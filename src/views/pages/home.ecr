@@ -1,0 +1,364 @@
+<!-- Marquee Banner -->
+<kt-marquee>
+  <kt-marquee-content>
+    <span>KEMAL TEMPLATE</span>
+    <span>TAC CSS ARCHITECTURE</span>
+    <span>ECR TEMPLATING SYSTEM</span>
+    <span>WEB AWESOME COMPONENTS</span>
+    <span>MODERN WEB DEVELOPMENT</span>
+    <span>CRYSTAL PROGRAMMING</span>
+    <span>COMPONENT-BASED DESIGN</span>
+    <span>KEMAL TEMPLATE</span>
+    <span>TAC CSS ARCHITECTURE</span>
+    <span>ECR TEMPLATING SYSTEM</span>
+    <span>WEB AWESOME COMPONENTS</span>
+    <span>MODERN WEB DEVELOPMENT</span>
+    <span>CRYSTAL PROGRAMMING</span>
+    <span>COMPONENT-BASED DESIGN</span>
+  </kt-marquee-content>
+</kt-marquee>
+
+<!-- Hero Section -->
+<kt-section class="mt-xl">
+  <kt-section-header>
+    <kt-section-title>Foundation</kt-section-title>
+  </kt-section-header>
+
+  <kt-grid cols="2">
+    <!-- TAC CSS Card using Web Awesome wa-card -->
+    <wa-card>
+      <div slot="header" class="wa-split">
+        <span class="wa-heading-m">TAC CSS Architecture</span>
+        <wa-badge appearance="accent" variant="brand">Core</wa-badge>
+      </div>
+      <p class="text-secondary mb-md">
+        A CSS methodology for the Web Components era. Style custom HTML tags, define custom attributes, then customize with utility classes.
+      </p>
+      <pre><code>/* Step 1: Style the tag */
+kt-badge {
+  display: inline-flex;
+  padding: 4px;
+}
+
+/* Step 2: Style attributes */
+kt-badge[variant=primary] {
+  background: var(--kt-color-accent-primary);
+}
+
+/* Step 3: Utility classes */
+&lt;kt-badge class="mar-r-sm"&gt;</code></pre>
+      <div slot="footer">
+        <wa-button appearance="outlined" variant="neutral">Learn More</wa-button>
+      </div>
+    </wa-card>
+
+    <!-- ECR Templates Card using Web Awesome wa-card -->
+    <wa-card>
+      <div slot="header" class="wa-split">
+        <span class="wa-heading-m">ECR Templating</span>
+        <wa-badge appearance="accent" variant="success">Active</wa-badge>
+      </div>
+      <p class="text-secondary mb-md">
+        Embedded Crystal for server-side templating. Create reusable templates with proper inheritance and partials.
+      </p>
+      <pre><code>&lt;%# layouts/main.ecr %&gt;
+&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+  &lt;title&gt;&lt;%= title %&gt;&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;%= content %&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+      <div slot="footer">
+        <wa-button appearance="outlined" variant="neutral">View Docs</wa-button>
+      </div>
+    </wa-card>
+  </kt-grid>
+</kt-section>
+
+<!-- Web Awesome Components Section -->
+<kt-section>
+  <kt-section-header>
+    <kt-section-title>Web Awesome Components</kt-section-title>
+  </kt-section-header>
+
+  <kt-grid cols="3">
+    <!-- Button Component Demo -->
+    <wa-card>
+      <div slot="header">
+        <span class="wa-heading-s">wa-button</span>
+      </div>
+      <p class="text-secondary text-sm mb-md">
+        Versatile button component with multiple variants and appearances.
+      </p>
+      <div class="wa-cluster wa-gap-xs">
+        <wa-button variant="brand">Brand</wa-button>
+        <wa-button variant="neutral" appearance="outlined">Outlined</wa-button>
+        <wa-button variant="success" appearance="filled">Success</wa-button>
+      </div>
+    </wa-card>
+
+    <!-- Badge Component Demo -->
+    <wa-card>
+      <div slot="header">
+        <span class="wa-heading-s">wa-badge</span>
+      </div>
+      <p class="text-secondary text-sm mb-md">
+        Status indicators with semantic variants.
+      </p>
+      <div class="wa-cluster wa-gap-xs">
+        <wa-badge>Default</wa-badge>
+        <wa-badge variant="brand">Brand</wa-badge>
+        <wa-badge variant="success">Success</wa-badge>
+        <wa-badge variant="warning">Warning</wa-badge>
+        <wa-badge variant="danger">Danger</wa-badge>
+      </div>
+    </wa-card>
+
+    <!-- Input Component Demo -->
+    <wa-card>
+      <div slot="header">
+        <span class="wa-heading-s">wa-input</span>
+      </div>
+      <p class="text-secondary text-sm mb-md">
+        Text input with label, placeholder, and icon support.
+      </p>
+      <wa-input label="Search" placeholder="Type to search...">
+        <wa-icon slot="start" name="magnifying-glass"></wa-icon>
+      </wa-input>
+    </wa-card>
+
+    <!-- Switch Component Demo -->
+    <wa-card>
+      <div slot="header">
+        <span class="wa-heading-s">wa-switch</span>
+      </div>
+      <p class="text-secondary text-sm mb-md">
+        Toggle switch for boolean settings.
+      </p>
+      <div class="wa-stack wa-gap-s">
+        <wa-switch checked>Dark Mode</wa-switch>
+        <wa-switch>Notifications</wa-switch>
+        <wa-switch>Auto-save</wa-switch>
+      </div>
+    </wa-card>
+
+    <!-- Progress Component Demo -->
+    <wa-card>
+      <div slot="header">
+        <span class="wa-heading-s">wa-progress-bar</span>
+      </div>
+      <p class="text-secondary text-sm mb-md">
+        Visual progress indicators.
+      </p>
+      <div class="wa-stack wa-gap-s">
+        <wa-progress-bar value="25"></wa-progress-bar>
+        <wa-progress-bar value="50" variant="success"></wa-progress-bar>
+        <wa-progress-bar value="75" variant="brand"></wa-progress-bar>
+      </div>
+    </wa-card>
+
+    <!-- Tooltip Component Demo -->
+    <wa-card>
+      <div slot="header">
+        <span class="wa-heading-s">wa-tooltip</span>
+      </div>
+      <p class="text-secondary text-sm mb-md">
+        Helpful hints on hover.
+      </p>
+      <div class="wa-cluster wa-gap-s">
+        <wa-tooltip content="This is helpful info">
+          <wa-button variant="neutral" appearance="outlined">Hover me</wa-button>
+        </wa-tooltip>
+        <wa-tooltip content="Click for action" placement="bottom">
+          <wa-button variant="brand">Action</wa-button>
+        </wa-tooltip>
+      </div>
+    </wa-card>
+  </kt-grid>
+</kt-section>
+
+<!-- Custom KT Components Section -->
+<kt-section>
+  <kt-section-header>
+    <kt-section-title>Custom Components (kt-*)</kt-section-title>
+  </kt-section-header>
+
+  <kt-grid cols="3">
+    <!-- Card Component -->
+    <kt-card variant="outlined">
+      <kt-card-header>
+        <kt-card-title class="text-lg">kt-card</kt-card-title>
+      </kt-card-header>
+      <kt-card-body>
+        <p class="text-secondary text-sm">
+          A flexible container component with header, body, and footer sections.
+        </p>
+      </kt-card-body>
+    </kt-card>
+
+    <!-- Badge Component -->
+    <kt-card variant="outlined">
+      <kt-card-header>
+        <kt-card-title class="text-lg">kt-badge</kt-card-title>
+      </kt-card-header>
+      <kt-card-body>
+        <p class="text-secondary text-sm mb-md">
+          Status indicators with multiple variants.
+        </p>
+        <div class="d-flex gap-xs flex-wrap">
+          <kt-badge>Default</kt-badge>
+          <kt-badge variant="primary">Primary</kt-badge>
+          <kt-badge variant="success">Success</kt-badge>
+          <kt-badge variant="warning">Warning</kt-badge>
+          <kt-badge variant="error">Error</kt-badge>
+        </div>
+      </kt-card-body>
+    </kt-card>
+
+    <!-- Search Component -->
+    <kt-card variant="outlined">
+      <kt-card-header>
+        <kt-card-title class="text-lg">kt-search</kt-card-title>
+      </kt-card-header>
+      <kt-card-body>
+        <p class="text-secondary text-sm mb-md">
+          Search input with icon and keyboard shortcut indicator.
+        </p>
+        <kt-search>
+          <kt-search-icon>
+            <wa-icon name="magnifying-glass"></wa-icon>
+          </kt-search-icon>
+          <kt-search-input>
+            <input type="search" placeholder="Search...">
+          </kt-search-input>
+        </kt-search>
+      </kt-card-body>
+    </kt-card>
+
+    <!-- Navigation Component -->
+    <kt-card variant="outlined">
+      <kt-card-header>
+        <kt-card-title class="text-lg">kt-nav-item</kt-card-title>
+      </kt-card-header>
+      <kt-card-body>
+        <p class="text-secondary text-sm mb-md">
+          Navigation items with icon and text.
+        </p>
+        <div class="d-flex flex-col gap-2xs">
+          <kt-nav-item active>
+            <wa-icon name="house"></wa-icon>
+            <span>Active Item</span>
+          </kt-nav-item>
+          <kt-nav-item>
+            <wa-icon name="grid-2"></wa-icon>
+            <span>Normal Item</span>
+          </kt-nav-item>
+        </div>
+      </kt-card-body>
+    </kt-card>
+
+    <!-- Grid Component -->
+    <kt-card variant="outlined">
+      <kt-card-header>
+        <kt-card-title class="text-lg">kt-grid</kt-card-title>
+      </kt-card-header>
+      <kt-card-body>
+        <p class="text-secondary text-sm mb-md">
+          Responsive grid layout with configurable columns.
+        </p>
+        <div class="d-grid gap-xs" style="grid-template-columns: repeat(3, 1fr);">
+          <div class="bg-surface p-xs rounded-sm text-center text-xs">1</div>
+          <div class="bg-surface p-xs rounded-sm text-center text-xs">2</div>
+          <div class="bg-surface p-xs rounded-sm text-center text-xs">3</div>
+        </div>
+      </kt-card-body>
+    </kt-card>
+
+    <!-- Section Component -->
+    <kt-card variant="outlined">
+      <kt-card-header>
+        <kt-card-title class="text-lg">kt-section</kt-card-title>
+      </kt-card-header>
+      <kt-card-body>
+        <p class="text-secondary text-sm">
+          Content sections with header and title for organizing page content.
+        </p>
+      </kt-card-body>
+    </kt-card>
+  </kt-grid>
+</kt-section>
+
+<!-- Features Section -->
+<kt-section>
+  <kt-section-header>
+    <kt-section-title>Features</kt-section-title>
+  </kt-section-header>
+
+  <kt-grid cols="4">
+    <div class="text-center p-lg">
+      <div class="text-3xl mb-md text-accent">
+        <wa-icon name="layer-group" style="font-size: 48px;"></wa-icon>
+      </div>
+      <h4 class="mb-sm">Kemal Framework</h4>
+      <p class="text-secondary text-sm">Fast, expressive web framework for Crystal</p>
+    </div>
+
+    <div class="text-center p-lg">
+      <div class="text-3xl mb-md text-accent">
+        <wa-icon name="palette" style="font-size: 48px;"></wa-icon>
+      </div>
+      <h4 class="mb-sm">TAC CSS</h4>
+      <p class="text-secondary text-sm">Modern methodology for Web Components</p>
+    </div>
+
+    <div class="text-center p-lg">
+      <div class="text-3xl mb-md text-accent">
+        <wa-icon name="file-code" style="font-size: 48px;"></wa-icon>
+      </div>
+      <h4 class="mb-sm">ECR Templates</h4>
+      <p class="text-secondary text-sm">Server-side templating with Crystal</p>
+    </div>
+
+    <div class="text-center p-lg">
+      <div class="text-3xl mb-md text-accent">
+        <wa-icon name="grid-2" style="font-size: 48px;"></wa-icon>
+      </div>
+      <h4 class="mb-sm">Web Awesome</h4>
+      <p class="text-secondary text-sm">50+ ready-to-use web components</p>
+    </div>
+  </kt-grid>
+</kt-section>
+
+<!-- Keyboard Shortcuts -->
+<kt-section>
+  <kt-section-header>
+    <kt-section-title>Keyboard Shortcuts</kt-section-title>
+  </kt-section-header>
+
+  <wa-card>
+    <div class="wa-stack wa-gap-s">
+      <div class="d-flex items-center justify-between p-sm bg-secondary rounded-sm">
+        <span class="text-secondary">Open search</span>
+        <kbd class="bg-surface p-xs rounded-sm text-xs font-mono">/</kbd>
+      </div>
+      <div class="d-flex items-center justify-between p-sm bg-secondary rounded-sm">
+        <span class="text-secondary">Toggle sidebar</span>
+        <div class="d-flex gap-xs">
+          <kbd class="bg-surface p-xs rounded-sm text-xs font-mono">Ctrl</kbd>
+          <kbd class="bg-surface p-xs rounded-sm text-xs font-mono">B</kbd>
+        </div>
+      </div>
+      <div class="d-flex items-center justify-between p-sm bg-secondary rounded-sm">
+        <span class="text-secondary">Toggle sound</span>
+        <kbd class="bg-surface p-xs rounded-sm text-xs font-mono">M</kbd>
+      </div>
+      <div class="d-flex items-center justify-between p-sm bg-secondary rounded-sm">
+        <span class="text-secondary">Close panel</span>
+        <kbd class="bg-surface p-xs rounded-sm text-xs font-mono">Esc</kbd>
+      </div>
+    </div>
+  </wa-card>
+</kt-section>

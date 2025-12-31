@@ -1,0 +1,30 @@
+<kt-topbar>
+  <kt-topbar-left>
+    <kt-logo id="logo-toggle" title="Click to open menu">
+      <kt-logo-icon>
+        <wa-icon name="layer-group" family="duotone"></wa-icon>
+      </kt-logo-icon>
+      <span>Kemal</span>
+    </kt-logo>
+  </kt-topbar-left>
+
+  <kt-topbar-center>
+    <wa-input id="search-input" placeholder="Search..." autocomplete="off" size="small">
+      <wa-icon slot="start" name="magnifying-glass"></wa-icon>
+      <span slot="end" class="text-muted text-xs font-mono">/</span>
+    </wa-input>
+  </kt-topbar-center>
+
+  <kt-topbar-right>
+    <kt-counter>
+      <kt-counter-current>0</kt-counter-current>
+      <kt-counter-divider>/</kt-counter-divider>
+      <kt-counter-total>149</kt-counter-total>
+    </kt-counter>
+    <wa-tooltip content="Toggle sound (M)">
+      <wa-button id="sound-toggle" appearance="plain" variant="neutral" size="small">
+        <wa-icon name="volume-high"></wa-icon>
+      </wa-button>
+    </wa-tooltip>
+  </kt-topbar-right>
+</kt-topbar>

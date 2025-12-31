@@ -1,0 +1,285 @@
+/**
+ * TAC CSS Architecture - HTML Tags Styles
+ * Styles for native HTML elements
+ * Reference: tac.org methodology
+ */
+
+/* ===== Reset & Base ===== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 100%;
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  background-color: var(--kt-color-bg-primary);
+  color: var(--kt-color-text-primary);
+  font-family: var(--kt-font-family-mono);
+  font-size: var(--kt-font-size-md);
+  font-weight: var(--kt-font-weight-normal);
+  line-height: var(--kt-line-height-normal);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ===== Typography ===== */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--kt-font-family-mono);
+  font-weight: var(--kt-font-weight-semibold);
+  line-height: var(--kt-line-height-tight);
+  color: var(--kt-color-text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+h1 {
+  font-size: var(--kt-font-size-4xl);
+}
+
+h2 {
+  font-size: var(--kt-font-size-3xl);
+}
+
+h3 {
+  font-size: var(--kt-font-size-2xl);
+}
+
+h4 {
+  font-size: var(--kt-font-size-xl);
+}
+
+h5 {
+  font-size: var(--kt-font-size-lg);
+}
+
+h6 {
+  font-size: var(--kt-font-size-md);
+}
+
+p {
+  margin-bottom: var(--kt-space-md);
+}
+
+a {
+  color: var(--kt-color-text-accent);
+  text-decoration: none;
+  transition: color var(--kt-transition-fast);
+}
+
+a:hover {
+  color: var(--kt-color-accent-primary);
+  text-decoration: underline;
+}
+
+strong, b {
+  font-weight: var(--kt-font-weight-semibold);
+}
+
+em, i {
+  font-style: italic;
+}
+
+small {
+  font-size: var(--kt-font-size-sm);
+}
+
+code {
+  font-family: var(--kt-font-family-mono);
+  font-size: 0.9em;
+  padding: var(--kt-space-2xs) var(--kt-space-xs);
+  background-color: var(--kt-color-bg-surface);
+  border-radius: var(--kt-border-radius-sm);
+  color: var(--kt-color-accent-primary);
+}
+
+pre {
+  font-family: var(--kt-font-family-mono);
+  font-size: var(--kt-font-size-sm);
+  padding: var(--kt-space-md);
+  background-color: var(--kt-color-bg-surface);
+  border-radius: var(--kt-border-radius-md);
+  overflow-x: auto;
+  border: var(--kt-border-width-thin) solid var(--kt-color-border-default);
+}
+
+pre code {
+  padding: 0;
+  background: none;
+}
+
+blockquote {
+  padding-left: var(--kt-space-md);
+  border-left: var(--kt-border-width-medium) solid var(--kt-color-border-accent);
+  color: var(--kt-color-text-secondary);
+  font-style: italic;
+}
+
+/* ===== Lists ===== */
+ul, ol {
+  padding-left: var(--kt-space-lg);
+  margin-bottom: var(--kt-space-md);
+}
+
+li {
+  margin-bottom: var(--kt-space-xs);
+}
+
+/* ===== Forms ===== */
+button {
+  font-family: var(--kt-font-family-mono);
+  font-size: var(--kt-font-size-sm);
+  font-weight: var(--kt-font-weight-medium);
+  padding: var(--kt-space-xs) var(--kt-space-md);
+  border: var(--kt-border-width-thin) solid var(--kt-color-border-default);
+  border-radius: var(--kt-border-radius-sm);
+  background-color: var(--kt-color-bg-surface);
+  color: var(--kt-color-text-primary);
+  cursor: pointer;
+  transition: all var(--kt-transition-fast);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+button:hover {
+  background-color: var(--kt-color-bg-elevated);
+  border-color: var(--kt-color-border-accent);
+}
+
+button:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--kt-color-accent-primary);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+input, textarea, select {
+  font-family: var(--kt-font-family-mono);
+  font-size: var(--kt-font-size-sm);
+  padding: var(--kt-space-xs) var(--kt-space-sm);
+  border: var(--kt-border-width-thin) solid var(--kt-color-border-default);
+  border-radius: var(--kt-border-radius-sm);
+  background-color: var(--kt-color-bg-surface);
+  color: var(--kt-color-text-primary);
+  width: 100%;
+  transition: border-color var(--kt-transition-fast);
+}
+
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: var(--kt-color-accent-primary);
+}
+
+input::placeholder, textarea::placeholder {
+  color: var(--kt-color-text-muted);
+}
+
+label {
+  display: block;
+  font-size: var(--kt-font-size-sm);
+  font-weight: var(--kt-font-weight-medium);
+  margin-bottom: var(--kt-space-xs);
+  color: var(--kt-color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ===== Tables ===== */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: var(--kt-space-md);
+}
+
+th, td {
+  padding: var(--kt-space-sm);
+  text-align: left;
+  border-bottom: var(--kt-border-width-thin) solid var(--kt-color-border-default);
+}
+
+th {
+  font-weight: var(--kt-font-weight-semibold);
+  color: var(--kt-color-text-secondary);
+  text-transform: uppercase;
+  font-size: var(--kt-font-size-xs);
+  letter-spacing: 0.1em;
+}
+
+/* ===== Media ===== */
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+figure {
+  margin: var(--kt-space-md) 0;
+}
+
+figcaption {
+  font-size: var(--kt-font-size-sm);
+  color: var(--kt-color-text-muted);
+  margin-top: var(--kt-space-xs);
+}
+
+/* ===== Dividers ===== */
+hr {
+  border: none;
+  border-top: var(--kt-border-width-thin) solid var(--kt-color-border-default);
+  margin: var(--kt-space-lg) 0;
+}
+
+/* ===== Details/Summary ===== */
+details {
+  border: var(--kt-border-width-thin) solid var(--kt-color-border-default);
+  border-radius: var(--kt-border-radius-md);
+  padding: var(--kt-space-sm);
+  margin-bottom: var(--kt-space-sm);
+}
+
+summary {
+  font-weight: var(--kt-font-weight-medium);
+  cursor: pointer;
+  padding: var(--kt-space-xs);
+}
+
+details[open] summary {
+  margin-bottom: var(--kt-space-sm);
+  border-bottom: var(--kt-border-width-thin) solid var(--kt-color-border-subtle);
+}
+
+/* ===== Scrollbar ===== */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--kt-color-bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--kt-color-border-accent);
+  border-radius: var(--kt-border-radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--kt-color-text-muted);
+}
+
+/* ===== Selection ===== */
+::selection {
+  background-color: var(--kt-color-accent-primary);
+  color: var(--kt-color-bg-primary);
+}

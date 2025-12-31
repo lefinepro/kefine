@@ -1,0 +1,131 @@
+/**
+ * TAC CSS Architecture - Design Tokens
+ * CSS Custom Properties for the design system
+ * Built on top of Web Awesome design system (https://webawesome.com/docs)
+ * Reference: tac.org methodology
+ */
+
+:root {
+  /* ===== Color Tokens ===== */
+  /* Using Web Awesome color system with dark theme inspired by types.kitlangton.com */
+
+  /* Surface colors - mapped from Web Awesome tokens */
+  --kt-color-bg-primary: var(--wa-color-surface-default, #000000);
+  --kt-color-bg-secondary: var(--wa-color-surface-lowered, #0a0a0a);
+  --kt-color-bg-tertiary: #111111;
+  --kt-color-bg-surface: var(--wa-color-surface-raised, #1a1a1a);
+  --kt-color-bg-elevated: #222222;
+
+  /* Text colors - mapped from Web Awesome tokens */
+  --kt-color-text-primary: var(--wa-color-text-normal, #f1efe8);
+  --kt-color-text-secondary: var(--wa-color-text-quiet, #a0a0a0);
+  --kt-color-text-muted: #666666;
+  --kt-color-text-accent: var(--wa-color-brand-fill-normal, #7dd3fc);
+
+  /* Border colors */
+  --kt-color-border-default: var(--wa-color-surface-border, #333333);
+  --kt-color-border-subtle: #222222;
+  --kt-color-border-accent: #444444;
+
+  /* Accent colors - mapped from Web Awesome semantic colors */
+  --kt-color-accent-primary: var(--wa-color-brand-fill-normal, #7dd3fc);
+  --kt-color-accent-secondary: #a78bfa;
+  --kt-color-accent-success: var(--wa-color-success-fill-normal, #4ade80);
+  --kt-color-accent-warning: var(--wa-color-warning-fill-normal, #fbbf24);
+  --kt-color-accent-error: var(--wa-color-danger-fill-normal, #f87171);
+
+  /* ===== Typography Tokens ===== */
+  /* Aligned with Web Awesome typography system */
+  --kt-font-family-primary: var(--wa-font-family-body, 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+  --kt-font-family-mono: var(--wa-font-family-code, 'Commit Mono', 'SF Mono', Monaco, 'Courier New', monospace);
+
+  /* Font sizes - aligned with Web Awesome sizing scale */
+  --kt-font-size-xs: var(--wa-font-size-xs, 0.75rem);    /* 12px */
+  --kt-font-size-sm: var(--wa-font-size-s, 0.875rem);    /* 14px */
+  --kt-font-size-md: var(--wa-font-size-m, 1rem);        /* 16px */
+  --kt-font-size-lg: var(--wa-font-size-l, 1.125rem);    /* 18px */
+  --kt-font-size-xl: var(--wa-font-size-xl, 1.25rem);    /* 20px */
+  --kt-font-size-2xl: var(--wa-font-size-2xl, 1.5rem);   /* 24px */
+  --kt-font-size-3xl: var(--wa-font-size-3xl, 2rem);     /* 32px */
+  --kt-font-size-4xl: var(--wa-font-size-4xl, 2.5rem);   /* 40px */
+
+  /* Font weights */
+  --kt-font-weight-light: var(--wa-font-weight-light, 300);
+  --kt-font-weight-normal: var(--wa-font-weight-body, 400);
+  --kt-font-weight-medium: 500;
+  --kt-font-weight-semibold: var(--wa-font-weight-heading, 600);
+  --kt-font-weight-bold: var(--wa-font-weight-bold, 700);
+
+  /* Line heights - aligned with Web Awesome */
+  --kt-line-height-tight: var(--wa-line-height-condensed, 1.2);
+  --kt-line-height-normal: var(--wa-line-height-normal, 1.5);
+  --kt-line-height-relaxed: 1.75;
+
+  /* ===== Spacing Tokens ===== */
+  /* Aligned with Web Awesome spacing scale */
+  --kt-space-2xs: var(--wa-space-2xs, 0.25rem);   /* 4px */
+  --kt-space-xs: var(--wa-space-xs, 0.5rem);      /* 8px */
+  --kt-space-sm: var(--wa-space-s, 0.75rem);      /* 12px */
+  --kt-space-md: var(--wa-space-m, 1rem);         /* 16px */
+  --kt-space-lg: var(--wa-space-l, 1.5rem);       /* 24px */
+  --kt-space-xl: var(--wa-space-xl, 2rem);        /* 32px */
+  --kt-space-2xl: var(--wa-space-2xl, 3rem);      /* 48px */
+  --kt-space-3xl: var(--wa-space-3xl, 4rem);      /* 64px */
+
+  /* ===== Layout Tokens ===== */
+  --kt-sidebar-width: 280px;
+  --kt-topbar-height: 60px;
+  --kt-content-max-width: 1200px;
+
+  /* ===== Border Tokens ===== */
+  /* Aligned with Web Awesome border system */
+  --kt-border-radius-sm: var(--wa-border-radius-s, 4px);
+  --kt-border-radius-md: var(--wa-border-radius-m, 8px);
+  --kt-border-radius-lg: var(--wa-border-radius-l, 12px);
+  --kt-border-radius-xl: var(--wa-border-radius-xl, 16px);
+  --kt-border-radius-full: var(--wa-border-radius-circle, 9999px);
+
+  --kt-border-width-thin: var(--wa-border-width-s, 1px);
+  --kt-border-width-medium: var(--wa-border-width-m, 2px);
+
+  /* ===== Shadow Tokens ===== */
+  /* Aligned with Web Awesome shadow system */
+  --kt-shadow-sm: var(--wa-shadow-s, 0 1px 2px rgba(0, 0, 0, 0.5));
+  --kt-shadow-md: var(--wa-shadow-m, 0 4px 6px rgba(0, 0, 0, 0.5));
+  --kt-shadow-lg: var(--wa-shadow-l, 0 10px 15px rgba(0, 0, 0, 0.5));
+  --kt-shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.5);
+
+  /* ===== Transition Tokens ===== */
+  /* Aligned with Web Awesome transitions */
+  --kt-transition-fast: var(--wa-transition-fast, 150ms ease);
+  --kt-transition-normal: var(--wa-transition-normal, 250ms ease);
+  --kt-transition-slow: var(--wa-transition-slow, 350ms ease);
+
+  /* ===== Z-Index Tokens ===== */
+  --kt-z-index-base: 0;
+  --kt-z-index-dropdown: 100;
+  --kt-z-index-sidebar: 200;
+  --kt-z-index-modal: 300;
+  --kt-z-index-toast: 400;
+}
+
+/* Dark theme overrides for Web Awesome integration */
+/* Force dark mode colors when Web Awesome default theme is loaded */
+:root {
+  /* Override Web Awesome defaults for dark theme */
+  --wa-color-surface-default: #000000;
+  --wa-color-surface-lowered: #0a0a0a;
+  --wa-color-surface-raised: #1a1a1a;
+  --wa-color-surface-border: #333333;
+  --wa-color-text-normal: #f1efe8;
+  --wa-color-text-quiet: #a0a0a0;
+  --wa-color-overlay-modal: rgba(0, 0, 0, 0.7);
+
+  /* Brand colors for dark theme */
+  --wa-color-brand-fill-quiet: rgba(125, 211, 252, 0.2);
+  --wa-color-brand-fill-normal: #7dd3fc;
+  --wa-color-brand-fill-loud: #38bdf8;
+
+  /* Focus ring for dark theme */
+  --wa-color-focus: rgba(125, 211, 252, 0.4);
+}

@@ -1,0 +1,103 @@
+<kt-sidebar-header>
+  <kt-logo>
+    <kt-logo-icon>
+      <wa-icon name="layer-group" family="duotone"></wa-icon>
+    </kt-logo-icon>
+    <span>Kemal Template</span>
+  </kt-logo>
+  <wa-button id="sidebar-close" appearance="plain" variant="neutral" size="small">
+    <wa-icon name="xmark"></wa-icon>
+  </wa-button>
+</kt-sidebar-header>
+
+<!-- Search Section -->
+<kt-sidebar-section>
+  <wa-input id="sidebar-search" placeholder="Search..." autocomplete="off">
+    <wa-icon slot="start" name="magnifying-glass"></wa-icon>
+  </wa-input>
+</kt-sidebar-section>
+
+<!-- Filters Section -->
+<kt-sidebar-section title="Filters">
+  <kt-filters>
+    <kt-filter-group title="Category">
+      <kt-filter-option selected>
+        <wa-checkbox checked>All</wa-checkbox>
+      </kt-filter-option>
+      <kt-filter-option>
+        <wa-checkbox>Components</wa-checkbox>
+      </kt-filter-option>
+      <kt-filter-option>
+        <wa-checkbox>Layouts</wa-checkbox>
+      </kt-filter-option>
+      <kt-filter-option>
+        <wa-checkbox>Patterns</wa-checkbox>
+      </kt-filter-option>
+    </kt-filter-group>
+
+    <kt-filter-group title="Status">
+      <kt-filter-option>
+        <wa-checkbox>Active</wa-checkbox>
+      </kt-filter-option>
+      <kt-filter-option>
+        <wa-checkbox>Completed</wa-checkbox>
+      </kt-filter-option>
+      <kt-filter-option>
+        <wa-checkbox>Pending</wa-checkbox>
+      </kt-filter-option>
+    </kt-filter-group>
+  </kt-filters>
+</kt-sidebar-section>
+
+<!-- Navigation Section -->
+<kt-sidebar-section title="Navigation">
+  <kt-nav-item active>
+    <wa-icon name="house"></wa-icon>
+    <span>Home</span>
+  </kt-nav-item>
+  <kt-nav-item>
+    <wa-icon name="grid-2"></wa-icon>
+    <span>Components</span>
+  </kt-nav-item>
+  <kt-nav-item>
+    <wa-icon name="file-lines"></wa-icon>
+    <span>Documentation</span>
+  </kt-nav-item>
+  <kt-nav-item>
+    <wa-icon name="sliders"></wa-icon>
+    <span>Examples</span>
+  </kt-nav-item>
+</kt-sidebar-section>
+
+<!-- Settings Section -->
+<kt-sidebar-section title="Settings">
+  <kt-settings>
+    <kt-setting-item>
+      <kt-setting-label>
+        <span>Dark Mode</span>
+        <small>Toggle dark theme</small>
+      </kt-setting-label>
+      <wa-switch id="dark-mode-toggle" checked></wa-switch>
+    </kt-setting-item>
+    <kt-setting-item>
+      <kt-setting-label>
+        <span>Animations</span>
+        <small>Enable UI animations</small>
+      </kt-setting-label>
+      <wa-switch id="animations-toggle" checked></wa-switch>
+    </kt-setting-item>
+    <kt-setting-item>
+      <kt-setting-label>
+        <span>Sound Effects</span>
+        <small>Play interaction sounds</small>
+      </kt-setting-label>
+      <wa-switch id="sound-effects-toggle"></wa-switch>
+    </kt-setting-item>
+  </kt-settings>
+</kt-sidebar-section>
+
+<!-- Footer -->
+<div class="mt-auto p-md border-t text-center text-muted text-xs">
+  <p>Built with <a href="https://kemalcr.com">Kemal</a> + <a href="https://webawesome.com">Web Awesome</a></p>
+  <p class="mt-xs">TAC CSS Architecture</p>
+</div>
