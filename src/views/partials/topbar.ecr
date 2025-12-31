@@ -9,14 +9,8 @@
   </kf-topbar-left>
 
   <kf-topbar-center>
-    <kf-combobox id="search-combobox" role="combobox" aria-label="Search" aria-expanded="false" aria-haspopup="listbox">
-      <wa-input id="search-input" placeholder="Search..." autocomplete="off" size="small" role="searchbox" aria-autocomplete="list">
-        <wa-icon slot="start" name="magnifying-glass"></wa-icon>
-        <span slot="end" class="text-muted text-xs font-mono">/</span>
-      </wa-input>
-      <kf-combobox-listbox id="search-listbox" role="listbox" hidden aria-label="Search results">
-        <!-- Dynamic search results will be populated here -->
-      </kf-combobox-listbox>
+    <kf-combobox placeholder="Search..." aria-label="Search">
+      <wa-icon slot="icon" name="magnifying-glass"></wa-icon>
     </kf-combobox>
   </kf-topbar-center>
 

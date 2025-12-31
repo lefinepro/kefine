@@ -5,14 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><%= title %> - Kefine</title>
 
-  <!-- Web Awesome Components Library -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@aspect.dev/webawesome@next/cdn/themes/default.css">
-  <script type="module" src="https://cdn.jsdelivr.net/npm/@aspect.dev/webawesome@next/cdn/webawesome.bundled.js"></script>
-
-  <!-- Lit for custom components -->
-  <script type="module" src="https://cdn.jsdelivr.net/npm/lit@3/+esm"></script>
-
-  <!-- Built CSS from Vite (includes Fontsource fonts and TAC CSS Architecture) -->
+  <!-- Built CSS from Vite (includes Fontsource fonts, WebAwesome, and TAC CSS Architecture) -->
   <link rel="stylesheet" href="/dist/assets/style.css">
 </head>
 <body>
@@ -34,7 +27,7 @@
     </kf-main>
   </kf-app>
 
-  <!-- Built JS from Vite -->
+  <!-- Built JS from Vite (includes Lit, WebAwesome components, and application code) -->
   <script type="module" src="/dist/assets/main.js"></script>
 </body>
 </html>

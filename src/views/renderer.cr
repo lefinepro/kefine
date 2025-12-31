@@ -16,7 +16,8 @@ module KemalTemplate
     processed_layout = layout_content.gsub("<%= content %>", processed_content)
                                    .gsub("<%= title %>", h(title))
 
-    processed_layout
+    # Process any ECR in the layout (like partials)
+    process_ecr(processed_layout)
   end
 
   # Render a page with the main layout
@@ -30,15 +31,8 @@ module KemalTemplate
                 "<p>Page not found</p>"
               end
 
-    # Process any ECR in the content first
-    processed_content = process_ecr(content)
-
-    # Read the layout file and replace placeholders
-    layout_content = File.read("src/views/layouts/main.ecr")
-    processed_layout = layout_content.gsub("<%= content %>", processed_content)
-                                   .gsub("<%= title %>", h(title))
-
-    processed_layout
+    # Use the layout renderer to handle partials properly
+    render_layout(title) { content }
   end
 
   # Render a partial component

@@ -12,43 +12,43 @@
       <kf-card-body>
         <kf-settings>
           <kf-setting-item>
-            <kf-setting-label>
+            <kf-setting-label slot="label">
               <span>Theme</span>
               <small>Choose your preferred color scheme</small>
             </kf-setting-label>
-            <select id="theme-select">
+            <wa-select slot="control" id="theme-select">
               <option value="dark" selected>Dark</option>
               <option value="light">Light</option>
               <option value="system">System</option>
-            </select>
+            </wa-select>
           </kf-setting-item>
 
           <kf-setting-item>
-            <kf-setting-label>
+            <kf-setting-label slot="label">
               <span>Font Size</span>
               <small>Adjust the base font size</small>
             </kf-setting-label>
-            <select id="font-size-select">
+            <wa-select slot="control" id="font-size-select">
               <option value="small">Small</option>
               <option value="medium" selected>Medium</option>
               <option value="large">Large</option>
-            </select>
+            </wa-select>
           </kf-setting-item>
 
           <kf-setting-item>
-            <kf-setting-label>
+            <kf-setting-label slot="label">
               <span>Animations</span>
               <small>Enable or disable UI animations</small>
             </kf-setting-label>
-            <input type="checkbox" id="animations-setting" checked>
+            <wa-switch slot="control" id="animations-setting" checked></wa-switch>
           </kf-setting-item>
 
           <kf-setting-item>
-            <kf-setting-label>
+            <kf-setting-label slot="label">
               <span>Compact Mode</span>
               <small>Reduce spacing throughout the interface</small>
             </kf-setting-label>
-            <input type="checkbox" id="compact-mode-setting">
+            <wa-switch slot="control" id="compact-mode-setting"></wa-switch>
           </kf-setting-item>
         </kf-settings>
       </kf-card-body>
@@ -62,27 +62,27 @@
       <kf-card-body>
         <kf-settings>
           <kf-setting-item>
-            <kf-setting-label>
+            <kf-setting-label slot="label">
               <span>Sound Effects</span>
               <small>Play sounds for interactions</small>
             </kf-setting-label>
-            <input type="checkbox" id="sound-effects-setting">
+            <wa-switch slot="control" id="sound-effects-setting"></wa-switch>
           </kf-setting-item>
 
           <kf-setting-item>
-            <kf-setting-label>
+            <kf-setting-label slot="label">
               <span>Notification Sounds</span>
               <small>Audio alerts for notifications</small>
             </kf-setting-label>
-            <input type="checkbox" id="notification-sounds-setting" checked>
+            <wa-switch slot="control" id="notification-sounds-setting" checked></wa-switch>
           </kf-setting-item>
 
           <kf-setting-item>
-            <kf-setting-label>
+            <kf-setting-label slot="label">
               <span>Volume</span>
               <small>Adjust the master volume level</small>
             </kf-setting-label>
-            <input type="range" id="volume-setting" min="0" max="100" value="75">
+            <wa-input slot="control" type="range" id="volume-setting" min="0" max="100" value="75"></wa-input>
           </kf-setting-item>
         </kf-settings>
       </kf-card-body>
@@ -96,19 +96,19 @@
       <kf-card-body>
         <kf-settings>
           <kf-setting-item>
-            <kf-setting-label>
+            <kf-setting-label slot="label">
               <span>Keyboard Shortcuts</span>
               <small>Enable keyboard navigation</small>
             </kf-setting-label>
-            <input type="checkbox" id="shortcuts-setting" checked>
+            <wa-switch slot="control" id="shortcuts-setting" checked></wa-switch>
           </kf-setting-item>
 
           <kf-setting-item>
-            <kf-setting-label>
+            <kf-setting-label slot="label">
               <span>Vim Mode</span>
               <small>Use vim-style key bindings</small>
             </kf-setting-label>
-            <input type="checkbox" id="vim-mode-setting">
+            <wa-switch slot="control" id="vim-mode-setting"></wa-switch>
           </kf-setting-item>
         </kf-settings>
       </kf-card-body>
@@ -122,19 +122,19 @@
       <kf-card-body>
         <kf-settings>
           <kf-setting-item>
-            <kf-setting-label>
+            <kf-setting-label slot="label">
               <span>Analytics</span>
               <small>Help improve the application</small>
             </kf-setting-label>
-            <input type="checkbox" id="analytics-setting" checked>
+            <wa-switch slot="control" id="analytics-setting" checked></wa-switch>
           </kf-setting-item>
 
           <kf-setting-item>
-            <kf-setting-label>
+            <kf-setting-label slot="label">
               <span>Save Preferences</span>
               <small>Remember your settings locally</small>
             </kf-setting-label>
-            <input type="checkbox" id="save-prefs-setting" checked>
+            <wa-switch slot="control" id="save-prefs-setting" checked></wa-switch>
           </kf-setting-item>
         </kf-settings>
       </kf-card-body>
@@ -150,9 +150,9 @@
   <kf-card>
     <kf-card-body>
       <div class="d-flex gap-md flex-wrap">
-        <button class="bg-surface">Export Settings</button>
-        <button class="bg-surface">Import Settings</button>
-        <button class="text-error">Reset to Defaults</button>
+        <wa-button class="bg-surface">Export Settings</wa-button>
+        <wa-button class="bg-surface">Import Settings</wa-button>
+        <wa-button class="text-error">Reset to Defaults</wa-button>
       </div>
     </kf-card-body>
   </kf-card>

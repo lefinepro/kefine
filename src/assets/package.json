@@ -1,7 +1,7 @@
 {
   "name": "kefine",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -18,8 +18,13 @@
     "oxlint": "^1.35.0"
   },
   "dependencies": {
+    "@awesome.me/webawesome": "^3.1.0",
+    "@fontsource/commit-mono": "^5.0.13",
     "@fontsource/inter": "^5.0.18",
-    "@fontsource/commit-mono": "^5.0.13"
+    "@lit/localize": "^0.12.2",
+    "@lit/reactive-element": "^2.1.2",
+    "lit": "^3.3.2",
+    "lit-html": "^3.3.2"
   },
   "overrides": {
     "vite": "npm:rolldown-vite@latest"
