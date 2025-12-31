@@ -3,31 +3,31 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><%= title %> - Kefine</title>
+  <title><%= title %> - Kemal Template</title>
 
-  <!-- Built CSS from Vite (includes Fontsource fonts, WebAwesome, and TAC CSS Architecture) -->
+  <!-- Built CSS from Vite (includes Fontsource fonts and TAC CSS Architecture) -->
   <link rel="stylesheet" href="/dist/assets/style.css">
 </head>
 <body>
-  <kf-app>
+  <kt-app>
     <!-- Sidebar (opened by clicking logotype) -->
-    <kf-sidebar id="sidebar" hidden>
+    <kt-sidebar id="sidebar" hidden>
       <%= KemalTemplate.render_partial("sidebar") %>
-    </kf-sidebar>
+    </kt-sidebar>
 
     <!-- Main content area -->
-    <kf-main>
+    <kt-main>
       <!-- Top bar with search -->
       <%= KemalTemplate.render_partial("topbar") %>
 
       <!-- Page content -->
-      <kf-content>
+      <kt-content>
         <%= content %>
-      </kf-content>
-    </kf-main>
-  </kf-app>
+      </kt-content>
+    </kt-main>
+  </kt-app>
 
-  <!-- Built JS from Vite (includes Lit, WebAwesome components, and application code) -->
+  <!-- Built JS from Vite -->
   <script type="module" src="/dist/assets/main.js"></script>
 </body>
 </html>

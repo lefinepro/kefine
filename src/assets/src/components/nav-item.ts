@@ -1,8 +1,8 @@
-import { LitElement, html, css } from "lit";
-import { customElement, property } from "lit/decorators.js";
+import { LitElement, html, css } from 'lit';
+import { customElement, property } from 'lit/decorators.js';
 
-@customElement("kf-nav-item")
-export class KFNavItem extends LitElement {
+@customElement('kt-nav-item')
+export class KTNavItem extends LitElement {
   @property({ type: Boolean, reflect: true }) active = false;
 
   static styles = css`
@@ -32,8 +32,8 @@ export class KFNavItem extends LitElement {
 
   render() {
     return html`
-      <div
-        class="nav-item"
+      <div 
+        class="nav-item" 
         ?active="${this.active}"
         @click="${this.handleClick}"
       >
@@ -47,28 +47,26 @@ export class KFNavItem extends LitElement {
     // Remove active from all items in the same parent
     const parent = this.parentElement;
     if (parent) {
-      const navItems = parent.querySelectorAll("kf-nav-item");
-      navItems.forEach((item) => {
-        (item as KFNavItem).active = false;
+      const navItems = parent.querySelectorAll('kt-nav-item');
+      navItems.forEach(item => {
+        (item as KTNavItem).active = false;
       });
     }
-
+    
     // Set this item as active
     this.active = true;
-
-    this.dispatchEvent(
-      new CustomEvent("nav-select", {
-        detail: { active: this.active },
-        bubbles: true,
-        composed: true,
-      }),
-    );
+    
+    this.dispatchEvent(new CustomEvent('nav-select', {
+      detail: { active: this.active },
+      bubbles: true,
+      composed: true
+    }));
   }
 }
 
 // Define the custom element if not already defined
-if (!customElements.get("kf-nav-item")) {
-  customElements.define("kf-nav-item", KFNavItem);
+if (!customElements.get('kt-nav-item')) {
+  customElements.define('kt-nav-item', KTNavItem);
 }
 
-export default KFNavItem;
+export default KTNavItem;

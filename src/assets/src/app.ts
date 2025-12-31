@@ -17,7 +17,6 @@ import "./components/counter.js";
 import "./components/filter-option.js";
 import "./components/nav-item.js";
 import "./components/setting-item.js";
-import "./components/kf-combobox/kf-combobox.js";
 
 // Register the icon library
 registerIconLibrary("icon", {
@@ -25,8 +24,8 @@ registerIconLibrary("icon", {
 });
 
 /**
- * Kefine Application TypeScript
- * Handles sidebar toggle, search combobox, keyboard shortcuts, posts, and settings
+ * Kemal Template Application TypeScript
+ * Handles sidebar toggle, search, keyboard shortcuts, and settings
  * Interactive elements are handled by Lit components, static templates remain as ECR
  */
 
@@ -34,47 +33,43 @@ registerIconLibrary("icon", {
 // No need to define them again
 
 // ===== Types =====
-type KFElement = HTMLElement & (HTMLElement | Element);
+type KTElement = HTMLElement & (HTMLElement | Element);
 
-interface KefineAPI {
+interface KemalTemplateAPI {
   toggleSidebar: () => void;
   openSidebar: () => void;
   closeSidebar: () => void;
   toggleSound: () => void;
-  expandPost: (postId: string) => void;
-  collapsePost: () => void;
+  updateCounter: (current: number, total: number) => void;
 }
 
 interface AppElements {
-  app: KFElement | null;
+  app: KTElement | null;
   sidebar: HTMLElement | null;
   logoToggle: HTMLElement | null;
   sidebarClose: HTMLElement | null;
-  searchCombobox: HTMLElement | null;
+  searchInput: HTMLInputElement | null;
   sidebarSearch: HTMLInputElement | null;
   soundToggle: HTMLElement | null;
   themeSelect: HTMLSelectElement | null;
-  loginButton: HTMLElement | null;
 }
 
 interface AppState {
   isSidebarOpen: boolean;
   isSoundEnabled: boolean;
-  expandedPostId: string | null;
 }
 
 // ===== Application Class =====
-class KefineApp {
+class KemalTemplateApp {
   private elements: AppElements;
   private state: AppState;
-  private api: KefineAPI;
+  private api: KemalTemplateAPI;
 
   constructor() {
     this.elements = this.initializeElements();
     this.state = {
       isSidebarOpen: false,
       isSoundEnabled: false,
-      expandedPostId: null,
     };
 
     this.api = {
@@ -82,8 +77,7 @@ class KefineApp {
       openSidebar: this.openSidebar.bind(this),
       closeSidebar: this.closeSidebar.bind(this),
       toggleSound: this.toggleSound.bind(this),
-      expandPost: this.expandPost.bind(this),
-      collapsePost: this.collapsePost.bind(this),
+      updateCounter: this.updateCounter.bind(this),
     };
 
     this.initialize();
@@ -91,17 +85,16 @@ class KefineApp {
 
   private initializeElements(): AppElements {
     return {
-      app: document.querySelector("kf-app") as KFElement,
+      app: document.querySelector("kt-app") as KTElement,
       sidebar: document.getElementById("sidebar"),
       logoToggle: document.getElementById("logo-toggle"),
       sidebarClose: document.getElementById("sidebar-close"),
-      searchCombobox: document.querySelector("kf-combobox"),
+      searchInput: document.getElementById("search-input") as HTMLInputElement,
       sidebarSearch: document.getElementById(
         "sidebar-search",
       ) as HTMLInputElement,
       soundToggle: document.getElementById("sound-toggle"),
       themeSelect: document.getElementById("theme-select") as HTMLSelectElement,
-      loginButton: document.getElementById("login-button"),
     };
   }
 
@@ -114,13 +107,10 @@ class KefineApp {
     // Initialize static template event listeners
     this.initStaticTemplateEventListeners();
 
-    // Initialize posts
-    this.initPosts();
-
     this.exposeAPI();
 
     // Log initialization
-    console.log("Kefine initialized");
+    console.log("Kemal Template initialized");
     console.log("Keyboard shortcuts:");
     console.log("  / - Focus search");
     console.log("  Ctrl+B - Toggle sidebar");
@@ -159,42 +149,27 @@ class KefineApp {
   // ===== Lit Component Event Listeners =====
   private initLitComponentEventListeners(): void {
     // Listen for overlay clicks to close sidebar
-    document.addEventListener("click", (e) => {
-      if (
-        e.target instanceof HTMLElement &&
-        e.target.tagName === "KF-OVERLAY"
-      ) {
+    document.addEventListener('click', (e) => {
+      if (e.target instanceof HTMLElement && e.target.tagName === 'KT-OVERLAY') {
         this.closeSidebar();
       }
     });
 
     // Listen for filter option toggle events
-    document.addEventListener("toggle", (e: Event) => {
-      if (
-        e.target instanceof HTMLElement &&
-        e.target.tagName === "KF-FILTER-OPTION"
-      ) {
+    document.addEventListener('toggle', (e: Event) => {
+      if (e.target instanceof HTMLElement && e.target.tagName === 'KT-FILTER-OPTION') {
         this.handleFilterChange();
       }
     });
 
     // Listen for nav item selection events
-    document.addEventListener("nav-select", (e: Event) => {
-      if (
-        e.target instanceof HTMLElement &&
-        e.target.tagName === "KF-NAV-ITEM"
-      ) {
+    document.addEventListener('nav-select', (e: Event) => {
+      if (e.target instanceof HTMLElement && e.target.tagName === 'KT-NAV-ITEM') {
         const label = e.target.querySelector("span");
         if (label) {
           console.log("Navigate to:", label.textContent);
         }
       }
-    });
-
-    // Listen for combobox select events
-    document.addEventListener("kf-combobox-select", (e: Event) => {
-      const customEvent = e as CustomEvent;
-      console.log("Search selected:", customEvent.detail);
     });
   }
 
@@ -224,6 +199,22 @@ class KefineApp {
       );
     }
 
+    // Search input
+    if (this.elements.searchInput) {
+      this.elements.searchInput.addEventListener("input", (e: Event) => {
+        const target = e.target as HTMLInputElement;
+        this.handleSearch(target.value);
+      });
+      this.elements.searchInput.addEventListener(
+        "keydown",
+        (e: KeyboardEvent) => {
+          if (e.key === "Escape") {
+            (e.target as HTMLElement).blur();
+          }
+        },
+      );
+    }
+
     // Sidebar search
     if (this.elements.sidebarSearch) {
       this.elements.sidebarSearch.addEventListener("input", (e: Event) => {
@@ -232,20 +223,12 @@ class KefineApp {
       });
     }
 
-    // Login button
-    if (this.elements.loginButton) {
-      this.elements.loginButton.addEventListener("click", () => {
-        console.log("Login clicked");
-        // Handle login action
-      });
-    }
-
     // Keyboard shortcuts
     document.addEventListener("keydown", this.handleKeydown.bind(this));
 
     // Settings toggles - these are static elements that need manual event handling
     const settingsToggles = document.querySelectorAll(
-      'kf-setting-item input[type="checkbox"]',
+      'kt-setting-item input[type="checkbox"]',
     );
     settingsToggles.forEach((toggle) => {
       toggle.addEventListener("change", (e: Event) => {
@@ -289,9 +272,9 @@ class KefineApp {
 
   // ===== Overlay Functions =====
   private createOverlay(): void {
-    let overlay = document.querySelector("kf-overlay");
+    let overlay = document.querySelector("kt-overlay");
     if (!overlay) {
-      overlay = document.createElement("kf-overlay");
+      overlay = document.createElement("kt-overlay");
       document.body.appendChild(overlay);
     }
     // Force reflow for transition
@@ -302,7 +285,7 @@ class KefineApp {
   }
 
   private removeOverlay(): void {
-    const overlay = document.querySelector("kf-overlay");
+    const overlay = document.querySelector("kt-overlay");
     if (overlay) {
       overlay.removeAttribute("visible");
       setTimeout(() => {
@@ -313,94 +296,19 @@ class KefineApp {
     }
   }
 
-  // ===== Post Functions =====
-  private initPosts(): void {
-    const posts = document.querySelectorAll("kf-post");
-    posts.forEach((post) => {
-      post.addEventListener("click", (e: Event) => {
-        const target = e.target as HTMLElement;
-        // Don't expand if clicking on action buttons
-        if (target.closest("kf-post-action") || target.closest("wa-button")) {
-          return;
-        }
-        const postId = post.getAttribute("data-post-id");
-        if (postId && !post.hasAttribute("expanded")) {
-          this.expandPost(postId);
-        }
-      });
-    });
-  }
-
-  public expandPost(postId: string): void {
-    const post = document.querySelector(`kf-post[data-post-id="${postId}"]`);
-    if (!post) return;
-
-    // Close any previously expanded post
-    if (this.state.expandedPostId) {
-      this.collapsePost();
+  // ===== Search Functions =====
+  private focusSearch(): void {
+    if (this.elements.searchInput) {
+      this.elements.searchInput.focus();
     }
-
-    this.state.expandedPostId = postId;
-    post.setAttribute("expanded", "");
-    document.body.style.overflow = "hidden";
-
-    // Add close button if not exists
-    if (!post.querySelector(".kf-post-close")) {
-      const closeBtn = document.createElement("wa-button");
-      closeBtn.className = "kf-post-close";
-      closeBtn.setAttribute("appearance", "plain");
-      closeBtn.setAttribute("variant", "neutral");
-      closeBtn.setAttribute("size", "small");
-      closeBtn.setAttribute("aria-label", "Close post");
-      closeBtn.innerHTML = '<wa-icon name="xmark"></wa-icon>';
-      closeBtn.style.cssText =
-        "position: absolute; top: 1rem; right: 1rem; z-index: 10;";
-      closeBtn.addEventListener("click", (e: Event) => {
-        e.stopPropagation();
-        this.collapsePost();
-      });
-      (post as HTMLElement).style.position = "relative";
-      post.appendChild(closeBtn);
-    }
-
-    // Handle Escape key
-    const escHandler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        this.collapsePost();
-        document.removeEventListener("keydown", escHandler);
-      }
-    };
-    document.addEventListener("keydown", escHandler);
-  }
-
-  public collapsePost(): void {
-    if (!this.state.expandedPostId) return;
-
-    const post = document.querySelector(
-      `kf-post[data-post-id="${this.state.expandedPostId}"]`,
-    );
-    if (post) {
-      post.removeAttribute("expanded");
-      const closeBtn = post.querySelector(".kf-post-close");
-      if (closeBtn) {
-        closeBtn.remove();
-      }
-    }
-
-    document.body.style.overflow = "";
-    this.state.expandedPostId = null;
   }
 
   private handleSearch(query: string): void {
     console.log("Search query:", query);
     // In a real application, this would make an API call
-  }
-
-  private focusSearch(): void {
-    const combobox = this.elements.searchCombobox as any;
-    if (combobox && combobox.focus) {
-      combobox.focus();
-    }
+    // fetch(`/api/search?q=${encodeURIComponent(query)}`)
+    //   .then(response => response.json())
+    //   .then(data => displayResults(data));
   }
 
   // ===== Sound Functions =====
@@ -412,29 +320,42 @@ class KefineApp {
         String(this.state.isSoundEnabled),
       );
       // Update icon or visual state
-      const icon = this.elements.soundToggle.querySelector("wa-icon");
+      const icon = this.elements.soundToggle.querySelector("svg");
       if (icon) {
-        icon.setAttribute(
-          "name",
-          this.state.isSoundEnabled ? "volume-high" : "volume-xmark",
-        );
+        icon.style.opacity = this.state.isSoundEnabled ? "1" : "0.5";
       }
     }
     // Save preference
     this.saveSettings("sound-enabled", this.state.isSoundEnabled);
   }
 
+  private playSound(type: string): void {
+    if (!this.state.isSoundEnabled) return;
+    // Sound implementation would go here
+    // Could use Web Audio API or Audio elements
+  }
+
   // ===== Filter Functions =====
   private handleFilterChange(): void {
     const selectedFilters: string[] = [];
-    document.querySelectorAll("kf-filter-option[selected]").forEach((option) => {
-      const label = option.querySelector("span");
-      if (label) {
-        selectedFilters.push(label.textContent || "");
-      }
-    });
+    document
+      .querySelectorAll("kt-filter-option[selected]")
+      .forEach((option) => {
+        const label = option.querySelector("span");
+        if (label) {
+          selectedFilters.push(label.textContent || "");
+        }
+      });
     console.log("Selected filters:", selectedFilters);
     // Apply filters to content
+  }
+
+  // ===== Counter Animation =====
+  public updateCounter(current: number, total: number): void {
+    const currentEl = document.querySelector("kt-counter-current");
+    const totalEl = document.querySelector("kt-counter-total");
+    if (currentEl) currentEl.textContent = current.toString();
+    if (totalEl) totalEl.textContent = total.toString();
   }
 
   // ===== Keyboard Shortcuts =====
@@ -446,17 +367,12 @@ class KefineApp {
 
     // Global shortcuts (work even when typing)
     if (event.key === "Escape") {
-      if (this.state.expandedPostId) {
-        this.collapsePost();
-        event.preventDefault();
-        return;
-      }
       if (this.state.isSidebarOpen) {
         this.closeSidebar();
         event.preventDefault();
       }
       if (document.activeElement !== document.body) {
-        (document.activeElement as HTMLElement)?.blur();
+        document.activeElement?.blur();
       }
       return;
     }
@@ -483,24 +399,44 @@ class KefineApp {
           this.toggleSidebar();
         }
         break;
+
+      case "ArrowLeft":
+        if (event.shiftKey) {
+          // Previous item
+        }
+        break;
+
+      case "ArrowRight":
+        if (event.shiftKey) {
+          // Next item
+        }
+        break;
+
+      case "ArrowUp":
+        // Previous step
+        break;
+
+      case "ArrowDown":
+        // Next step / start
+        break;
     }
   }
 
   private exposeAPI(): void {
-    (window as any).Kefine = this.api;
+    (window as any).KemalTemplate = this.api;
   }
 }
 
 // ===== Initialization =====
 function initializeApp(): void {
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", () => new KefineApp());
+    document.addEventListener("DOMContentLoaded", () => new KemalTemplateApp());
   } else {
-    new KefineApp();
+    new KemalTemplateApp();
   }
 }
 
 // Initialize the application
 initializeApp();
 
-export default KefineApp;
+export default KemalTemplateApp;

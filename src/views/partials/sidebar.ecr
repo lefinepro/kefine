@@ -1,100 +1,100 @@
-<kf-sidebar-header>
-  <kf-logo>
-    <kf-logo-icon>
+<kt-sidebar-header>
+  <kt-logo>
+    <kt-logo-icon>
       <wa-icon name="layer-group" family="duotone"></wa-icon>
-    </kf-logo-icon>
-    <span>Kefine</span>
-  </kf-logo>
-  <wa-button id="sidebar-close" appearance="plain" variant="neutral" size="small" aria-label="Close sidebar">
+    </kt-logo-icon>
+    <span>Kemal Template</span>
+  </kt-logo>
+  <wa-button id="sidebar-close" appearance="plain" variant="neutral" size="small">
     <wa-icon name="xmark"></wa-icon>
   </wa-button>
-</kf-sidebar-header>
+</kt-sidebar-header>
 
 <!-- Search Section -->
-<kf-sidebar-section>
+<kt-sidebar-section>
   <wa-input id="sidebar-search" placeholder="Search..." autocomplete="off">
     <wa-icon slot="start" name="magnifying-glass"></wa-icon>
   </wa-input>
-</kf-sidebar-section>
+</kt-sidebar-section>
 
 <!-- Filters Section -->
-<kf-sidebar-section title="Filters">
-  <kf-filters>
-    <kf-filter-group title="Category">
-      <kf-filter-option selected>
+<kt-sidebar-section title="Filters">
+  <kt-filters>
+    <kt-filter-group title="Category">
+      <kt-filter-option selected>
         <wa-checkbox checked>All</wa-checkbox>
-      </kf-filter-option>
-      <kf-filter-option>
+      </kt-filter-option>
+      <kt-filter-option>
         <wa-checkbox>Components</wa-checkbox>
-      </kf-filter-option>
-      <kf-filter-option>
+      </kt-filter-option>
+      <kt-filter-option>
         <wa-checkbox>Layouts</wa-checkbox>
-      </kf-filter-option>
-      <kf-filter-option>
+      </kt-filter-option>
+      <kt-filter-option>
         <wa-checkbox>Patterns</wa-checkbox>
-      </kf-filter-option>
-    </kf-filter-group>
+      </kt-filter-option>
+    </kt-filter-group>
 
-    <kf-filter-group title="Status">
-      <kf-filter-option>
+    <kt-filter-group title="Status">
+      <kt-filter-option>
         <wa-checkbox>Active</wa-checkbox>
-      </kf-filter-option>
-      <kf-filter-option>
+      </kt-filter-option>
+      <kt-filter-option>
         <wa-checkbox>Completed</wa-checkbox>
-      </kf-filter-option>
-      <kf-filter-option>
+      </kt-filter-option>
+      <kt-filter-option>
         <wa-checkbox>Pending</wa-checkbox>
-      </kf-filter-option>
-    </kf-filter-group>
-  </kf-filters>
-</kf-sidebar-section>
+      </kt-filter-option>
+    </kt-filter-group>
+  </kt-filters>
+</kt-sidebar-section>
 
 <!-- Navigation Section -->
-<kf-sidebar-section title="Navigation">
-  <kf-nav-item active>
+<kt-sidebar-section title="Navigation">
+  <kt-nav-item active>
     <wa-icon name="house"></wa-icon>
     <span>Home</span>
-  </kf-nav-item>
-  <kf-nav-item>
+  </kt-nav-item>
+  <kt-nav-item>
     <wa-icon name="grid-2"></wa-icon>
     <span>Components</span>
-  </kf-nav-item>
-  <kf-nav-item>
+  </kt-nav-item>
+  <kt-nav-item>
     <wa-icon name="file-lines"></wa-icon>
     <span>Documentation</span>
-  </kf-nav-item>
-  <kf-nav-item>
+  </kt-nav-item>
+  <kt-nav-item>
     <wa-icon name="sliders"></wa-icon>
     <span>Examples</span>
-  </kf-nav-item>
-</kf-sidebar-section>
+  </kt-nav-item>
+</kt-sidebar-section>
 
 <!-- Settings Section -->
-<kf-sidebar-section title="Settings">
-  <kf-settings>
-    <kf-setting-item>
-      <kf-setting-label slot="label">
+<kt-sidebar-section title="Settings">
+  <kt-settings>
+    <kt-setting-item>
+      <kt-setting-label slot="label">
         <span>Dark Mode</span>
         <small>Toggle dark theme</small>
-      </kf-setting-label>
+      </kt-setting-label>
       <wa-switch slot="control" id="dark-mode-toggle" checked></wa-switch>
-    </kf-setting-item>
-    <kf-setting-item>
-      <kf-setting-label slot="label">
+    </kt-setting-item>
+    <kt-setting-item>
+      <kt-setting-label slot="label">
         <span>Animations</span>
         <small>Enable UI animations</small>
-      </kf-setting-label>
+      </kt-setting-label>
       <wa-switch slot="control" id="animations-toggle" checked></wa-switch>
-    </kf-setting-item>
-    <kf-setting-item>
-      <kf-setting-label slot="label">
+    </kt-setting-item>
+    <kt-setting-item>
+      <kt-setting-label slot="label">
         <span>Sound Effects</span>
         <small>Play interaction sounds</small>
-      </kf-setting-label>
+      </kt-setting-label>
       <wa-switch slot="control" id="sound-effects-toggle"></wa-switch>
-    </kf-setting-item>
-  </kf-settings>
-</kf-sidebar-section>
+    </kt-setting-item>
+  </kt-settings>
+</kt-sidebar-section>
 
 <!-- Footer -->
 <div class="mt-auto p-md border-t text-center text-muted text-xs">
