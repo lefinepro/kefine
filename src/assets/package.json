@@ -1,0 +1,28 @@
+{
+  "name": "kefine",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "lint:fix": "oxlint --fix src",
+    "format": "oxfmt --write src",
+    "build": " vite build",
+    "typecheck": "tsgo --noEmit"
+  },
+  "devDependencies": {
+    "vite": "npm:rolldown-vite@latest",
+    "@typescript/native-preview": "^7.0.0-dev.20251227.1",
+    "@types/bun": "latest",
+    "oxfmt": "^0.20.0",
+    "oxlint": "^1.35.0"
+  },
+  "dependencies": {
+    "@fontsource/inter": "^5.0.18",
+    "@fontsource/commit-mono": "^5.0.13"
+  },
+  "overrides": {
+    "vite": "npm:rolldown-vite@latest"
+  },
+  "packageManager": "bun@1.1.21"
+}

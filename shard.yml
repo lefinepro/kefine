@@ -1,6 +1,11 @@
 name: kemal-template
 version: 0.1.0
 
+description: |
+  A template for creating web applications with Kemal framework.
+  This template provides a solid foundation with integrated frontend build tools,
+  view rendering, and common web application patterns.
+
 authors:
   - kogeletey
 
@@ -10,9 +15,23 @@ license: MIT
 
 targets:
   kemal-template:
-    main: src/kemal-template.cr
+    main: src/server.cr
+
+scripts:
+  dev: |
+    # Start bun dev server in background
+    (cd src/assets && bun run dev) &
+    # Start crystal server
+    crystal run src/server.cr -- --development
+  assets: |
+    cd src/assets && bun install && bun run dev
 
 dependencies:
   kemal:
     github: kemalcr/kemal
     version: ~> 1.5.0
+
+development_dependencies:
+  ameba:
+    github: crystal-ameba/ameba
+    version: ~> 1.0
