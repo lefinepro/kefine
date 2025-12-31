@@ -1,30 +1,34 @@
-<kt-topbar>
-  <kt-topbar-left>
-    <kt-logo id="logo-toggle" title="Click to open menu">
-      <kt-logo-icon>
+<kf-topbar>
+  <kf-topbar-left>
+    <kf-logo id="logo-toggle" title="Click to open menu">
+      <kf-logo-icon>
         <wa-icon name="layer-group" family="duotone"></wa-icon>
-      </kt-logo-icon>
-      <span>Kemal</span>
-    </kt-logo>
-  </kt-topbar-left>
+      </kf-logo-icon>
+      <span>Kefine</span>
+    </kf-logo>
+  </kf-topbar-left>
 
-  <kt-topbar-center>
-    <wa-input id="search-input" placeholder="Search..." autocomplete="off" size="small">
-      <wa-icon slot="start" name="magnifying-glass"></wa-icon>
-      <span slot="end" class="text-muted text-xs font-mono">/</span>
-    </wa-input>
-  </kt-topbar-center>
+  <kf-topbar-center>
+    <kf-combobox id="search-combobox" role="combobox" aria-label="Search" aria-expanded="false" aria-haspopup="listbox">
+      <wa-input id="search-input" placeholder="Search..." autocomplete="off" size="small" role="searchbox" aria-autocomplete="list">
+        <wa-icon slot="start" name="magnifying-glass"></wa-icon>
+        <span slot="end" class="text-muted text-xs font-mono">/</span>
+      </wa-input>
+      <kf-combobox-listbox id="search-listbox" role="listbox" hidden aria-label="Search results">
+        <!-- Dynamic search results will be populated here -->
+      </kf-combobox-listbox>
+    </kf-combobox>
+  </kf-topbar-center>
 
-  <kt-topbar-right>
-    <kt-counter>
-      <kt-counter-current>0</kt-counter-current>
-      <kt-counter-divider>/</kt-counter-divider>
-      <kt-counter-total>149</kt-counter-total>
-    </kt-counter>
+  <kf-topbar-right>
     <wa-tooltip content="Toggle sound (M)">
-      <wa-button id="sound-toggle" appearance="plain" variant="neutral" size="small">
+      <wa-button id="sound-toggle" appearance="plain" variant="neutral" size="small" aria-label="Toggle sound">
         <wa-icon name="volume-high"></wa-icon>
       </wa-button>
     </wa-tooltip>
-  </kt-topbar-right>
-</kt-topbar>
+    <wa-button id="login-button" variant="brand" size="small">
+      <wa-icon slot="prefix" name="user"></wa-icon>
+      Login
+    </wa-button>
+  </kf-topbar-right>
+</kf-topbar>

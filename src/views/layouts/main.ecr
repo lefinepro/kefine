@@ -3,29 +3,36 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><%= title %> - Kemal Template</title>
+  <title><%= title %> - Kefine</title>
+
+  <!-- Web Awesome Components Library -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@aspect.dev/webawesome@next/cdn/themes/default.css">
+  <script type="module" src="https://cdn.jsdelivr.net/npm/@aspect.dev/webawesome@next/cdn/webawesome.bundled.js"></script>
+
+  <!-- Lit for custom components -->
+  <script type="module" src="https://cdn.jsdelivr.net/npm/lit@3/+esm"></script>
 
   <!-- Built CSS from Vite (includes Fontsource fonts and TAC CSS Architecture) -->
   <link rel="stylesheet" href="/dist/assets/style.css">
 </head>
 <body>
-  <kt-app>
+  <kf-app>
     <!-- Sidebar (opened by clicking logotype) -->
-    <kt-sidebar id="sidebar" hidden>
+    <kf-sidebar id="sidebar" hidden>
       <%= KemalTemplate.render_partial("sidebar") %>
-    </kt-sidebar>
+    </kf-sidebar>
 
     <!-- Main content area -->
-    <kt-main>
+    <kf-main>
       <!-- Top bar with search -->
       <%= KemalTemplate.render_partial("topbar") %>
 
       <!-- Page content -->
-      <kt-content>
+      <kf-content>
         <%= content %>
-      </kt-content>
-    </kt-main>
-  </kt-app>
+      </kf-content>
+    </kf-main>
+  </kf-app>
 
   <!-- Built JS from Vite -->
   <script type="module" src="/dist/assets/main.js"></script>

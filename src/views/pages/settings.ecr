@@ -1,159 +1,159 @@
-<kt-section>
-  <kt-section-header>
-    <kt-section-title>Settings</kt-section-title>
-  </kt-section-header>
+<kf-section>
+  <kf-section-header>
+    <kf-section-title>Settings</kf-section-title>
+  </kf-section-header>
 
-  <kt-grid cols="2">
+  <kf-grid cols="2">
     <!-- Appearance Settings -->
-    <kt-card>
-      <kt-card-header>
-        <kt-card-title>Appearance</kt-card-title>
-      </kt-card-header>
-      <kt-card-body>
-        <kt-settings>
-          <kt-setting-item>
-            <kt-setting-label>
+    <kf-card>
+      <kf-card-header>
+        <kf-card-title>Appearance</kf-card-title>
+      </kf-card-header>
+      <kf-card-body>
+        <kf-settings>
+          <kf-setting-item>
+            <kf-setting-label>
               <span>Theme</span>
               <small>Choose your preferred color scheme</small>
-            </kt-setting-label>
+            </kf-setting-label>
             <select id="theme-select">
               <option value="dark" selected>Dark</option>
               <option value="light">Light</option>
               <option value="system">System</option>
             </select>
-          </kt-setting-item>
+          </kf-setting-item>
 
-          <kt-setting-item>
-            <kt-setting-label>
+          <kf-setting-item>
+            <kf-setting-label>
               <span>Font Size</span>
               <small>Adjust the base font size</small>
-            </kt-setting-label>
+            </kf-setting-label>
             <select id="font-size-select">
               <option value="small">Small</option>
               <option value="medium" selected>Medium</option>
               <option value="large">Large</option>
             </select>
-          </kt-setting-item>
+          </kf-setting-item>
 
-          <kt-setting-item>
-            <kt-setting-label>
+          <kf-setting-item>
+            <kf-setting-label>
               <span>Animations</span>
               <small>Enable or disable UI animations</small>
-            </kt-setting-label>
+            </kf-setting-label>
             <input type="checkbox" id="animations-setting" checked>
-          </kt-setting-item>
+          </kf-setting-item>
 
-          <kt-setting-item>
-            <kt-setting-label>
+          <kf-setting-item>
+            <kf-setting-label>
               <span>Compact Mode</span>
               <small>Reduce spacing throughout the interface</small>
-            </kt-setting-label>
+            </kf-setting-label>
             <input type="checkbox" id="compact-mode-setting">
-          </kt-setting-item>
-        </kt-settings>
-      </kt-card-body>
-    </kt-card>
+          </kf-setting-item>
+        </kf-settings>
+      </kf-card-body>
+    </kf-card>
 
     <!-- Audio Settings -->
-    <kt-card>
-      <kt-card-header>
-        <kt-card-title>Audio</kt-card-title>
-      </kt-card-header>
-      <kt-card-body>
-        <kt-settings>
-          <kt-setting-item>
-            <kt-setting-label>
+    <kf-card>
+      <kf-card-header>
+        <kf-card-title>Audio</kf-card-title>
+      </kf-card-header>
+      <kf-card-body>
+        <kf-settings>
+          <kf-setting-item>
+            <kf-setting-label>
               <span>Sound Effects</span>
               <small>Play sounds for interactions</small>
-            </kt-setting-label>
+            </kf-setting-label>
             <input type="checkbox" id="sound-effects-setting">
-          </kt-setting-item>
+          </kf-setting-item>
 
-          <kt-setting-item>
-            <kt-setting-label>
+          <kf-setting-item>
+            <kf-setting-label>
               <span>Notification Sounds</span>
               <small>Audio alerts for notifications</small>
-            </kt-setting-label>
+            </kf-setting-label>
             <input type="checkbox" id="notification-sounds-setting" checked>
-          </kt-setting-item>
+          </kf-setting-item>
 
-          <kt-setting-item>
-            <kt-setting-label>
+          <kf-setting-item>
+            <kf-setting-label>
               <span>Volume</span>
               <small>Adjust the master volume level</small>
-            </kt-setting-label>
+            </kf-setting-label>
             <input type="range" id="volume-setting" min="0" max="100" value="75">
-          </kt-setting-item>
-        </kt-settings>
-      </kt-card-body>
-    </kt-card>
+          </kf-setting-item>
+        </kf-settings>
+      </kf-card-body>
+    </kf-card>
 
     <!-- Keyboard Settings -->
-    <kt-card>
-      <kt-card-header>
-        <kt-card-title>Keyboard</kt-card-title>
-      </kt-card-header>
-      <kt-card-body>
-        <kt-settings>
-          <kt-setting-item>
-            <kt-setting-label>
+    <kf-card>
+      <kf-card-header>
+        <kf-card-title>Keyboard</kf-card-title>
+      </kf-card-header>
+      <kf-card-body>
+        <kf-settings>
+          <kf-setting-item>
+            <kf-setting-label>
               <span>Keyboard Shortcuts</span>
               <small>Enable keyboard navigation</small>
-            </kt-setting-label>
+            </kf-setting-label>
             <input type="checkbox" id="shortcuts-setting" checked>
-          </kt-setting-item>
+          </kf-setting-item>
 
-          <kt-setting-item>
-            <kt-setting-label>
+          <kf-setting-item>
+            <kf-setting-label>
               <span>Vim Mode</span>
               <small>Use vim-style key bindings</small>
-            </kt-setting-label>
+            </kf-setting-label>
             <input type="checkbox" id="vim-mode-setting">
-          </kt-setting-item>
-        </kt-settings>
-      </kt-card-body>
-    </kt-card>
+          </kf-setting-item>
+        </kf-settings>
+      </kf-card-body>
+    </kf-card>
 
     <!-- Privacy Settings -->
-    <kt-card>
-      <kt-card-header>
-        <kt-card-title>Privacy</kt-card-title>
-      </kt-card-header>
-      <kt-card-body>
-        <kt-settings>
-          <kt-setting-item>
-            <kt-setting-label>
+    <kf-card>
+      <kf-card-header>
+        <kf-card-title>Privacy</kf-card-title>
+      </kf-card-header>
+      <kf-card-body>
+        <kf-settings>
+          <kf-setting-item>
+            <kf-setting-label>
               <span>Analytics</span>
               <small>Help improve the application</small>
-            </kt-setting-label>
+            </kf-setting-label>
             <input type="checkbox" id="analytics-setting" checked>
-          </kt-setting-item>
+          </kf-setting-item>
 
-          <kt-setting-item>
-            <kt-setting-label>
+          <kf-setting-item>
+            <kf-setting-label>
               <span>Save Preferences</span>
               <small>Remember your settings locally</small>
-            </kt-setting-label>
+            </kf-setting-label>
             <input type="checkbox" id="save-prefs-setting" checked>
-          </kt-setting-item>
-        </kt-settings>
-      </kt-card-body>
-    </kt-card>
-  </kt-grid>
-</kt-section>
+          </kf-setting-item>
+        </kf-settings>
+      </kf-card-body>
+    </kf-card>
+  </kf-grid>
+</kf-section>
 
-<kt-section>
-  <kt-section-header>
-    <kt-section-title>Actions</kt-section-title>
-  </kt-section-header>
+<kf-section>
+  <kf-section-header>
+    <kf-section-title>Actions</kf-section-title>
+  </kf-section-header>
 
-  <kt-card>
-    <kt-card-body>
+  <kf-card>
+    <kf-card-body>
       <div class="d-flex gap-md flex-wrap">
         <button class="bg-surface">Export Settings</button>
         <button class="bg-surface">Import Settings</button>
         <button class="text-error">Reset to Defaults</button>
       </div>
-    </kt-card-body>
-  </kt-card>
-</kt-section>
+    </kf-card-body>
+  </kf-card>
+</kf-section>
