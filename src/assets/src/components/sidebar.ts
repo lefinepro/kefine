@@ -1,8 +1,8 @@
-import { LitElement, html, css } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
+import { LitElement, html, css } from "lit";
+import { customElement, property } from "lit/decorators.js";
 
-@customElement('kt-sidebar')
-export class KTSidebar extends LitElement {
+@customElement("kf-sidebar")
+export class KFSidebar extends LitElement {
   @property({ type: Boolean, reflect: true }) isOpen = false;
 
   static styles = css`
@@ -14,7 +14,9 @@ export class KTSidebar extends LitElement {
       border-right: 1px solid var(--border-color, #dee2e6);
       position: relative;
       overflow: hidden;
-      transition: transform 0.3s ease, width 0.3s ease;
+      transition:
+        transform 0.3s ease,
+        width 0.3s ease;
     }
 
     :host([open="false"]) {
@@ -84,25 +86,34 @@ export class KTSidebar extends LitElement {
             <wa-icon name="x-lg"></wa-icon>
           </button>
         </div>
-        
+
         <div class="search-container">
-          <wa-input 
-            id="sidebar-search" 
-            placeholder="Search..." 
+          <wa-input
+            id="sidebar-search"
+            placeholder="Search..."
             @input="${this.handleSearchInput}"
           ></wa-input>
         </div>
-        
+
         <div class="nav-container">
-          <div class="nav-item" @click="${() => this.handleNavClick('dashboard')}">
+          <div
+            class="nav-item"
+            @click="${() => this.handleNavClick("dashboard")}"
+          >
             <wa-icon name="house-door"></wa-icon>
             <span>Dashboard</span>
           </div>
-          <div class="nav-item" @click="${() => this.handleNavClick('settings')}">
+          <div
+            class="nav-item"
+            @click="${() => this.handleNavClick("settings")}"
+          >
             <wa-icon name="gear"></wa-icon>
             <span>Settings</span>
           </div>
-          <div class="nav-item" @click="${() => this.handleNavClick('profile')}">
+          <div
+            class="nav-item"
+            @click="${() => this.handleNavClick("profile")}"
+          >
             <wa-icon name="person"></wa-icon>
             <span>Profile</span>
           </div>
@@ -112,38 +123,42 @@ export class KTSidebar extends LitElement {
   }
 
   private handleCloseClick() {
-    this.dispatchEvent(new CustomEvent('close', { bubbles: true, composed: true }));
+    this.dispatchEvent(
+      new CustomEvent("close", { bubbles: true, composed: true }),
+    );
   }
 
   private handleSearchInput(e: Event) {
     const target = e.target as HTMLInputElement;
-    this.dispatchEvent(new CustomEvent('search', {
-      detail: { query: target.value },
-      bubbles: true,
-      composed: true
-    }));
+    this.dispatchEvent(
+      new CustomEvent("search", {
+        detail: { query: target.value },
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 
   private handleNavClick(item: string) {
     // Remove active from all items
-    this.querySelectorAll('.nav-item').forEach(item => {
-      item.removeAttribute('active');
+    this.querySelectorAll(".nav-item").forEach((navItem) => {
+      navItem.removeAttribute("active");
     });
 
     // Set active on clicked item
-    const clickedItem = event.target as HTMLElement;
-    const navItem = clickedItem.closest('.nav-item');
+    const clickedItem = event?.target as HTMLElement;
+    const navItem = clickedItem?.closest(".nav-item");
     if (navItem) {
-      navItem.setAttribute('active', '');
+      navItem.setAttribute("active", "");
     }
 
-    console.log('Navigate to:', item);
+    console.log("Navigate to:", item);
   }
 }
 
 // Define the custom element if not already defined
-if (!customElements.get('kt-sidebar')) {
-  customElements.define('kt-sidebar', KTSidebar);
+if (!customElements.get("kf-sidebar")) {
+  customElements.define("kf-sidebar", KFSidebar);
 }
 
-export default KTSidebar;
+export default KFSidebar;

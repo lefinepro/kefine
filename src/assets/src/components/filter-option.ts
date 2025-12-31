@@ -1,8 +1,8 @@
-import { LitElement, html, css } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
+import { LitElement, html, css } from "lit";
+import { customElement, property } from "lit/decorators.js";
 
-@customElement('kt-filter-option')
-export class KTFilterOption extends LitElement {
+@customElement("kf-filter-option")
+export class KFFilterOption extends LitElement {
   @property({ type: Boolean, reflect: true }) selected = false;
 
   static styles = css`
@@ -34,8 +34,8 @@ export class KTFilterOption extends LitElement {
 
   render() {
     return html`
-      <div 
-        class="filter-option" 
+      <div
+        class="filter-option"
         ?selected="${this.selected}"
         @click="${this.toggleSelection}"
       >
@@ -51,17 +51,19 @@ export class KTFilterOption extends LitElement {
 
   private toggleSelection() {
     this.selected = !this.selected;
-    this.dispatchEvent(new CustomEvent('toggle', {
-      detail: { selected: this.selected },
-      bubbles: true,
-      composed: true
-    }));
+    this.dispatchEvent(
+      new CustomEvent("toggle", {
+        detail: { selected: this.selected },
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 }
 
 // Define the custom element if not already defined
-if (!customElements.get('kt-filter-option')) {
-  customElements.define('kt-filter-option', KTFilterOption);
+if (!customElements.get("kf-filter-option")) {
+  customElements.define("kf-filter-option", KFFilterOption);
 }
 
-export default KTFilterOption;
+export default KFFilterOption;

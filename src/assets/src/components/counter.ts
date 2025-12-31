@@ -1,8 +1,8 @@
-import { LitElement, html, css } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
+import { LitElement, html, css } from "lit";
+import { customElement, property } from "lit/decorators.js";
 
-@customElement('kt-counter')
-export class KTCounter extends LitElement {
+@customElement("kf-counter")
+export class KFCounter extends LitElement {
   @property({ type: Number }) current = 0;
   @property({ type: Number }) total = 0;
 
@@ -42,8 +42,8 @@ export class KTCounter extends LitElement {
 }
 
 // Define the custom element if not already defined
-if (!customElements.get('kt-counter')) {
-  customElements.define('kt-counter', KTCounter);
+if (!customElements.get("kf-counter")) {
+  customElements.define("kf-counter", KFCounter);
 }
 
-export default KTCounter;
+export default KFCounter;
