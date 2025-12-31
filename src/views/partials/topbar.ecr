@@ -2,31 +2,17 @@
   <kt-topbar-left>
     <kt-logo id="logo-toggle" title="Click to open menu">
       <kt-logo-icon>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
-          <polyline points="2 17 12 22 22 17"></polyline>
-          <polyline points="2 12 12 17 22 12"></polyline>
-        </svg>
+        <wa-icon name="layer-group" family="duotone"></wa-icon>
       </kt-logo-icon>
       <span>Kemal</span>
     </kt-logo>
   </kt-topbar-left>
 
   <kt-topbar-center>
-    <kt-search>
-      <kt-search-icon>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="11" cy="11" r="8"></circle>
-          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-        </svg>
-      </kt-search-icon>
-      <kt-search-input>
-        <input type="search" id="search-input" placeholder="Search..." autocomplete="off">
-      </kt-search-input>
-      <kt-search-shortcut>
-        <kbd>/</kbd>
-      </kt-search-shortcut>
-    </kt-search>
+    <wa-input id="search-input" placeholder="Search..." autocomplete="off" size="small">
+      <wa-icon slot="start" name="magnifying-glass"></wa-icon>
+      <span slot="end" class="text-muted text-xs font-mono">/</span>
+    </wa-input>
   </kt-topbar-center>
 
   <kt-topbar-right>
@@ -35,12 +21,10 @@
       <kt-counter-divider>/</kt-counter-divider>
       <kt-counter-total>149</kt-counter-total>
     </kt-counter>
-    <button id="sound-toggle" title="Toggle sound" class="p-xs">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-        <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
-        <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-      </svg>
-    </button>
+    <wa-tooltip content="Toggle sound (M)">
+      <wa-button id="sound-toggle" appearance="plain" variant="neutral" size="small">
+        <wa-icon name="volume-high"></wa-icon>
+      </wa-button>
+    </wa-tooltip>
   </kt-topbar-right>
 </kt-topbar>
