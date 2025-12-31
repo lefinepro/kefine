@@ -1,0 +1,304 @@
+#+TITLE: A CSS methodology for the Web Components era
+#+AUTHOR: HTML to Org Converter
+#+DATE: 2025-12-29
+
+ A CSS methodology for the Web Components era Follow TAC: A new CSS methodology Jordan Brennan · May 18, 2023 · 17 min read +5 Table of contents History & Philosophy of TAC Methodology Overview Step 1 - The Tag Step 2 - Implement the attributes Step 3 - Classes for generic styles only Scaling Projects With TAC Closing thoughts All our favorite CSS methodologies were created more than 10 years ago in the pre-Web Components era. It's time for a new approach. Something that: Leverages modern web technology Can scale components from CSS to JavaScript Has no proprietary concepts or syntax Works everywhere I've found all that in a new methodology I've been following for the past 5 years. I call it Tag, Attributes, then Classes or TAC . The name is simply a summation of three simple steps. Using only CSS, you: Style a custom HTML tag x-badge { ... } Define and style custom attributes x-badge[count] { ... } Customize with utility classes, like .mar-r-sm With that, you've just made a new Badge component with a meaningful API that requires no build steps, no dependencies, and no hacks ! Check it out: <x-badge count="1" class="mar-r-sm"></x-badge>Inbox And this tag-first approach enables your CSS components to seamlessly evolve into JavaScript-enabled Custom Elements without breaking changes or adding dependencies . That's never been possible before! There's a lot to unpack, so we'll look briefly at the history and principles behind the methodology, then get into some examples of how to scale this for an application and even enterprise-sized design systems. Permalink History & Philosophy of TAC TAC was first conceived at Egencia while rebuilding our design system to work better with diverse tech stacks. The methodology was then refined at another large SaaS company and used more recently at an AI startup. TAC is a methodology for creating reusable UI elements . The methodology is geared toward leveraging the web platform and is committed to being 100% standards-based. Nothing new. Nothing proprietary. Nothing complicated. It may sound unintuitive, but nothing is better. More specifically, TAC is for creating components and utility classes, not just one or the other. And the unique tag-first approach puts your custom components on par with native HTML elements because they are HTML elements! Being derived from web standards (HTML, CSS, and JavaScript) you're already familiar with it and won't need to install or run anything to get started. Now, let's take a look! Permalink Methodology Overview There are 3 general steps to follow: Define and/or style an HTML tag for every component Define and style its attributes and relationships Add utility classes Permalink Step 1 - The Tag TAC starts with HTML tags, not classes, for defining components. When HTML doesn't have a tag for your component, like a badge or accordion, you define your own: Copy Copy 
+
+#+BEGIN_SRC
+Use standard HTML tags when possible
+<button></button>
+<details></details>
+Use custom tags for new components
+<x-badge></x-badge>
+<x-accordion></x-accordion>
+#+END_SRC
+
+ A custom tag must be a valid Custom Elements name, which means it starts with at least one lowercase alpha character and contains a hyphen. You should simply pick a prefix that's meaningful to your project and always use that. For example, if Material Design was built following the TAC methodology, md- would be a good prefix and every component would include it in the name, e.g. <md-chip> . Tag names should not include variations of the component, that's what attributes are for. More on that later. Creating the component Defining a custom tag happens in two ways. The first is with CSS when creating its core styles:
+
+#+BEGIN_SRC
+x-badge {
+  display: inline-flex;
+  padding: 4px;
+  ...
+}
+#+END_SRC
+
+ Yup, it's that easy and it works everywhere! HTML and CSS are awesome! The second is with the Custom Elements API if (or when) the component needs some JavaScript: Copy Copy 
+
+#+BEGIN_SRC
+customElements.define('x-badge', class extends HTMLElement {
+  ...
+})
+#+END_SRC
+
+ Additional styles and JavaScript are also applied to its attributes (more on that soon). Components can range from extremely simple, like a Badge or Icon, all the way up to an interactive File Upload or shared site header with nested content, state, and events. If it has an identity beyond a generic style like color or font size, then it's a component. Why tags? Tags are the way HTML intended for components to be defined. It’s been technically possible for decades. The practical reason is using tags instead of classes provides three major improvements: 1. Tags produce the most clean and uniform markup possible: 
+
+#+BEGIN_SRC
+Tags = clean and uniform
+<button>
+<details>
+<x-badge>
+<x-accordion>
+Classes = chunky boilerplate, component names get obscured
+<button class="btn">
+<details class="collapse">
+<div class="badge">
+<div id="faq-list" class="foo-bar accordion baz">
+#+END_SRC
+
+ 2. Tags and attributes make for a better API. Compare these 3 grids: Copy Copy 
+
+#+BEGIN_SRC html
+Bootstrap grid following OOCSS
+<div class="row">
+  <div class="col-6 col-md-3"></div>
+  <div class="col-6 col-md-9"></div>
+</div>
+Material grid following BEM
+<div class="mdc-layout-grid">
+  <div class="mdc-layout-grid__inner">
+    <div class="mdc-layout-grid__cell mdc-layout-grid__cell--span-3 mdc-layout-grid__cell--span-6-phone"></div>
+    <div class="mdc-layout-grid__cell mdc-layout-grid__cell--span-9 mdc-layout-grid__cell--span-6-phone"></div>
+  </div>
+</div>
+The same grid following TAC
+<x-row>
+  <x-col span="3 sm-6"></x-col>
+  <x-col span="9 sm-6"></x-col>
+</x-row>
+#+END_SRC
+
+ 3. Prefixed tags enable scaling CSS components to JavaScript Custom Elements:
+
+#+BEGIN_SRC html
+CSS today...
+<x-alert type="success">I'm green!</x-alert>
+Seamlessly add JavaScript-enabled features tomorrow
+<x-alert type="success" autodismiss>Now I automatically disappear!</x-alert>
+#+END_SRC
+
+ Using a prefixed custom tag means a component can evolve from CSS-only to a Custom Element (and back again) without breaking changes or introducing a 3rd-party solution . And because these components are 100% standards-based, they work everywhere. That is a powerful approach to writing CSS! To recap Step 1: Define a custom tag and its base styles with CSS. When needed, define a Custom Element too. The tag-first approach produces superb markup, meaningful API, and a non-breaking standards-based solution to adding JavaScript-enabled features. Permalink Step 2 - Implement the attributes After defining the component's tag, define its attributes. Most components are more than a static one-dimensional design. They have variations, i.e. attributes, which include things like type, state, behaviors, and more. TAC follows HTML's lead and uses attributes and relationships - not classes - for implementing these variations. As the Riot.js framework explains: HTML syntax is the de facto language of the web... The syntax is explicit, nesting is inherent to the language, and attributes offer a clean way to provide options for custom tags. Like tags, use what HTML already has when possible and create custom attributes when not. Using the Grid example from above, we see the row and column tags have several custom attributes:
+
+#+BEGIN_SRC html
+The `center` attribute centers columns within a row
+<x-row center>
+and these two attributes set column size and order per breakpoint
+<x-col span="3 sm-6" order="sm-2">
+#+END_SRC
+
+ The Alert component has two attributes: 
+
+#+BEGIN_SRC html
+<x-alert type="success" autodismiss>
+#+END_SRC
+
+ Those components are using attributes for variations just like native elements do for theirs: 
+
+#+BEGIN_SRC html
+The Details `open` attribute shows its content
+<details open>
+Content is hidden when `open` is removed
+<details>
+Input has many different types
+<input type="email">
+All elements can have an id
+<div id="foo">
+and on it goes...
+#+END_SRC
+
+ Defining the attributes Like the component's tag, defining its attributes happens in two places: CSS and a Custom Element. First, CSS attribute selectors are used to implement CSS-only variations. For example, the Grid column's order attribute sets the Flexbox order and the Alert type attribute sets a color theme: Copy Copy 
+
+#+BEGIN_SRC css
+x-col[order~=1] {
+  order: 1;
+}
+x-alert[type=success] {
+  background-color: green;
+  color: white;
+}
+#+END_SRC
+
+ Badge's count sets the component's content and also controls some behavior with just CSS: Copy Copy 
+
+#+BEGIN_SRC css
+/* Badge is hidden by default... */
+x-badge {
+  display: none;
+}
+/* Badge is displayed when count is greater than zero */
+x-badge[count]:not([count=""]):not([count="0"]) {
+  display: inline-flex;
+}
+/* Set its text with the count value */
+x-badge[count]:before {
+  content: attr(count);
+}
+#+END_SRC
+
+ Don't underestimate attribute selectors . They're quite powerful and it's fun to see how much you can do with them. Second, for any attributes that require JavaScript, like Alert's autodismiss, you use the Custom Elements observedAttributes and attributeChangedCallback methods to implement those behaviors. Here's how autodimiss might be done: Copy Copy 
+
+#+BEGIN_SRC css
+customElements.define('x-alert', class extends HTMLElement {
+  ...
+  static get observedAttributes() { return ['autodismiss'] }
+  attributeChangedCallback(name, oldVal, newVal) {
+    if (name === 'autodismiss' && newVal) {
+      setTimeout(() => this.dismiss(), 4000);
+    }
+  }
+  dismiss() {
+    this.dispatchEvent(new CustomEvent('dismiss'));
+    this.remove();
+  }
+});
+#+END_SRC
+
+ Attribute types There are three types of attributes to choose from when designing your components. 1. Boolean attributes These are used to represent a binary state. The attribute is either present or not, there is no value. For example, HTML defines an open boolean attribute for the dialog element to control its open/closed state, and our alert component above implemented its autodismiss behavior as a boolean attribute. 2. Enumerated attributes These are attributes with a predefined list of values. For example, the input element has a type attribute with values "text", "email", "password", "date", "checkbox", and "radio". The alert component also implements its types as an enumerated attribute with "success", "error", "warn", and "info" values. 3. Open attributes These attributes take as a value whatever you want them to. For example, the input element has a placeholder attribute that takes any string and our Badge has a count attribute that will take any number (technically it will accept any characters, but it is meant to show numbers). You can get creative and do things like combine attribute types. For example, Alert may want to allow setting a custom delay before auto-dismissing. It could then define both autodismiss="<seconds>" and autodismiss , where if no value is provided (or it's not a number) it will default to a 4-second delay. Naming conventions The component tag defines only the component, not the variations. For example, Alert types are not implemented as multiple tags: 
+
+#+BEGIN_SRC css
+Don't ❌
+<x-alert-success>
+<x-alert-error>
+<x-alert-warn>
+Do ✅
+<x-alert type="success|error|warn">
+#+END_SRC
+
+ When defining attribute names, take inspiration from HTML. Alert's autodismiss attribute looks native because it purposefully matches HTML's autofocus , autocomplete , and autoplay names. The name dismiss-automatically or willdismiss would work, but goes against TAC's philosophy of leveraging HTML. Similarly, a custom component with an open and closed state would follow the native Details element and use an open boolean attribute, not isopen or open="true" or state="open" . Custom attributes for native elements In addition to creating custom attributes for your components, you also do it for HTML elements*. For example, you might define a theme attribute for the native details element that allows you to leverage it for many different use cases: Copy Copy 
+
+#+BEGIN_SRC css
+details[theme=blank] {
+  /* Removes all user-agent styles */
+} 
+details[theme=toggle] {
+  /* Custom styles including a rotating icon */
+}
+#+END_SRC
+
+ Yes, this seems risky and some may say it's a bad idea as there can be collisions with attributes of the same name getting added to the HTML spec. Use this approach with eyes wide open, but also recognize some facts. HTML moves incredibly slow and resolving a rare theoretical collision is manageable. More importantly, collisions are likely to be a non-issue because we can and do change native elements' styles all the time by selecting their attributes ( button[disabled] {...} ). If WHATWG added theme to details next year, what breaks? Nothing. The real risks come when overriding native element behavior with JavaScript, which is not part of the TAC methodology. ARIA attributes TAC dictates that in some instances you will avoid defining custom attributes because there is already an ARIA attribute that can and should take its place. Sortable table columns, for example, don't need custom tags or attributes. Everything you need already exists:
+
+#+BEGIN_SRC css
+<th aria-sort="ascending">
+  <button aria-pressed="true">Price</button>
+</th>
+#+END_SRC
+
+ You would then style for that: 
+
+#+BEGIN_SRC css
+th[aria-sort=ascending] button:after { content: '↑' }
+th[aria-sort=descending] button:after { content: '↓' }
+#+END_SRC
+
+ Do be aware that some uses of ARIA attributes are redundant and should be avoided. The disabled attribute is one example where all needs are met, including accessibility, with just that one attribute. Parent-child and sibling relationships In addition to variations, components often have relationships with other elements. The native <details> element, for example, expects one <summary> child. The Grid component from earlier defines a relationship between a <x-row> parent and <x-col> children. Sibling buttons or tabs might have a default spacing applied to them or a badge inside a button may have its background color darkened. Leverage the parent-child and sibling relationships of HTML. Slotting Slots are a feature of Web Components. They're like a placeholder. In the case of named slots (you can have unnamed slots), the child element that takes the place of the slot identifies itself as such with the slot attribute. If a Web Component defines a slot called "message", i.e. <slot name="message"> , then you could do <p slot="message">Hello, slots!</p> and that element takes the place of the slot. TAC recommends leveraging this feature even for CSS-only components as the slot attribute is not technically limited to Web Components. Local CSS Custom Properties More on CSS Custom Properties is explained in the section below, but this is another recommended design for customizing a component's styles. A component can scope a CSS Custom Property to itself and allow it to be set via the style attribute. Let's say a component has a few properties that are intended to be the same color and that color is open for customization. Adding utility classes is usually the solution, but you might not know all the properties you need to override to correctly change the design or there might not be a utility class for obscure cases or it might not be practical because the component it depends on a psuedo element or focus state. Or it just isn't possible. This is when a local custom property should be defined. Here's a couple examples: Copy Copy 
+#+BEGIN_SRC
+/* Custom color in too many places */
+x-colorseverywhere {
+  color: var(--color, --x-color-gray);
+  border-color: var(--color, --x-color-gray);
+}
+x-colorseverywhere:after {
+  background-color: var(--color, --x-color-gray);
+}
+/* Custom rotation value not possible with classes */
+x-earth {
+  transform: rotate(var(--rotation, 0deg));
+}
+#+END_SRC
+
+ Okay, let's recap step 2: Components have variations, like types and behaviors. These variations are defined as HTML attributes. Use CSS attribute selectors and Custom Elements attribute APIs to implement these variations. Permalink Step 3 - Classes for generic styles only So we've seen how tags and attributes are used to define a component and its variations, and CSS and JavaScript are used to bring it all to life. The TAC methodology then reduces classes to one specific role: generic styles. TAC is similar to utility class frameworks in that both define single-purpose non-semantic classes. In fact, a TAC-based design system will likely have 100 or more utility classes (Mdash has over 200 ). Utility classes only do things like bold text, change margins, or add a background color. They do not define components like .sidebar or variations like .open . Their purpose is to create generic style patterns and customize components. For example, you could: Copy Copy 
+#+BEGIN_SRC
+Increase padding on an instance of an alert component
+<x-alert class="pad-lg">...</x-alert>
+Or make a button's width 100%
+<button class="width-full">...</button>
+Or style basic markup
+<div class="flex align-items-center pad-lg">
+  <img class="shadow-1">
+  <p class="font-light">...</p>
+</div>
+#+END_SRC
+
+ It's important to clarify that components do have styles of their own. They are fully designed and usable on their own , but TAC components remain open for customization with utility classes, which makes specificity really important (and much easier). Better specificity with TAC The TAC methodology produces more natural specificity scores. As a refresher, the specificity ranking is: tags < .classes < tags[with_attributes] A class will override a tag, but a tag with an attribute will override the class. This very much works in TAC's favor. Let's say Alerts have, among other styles, a default padding of 12px and let's also say we have some generic utility classes for padding: Copy Copy 
+#+BEGIN_SRC
+x-alert {
+ padding: 12px;
+ ...
+}
+.pad-sm { padding: 8px }
+.pad-md { padding: 12px }
+.pad-lg { padding: 18px }
+#+END_SRC
+
+ The specificity score for Alert's padding would be 1 (i.e. tag selector = 1). We can then customize an Alert's padding with a padding utility class because classes score higher than tags: Copy Copy 
+#+BEGIN_SRC
+<x-alert type="success" class="pad-sm">Padding is smaller</x-alert>
+<x-alert type="success" class="pad-md">Padding is the same</x-alert>
+<x-alert type="success" class="pad-lg">Padding is bigger</x-alert>
+#+END_SRC
+
+ The x-alert tag selector scores 1, but the .pad-lg class selector scores 10, so it overrides the padding. And as usual, adding utility classes that don't compete with any of Alert's base styles (styles set on the tag) works too. However, any Alert base styles that should not be customizable are appropriately marked !important : Copy Copy 
+#+BEGIN_SRC
+x-alert {
+  padding: 12px !important; /* .pad-lg class can't override */
+}
+#+END_SRC
+
+ Yup, turns out !important can be used intelligently🎉 Because attributes define the semantic variations of a component, their styles are never open for customization. For example, an alert's background color cannot and should not change: Copy Copy 
+#+BEGIN_SRC
+<x-alert type="success">Green background</x-alert>
+<x-alert type="success" class="bg-red">Still green</x-alert>
+#+END_SRC
+
+ The tag+attribute selector x-alert[type=success] scores higher than the .bg-red class (11 vs. 10), so the Alert still has the green "success" background, which is exactly what we want. So that's how classes fit into the methodology. Recapping step 3: Classes never define components or variations - they are for generic styles only Components are fully designed and usable as-is but can be customized Utility classes are also used to style generic markup So that's the 3 basic steps of the methodology - define and style a tag and its attributes, then use utility classes for customization and generic styling. It's quite powerful, yet simple and familiar. Beyond that, there are a couple concerns TAC addresses to scale a project. Permalink Scaling Projects With TAC Design tokens and CSS Custom Properties You must create and use design tokens. Design tokens are the raw values of a design language, e.g. the colors, typography, and size of things. Projects of all sizes can and should tokenize these values as CSS Custom Properties. This is a CSS feature that allows you to create variables in CSS without the need for tools like SASS. They are defined like this --foo: 20px and referenced like this padding: var(--foo) , but make sure to namespace them, e.g. --x-foo . Components and utility classes share these properties. In the Alert example above, both x-alert and .pad-lg would use a common set of spacing properties. Native tags would too. Like this: Copy Copy 
+#+BEGIN_SRC
+/* Custom properties */
+:root {
+  --x-space-sm: 8px;
+  --x-space-md: 12px;
+  --x-space-lg: 18px;
+}
+/* Custom tag */
+x-alert {
+  padding: var(--x-space-md);
+  ...
+}
+/* Native tag */
+button {
+  padding: var(--x-space-md);
+  ...
+}
+/* Utility classes */
+.pad-sm { var(--x-space-sm) }
+.pad-md { var(--x-space-md) }
+.pad-lg { var(--x-space-lg) }
+#+END_SRC
+
+ You can change custom properties at runtime with JavaScript. If you need to do that, then simply include them in a stylesheet and because they are prefixed they are unlikely to collide with existing properties.
+This option is, however, uncommon and tools like PostCSS can convert all usages to their actual values and strip the definitions out of the final stylesheet to make it smaller. Ship three separate stylesheets.
+
+Because of the risk of stylesheets containing selectors that collide with existing styles, e.g. two classes with the same name or HTML tags styled again, it is recommended to maintain three separate stylesheets: utility-classes.css - All the utility classes. 
+
+None of these will ever match an HTML element, so they won't accidentally style things like h1 or button.
+Also, by design, these classes never change over time so they won't start doing something unexpected. 
+For example, .font-italic { font-style: italic } or .block { display: block } are never going to change. 
+These classes may collide with existing classes. In that case, TAC strongly recommends against trying to resolve this with a class prefix. Refactor existing class names instead. custom-tags.css - Bundled styles for all custom HTML tags.
+Because custom tags are prefixed, their styles will not interfere with any existing code. Include the stylesheet (and optional Custom Elements JS bundle) and immediately start using these components! html-tags.css - Bundled styles for all native HTML tags. 
+Remember, following TAC means leveraging HTML, so you will style elements like h1 and button and dialog instead of creating custom versions of those elements. Delivering this as a separate stylesheet allows teams to use utility-classes.css and custom-tags.css without breaking existing styles for HTML tags.
+Like utility classes, resolve conflicts by refactoring existing styles.
+There is also the optional custom-properties.css stylesheet as explained previously.
+If your project doesn't have styles yet or you're ready to resolve collisions, then just create one stylesheet with everything in it.
+An entire TAC-based design system can be as small as 6kb minified and gzipped (see Mdash )! Avoid Web Component abstractions If you're not experienced with Web Components, or even the more basic Custom Elements, building them will likely feel a bit raw at first.
+Embrace the learning curve and master the API instead of reaching for an abstraction.
+Not only is a 3rd-party library prohibited by TAC philosophy of leveraging native, but they add extra bloat to your bundle and require ongoing management as the library receives bug fixes and the possibility of where two versions of a library are used on the same page.
+Remember though that TAC only applies to UI elements , so use whatever libraries you want for the other parts of your app.
+Permalink Closing thoughts I've recently gone from using a TAC-based design system with a Vue app to a CSS-in-JS design system with a React app and I cannot express the difference in developer experience and code quality.
+It was like day to night.
+React unfortunately remains the only framework that is incompatible with Web Components and it's periodically incompatible with HTML too! As a front-end community, we need to stop settling for popularity and start asking to see the merit.
+We need to look for, share, and support new, elegant standards-based solutions to web development.
+The status quo is over-engineered, over-funded, and overshadowing the next iteration of web frameworks and ideas.
+TAC is by no means a silver bullet, but the future of the web is the web .
+The web platform - HTML, CSS, and JavaScript - is advancing much faster than it used to and there's so much new stuff that we should be trying and building and talking about! If you try TAC or have questions, I'd love to hear about it in the comments! More Resources & FAQ Any examples of a project using TAC? Yes, the Mdash design system follows this methodology.
+See http://m-docs.org. 
+I have also used this methodology at four companies over the past 5+ years, but none of that code is open source.
+Examples of how to apply the methodology in 3 Examples of the TAC Methodology In Action When do you not use TAC? Sometimes, but not always, you should build a "product component" with a framework.
