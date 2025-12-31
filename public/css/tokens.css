@@ -1,0 +1,109 @@
+/**
+ * TAC CSS Architecture - Design Tokens
+ * CSS Custom Properties for the design system
+ * Reference: tac.org methodology
+ */
+
+:root {
+  /* ===== Color Tokens ===== */
+  /* Primary palette - Dark theme inspired by types.kitlangton.com */
+  --kt-color-bg-primary: #000000;
+  --kt-color-bg-secondary: #0a0a0a;
+  --kt-color-bg-tertiary: #111111;
+  --kt-color-bg-surface: #1a1a1a;
+  --kt-color-bg-elevated: #222222;
+
+  /* Text colors */
+  --kt-color-text-primary: #f1efe8;
+  --kt-color-text-secondary: #a0a0a0;
+  --kt-color-text-muted: #666666;
+  --kt-color-text-accent: #7dd3fc;
+
+  /* Border colors */
+  --kt-color-border-default: #333333;
+  --kt-color-border-subtle: #222222;
+  --kt-color-border-accent: #444444;
+
+  /* Accent colors */
+  --kt-color-accent-primary: #7dd3fc;
+  --kt-color-accent-secondary: #a78bfa;
+  --kt-color-accent-success: #4ade80;
+  --kt-color-accent-warning: #fbbf24;
+  --kt-color-accent-error: #f87171;
+
+  /* ===== Typography Tokens ===== */
+  --kt-font-family-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --kt-font-family-mono: 'Commit Mono', 'SF Mono', Monaco, 'Courier New', monospace;
+
+  /* Font sizes */
+  --kt-font-size-xs: 0.75rem;    /* 12px */
+  --kt-font-size-sm: 0.875rem;   /* 14px */
+  --kt-font-size-md: 1rem;       /* 16px */
+  --kt-font-size-lg: 1.125rem;   /* 18px */
+  --kt-font-size-xl: 1.25rem;    /* 20px */
+  --kt-font-size-2xl: 1.5rem;    /* 24px */
+  --kt-font-size-3xl: 2rem;      /* 32px */
+  --kt-font-size-4xl: 2.5rem;    /* 40px */
+
+  /* Font weights */
+  --kt-font-weight-light: 300;
+  --kt-font-weight-normal: 400;
+  --kt-font-weight-medium: 500;
+  --kt-font-weight-semibold: 600;
+  --kt-font-weight-bold: 700;
+
+  /* Line heights */
+  --kt-line-height-tight: 1.2;
+  --kt-line-height-normal: 1.5;
+  --kt-line-height-relaxed: 1.75;
+
+  /* ===== Spacing Tokens ===== */
+  --kt-space-2xs: 0.25rem;   /* 4px */
+  --kt-space-xs: 0.5rem;     /* 8px */
+  --kt-space-sm: 0.75rem;    /* 12px */
+  --kt-space-md: 1rem;       /* 16px */
+  --kt-space-lg: 1.5rem;     /* 24px */
+  --kt-space-xl: 2rem;       /* 32px */
+  --kt-space-2xl: 3rem;      /* 48px */
+  --kt-space-3xl: 4rem;      /* 64px */
+
+  /* ===== Layout Tokens ===== */
+  --kt-sidebar-width: 280px;
+  --kt-topbar-height: 60px;
+  --kt-content-max-width: 1200px;
+
+  /* ===== Border Tokens ===== */
+  --kt-border-radius-sm: 4px;
+  --kt-border-radius-md: 8px;
+  --kt-border-radius-lg: 12px;
+  --kt-border-radius-xl: 16px;
+  --kt-border-radius-full: 9999px;
+
+  --kt-border-width-thin: 1px;
+  --kt-border-width-medium: 2px;
+
+  /* ===== Shadow Tokens ===== */
+  --kt-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --kt-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.5);
+  --kt-shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
+  --kt-shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.5);
+
+  /* ===== Transition Tokens ===== */
+  --kt-transition-fast: 150ms ease;
+  --kt-transition-normal: 250ms ease;
+  --kt-transition-slow: 350ms ease;
+
+  /* ===== Z-Index Tokens ===== */
+  --kt-z-index-base: 0;
+  --kt-z-index-dropdown: 100;
+  --kt-z-index-sidebar: 200;
+  --kt-z-index-modal: 300;
+  --kt-z-index-toast: 400;
+}
+
+/* Dark theme is default, light theme can be added later */
+@media (prefers-color-scheme: light) {
+  :root {
+    /* Light theme overrides can be added here */
+  }
+}

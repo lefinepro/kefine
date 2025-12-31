@@ -1,0 +1,18 @@
+name: kemal-template
+version: 0.1.0
+
+authors:
+  - kogeletey
+
+crystal: ">= 1.18.0"
+
+license: MIT
+
+targets:
+  kemal-template:
+    main: src/kemal-template.cr
+
+dependencies:
+  kemal:
+    github: kemalcr/kemal
+    version: ~> 1.5.0

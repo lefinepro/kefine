@@ -1,0 +1,545 @@
+/**
+ * TAC CSS Architecture - Custom Tags Styles
+ * Styles for custom HTML elements (Web Components approach)
+ * Reference: tac.org methodology
+ *
+ * Using kt- prefix for Kemal Template components
+ */
+
+/* ===== kt-app - Main Application Container ===== */
+kt-app {
+  display: flex;
+  min-height: 100vh;
+  background-color: var(--kt-color-bg-primary);
+}
+
+/* ===== kt-sidebar - Left Navigation Panel ===== */
+kt-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: var(--kt-sidebar-width);
+  height: 100vh;
+  background-color: var(--kt-color-bg-secondary);
+  border-right: var(--kt-border-width-thin) solid var(--kt-color-border-default);
+  z-index: var(--kt-z-index-sidebar);
+  display: flex;
+  flex-direction: column;
+  transform: translateX(-100%);
+  transition: transform var(--kt-transition-normal);
+  overflow-y: auto;
+}
+
+kt-sidebar[open] {
+  transform: translateX(0);
+}
+
+kt-sidebar[hidden] {
+  display: flex;
+}
+
+/* Sidebar header with logo */
+kt-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--kt-space-md);
+  border-bottom: var(--kt-border-width-thin) solid var(--kt-color-border-default);
+}
+
+/* Sidebar navigation sections */
+kt-sidebar-section {
+  display: block;
+  padding: var(--kt-space-md);
+}
+
+kt-sidebar-section[title]::before {
+  content: attr(title);
+  display: block;
+  font-size: var(--kt-font-size-xs);
+  font-weight: var(--kt-font-weight-semibold);
+  color: var(--kt-color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: var(--kt-space-sm);
+}
+
+/* Sidebar navigation items */
+kt-nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--kt-space-sm);
+  padding: var(--kt-space-xs) var(--kt-space-sm);
+  color: var(--kt-color-text-secondary);
+  font-size: var(--kt-font-size-sm);
+  border-radius: var(--kt-border-radius-sm);
+  cursor: pointer;
+  transition: all var(--kt-transition-fast);
+  margin-bottom: var(--kt-space-2xs);
+}
+
+kt-nav-item:hover {
+  background-color: var(--kt-color-bg-surface);
+  color: var(--kt-color-text-primary);
+}
+
+kt-nav-item[active] {
+  background-color: var(--kt-color-bg-surface);
+  color: var(--kt-color-accent-primary);
+}
+
+/* ===== kt-main - Main Content Area ===== */
+kt-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  transition: margin-left var(--kt-transition-normal);
+}
+
+kt-app[sidebar-open] kt-main {
+  margin-left: var(--kt-sidebar-width);
+}
+
+/* ===== kt-topbar - Top Navigation Bar ===== */
+kt-topbar {
+  position: sticky;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--kt-topbar-height);
+  padding: 0 var(--kt-space-lg);
+  background-color: var(--kt-color-bg-primary);
+  border-bottom: var(--kt-border-width-thin) solid var(--kt-color-border-default);
+  z-index: calc(var(--kt-z-index-sidebar) - 1);
+}
+
+kt-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: var(--kt-space-md);
+}
+
+kt-topbar-center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  max-width: 600px;
+  margin: 0 var(--kt-space-lg);
+}
+
+kt-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: var(--kt-space-sm);
+}
+
+/* ===== kt-logo - Application Logo ===== */
+kt-logo {
+  display: flex;
+  align-items: center;
+  gap: var(--kt-space-sm);
+  font-size: var(--kt-font-size-lg);
+  font-weight: var(--kt-font-weight-semibold);
+  color: var(--kt-color-text-primary);
+  cursor: pointer;
+  user-select: none;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+kt-logo:hover {
+  color: var(--kt-color-accent-primary);
+}
+
+kt-logo-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background-color: var(--kt-color-bg-surface);
+  border: var(--kt-border-width-thin) solid var(--kt-color-border-default);
+  border-radius: var(--kt-border-radius-sm);
+}
+
+/* ===== kt-content - Main Content Container ===== */
+kt-content {
+  flex: 1;
+  display: block;
+  padding: var(--kt-space-xl);
+  max-width: var(--kt-content-max-width);
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* ===== kt-search - Search Component ===== */
+kt-search {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: 400px;
+  position: relative;
+}
+
+kt-search-input {
+  display: block;
+  width: 100%;
+}
+
+kt-search-input input {
+  padding-left: var(--kt-space-xl);
+  padding-right: var(--kt-space-xl);
+}
+
+kt-search-icon {
+  position: absolute;
+  left: var(--kt-space-sm);
+  display: flex;
+  align-items: center;
+  color: var(--kt-color-text-muted);
+}
+
+kt-search-shortcut {
+  position: absolute;
+  right: var(--kt-space-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--kt-space-2xs);
+  font-size: var(--kt-font-size-xs);
+  color: var(--kt-color-text-muted);
+}
+
+kt-search-shortcut kbd {
+  padding: var(--kt-space-2xs) var(--kt-space-xs);
+  background-color: var(--kt-color-bg-tertiary);
+  border: var(--kt-border-width-thin) solid var(--kt-color-border-default);
+  border-radius: var(--kt-border-radius-sm);
+  font-family: var(--kt-font-family-mono);
+  font-size: var(--kt-font-size-xs);
+}
+
+/* ===== kt-card - Card Component ===== */
+kt-card {
+  display: block;
+  background-color: var(--kt-color-bg-surface);
+  border: var(--kt-border-width-thin) solid var(--kt-color-border-default);
+  border-radius: var(--kt-border-radius-md);
+  padding: var(--kt-space-lg);
+  margin-bottom: var(--kt-space-md);
+}
+
+kt-card[variant="outlined"] {
+  background-color: transparent;
+}
+
+kt-card[variant="elevated"] {
+  box-shadow: var(--kt-shadow-md);
+}
+
+kt-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--kt-space-md);
+  padding-bottom: var(--kt-space-md);
+  border-bottom: var(--kt-border-width-thin) solid var(--kt-color-border-subtle);
+}
+
+kt-card-title {
+  display: block;
+  font-size: var(--kt-font-size-lg);
+  font-weight: var(--kt-font-weight-semibold);
+  color: var(--kt-color-text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+kt-card-body {
+  display: block;
+}
+
+kt-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--kt-space-sm);
+  margin-top: var(--kt-space-md);
+  padding-top: var(--kt-space-md);
+  border-top: var(--kt-border-width-thin) solid var(--kt-color-border-subtle);
+}
+
+/* ===== kt-badge - Badge Component ===== */
+kt-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--kt-space-2xs) var(--kt-space-xs);
+  font-size: var(--kt-font-size-xs);
+  font-weight: var(--kt-font-weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: var(--kt-border-radius-sm);
+  background-color: var(--kt-color-bg-elevated);
+  color: var(--kt-color-text-secondary);
+}
+
+kt-badge[variant="primary"] {
+  background-color: var(--kt-color-accent-primary);
+  color: var(--kt-color-bg-primary);
+}
+
+kt-badge[variant="success"] {
+  background-color: var(--kt-color-accent-success);
+  color: var(--kt-color-bg-primary);
+}
+
+kt-badge[variant="warning"] {
+  background-color: var(--kt-color-accent-warning);
+  color: var(--kt-color-bg-primary);
+}
+
+kt-badge[variant="error"] {
+  background-color: var(--kt-color-accent-error);
+  color: var(--kt-color-bg-primary);
+}
+
+/* ===== kt-filters - Filter Panel ===== */
+kt-filters {
+  display: block;
+  padding: var(--kt-space-md);
+}
+
+kt-filter-group {
+  display: block;
+  margin-bottom: var(--kt-space-md);
+}
+
+kt-filter-group[title]::before {
+  content: attr(title);
+  display: block;
+  font-size: var(--kt-font-size-xs);
+  font-weight: var(--kt-font-weight-semibold);
+  color: var(--kt-color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: var(--kt-space-sm);
+}
+
+kt-filter-option {
+  display: flex;
+  align-items: center;
+  gap: var(--kt-space-sm);
+  padding: var(--kt-space-xs);
+  font-size: var(--kt-font-size-sm);
+  color: var(--kt-color-text-secondary);
+  cursor: pointer;
+  border-radius: var(--kt-border-radius-sm);
+  transition: all var(--kt-transition-fast);
+}
+
+kt-filter-option:hover {
+  background-color: var(--kt-color-bg-surface);
+  color: var(--kt-color-text-primary);
+}
+
+kt-filter-option[selected] {
+  background-color: var(--kt-color-bg-surface);
+  color: var(--kt-color-accent-primary);
+}
+
+/* ===== kt-settings - Settings Panel ===== */
+kt-settings {
+  display: block;
+  padding: var(--kt-space-md);
+}
+
+kt-setting-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--kt-space-sm) 0;
+  border-bottom: var(--kt-border-width-thin) solid var(--kt-color-border-subtle);
+}
+
+kt-setting-item:last-child {
+  border-bottom: none;
+}
+
+kt-setting-label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--kt-space-2xs);
+}
+
+kt-setting-label span {
+  font-size: var(--kt-font-size-sm);
+  color: var(--kt-color-text-primary);
+}
+
+kt-setting-label small {
+  font-size: var(--kt-font-size-xs);
+  color: var(--kt-color-text-muted);
+}
+
+/* ===== kt-grid - Grid Layout ===== */
+kt-grid {
+  display: grid;
+  gap: var(--kt-space-md);
+}
+
+kt-grid[cols="2"] {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+kt-grid[cols="3"] {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+kt-grid[cols="4"] {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+@media (max-width: 768px) {
+  kt-grid[cols="2"],
+  kt-grid[cols="3"],
+  kt-grid[cols="4"] {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ===== kt-section - Content Section ===== */
+kt-section {
+  display: block;
+  margin-bottom: var(--kt-space-2xl);
+}
+
+kt-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--kt-space-lg);
+  padding-bottom: var(--kt-space-md);
+  border-bottom: var(--kt-border-width-thin) solid var(--kt-color-border-default);
+}
+
+kt-section-title {
+  display: block;
+  font-size: var(--kt-font-size-xl);
+  font-weight: var(--kt-font-weight-semibold);
+  color: var(--kt-color-text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ===== kt-icon - Icon Component ===== */
+kt-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1em;
+  height: 1em;
+  line-height: 1;
+}
+
+kt-icon[size="sm"] {
+  font-size: var(--kt-font-size-sm);
+}
+
+kt-icon[size="md"] {
+  font-size: var(--kt-font-size-md);
+}
+
+kt-icon[size="lg"] {
+  font-size: var(--kt-font-size-xl);
+}
+
+/* ===== kt-marquee - Scrolling Text Banner ===== */
+kt-marquee {
+  display: block;
+  overflow: hidden;
+  padding: var(--kt-space-sm) 0;
+  background-color: var(--kt-color-bg-secondary);
+  border-top: var(--kt-border-width-thin) solid var(--kt-color-border-subtle);
+  border-bottom: var(--kt-border-width-thin) solid var(--kt-color-border-subtle);
+}
+
+kt-marquee-content {
+  display: flex;
+  white-space: nowrap;
+  animation: marquee 30s linear infinite;
+}
+
+kt-marquee-content span {
+  font-size: var(--kt-font-size-sm);
+  color: var(--kt-color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 0 var(--kt-space-lg);
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+/* ===== kt-counter - Progress Counter ===== */
+kt-counter {
+  display: flex;
+  align-items: center;
+  gap: var(--kt-space-xs);
+  font-family: var(--kt-font-family-mono);
+  font-size: var(--kt-font-size-sm);
+  color: var(--kt-color-text-secondary);
+}
+
+kt-counter-current {
+  color: var(--kt-color-text-primary);
+}
+
+kt-counter-divider {
+  color: var(--kt-color-text-muted);
+}
+
+kt-counter-total {
+  color: var(--kt-color-text-muted);
+}
+
+/* ===== kt-overlay - Sidebar Overlay ===== */
+kt-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: calc(var(--kt-z-index-sidebar) - 1);
+  opacity: 0;
+  visibility: hidden;
+  transition: all var(--kt-transition-normal);
+}
+
+kt-overlay[visible] {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* ===== Responsive Adjustments ===== */
+@media (max-width: 768px) {
+  kt-sidebar {
+    width: 100%;
+    max-width: var(--kt-sidebar-width);
+  }
+
+  kt-topbar {
+    padding: 0 var(--kt-space-md);
+  }
+
+  kt-content {
+    padding: var(--kt-space-md);
+  }
+}

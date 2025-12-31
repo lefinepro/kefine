@@ -1,0 +1,24 @@
+# Crystal dependencies
+lib/
+.shards/
+
+# Build output
+bin/
+_site/
+
+# Playwright MCP screenshots (for testing)
+.playwright-mcp/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
