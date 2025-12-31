@@ -170,8 +170,6 @@ kf-content {
   flex: 1;
   display: block;
   padding: var(--kf-space-xl);
-  max-width: var(--kf-content-max-width);
-  margin: 0 auto;
   width: 100%;
 }
 

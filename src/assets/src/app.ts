@@ -1,5 +1,3 @@
-import { registerIconLibrary } from "@awesome.me/webawesome/dist/webawesome.js";
-
 // Import WebAwesome components individually
 import "@awesome.me/webawesome/dist/components/button/button.js";
 import "@awesome.me/webawesome/dist/components/card/card.js";
@@ -19,10 +17,8 @@ import "./components/nav-item.js";
 import "./components/setting-item.js";
 import "./components/kf-combobox/kf-combobox.js";
 
-// Register the icon library
-registerIconLibrary("icon", {
-  resolver: (name: string) => `/icons/${name}.svg`,
-});
+// WebAwesome uses Font Awesome Free icons by default
+// No need to register a custom icon library - icons work out of the box
 
 /**
  * Kefine Application TypeScript
