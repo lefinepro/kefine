@@ -367,6 +367,30 @@ kf-filter-option input[type="radio"] {
   flex-shrink: 0;
 }
 
+/* Search input for filter groups */
+kf-filter-search {
+  display: block;
+  margin-bottom: var(--kf-space-sm);
+}
+
+kf-filter-search input[type="text"] {
+  width: 100%;
+  padding: var(--kf-space-xs) var(--kf-space-sm);
+  background-color: var(--kf-color-bg-surface);
+  border: 1px solid var(--kf-color-border-default);
+  color: var(--kf-color-text-primary);
+  font-size: var(--kf-font-size-sm);
+}
+
+kf-filter-search input[type="text"]:focus {
+  outline: none;
+  border-color: var(--kf-color-accent-primary);
+}
+
+kf-filter-search input[type="text"]::placeholder {
+  color: var(--kf-color-text-muted);
+}
+
 /* Range inputs for price filter */
 kf-filter-range {
   display: block;
