@@ -2,7 +2,7 @@
 // All icons are local Carbon Design System SVGs
 import "./components/kf-icon/kf-icon.js";
 import "./components/kf-switch/kf-switch.js";
-import "./components/kf-post-close/kf-post-close.js";
+import "./components/kf-card-close/kf-card-close.js";
 import "./components/kf-overlay/kf-overlay.js";
 import "./components/kf-combobox/kf-combobox.js";
 
@@ -14,14 +14,18 @@ import "./components/kf-combobox/kf-combobox.js";
 
 interface AppState {
   sidebarOpen: boolean;
-  expandedPostId: string | null;
+  expandedCardId: string | null;
+  currentCardIndex: number;
 }
 
 class KefineApp {
   private state: AppState = {
     sidebarOpen: false,
-    expandedPostId: null,
+    expandedCardId: null,
+    currentCardIndex: 0,
   };
+
+  private cards: Element[] = [];
 
   constructor() {
     this.loadSettings();
@@ -64,16 +68,44 @@ class KefineApp {
       toggle.addEventListener("change", (e) => this.handleSettingChange(e));
     });
 
-    // Posts
-    document.querySelectorAll("kf-post").forEach((post) => {
-      post.addEventListener("click", (e) => this.handlePostClick(e, post));
-      post.querySelector("kf-post-close")?.addEventListener("close", () => this.collapsePost());
+    // Post cards - using kf-card[variant="post"]
+    this.cards = Array.from(document.querySelectorAll('kf-card[variant="post"]'));
+    this.cards.forEach((card, index) => {
+      card.addEventListener("click", (e) => this.handleCardClick(e, card, index));
+      card.querySelector("kf-card-close")?.addEventListener("close", () => this.collapseCard());
     });
+
+    // Infinite scroll for feed
+    this.initInfiniteScroll();
 
     // Combobox select
     document.addEventListener("kf-combobox-select", (e) => {
       console.log("Search selected:", (e as CustomEvent).detail);
     });
+  }
+
+  private initInfiniteScroll(): void {
+    const feed = document.querySelector("kf-feed");
+    if (!feed) return;
+
+    // Observer for infinite scroll
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && this.state.expandedCardId) {
+            const cardIndex = this.cards.findIndex(
+              (c) => c.getAttribute("data-post-id") === this.state.expandedCardId
+            );
+            if (cardIndex !== -1) {
+              this.state.currentCardIndex = cardIndex;
+            }
+          }
+        });
+      },
+      { threshold: 0.5 }
+    );
+
+    this.cards.forEach((card) => observer.observe(card));
   }
 
   private handleSettingChange(e: Event): void {
@@ -92,14 +124,15 @@ class KefineApp {
     }
   }
 
-  private handlePostClick(e: Event, post: Element): void {
+  private handleCardClick(e: Event, card: Element, index: number): void {
     const target = e.target as HTMLElement;
-    if (target.closest("kf-post-action") || target.closest("button") || target.closest("kf-post-close")) {
+    if (target.closest("kf-card-action") || target.closest("button") || target.closest("kf-card-close")) {
       return;
     }
-    const postId = post.getAttribute("data-post-id");
-    if (postId && !post.hasAttribute("expanded")) {
-      this.expandPost(postId);
+    const cardId = card.getAttribute("data-post-id");
+    if (cardId && !card.hasAttribute("expanded")) {
+      this.state.currentCardIndex = index;
+      this.expandCard(cardId);
     }
   }
 
@@ -107,8 +140,8 @@ class KefineApp {
     const isTyping = ["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName || "");
 
     if (e.key === "Escape") {
-      if (this.state.expandedPostId) {
-        this.collapsePost();
+      if (this.state.expandedCardId) {
+        this.collapseCard();
         e.preventDefault();
       } else if (this.state.sidebarOpen) {
         this.closeSidebar();
@@ -131,6 +164,44 @@ class KefineApp {
           this.toggleSidebar();
         }
         break;
+      case "ArrowDown":
+      case "j":
+        if (this.state.expandedCardId) {
+          e.preventDefault();
+          this.navigateToNextCard();
+        }
+        break;
+      case "ArrowUp":
+      case "k":
+        if (this.state.expandedCardId) {
+          e.preventDefault();
+          this.navigateToPrevCard();
+        }
+        break;
+    }
+  }
+
+  private navigateToNextCard(): void {
+    if (this.state.currentCardIndex < this.cards.length - 1) {
+      this.collapseCard();
+      this.state.currentCardIndex++;
+      const nextCard = this.cards[this.state.currentCardIndex];
+      const nextId = nextCard?.getAttribute("data-post-id");
+      if (nextId) {
+        this.expandCard(nextId);
+      }
+    }
+  }
+
+  private navigateToPrevCard(): void {
+    if (this.state.currentCardIndex > 0) {
+      this.collapseCard();
+      this.state.currentCardIndex--;
+      const prevCard = this.cards[this.state.currentCardIndex];
+      const prevId = prevCard?.getAttribute("data-post-id");
+      if (prevId) {
+        this.expandCard(prevId);
+      }
     }
   }
 
@@ -156,26 +227,31 @@ class KefineApp {
     document.querySelector("kf-overlay")?.removeAttribute("visible");
   }
 
-  expandPost(postId: string): void {
-    if (this.state.expandedPostId) this.collapsePost();
+  expandCard(cardId: string): void {
+    if (this.state.expandedCardId) this.collapseCard();
 
-    const post = document.querySelector(`kf-post[data-post-id="${postId}"]`);
-    if (!post) return;
+    const card = document.querySelector(`kf-card[data-post-id="${cardId}"]`);
+    if (!card) return;
 
-    this.state.expandedPostId = postId;
-    post.setAttribute("expanded", "");
-    post.querySelector("kf-post-close")?.setAttribute("visible", "");
+    this.state.expandedCardId = cardId;
+    card.setAttribute("expanded", "");
+    card.querySelector("kf-card-close")?.setAttribute("visible", "");
     document.body.style.overflow = "hidden";
   }
 
-  collapsePost(): void {
-    if (!this.state.expandedPostId) return;
+  collapseCard(): void {
+    if (!this.state.expandedCardId) return;
 
-    const post = document.querySelector(`kf-post[data-post-id="${this.state.expandedPostId}"]`);
-    post?.removeAttribute("expanded");
-    post?.querySelector("kf-post-close")?.removeAttribute("visible");
+    const card = document.querySelector(`kf-card[data-post-id="${this.state.expandedCardId}"]`);
+    card?.removeAttribute("expanded");
+    card?.querySelector("kf-card-close")?.removeAttribute("visible");
     document.body.style.overflow = "";
-    this.state.expandedPostId = null;
+    this.state.expandedCardId = null;
+  }
+
+  navigateToHome(): void {
+    this.collapseCard();
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   private exposeAPI(): void {
@@ -183,8 +259,11 @@ class KefineApp {
       toggleSidebar: () => this.toggleSidebar(),
       openSidebar: () => this.openSidebar(),
       closeSidebar: () => this.closeSidebar(),
-      expandPost: (id: string) => this.expandPost(id),
-      collapsePost: () => this.collapsePost(),
+      expandCard: (id: string) => this.expandCard(id),
+      collapseCard: () => this.collapseCard(),
+      navigateToHome: () => this.navigateToHome(),
+      nextCard: () => this.navigateToNextCard(),
+      prevCard: () => this.navigateToPrevCard(),
     };
   }
 }

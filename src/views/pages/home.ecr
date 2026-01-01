@@ -1,495 +1,180 @@
-<!-- Posts Section - Vertical Layout with Expandable View -->
-<kf-section>
-  <kf-section-header>
-    <kf-section-title>Latest Posts</kf-section-title>
-  </kf-section-header>
-
-  <kf-post-list>
-    <kf-post data-post-id="post-1" role="article" tabindex="0" aria-label="Post: Getting Started with Kefine">
-      <kf-post-close></kf-post-close>
-      <kf-post-header>
-        <kf-post-avatar aria-hidden="true">
-          <kf-icon name="user"></kf-icon>
-        </kf-post-avatar>
-        <kf-post-meta>
-          <kf-post-author>Admin</kf-post-author>
-          <kf-post-date>December 31, 2025</kf-post-date>
-        </kf-post-meta>
-      </kf-post-header>
-      <kf-post-body>
-        <kf-post-title>Getting Started with Kefine</kf-post-title>
-        <kf-post-content>
-          Learn how to build modern web applications using the Kefine template. This guide covers the TAC CSS architecture, Lit components integration, and ECR templating system.
-        </kf-post-content>
-      </kf-post-body>
-      <kf-post-footer>
-        <kf-post-action aria-label="Like post">
-          <kf-icon name="heart"></kf-icon>
-          <span>24</span>
-        </kf-post-action>
-        <kf-post-action aria-label="View comments">
-          <kf-icon name="comment"></kf-icon>
-          <span>8</span>
-        </kf-post-action>
-        <kf-post-action aria-label="Share post">
-          <kf-icon name="share"></kf-icon>
-        </kf-post-action>
-      </kf-post-footer>
-      <kf-post-comments aria-label="Comments section">
-        <kf-post-comments-header>
-          <span>Comments (8)</span>
-          <button type="button">Add Comment</button>
-        </kf-post-comments-header>
-        <kf-comment>
-          <kf-comment-header>
-            <kf-comment-author>Jane Doe</kf-comment-author>
-            <kf-comment-date>2 hours ago</kf-comment-date>
-          </kf-comment-header>
-          <kf-comment-body>Great introduction! The TAC methodology is really intuitive.</kf-comment-body>
-        </kf-comment>
-        <kf-comment>
-          <kf-comment-header>
-            <kf-comment-author>John Smith</kf-comment-author>
-            <kf-comment-date>5 hours ago</kf-comment-date>
-          </kf-comment-header>
-          <kf-comment-body>Looking forward to trying this out in my next project.</kf-comment-body>
-        </kf-comment>
-        <kf-comment-form>
-          <input type="text" placeholder="Write a comment...">
-          <button type="submit">Post</button>
-        </kf-comment-form>
-      </kf-post-comments>
-    </kf-post>
-
-    <kf-post data-post-id="post-2" role="article" tabindex="0" aria-label="Post: Lit Components">
-      <kf-post-close></kf-post-close>
-      <kf-post-header>
-        <kf-post-avatar aria-hidden="true">
-          <kf-icon name="code"></kf-icon>
-        </kf-post-avatar>
-        <kf-post-meta>
-          <kf-post-author>Developer</kf-post-author>
-          <kf-post-date>December 30, 2025</kf-post-date>
-        </kf-post-meta>
-      </kf-post-header>
-      <kf-post-body>
-        <kf-post-title>Exploring Lit Components</kf-post-title>
-        <kf-post-content>
-          Discover the power of Lit's lightweight web components. From buttons and badges to complex form controls, everything is designed with accessibility in mind.
-        </kf-post-content>
-      </kf-post-body>
-      <kf-post-footer>
-        <kf-post-action aria-label="Like post">
-          <kf-icon name="heart"></kf-icon>
-          <span>42</span>
-        </kf-post-action>
-        <kf-post-action aria-label="View comments">
-          <kf-icon name="comment"></kf-icon>
-          <span>15</span>
-        </kf-post-action>
-        <kf-post-action aria-label="Share post">
-          <kf-icon name="share"></kf-icon>
-        </kf-post-action>
-      </kf-post-footer>
-      <kf-post-comments aria-label="Comments section">
-        <kf-post-comments-header>
-          <span>Comments (15)</span>
-          <button type="button">Add Comment</button>
-        </kf-post-comments-header>
-        <kf-comment>
-          <kf-comment-header>
-            <kf-comment-author>Alex Chen</kf-comment-author>
-            <kf-comment-date>1 day ago</kf-comment-date>
-          </kf-comment-header>
-          <kf-comment-body>The accessibility features are fantastic. Great work!</kf-comment-body>
-        </kf-comment>
-        <kf-comment-form>
-          <input type="text" placeholder="Write a comment...">
-          <button type="submit">Post</button>
-        </kf-comment-form>
-      </kf-post-comments>
-    </kf-post>
-
-    <kf-post data-post-id="post-3" role="article" tabindex="0" aria-label="Post: TAC CSS Deep Dive">
-      <kf-post-close></kf-post-close>
-      <kf-post-header>
-        <kf-post-avatar aria-hidden="true">
-          <kf-icon name="palette"></kf-icon>
-        </kf-post-avatar>
-        <kf-post-meta>
-          <kf-post-author>Designer</kf-post-author>
-          <kf-post-date>December 29, 2025</kf-post-date>
-        </kf-post-meta>
-      </kf-post-header>
-      <kf-post-body>
-        <kf-post-title>TAC CSS: A Deep Dive</kf-post-title>
-        <kf-post-content>
-          Understanding the Tags, Attributes, Classes hierarchy. Learn why this approach leads to more maintainable and scalable stylesheets in your web component projects.
-        </kf-post-content>
-      </kf-post-body>
-      <kf-post-footer>
-        <kf-post-action aria-label="Like post">
-          <kf-icon name="heart"></kf-icon>
-          <span>67</span>
-        </kf-post-action>
-        <kf-post-action aria-label="View comments">
-          <kf-icon name="comment"></kf-icon>
-          <span>23</span>
-        </kf-post-action>
-        <kf-post-action aria-label="Share post">
-          <kf-icon name="share"></kf-icon>
-        </kf-post-action>
-      </kf-post-footer>
-      <kf-post-comments aria-label="Comments section">
-        <kf-post-comments-header>
-          <span>Comments (23)</span>
-          <button type="button">Add Comment</button>
-        </kf-post-comments-header>
-        <kf-comment>
-          <kf-comment-header>
-            <kf-comment-author>Sarah Wilson</kf-comment-author>
-            <kf-comment-date>2 days ago</kf-comment-date>
-          </kf-comment-header>
-          <kf-comment-body>This changed how I think about CSS architecture. Brilliant!</kf-comment-body>
-        </kf-comment>
-        <kf-comment-form>
-          <input type="text" placeholder="Write a comment...">
-          <button type="submit">Post</button>
-        </kf-comment-form>
-      </kf-post-comments>
-    </kf-post>
-  </kf-post-list>
-</kf-section>
-
-<!-- Foundation Section -->
-<kf-section>
-  <kf-section-header>
-    <kf-section-title>Foundation</kf-section-title>
-  </kf-section-header>
-
-  <kf-grid cols="2">
-    <!-- TAC CSS Card -->
-    <kf-card>
-      <kf-card-header>
-        <kf-card-title>TAC CSS Architecture</kf-card-title>
-        <kf-badge variant="primary">Core</kf-badge>
-      </kf-card-header>
-      <kf-card-body>
-        <p>A CSS methodology for the Web Components era. Style custom HTML tags, define custom attributes, then customize with utility classes.</p>
-        <pre><code>/* Step 1: Style the tag */
-kf-badge {
-  display: inline-flex;
-  padding: 4px;
-}
-
-/* Step 2: Style attributes */
-kf-badge[variant=primary] {
-  background: var(--kf-color-accent-primary);
-}
-
-/* Step 3: Utility classes */
-&lt;kf-badge class="mar-r-sm"&gt;</code></pre>
-      </kf-card-body>
-      <kf-card-footer>
-        <button type="button">Learn More</button>
-      </kf-card-footer>
-    </kf-card>
-
-    <!-- ECR Templates Card -->
-    <kf-card>
-      <kf-card-header>
-        <kf-card-title>ECR Templating</kf-card-title>
-        <kf-badge variant="success">Active</kf-badge>
-      </kf-card-header>
-      <kf-card-body>
-        <p>Embedded Crystal for server-side templating. Create reusable templates with proper inheritance and partials.</p>
-        <pre><code>&lt;%# layouts/main.ecr %&gt;
-&lt;!DOCTYPE html&gt;
-&lt;html&gt;
-&lt;head&gt;
-  &lt;title&gt;&lt;%= title %&gt;&lt;/title&gt;
-&lt;/head&gt;
-&lt;body&gt;
-  &lt;%= content %&gt;
-&lt;/body&gt;
-&lt;/html&gt;</code></pre>
-      </kf-card-body>
-      <kf-card-footer>
-        <button type="button">View Docs</button>
-      </kf-card-footer>
-    </kf-card>
-  </kf-grid>
-</kf-section>
-
-<!-- Component Examples Section -->
-<kf-section>
-  <kf-section-header>
-    <kf-section-title>Component Examples</kf-section-title>
-  </kf-section-header>
-
-  <kf-grid cols="3">
-    <!-- Button Component Demo -->
-    <kf-card>
-      <kf-card-header>
-        <kf-card-title>button</kf-card-title>
-      </kf-card-header>
-      <kf-card-body>
-        <p>Native button element with TAC styling.</p>
-        <kf-button-group>
-          <button type="button" variant="primary">Primary</button>
-          <button type="button" variant="secondary">Secondary</button>
-          <button type="button" variant="success">Success</button>
-        </kf-button-group>
-      </kf-card-body>
-    </kf-card>
-
-    <!-- Badge Component Demo -->
-    <kf-card>
-      <kf-card-header>
-        <kf-card-title>kf-badge</kf-card-title>
-      </kf-card-header>
-      <kf-card-body>
-        <p>Status indicators with semantic variants.</p>
-        <kf-badge-group>
-          <kf-badge>Default</kf-badge>
-          <kf-badge variant="primary">Primary</kf-badge>
-          <kf-badge variant="success">Success</kf-badge>
-          <kf-badge variant="warning">Warning</kf-badge>
-          <kf-badge variant="error">Error</kf-badge>
-        </kf-badge-group>
-      </kf-card-body>
-    </kf-card>
-
-    <!-- Input Component Demo -->
-    <kf-card>
-      <kf-card-header>
-        <kf-card-title>input</kf-card-title>
-      </kf-card-header>
-      <kf-card-body>
-        <p>Native input with icon support.</p>
-        <kf-input-group>
-          <label for="demo-search">Search</label>
-          <kf-search-input>
-            <kf-icon name="search"></kf-icon>
-            <input id="demo-search" type="search" placeholder="Type to search...">
-          </kf-search-input>
-        </kf-input-group>
-      </kf-card-body>
-    </kf-card>
-
-    <!-- Switch Component Demo -->
-    <kf-card>
-      <kf-card-header>
-        <kf-card-title>checkbox</kf-card-title>
-      </kf-card-header>
-      <kf-card-body>
-        <p>Toggle switches using native checkboxes.</p>
-        <kf-switch-group>
-          <label><input type="checkbox" checked> Dark Mode</label>
-          <label><input type="checkbox"> Notifications</label>
-          <label><input type="checkbox"> Auto-save</label>
-        </kf-switch-group>
-      </kf-card-body>
-    </kf-card>
-
-    <!-- Progress Component Demo -->
-    <kf-card>
-      <kf-card-header>
-        <kf-card-title>progress</kf-card-title>
-      </kf-card-header>
-      <kf-card-body>
-        <p>Native progress elements.</p>
-        <kf-progress-group>
-          <progress value="25" max="100">25%</progress>
-          <progress value="50" max="100">50%</progress>
-          <progress value="75" max="100">75%</progress>
-        </kf-progress-group>
-      </kf-card-body>
-    </kf-card>
-
-    <!-- Icon Component Demo -->
-    <kf-card>
-      <kf-card-header>
-        <kf-card-title>kf-icon</kf-card-title>
-      </kf-card-header>
-      <kf-card-body>
-        <p>Local Carbon Design SVG icons.</p>
-        <kf-icon-group>
-          <kf-icon name="home" size="lg"></kf-icon>
-          <kf-icon name="search" size="lg"></kf-icon>
-          <kf-icon name="settings" size="lg"></kf-icon>
-          <kf-icon name="user" size="lg"></kf-icon>
-        </kf-icon-group>
-      </kf-card-body>
-    </kf-card>
-  </kf-grid>
-</kf-section>
-
-<!-- Custom Components Section -->
-<kf-section>
-  <kf-section-header>
-    <kf-section-title>Custom Components (kf-*)</kf-section-title>
-  </kf-section-header>
-
-  <kf-grid cols="3">
-    <!-- Card Component -->
-    <kf-card variant="outlined">
-      <kf-card-header>
-        <kf-card-title>kf-card</kf-card-title>
-      </kf-card-header>
-      <kf-card-body>
-        <p>A flexible container component with header, body, and footer sections.</p>
-      </kf-card-body>
-    </kf-card>
-
-    <!-- Badge Component -->
-    <kf-card variant="outlined">
-      <kf-card-header>
-        <kf-card-title>kf-badge</kf-card-title>
-      </kf-card-header>
-      <kf-card-body>
-        <p>Status indicators with multiple variants.</p>
-        <kf-badge-group>
-          <kf-badge>Default</kf-badge>
-          <kf-badge variant="primary">Primary</kf-badge>
-          <kf-badge variant="success">Success</kf-badge>
-          <kf-badge variant="warning">Warning</kf-badge>
-          <kf-badge variant="error">Error</kf-badge>
-        </kf-badge-group>
-      </kf-card-body>
-    </kf-card>
-
-    <!-- Search Component -->
-    <kf-card variant="outlined">
-      <kf-card-header>
-        <kf-card-title>kf-search</kf-card-title>
-      </kf-card-header>
-      <kf-card-body>
-        <p>Search input with icon and keyboard shortcut indicator.</p>
-        <kf-search>
-          <kf-search-icon>
-            <kf-icon name="search"></kf-icon>
-          </kf-search-icon>
-          <kf-search-input>
-            <input type="search" placeholder="Search...">
-          </kf-search-input>
-        </kf-search>
-      </kf-card-body>
-    </kf-card>
-
-    <!-- Navigation Component -->
-    <kf-card variant="outlined">
-      <kf-card-header>
-        <kf-card-title>kf-nav-item</kf-card-title>
-      </kf-card-header>
-      <kf-card-body>
-        <p>Navigation items with icon and text.</p>
-        <nav>
-          <kf-nav-item active>
-            <kf-icon name="home"></kf-icon>
-            <span>Active Item</span>
-          </kf-nav-item>
-          <kf-nav-item>
-            <kf-icon name="grid"></kf-icon>
-            <span>Normal Item</span>
-          </kf-nav-item>
-        </nav>
-      </kf-card-body>
-    </kf-card>
-
-    <!-- Grid Component -->
-    <kf-card variant="outlined">
-      <kf-card-header>
-        <kf-card-title>kf-grid</kf-card-title>
-      </kf-card-header>
-      <kf-card-body>
-        <p>Responsive grid layout with configurable columns.</p>
-        <kf-grid cols="3">
-          <kf-grid-item>1</kf-grid-item>
-          <kf-grid-item>2</kf-grid-item>
-          <kf-grid-item>3</kf-grid-item>
-        </kf-grid>
-      </kf-card-body>
-    </kf-card>
-
-    <!-- Section Component -->
-    <kf-card variant="outlined">
-      <kf-card-header>
-        <kf-card-title>kf-section</kf-card-title>
-      </kf-card-header>
-      <kf-card-body>
-        <p>Content sections with header and title for organizing page content.</p>
-      </kf-card-body>
-    </kf-card>
-  </kf-grid>
-</kf-section>
-
-<!-- Features Section -->
-<kf-section>
-  <kf-section-header>
-    <kf-section-title>Features</kf-section-title>
-  </kf-section-header>
-
-  <kf-grid cols="4">
-    <kf-feature-item>
-      <kf-feature-icon>
-        <kf-icon name="layers" size="3xl"></kf-icon>
-      </kf-feature-icon>
-      <h4>Kemal Framework</h4>
-      <p>Fast, expressive web framework for Crystal</p>
-    </kf-feature-item>
-
-    <kf-feature-item>
-      <kf-feature-icon>
-        <kf-icon name="palette" size="3xl"></kf-icon>
-      </kf-feature-icon>
-      <h4>TAC CSS</h4>
-      <p>Modern methodology for Web Components</p>
-    </kf-feature-item>
-
-    <kf-feature-item>
-      <kf-feature-icon>
-        <kf-icon name="document" size="3xl"></kf-icon>
-      </kf-feature-icon>
-      <h4>ECR Templates</h4>
-      <p>Server-side templating with Crystal</p>
-    </kf-feature-item>
-
-    <kf-feature-item>
-      <kf-feature-icon>
-        <kf-icon name="grid" size="3xl"></kf-icon>
-      </kf-feature-icon>
-      <h4>Lit Components</h4>
-      <p>Lightweight web components library</p>
-    </kf-feature-item>
-  </kf-grid>
-</kf-section>
-
-<!-- Keyboard Shortcuts -->
-<kf-section>
-  <kf-section-header>
-    <kf-section-title>Keyboard Shortcuts</kf-section-title>
-  </kf-section-header>
-
-  <kf-card>
+<!-- Posts Feed - Infinite Scroll Layout -->
+<kf-feed>
+  <kf-card data-post-id="post-1" variant="post" role="article" tabindex="0" aria-label="Post: Getting Started with Kefine">
+    <kf-card-close></kf-card-close>
+    <kf-card-header>
+      <kf-card-avatar aria-hidden="true">
+        <kf-icon name="user"></kf-icon>
+      </kf-card-avatar>
+      <kf-card-meta>
+        <kf-card-author>Admin</kf-card-author>
+        <kf-card-date>December 31, 2025</kf-card-date>
+      </kf-card-meta>
+    </kf-card-header>
     <kf-card-body>
-      <kf-shortcut-list>
-        <kf-shortcut-item>
-          <span>Open search</span>
-          <kbd>/</kbd>
-        </kf-shortcut-item>
-        <kf-shortcut-item>
-          <span>Toggle sidebar</span>
-          <kf-kbd-group>
-            <kbd>Ctrl</kbd>
-            <kbd>B</kbd>
-          </kf-kbd-group>
-        </kf-shortcut-item>
-        <kf-shortcut-item>
-          <span>Close panel</span>
-          <kbd>Esc</kbd>
-        </kf-shortcut-item>
-      </kf-shortcut-list>
+      <kf-card-title>Getting Started with Kefine</kf-card-title>
+      <kf-card-content>
+        Learn how to build modern web applications using the Kefine template. This guide covers the TAC CSS architecture, Lit components integration, and ECR templating system.
+      </kf-card-content>
     </kf-card-body>
+    <kf-card-footer>
+      <kf-card-action aria-label="Like post">
+        <kf-icon name="heart"></kf-icon>
+        <span>24</span>
+      </kf-card-action>
+      <kf-card-action aria-label="View comments">
+        <kf-icon name="comment"></kf-icon>
+        <span>8</span>
+      </kf-card-action>
+      <kf-card-action aria-label="Share post">
+        <kf-icon name="share"></kf-icon>
+      </kf-card-action>
+    </kf-card-footer>
+    <kf-card-comments aria-label="Comments section">
+      <kf-card-comments-header>
+        <span>Comments (8)</span>
+        <button type="button">Add Comment</button>
+      </kf-card-comments-header>
+      <kf-comment>
+        <kf-comment-header>
+          <kf-comment-author>Jane Doe</kf-comment-author>
+          <kf-comment-date>2 hours ago</kf-comment-date>
+        </kf-comment-header>
+        <kf-comment-body>Great introduction! The TAC methodology is really intuitive.</kf-comment-body>
+      </kf-comment>
+      <kf-comment>
+        <kf-comment-header>
+          <kf-comment-author>John Smith</kf-comment-author>
+          <kf-comment-date>5 hours ago</kf-comment-date>
+        </kf-comment-header>
+        <kf-comment-body>Looking forward to trying this out in my next project.</kf-comment-body>
+      </kf-comment>
+      <kf-comment-form>
+        <kf-combobox placeholder="Write a comment..." min-chars="0" aria-label="Comment input">
+          <kf-icon slot="icon" name="edit"></kf-icon>
+        </kf-combobox>
+        <kf-comment-actions>
+          <button type="button" variant="secondary" title="Save as draft">
+            <kf-icon name="document"></kf-icon>
+            Draft
+          </button>
+          <button type="submit" variant="primary">Post</button>
+        </kf-comment-actions>
+      </kf-comment-form>
+    </kf-card-comments>
   </kf-card>
-</kf-section>
+
+  <kf-card data-post-id="post-2" variant="post" role="article" tabindex="0" aria-label="Post: Lit Components">
+    <kf-card-close></kf-card-close>
+    <kf-card-header>
+      <kf-card-avatar aria-hidden="true">
+        <kf-icon name="code"></kf-icon>
+      </kf-card-avatar>
+      <kf-card-meta>
+        <kf-card-author>Developer</kf-card-author>
+        <kf-card-date>December 30, 2025</kf-card-date>
+      </kf-card-meta>
+    </kf-card-header>
+    <kf-card-body>
+      <kf-card-title>Exploring Lit Components</kf-card-title>
+      <kf-card-content>
+        Discover the power of Lit's lightweight web components. From buttons and badges to complex form controls, everything is designed with accessibility in mind.
+      </kf-card-content>
+    </kf-card-body>
+    <kf-card-footer>
+      <kf-card-action aria-label="Like post">
+        <kf-icon name="heart"></kf-icon>
+        <span>42</span>
+      </kf-card-action>
+      <kf-card-action aria-label="View comments">
+        <kf-icon name="comment"></kf-icon>
+        <span>15</span>
+      </kf-card-action>
+      <kf-card-action aria-label="Share post">
+        <kf-icon name="share"></kf-icon>
+      </kf-card-action>
+    </kf-card-footer>
+    <kf-card-comments aria-label="Comments section">
+      <kf-card-comments-header>
+        <span>Comments (15)</span>
+        <button type="button">Add Comment</button>
+      </kf-card-comments-header>
+      <kf-comment>
+        <kf-comment-header>
+          <kf-comment-author>Alex Chen</kf-comment-author>
+          <kf-comment-date>1 day ago</kf-comment-date>
+        </kf-comment-header>
+        <kf-comment-body>The accessibility features are fantastic. Great work!</kf-comment-body>
+      </kf-comment>
+      <kf-comment-form>
+        <kf-combobox placeholder="Write a comment..." min-chars="0" aria-label="Comment input">
+          <kf-icon slot="icon" name="edit"></kf-icon>
+        </kf-combobox>
+        <kf-comment-actions>
+          <button type="button" variant="secondary" title="Save as draft">
+            <kf-icon name="document"></kf-icon>
+            Draft
+          </button>
+          <button type="submit" variant="primary">Post</button>
+        </kf-comment-actions>
+      </kf-comment-form>
+    </kf-card-comments>
+  </kf-card>
+
+  <kf-card data-post-id="post-3" variant="post" role="article" tabindex="0" aria-label="Post: TAC CSS Deep Dive">
+    <kf-card-close></kf-card-close>
+    <kf-card-header>
+      <kf-card-avatar aria-hidden="true">
+        <kf-icon name="palette"></kf-icon>
+      </kf-card-avatar>
+      <kf-card-meta>
+        <kf-card-author>Designer</kf-card-author>
+        <kf-card-date>December 29, 2025</kf-card-date>
+      </kf-card-meta>
+    </kf-card-header>
+    <kf-card-body>
+      <kf-card-title>TAC CSS: A Deep Dive</kf-card-title>
+      <kf-card-content>
+        Understanding the Tags, Attributes, Classes hierarchy. Learn why this approach leads to more maintainable and scalable stylesheets in your web component projects.
+      </kf-card-content>
+    </kf-card-body>
+    <kf-card-footer>
+      <kf-card-action aria-label="Like post">
+        <kf-icon name="heart"></kf-icon>
+        <span>67</span>
+      </kf-card-action>
+      <kf-card-action aria-label="View comments">
+        <kf-icon name="comment"></kf-icon>
+        <span>23</span>
+      </kf-card-action>
+      <kf-card-action aria-label="Share post">
+        <kf-icon name="share"></kf-icon>
+      </kf-card-action>
+    </kf-card-footer>
+    <kf-card-comments aria-label="Comments section">
+      <kf-card-comments-header>
+        <span>Comments (23)</span>
+        <button type="button">Add Comment</button>
+      </kf-card-comments-header>
+      <kf-comment>
+        <kf-comment-header>
+          <kf-comment-author>Sarah Wilson</kf-comment-author>
+          <kf-comment-date>2 days ago</kf-comment-date>
+        </kf-comment-header>
+        <kf-comment-body>This changed how I think about CSS architecture. Brilliant!</kf-comment-body>
+      </kf-comment>
+      <kf-comment-form>
+        <kf-combobox placeholder="Write a comment..." min-chars="0" aria-label="Comment input">
+          <kf-icon slot="icon" name="edit"></kf-icon>
+        </kf-combobox>
+        <kf-comment-actions>
+          <button type="button" variant="secondary" title="Save as draft">
+            <kf-icon name="document"></kf-icon>
+            Draft
+          </button>
+          <button type="submit" variant="primary">Post</button>
+        </kf-comment-actions>
+      </kf-comment-form>
+    </kf-card-comments>
+  </kf-card>
+</kf-feed>
