@@ -22,7 +22,7 @@
         <kf-icon name="heart"></kf-icon>
         <span>24</span>
       </kf-card-action>
-      <kf-card-action aria-label="View comments">
+      <kf-card-action class="comment-toggle" aria-label="Write a comment" title="Write a comment">
         <kf-icon name="comment"></kf-icon>
         <span>8</span>
       </kf-card-action>
@@ -33,7 +33,6 @@
     <kf-card-comments aria-label="Comments section">
       <kf-card-comments-header>
         <span>Comments (8)</span>
-        <button type="button">Add Comment</button>
       </kf-card-comments-header>
       <kf-comment>
         <kf-comment-header>
@@ -49,9 +48,8 @@
         </kf-comment-header>
         <kf-comment-body>Looking forward to trying this out in my next project.</kf-comment-body>
       </kf-comment>
-      <kf-comment-form>
+      <kf-comment-form hidden>
         <kf-combobox placeholder="Write a comment..." min-chars="0" aria-label="Comment input">
-          <kf-icon slot="icon" name="edit"></kf-icon>
         </kf-combobox>
         <kf-comment-actions>
           <button type="button" variant="secondary" title="Save as draft">
@@ -86,7 +84,7 @@
         <kf-icon name="heart"></kf-icon>
         <span>42</span>
       </kf-card-action>
-      <kf-card-action aria-label="View comments">
+      <kf-card-action class="comment-toggle" aria-label="Write a comment" title="Write a comment">
         <kf-icon name="comment"></kf-icon>
         <span>15</span>
       </kf-card-action>
@@ -97,7 +95,6 @@
     <kf-card-comments aria-label="Comments section">
       <kf-card-comments-header>
         <span>Comments (15)</span>
-        <button type="button">Add Comment</button>
       </kf-card-comments-header>
       <kf-comment>
         <kf-comment-header>
@@ -106,9 +103,8 @@
         </kf-comment-header>
         <kf-comment-body>The accessibility features are fantastic. Great work!</kf-comment-body>
       </kf-comment>
-      <kf-comment-form>
+      <kf-comment-form hidden>
         <kf-combobox placeholder="Write a comment..." min-chars="0" aria-label="Comment input">
-          <kf-icon slot="icon" name="edit"></kf-icon>
         </kf-combobox>
         <kf-comment-actions>
           <button type="button" variant="secondary" title="Save as draft">
@@ -143,7 +139,7 @@
         <kf-icon name="heart"></kf-icon>
         <span>67</span>
       </kf-card-action>
-      <kf-card-action aria-label="View comments">
+      <kf-card-action class="comment-toggle" aria-label="Write a comment" title="Write a comment">
         <kf-icon name="comment"></kf-icon>
         <span>23</span>
       </kf-card-action>
@@ -154,7 +150,6 @@
     <kf-card-comments aria-label="Comments section">
       <kf-card-comments-header>
         <span>Comments (23)</span>
-        <button type="button">Add Comment</button>
       </kf-card-comments-header>
       <kf-comment>
         <kf-comment-header>
@@ -163,9 +158,8 @@
         </kf-comment-header>
         <kf-comment-body>This changed how I think about CSS architecture. Brilliant!</kf-comment-body>
       </kf-comment>
-      <kf-comment-form>
+      <kf-comment-form hidden>
         <kf-combobox placeholder="Write a comment..." min-chars="0" aria-label="Comment input">
-          <kf-icon slot="icon" name="edit"></kf-icon>
         </kf-combobox>
         <kf-comment-actions>
           <button type="button" variant="secondary" title="Save as draft">

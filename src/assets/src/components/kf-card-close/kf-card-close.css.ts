@@ -8,8 +8,8 @@ export const kfCardCloseStyles = css`
     right: 0;
     z-index: 10;
     display: none;
-    background-color: var(--kf-color-bg-secondary, #1a1a1a);
-    border-bottom: 1px solid var(--kf-color-border-default, #333);
+    background-color: var(--kf-color-bg-secondary);
+    border-bottom: 1px solid var(--kf-color-border-default);
   }
 
   :host([visible]) {
@@ -37,11 +37,11 @@ export const kfCardCloseStyles = css`
   }
 
   button:hover {
-    color: var(--kf-color-accent-primary, #3b82f6);
+    color: var(--kf-color-accent-primary);
   }
 
   button:focus-visible {
-    outline: 2px solid var(--kf-focus-ring-color, #3b82f6);
+    outline: 2px solid var(--kf-color-accent-primary);
     outline-offset: 2px;
   }
 

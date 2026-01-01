@@ -73,6 +73,13 @@ class KefineApp {
     this.cards.forEach((card, index) => {
       card.addEventListener("click", (e) => this.handleCardClick(e, card, index));
       card.querySelector("kf-card-close")?.addEventListener("close", () => this.collapseCard());
+
+      // Comment toggle button - shows comment form when clicked
+      const commentToggle = card.querySelector(".comment-toggle");
+      commentToggle?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.toggleCommentForm(card);
+      });
     });
 
     // Infinite scroll for feed
@@ -254,6 +261,30 @@ class KefineApp {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  toggleCommentForm(card: Element): void {
+    const commentForm = card.querySelector("kf-comment-form");
+    if (!commentForm) return;
+
+    // First expand the card if not expanded
+    const cardId = card.getAttribute("data-post-id");
+    if (cardId && !card.hasAttribute("expanded")) {
+      const index = this.cards.indexOf(card);
+      this.state.currentCardIndex = index;
+      this.expandCard(cardId);
+    }
+
+    // Toggle comment form visibility
+    if (commentForm.hasAttribute("hidden")) {
+      commentForm.removeAttribute("hidden");
+      // Focus the combobox input after a short delay
+      setTimeout(() => {
+        (commentForm.querySelector("kf-combobox") as any)?.focus();
+      }, 100);
+    } else {
+      commentForm.setAttribute("hidden", "");
+    }
+  }
+
   private exposeAPI(): void {
     (window as any).Kefine = {
       toggleSidebar: () => this.toggleSidebar(),
@@ -264,6 +295,7 @@ class KefineApp {
       navigateToHome: () => this.navigateToHome(),
       nextCard: () => this.navigateToNextCard(),
       prevCard: () => this.navigateToPrevCard(),
+      toggleCommentForm: (card: Element) => this.toggleCommentForm(card),
     };
   }
 }

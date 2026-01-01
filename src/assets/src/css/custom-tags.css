@@ -533,25 +533,17 @@ kf-card[variant="post"][expanded] {
   left: 0;
   right: 0;
   bottom: 0;
+  width: 100vw;
+  height: 100vh;
   margin: 0;
   border-radius: 0;
   z-index: var(--kf-z-index-modal);
   overflow-y: auto;
   cursor: default;
+  background-color: var(--kf-color-bg-primary);
 }
 
-/* Card close button for fullscreen mode */
-kf-card-close {
-  position: absolute;
-  top: var(--kf-space-md);
-  right: var(--kf-space-md);
-  display: none;
-  z-index: 10;
-}
-
-kf-card[variant="post"][expanded] kf-card-close {
-  display: block;
-}
+/* Card close button visibility is handled by the kf-card-close Lit component's [visible] attribute */
 
 /* Card header for posts */
 kf-card[variant="post"] kf-card-header {
