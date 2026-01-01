@@ -80,30 +80,24 @@
         <span>Dark Mode</span>
         <small>Toggle dark theme</small>
       </kf-setting-label>
-      <label slot="control">
-        <input type="checkbox" id="dark-mode-toggle" checked>
-        <span class="toggle-switch"></span>
-      </label>
+      <kf-switch slot="control" id="dark-mode-toggle" name="dark-mode" checked>
+      </kf-switch>
     </kf-setting-item>
     <kf-setting-item>
       <kf-setting-label slot="label">
         <span>Animations</span>
         <small>Enable UI animations</small>
       </kf-setting-label>
-      <label slot="control">
-        <input type="checkbox" id="animations-toggle" checked>
-        <span class="toggle-switch"></span>
-      </label>
+      <kf-switch slot="control" id="animations-toggle" name="animations" checked>
+      </kf-switch>
     </kf-setting-item>
     <kf-setting-item>
       <kf-setting-label slot="label">
         <span>Sound Effects</span>
         <small>Play interaction sounds</small>
       </kf-setting-label>
-      <label slot="control">
-        <input type="checkbox" id="sound-effects-toggle">
-        <span class="toggle-switch"></span>
-      </label>
+      <kf-switch slot="control" id="sound-effects-toggle" name="sound-effects">
+      </kf-switch>
     </kf-setting-item>
   </kf-settings>
 </kf-sidebar-section>

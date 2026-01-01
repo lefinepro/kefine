@@ -1,6 +1,8 @@
 // Import our custom Lit components for interactive elements
 // No external icon libraries - all icons are local Carbon Design System SVGs
 import "./components/kf-icon.js";
+import "./components/kf-switch.js";
+import "./components/kf-post-close.js";
 import "./components/overlay.js";
 import "./components/counter.js";
 import "./components/filter-option.js";
@@ -226,14 +228,29 @@ class KefineApp {
     // Keyboard shortcuts
     document.addEventListener("keydown", this.handleKeydown.bind(this));
 
-    // Settings toggles - these are static elements that need manual event handling
-    const settingsToggles = document.querySelectorAll(
-      'kf-setting-item input[type="checkbox"]',
+    // Settings toggles using kf-switch Lit component
+    const settingsSwitches = document.querySelectorAll(
+      "kf-setting-item kf-switch",
     );
-    settingsToggles.forEach((toggle) => {
+    settingsSwitches.forEach((toggle) => {
       toggle.addEventListener("change", (e: Event) => {
-        const target = e.target as HTMLInputElement;
-        this.saveSettings(target.id, target.checked);
+        const target = e.target as HTMLElement & { checked: boolean };
+        const switchId = target.id;
+        this.saveSettings(switchId, target.checked);
+
+        // Handle specific settings
+        if (switchId === "dark-mode-toggle") {
+          document.documentElement.setAttribute(
+            "data-theme",
+            target.checked ? "dark" : "light",
+          );
+        } else if (switchId === "animations-toggle") {
+          if (target.checked) {
+            document.documentElement.classList.remove("reduce-motion");
+          } else {
+            document.documentElement.classList.add("reduce-motion");
+          }
+        }
       });
     });
 
@@ -252,14 +269,14 @@ class KefineApp {
     this.state.isSidebarOpen = true;
     if (this.elements.sidebar) this.elements.sidebar.setAttribute("open", "");
     if (this.elements.app) this.elements.app.setAttribute("sidebar-open", "");
-    this.createOverlay();
+    this.showOverlay();
   }
 
   private closeSidebar(): void {
     this.state.isSidebarOpen = false;
     if (this.elements.sidebar) this.elements.sidebar.removeAttribute("open");
     if (this.elements.app) this.elements.app.removeAttribute("sidebar-open");
-    this.removeOverlay();
+    this.hideOverlay();
   }
 
   public toggleSidebar(): void {
@@ -271,39 +288,32 @@ class KefineApp {
   }
 
   // ===== Overlay Functions =====
-  private createOverlay(): void {
-    let overlay = document.querySelector("kf-overlay");
-    if (!overlay) {
-      overlay = document.createElement("kf-overlay");
-      document.body.appendChild(overlay);
-    }
-    // Force reflow for transition
+  // Overlay is now pre-placed in the template, we just toggle visibility
+  private showOverlay(): void {
+    const overlay = document.querySelector("kf-overlay");
     if (overlay) {
+      // Force reflow for transition
       (overlay as HTMLElement).offsetHeight;
       overlay.setAttribute("visible", "");
     }
   }
 
-  private removeOverlay(): void {
+  private hideOverlay(): void {
     const overlay = document.querySelector("kf-overlay");
     if (overlay) {
       overlay.removeAttribute("visible");
-      setTimeout(() => {
-        if (overlay && overlay.parentNode) {
-          overlay.parentNode.removeChild(overlay);
-        }
-      }, 250);
     }
   }
 
   // ===== Post Functions =====
+  // Posts use kf-post-close Lit component - pre-placed in template, visibility toggled
   private initPosts(): void {
     const posts = document.querySelectorAll("kf-post");
     posts.forEach((post) => {
       post.addEventListener("click", (e: Event) => {
         const target = e.target as HTMLElement;
-        // Don't expand if clicking on action buttons
-        if (target.closest("kf-post-action") || target.closest("button")) {
+        // Don't expand if clicking on action buttons or close button
+        if (target.closest("kf-post-action") || target.closest("button") || target.closest("kf-post-close")) {
           return;
         }
         const postId = post.getAttribute("data-post-id");
@@ -311,6 +321,14 @@ class KefineApp {
           this.expandPost(postId);
         }
       });
+
+      // Listen for close events from kf-post-close component
+      const closeButton = post.querySelector("kf-post-close");
+      if (closeButton) {
+        closeButton.addEventListener("close", () => {
+          this.collapsePost();
+        });
+      }
     });
   }
 
@@ -327,20 +345,10 @@ class KefineApp {
     post.setAttribute("expanded", "");
     document.body.style.overflow = "hidden";
 
-    // Add close button if not exists
-    if (!post.querySelector(".kf-post-close")) {
-      const closeBtn = document.createElement("button");
-      closeBtn.className = "kf-post-close";
-      closeBtn.setAttribute("aria-label", "Close post");
-      closeBtn.innerHTML = '<kf-icon name="close"></kf-icon>';
-      closeBtn.style.cssText =
-        "position: absolute; top: 1rem; right: 1rem; z-index: 10; background: transparent; border: none; cursor: pointer; padding: 0.5rem; color: inherit;";
-      closeBtn.addEventListener("click", (e: Event) => {
-        e.stopPropagation();
-        this.collapsePost();
-      });
-      (post as HTMLElement).style.position = "relative";
-      post.appendChild(closeBtn);
+    // Show the close button (pre-placed in template)
+    const closeBtn = post.querySelector("kf-post-close");
+    if (closeBtn) {
+      closeBtn.setAttribute("visible", "");
     }
 
     // Handle Escape key
@@ -361,9 +369,10 @@ class KefineApp {
     );
     if (post) {
       post.removeAttribute("expanded");
-      const closeBtn = post.querySelector(".kf-post-close");
+      // Hide the close button
+      const closeBtn = post.querySelector("kf-post-close");
       if (closeBtn) {
-        closeBtn.remove();
+        closeBtn.removeAttribute("visible");
       }
     }
 
