@@ -348,6 +348,61 @@ kf-filter-option[selected] {
   color: var(--kf-color-accent-primary);
 }
 
+/* Filter option label styling */
+kf-filter-option label {
+  display: flex;
+  align-items: center;
+  gap: var(--kf-space-sm);
+  cursor: pointer;
+  width: 100%;
+}
+
+/* Custom checkbox/radio styling */
+kf-filter-option input[type="checkbox"],
+kf-filter-option input[type="radio"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--kf-color-accent-primary);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* Range inputs for price filter */
+kf-filter-range {
+  display: block;
+  margin-bottom: var(--kf-space-sm);
+}
+
+kf-range-inputs {
+  display: flex;
+  align-items: center;
+  gap: var(--kf-space-xs);
+}
+
+kf-range-inputs input[type="number"] {
+  flex: 1;
+  min-width: 0;
+  padding: var(--kf-space-xs) var(--kf-space-sm);
+  background-color: var(--kf-color-bg-surface);
+  border: 1px solid var(--kf-color-border-default);
+  color: var(--kf-color-text-primary);
+  font-size: var(--kf-font-size-sm);
+}
+
+kf-range-inputs input[type="number"]:focus {
+  outline: none;
+  border-color: var(--kf-color-accent-primary);
+}
+
+kf-range-inputs input[type="number"]::placeholder {
+  color: var(--kf-color-text-muted);
+}
+
+kf-range-inputs span {
+  color: var(--kf-color-text-muted);
+  font-size: var(--kf-font-size-sm);
+}
+
 /* ===== kf-settings - Settings Panel ===== */
 kf-settings {
   display: block;
