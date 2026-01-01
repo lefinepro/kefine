@@ -1,5 +1,5 @@
 <!-- Posts Section - Vertical Layout with Expandable View -->
-<kf-section class="mt-xl">
+<kf-section>
   <kf-section-header>
     <kf-section-title>Latest Posts</kf-section-title>
   </kf-section-header>
@@ -8,7 +8,7 @@
     <kf-post data-post-id="post-1" role="article" tabindex="0" aria-label="Post: Getting Started with Kefine">
       <kf-post-header>
         <kf-post-avatar aria-hidden="true">
-          <wa-icon name="user"></wa-icon>
+          <kf-icon name="user"></kf-icon>
         </kf-post-avatar>
         <kf-post-meta>
           <kf-post-author>Admin</kf-post-author>
@@ -18,26 +18,26 @@
       <kf-post-body>
         <kf-post-title>Getting Started with Kefine</kf-post-title>
         <kf-post-content>
-          Learn how to build modern web applications using the Kefine template. This guide covers the TAC CSS architecture, Web Awesome components integration, and ECR templating system.
+          Learn how to build modern web applications using the Kefine template. This guide covers the TAC CSS architecture, Lit components integration, and ECR templating system.
         </kf-post-content>
       </kf-post-body>
       <kf-post-footer>
         <kf-post-action aria-label="Like post">
-          <wa-icon name="heart"></wa-icon>
+          <kf-icon name="heart"></kf-icon>
           <span>24</span>
         </kf-post-action>
         <kf-post-action aria-label="View comments">
-          <wa-icon name="comment"></wa-icon>
+          <kf-icon name="comment"></kf-icon>
           <span>8</span>
         </kf-post-action>
         <kf-post-action aria-label="Share post">
-          <wa-icon name="share"></wa-icon>
+          <kf-icon name="share"></kf-icon>
         </kf-post-action>
       </kf-post-footer>
       <kf-post-comments aria-label="Comments section">
         <kf-post-comments-header>
           <span>Comments (8)</span>
-          <wa-button variant="neutral" appearance="outlined" size="small">Add Comment</wa-button>
+          <button type="button">Add Comment</button>
         </kf-post-comments-header>
         <kf-comment>
           <kf-comment-header>
@@ -54,16 +54,16 @@
           <kf-comment-body>Looking forward to trying this out in my next project.</kf-comment-body>
         </kf-comment>
         <kf-comment-form>
-          <wa-input placeholder="Write a comment..." style="flex: 1;"></wa-input>
-          <wa-button variant="brand">Post</wa-button>
+          <input type="text" placeholder="Write a comment...">
+          <button type="submit">Post</button>
         </kf-comment-form>
       </kf-post-comments>
     </kf-post>
 
-    <kf-post data-post-id="post-2" role="article" tabindex="0" aria-label="Post: Web Awesome Components">
+    <kf-post data-post-id="post-2" role="article" tabindex="0" aria-label="Post: Lit Components">
       <kf-post-header>
         <kf-post-avatar aria-hidden="true">
-          <wa-icon name="code"></wa-icon>
+          <kf-icon name="code"></kf-icon>
         </kf-post-avatar>
         <kf-post-meta>
           <kf-post-author>Developer</kf-post-author>
@@ -71,28 +71,28 @@
         </kf-post-meta>
       </kf-post-header>
       <kf-post-body>
-        <kf-post-title>Exploring Web Awesome Components</kf-post-title>
+        <kf-post-title>Exploring Lit Components</kf-post-title>
         <kf-post-content>
-          Discover the power of Web Awesome's 50+ pre-built components. From buttons and badges to complex form controls, everything is designed with accessibility in mind.
+          Discover the power of Lit's lightweight web components. From buttons and badges to complex form controls, everything is designed with accessibility in mind.
         </kf-post-content>
       </kf-post-body>
       <kf-post-footer>
         <kf-post-action aria-label="Like post">
-          <wa-icon name="heart"></wa-icon>
+          <kf-icon name="heart"></kf-icon>
           <span>42</span>
         </kf-post-action>
         <kf-post-action aria-label="View comments">
-          <wa-icon name="comment"></wa-icon>
+          <kf-icon name="comment"></kf-icon>
           <span>15</span>
         </kf-post-action>
         <kf-post-action aria-label="Share post">
-          <wa-icon name="share"></wa-icon>
+          <kf-icon name="share"></kf-icon>
         </kf-post-action>
       </kf-post-footer>
       <kf-post-comments aria-label="Comments section">
         <kf-post-comments-header>
           <span>Comments (15)</span>
-          <wa-button variant="neutral" appearance="outlined" size="small">Add Comment</wa-button>
+          <button type="button">Add Comment</button>
         </kf-post-comments-header>
         <kf-comment>
           <kf-comment-header>
@@ -102,8 +102,8 @@
           <kf-comment-body>The accessibility features are fantastic. Great work!</kf-comment-body>
         </kf-comment>
         <kf-comment-form>
-          <wa-input placeholder="Write a comment..." style="flex: 1;"></wa-input>
-          <wa-button variant="brand">Post</wa-button>
+          <input type="text" placeholder="Write a comment...">
+          <button type="submit">Post</button>
         </kf-comment-form>
       </kf-post-comments>
     </kf-post>
@@ -111,7 +111,7 @@
     <kf-post data-post-id="post-3" role="article" tabindex="0" aria-label="Post: TAC CSS Deep Dive">
       <kf-post-header>
         <kf-post-avatar aria-hidden="true">
-          <wa-icon name="palette"></wa-icon>
+          <kf-icon name="palette"></kf-icon>
         </kf-post-avatar>
         <kf-post-meta>
           <kf-post-author>Designer</kf-post-author>
@@ -126,21 +126,21 @@
       </kf-post-body>
       <kf-post-footer>
         <kf-post-action aria-label="Like post">
-          <wa-icon name="heart"></wa-icon>
+          <kf-icon name="heart"></kf-icon>
           <span>67</span>
         </kf-post-action>
         <kf-post-action aria-label="View comments">
-          <wa-icon name="comment"></wa-icon>
+          <kf-icon name="comment"></kf-icon>
           <span>23</span>
         </kf-post-action>
         <kf-post-action aria-label="Share post">
-          <wa-icon name="share"></wa-icon>
+          <kf-icon name="share"></kf-icon>
         </kf-post-action>
       </kf-post-footer>
       <kf-post-comments aria-label="Comments section">
         <kf-post-comments-header>
           <span>Comments (23)</span>
-          <wa-button variant="neutral" appearance="outlined" size="small">Add Comment</wa-button>
+          <button type="button">Add Comment</button>
         </kf-post-comments-header>
         <kf-comment>
           <kf-comment-header>
@@ -150,8 +150,8 @@
           <kf-comment-body>This changed how I think about CSS architecture. Brilliant!</kf-comment-body>
         </kf-comment>
         <kf-comment-form>
-          <wa-input placeholder="Write a comment..." style="flex: 1;"></wa-input>
-          <wa-button variant="brand">Post</wa-button>
+          <input type="text" placeholder="Write a comment...">
+          <button type="submit">Post</button>
         </kf-comment-form>
       </kf-post-comments>
     </kf-post>
@@ -165,16 +165,15 @@
   </kf-section-header>
 
   <kf-grid cols="2">
-    <!-- TAC CSS Card using Web Awesome wa-card -->
-    <wa-card>
-      <div slot="header" class="wa-split">
-        <span class="wa-heading-m">TAC CSS Architecture</span>
-        <wa-badge appearance="accent" variant="brand">Core</wa-badge>
-      </div>
-      <p class="text-secondary mb-md">
-        A CSS methodology for the Web Components era. Style custom HTML tags, define custom attributes, then customize with utility classes.
-      </p>
-      <pre><code>/* Step 1: Style the tag */
+    <!-- TAC CSS Card -->
+    <kf-card>
+      <kf-card-header>
+        <kf-card-title>TAC CSS Architecture</kf-card-title>
+        <kf-badge variant="primary">Core</kf-badge>
+      </kf-card-header>
+      <kf-card-body>
+        <p>A CSS methodology for the Web Components era. Style custom HTML tags, define custom attributes, then customize with utility classes.</p>
+        <pre><code>/* Step 1: Style the tag */
 kf-badge {
   display: inline-flex;
   padding: 4px;
@@ -187,21 +186,21 @@ kf-badge[variant=primary] {
 
 /* Step 3: Utility classes */
 &lt;kf-badge class="mar-r-sm"&gt;</code></pre>
-      <div slot="footer">
-        <wa-button appearance="outlined" variant="neutral">Learn More</wa-button>
-      </div>
-    </wa-card>
+      </kf-card-body>
+      <kf-card-footer>
+        <button type="button">Learn More</button>
+      </kf-card-footer>
+    </kf-card>
 
-    <!-- ECR Templates Card using Web Awesome wa-card -->
-    <wa-card>
-      <div slot="header" class="wa-split">
-        <span class="wa-heading-m">ECR Templating</span>
-        <wa-badge appearance="accent" variant="success">Active</wa-badge>
-      </div>
-      <p class="text-secondary mb-md">
-        Embedded Crystal for server-side templating. Create reusable templates with proper inheritance and partials.
-      </p>
-      <pre><code>&lt;%# layouts/main.ecr %&gt;
+    <!-- ECR Templates Card -->
+    <kf-card>
+      <kf-card-header>
+        <kf-card-title>ECR Templating</kf-card-title>
+        <kf-badge variant="success">Active</kf-badge>
+      </kf-card-header>
+      <kf-card-body>
+        <p>Embedded Crystal for server-side templating. Create reusable templates with proper inheritance and partials.</p>
+        <pre><code>&lt;%# layouts/main.ecr %&gt;
 &lt;!DOCTYPE html&gt;
 &lt;html&gt;
 &lt;head&gt;
@@ -211,116 +210,119 @@ kf-badge[variant=primary] {
   &lt;%= content %&gt;
 &lt;/body&gt;
 &lt;/html&gt;</code></pre>
-      <div slot="footer">
-        <wa-button appearance="outlined" variant="neutral">View Docs</wa-button>
-      </div>
-    </wa-card>
+      </kf-card-body>
+      <kf-card-footer>
+        <button type="button">View Docs</button>
+      </kf-card-footer>
+    </kf-card>
   </kf-grid>
 </kf-section>
 
-<!-- Web Awesome Components Section -->
+<!-- Component Examples Section -->
 <kf-section>
   <kf-section-header>
-    <kf-section-title>Web Awesome Components</kf-section-title>
+    <kf-section-title>Component Examples</kf-section-title>
   </kf-section-header>
 
   <kf-grid cols="3">
     <!-- Button Component Demo -->
-    <wa-card>
-      <div slot="header">
-        <span class="wa-heading-s">wa-button</span>
-      </div>
-      <p class="text-secondary text-sm mb-md">
-        Versatile button component with multiple variants and appearances.
-      </p>
-      <div class="wa-cluster wa-gap-xs">
-        <wa-button variant="brand">Brand</wa-button>
-        <wa-button variant="neutral" appearance="outlined">Outlined</wa-button>
-        <wa-button variant="success" appearance="filled">Success</wa-button>
-      </div>
-    </wa-card>
+    <kf-card>
+      <kf-card-header>
+        <kf-card-title>button</kf-card-title>
+      </kf-card-header>
+      <kf-card-body>
+        <p>Native button element with TAC styling.</p>
+        <kf-button-group>
+          <button type="button" variant="primary">Primary</button>
+          <button type="button" variant="secondary">Secondary</button>
+          <button type="button" variant="success">Success</button>
+        </kf-button-group>
+      </kf-card-body>
+    </kf-card>
 
     <!-- Badge Component Demo -->
-    <wa-card>
-      <div slot="header">
-        <span class="wa-heading-s">wa-badge</span>
-      </div>
-      <p class="text-secondary text-sm mb-md">
-        Status indicators with semantic variants.
-      </p>
-      <div class="wa-cluster wa-gap-xs">
-        <wa-badge>Default</wa-badge>
-        <wa-badge variant="brand">Brand</wa-badge>
-        <wa-badge variant="success">Success</wa-badge>
-        <wa-badge variant="warning">Warning</wa-badge>
-        <wa-badge variant="danger">Danger</wa-badge>
-      </div>
-    </wa-card>
+    <kf-card>
+      <kf-card-header>
+        <kf-card-title>kf-badge</kf-card-title>
+      </kf-card-header>
+      <kf-card-body>
+        <p>Status indicators with semantic variants.</p>
+        <kf-badge-group>
+          <kf-badge>Default</kf-badge>
+          <kf-badge variant="primary">Primary</kf-badge>
+          <kf-badge variant="success">Success</kf-badge>
+          <kf-badge variant="warning">Warning</kf-badge>
+          <kf-badge variant="error">Error</kf-badge>
+        </kf-badge-group>
+      </kf-card-body>
+    </kf-card>
 
     <!-- Input Component Demo -->
-    <wa-card>
-      <div slot="header">
-        <span class="wa-heading-s">wa-input</span>
-      </div>
-      <p class="text-secondary text-sm mb-md">
-        Text input with label, placeholder, and icon support.
-      </p>
-      <wa-input label="Search" placeholder="Type to search...">
-        <wa-icon slot="start" name="magnifying-glass"></wa-icon>
-      </wa-input>
-    </wa-card>
+    <kf-card>
+      <kf-card-header>
+        <kf-card-title>input</kf-card-title>
+      </kf-card-header>
+      <kf-card-body>
+        <p>Native input with icon support.</p>
+        <kf-input-group>
+          <label for="demo-search">Search</label>
+          <kf-search-input>
+            <kf-icon name="search"></kf-icon>
+            <input id="demo-search" type="search" placeholder="Type to search...">
+          </kf-search-input>
+        </kf-input-group>
+      </kf-card-body>
+    </kf-card>
 
     <!-- Switch Component Demo -->
-    <wa-card>
-      <div slot="header">
-        <span class="wa-heading-s">wa-switch</span>
-      </div>
-      <p class="text-secondary text-sm mb-md">
-        Toggle switch for boolean settings.
-      </p>
-      <div class="wa-stack wa-gap-s">
-        <wa-switch checked>Dark Mode</wa-switch>
-        <wa-switch>Notifications</wa-switch>
-        <wa-switch>Auto-save</wa-switch>
-      </div>
-    </wa-card>
+    <kf-card>
+      <kf-card-header>
+        <kf-card-title>checkbox</kf-card-title>
+      </kf-card-header>
+      <kf-card-body>
+        <p>Toggle switches using native checkboxes.</p>
+        <kf-switch-group>
+          <label><input type="checkbox" checked> Dark Mode</label>
+          <label><input type="checkbox"> Notifications</label>
+          <label><input type="checkbox"> Auto-save</label>
+        </kf-switch-group>
+      </kf-card-body>
+    </kf-card>
 
     <!-- Progress Component Demo -->
-    <wa-card>
-      <div slot="header">
-        <span class="wa-heading-s">wa-progress-bar</span>
-      </div>
-      <p class="text-secondary text-sm mb-md">
-        Visual progress indicators.
-      </p>
-      <div class="wa-stack wa-gap-s">
-        <wa-progress-bar value="25"></wa-progress-bar>
-        <wa-progress-bar value="50" variant="success"></wa-progress-bar>
-        <wa-progress-bar value="75" variant="brand"></wa-progress-bar>
-      </div>
-    </wa-card>
+    <kf-card>
+      <kf-card-header>
+        <kf-card-title>progress</kf-card-title>
+      </kf-card-header>
+      <kf-card-body>
+        <p>Native progress elements.</p>
+        <kf-progress-group>
+          <progress value="25" max="100">25%</progress>
+          <progress value="50" max="100">50%</progress>
+          <progress value="75" max="100">75%</progress>
+        </kf-progress-group>
+      </kf-card-body>
+    </kf-card>
 
-    <!-- Tooltip Component Demo -->
-    <wa-card>
-      <div slot="header">
-        <span class="wa-heading-s">wa-tooltip</span>
-      </div>
-      <p class="text-secondary text-sm mb-md">
-        Helpful hints on hover.
-      </p>
-      <div class="wa-cluster wa-gap-s">
-        <wa-tooltip content="This is helpful info">
-          <wa-button variant="neutral" appearance="outlined">Hover me</wa-button>
-        </wa-tooltip>
-        <wa-tooltip content="Click for action" placement="bottom">
-          <wa-button variant="brand">Action</wa-button>
-        </wa-tooltip>
-      </div>
-    </wa-card>
+    <!-- Icon Component Demo -->
+    <kf-card>
+      <kf-card-header>
+        <kf-card-title>kf-icon</kf-card-title>
+      </kf-card-header>
+      <kf-card-body>
+        <p>Local Carbon Design SVG icons.</p>
+        <kf-icon-group>
+          <kf-icon name="home" size="lg"></kf-icon>
+          <kf-icon name="search" size="lg"></kf-icon>
+          <kf-icon name="settings" size="lg"></kf-icon>
+          <kf-icon name="user" size="lg"></kf-icon>
+        </kf-icon-group>
+      </kf-card-body>
+    </kf-card>
   </kf-grid>
 </kf-section>
 
-<!-- Custom KT Components Section -->
+<!-- Custom Components Section -->
 <kf-section>
   <kf-section-header>
     <kf-section-title>Custom Components (kf-*)</kf-section-title>
@@ -330,46 +332,40 @@ kf-badge[variant=primary] {
     <!-- Card Component -->
     <kf-card variant="outlined">
       <kf-card-header>
-        <kf-card-title class="text-lg">kf-card</kf-card-title>
+        <kf-card-title>kf-card</kf-card-title>
       </kf-card-header>
       <kf-card-body>
-        <p class="text-secondary text-sm">
-          A flexible container component with header, body, and footer sections.
-        </p>
+        <p>A flexible container component with header, body, and footer sections.</p>
       </kf-card-body>
     </kf-card>
 
     <!-- Badge Component -->
     <kf-card variant="outlined">
       <kf-card-header>
-        <kf-card-title class="text-lg">kf-badge</kf-card-title>
+        <kf-card-title>kf-badge</kf-card-title>
       </kf-card-header>
       <kf-card-body>
-        <p class="text-secondary text-sm mb-md">
-          Status indicators with multiple variants.
-        </p>
-        <div class="d-flex gap-xs flex-wrap">
+        <p>Status indicators with multiple variants.</p>
+        <kf-badge-group>
           <kf-badge>Default</kf-badge>
           <kf-badge variant="primary">Primary</kf-badge>
           <kf-badge variant="success">Success</kf-badge>
           <kf-badge variant="warning">Warning</kf-badge>
           <kf-badge variant="error">Error</kf-badge>
-        </div>
+        </kf-badge-group>
       </kf-card-body>
     </kf-card>
 
     <!-- Search Component -->
     <kf-card variant="outlined">
       <kf-card-header>
-        <kf-card-title class="text-lg">kf-search</kf-card-title>
+        <kf-card-title>kf-search</kf-card-title>
       </kf-card-header>
       <kf-card-body>
-        <p class="text-secondary text-sm mb-md">
-          Search input with icon and keyboard shortcut indicator.
-        </p>
+        <p>Search input with icon and keyboard shortcut indicator.</p>
         <kf-search>
           <kf-search-icon>
-            <wa-icon name="magnifying-glass"></wa-icon>
+            <kf-icon name="search"></kf-icon>
           </kf-search-icon>
           <kf-search-input>
             <input type="search" placeholder="Search...">
@@ -381,51 +377,45 @@ kf-badge[variant=primary] {
     <!-- Navigation Component -->
     <kf-card variant="outlined">
       <kf-card-header>
-        <kf-card-title class="text-lg">kf-nav-item</kf-card-title>
+        <kf-card-title>kf-nav-item</kf-card-title>
       </kf-card-header>
       <kf-card-body>
-        <p class="text-secondary text-sm mb-md">
-          Navigation items with icon and text.
-        </p>
-        <div class="d-flex flex-col gap-2xs">
+        <p>Navigation items with icon and text.</p>
+        <nav>
           <kf-nav-item active>
-            <wa-icon name="house"></wa-icon>
+            <kf-icon name="home"></kf-icon>
             <span>Active Item</span>
           </kf-nav-item>
           <kf-nav-item>
-            <wa-icon name="grid-2"></wa-icon>
+            <kf-icon name="grid"></kf-icon>
             <span>Normal Item</span>
           </kf-nav-item>
-        </div>
+        </nav>
       </kf-card-body>
     </kf-card>
 
     <!-- Grid Component -->
     <kf-card variant="outlined">
       <kf-card-header>
-        <kf-card-title class="text-lg">kf-grid</kf-card-title>
+        <kf-card-title>kf-grid</kf-card-title>
       </kf-card-header>
       <kf-card-body>
-        <p class="text-secondary text-sm mb-md">
-          Responsive grid layout with configurable columns.
-        </p>
-        <div class="d-grid gap-xs" style="grid-template-columns: repeat(3, 1fr);">
-          <div class="bg-surface p-xs rounded-sm text-center text-xs">1</div>
-          <div class="bg-surface p-xs rounded-sm text-center text-xs">2</div>
-          <div class="bg-surface p-xs rounded-sm text-center text-xs">3</div>
-        </div>
+        <p>Responsive grid layout with configurable columns.</p>
+        <kf-grid cols="3">
+          <kf-grid-item>1</kf-grid-item>
+          <kf-grid-item>2</kf-grid-item>
+          <kf-grid-item>3</kf-grid-item>
+        </kf-grid>
       </kf-card-body>
     </kf-card>
 
     <!-- Section Component -->
     <kf-card variant="outlined">
       <kf-card-header>
-        <kf-card-title class="text-lg">kf-section</kf-card-title>
+        <kf-card-title>kf-section</kf-card-title>
       </kf-card-header>
       <kf-card-body>
-        <p class="text-secondary text-sm">
-          Content sections with header and title for organizing page content.
-        </p>
+        <p>Content sections with header and title for organizing page content.</p>
       </kf-card-body>
     </kf-card>
   </kf-grid>
@@ -438,37 +428,37 @@ kf-badge[variant=primary] {
   </kf-section-header>
 
   <kf-grid cols="4">
-    <div class="text-center p-lg">
-      <div class="text-3xl mb-md text-accent">
-        <wa-icon name="layer-group" style="font-size: 48px;"></wa-icon>
-      </div>
-      <h4 class="mb-sm">Kemal Framework</h4>
-      <p class="text-secondary text-sm">Fast, expressive web framework for Crystal</p>
-    </div>
+    <kf-feature-item>
+      <kf-feature-icon>
+        <kf-icon name="layers" size="3xl"></kf-icon>
+      </kf-feature-icon>
+      <h4>Kemal Framework</h4>
+      <p>Fast, expressive web framework for Crystal</p>
+    </kf-feature-item>
 
-    <div class="text-center p-lg">
-      <div class="text-3xl mb-md text-accent">
-        <wa-icon name="palette" style="font-size: 48px;"></wa-icon>
-      </div>
-      <h4 class="mb-sm">TAC CSS</h4>
-      <p class="text-secondary text-sm">Modern methodology for Web Components</p>
-    </div>
+    <kf-feature-item>
+      <kf-feature-icon>
+        <kf-icon name="palette" size="3xl"></kf-icon>
+      </kf-feature-icon>
+      <h4>TAC CSS</h4>
+      <p>Modern methodology for Web Components</p>
+    </kf-feature-item>
 
-    <div class="text-center p-lg">
-      <div class="text-3xl mb-md text-accent">
-        <wa-icon name="file-code" style="font-size: 48px;"></wa-icon>
-      </div>
-      <h4 class="mb-sm">ECR Templates</h4>
-      <p class="text-secondary text-sm">Server-side templating with Crystal</p>
-    </div>
+    <kf-feature-item>
+      <kf-feature-icon>
+        <kf-icon name="document" size="3xl"></kf-icon>
+      </kf-feature-icon>
+      <h4>ECR Templates</h4>
+      <p>Server-side templating with Crystal</p>
+    </kf-feature-item>
 
-    <div class="text-center p-lg">
-      <div class="text-3xl mb-md text-accent">
-        <wa-icon name="grid-2" style="font-size: 48px;"></wa-icon>
-      </div>
-      <h4 class="mb-sm">Web Awesome</h4>
-      <p class="text-secondary text-sm">50+ ready-to-use web components</p>
-    </div>
+    <kf-feature-item>
+      <kf-feature-icon>
+        <kf-icon name="grid" size="3xl"></kf-icon>
+      </kf-feature-icon>
+      <h4>Lit Components</h4>
+      <p>Lightweight web components library</p>
+    </kf-feature-item>
   </kf-grid>
 </kf-section>
 
@@ -478,27 +468,29 @@ kf-badge[variant=primary] {
     <kf-section-title>Keyboard Shortcuts</kf-section-title>
   </kf-section-header>
 
-  <wa-card>
-    <div class="wa-stack wa-gap-s">
-      <div class="d-flex items-center justify-between p-sm bg-secondary rounded-sm">
-        <span class="text-secondary">Open search</span>
-        <kbd class="bg-surface p-xs rounded-sm text-xs font-mono">/</kbd>
-      </div>
-      <div class="d-flex items-center justify-between p-sm bg-secondary rounded-sm">
-        <span class="text-secondary">Toggle sidebar</span>
-        <div class="d-flex gap-xs">
-          <kbd class="bg-surface p-xs rounded-sm text-xs font-mono">Ctrl</kbd>
-          <kbd class="bg-surface p-xs rounded-sm text-xs font-mono">B</kbd>
-        </div>
-      </div>
-      <div class="d-flex items-center justify-between p-sm bg-secondary rounded-sm">
-        <span class="text-secondary">Toggle sound</span>
-        <kbd class="bg-surface p-xs rounded-sm text-xs font-mono">M</kbd>
-      </div>
-      <div class="d-flex items-center justify-between p-sm bg-secondary rounded-sm">
-        <span class="text-secondary">Close panel</span>
-        <kbd class="bg-surface p-xs rounded-sm text-xs font-mono">Esc</kbd>
-      </div>
-    </div>
-  </wa-card>
+  <kf-card>
+    <kf-card-body>
+      <kf-shortcut-list>
+        <kf-shortcut-item>
+          <span>Open search</span>
+          <kbd>/</kbd>
+        </kf-shortcut-item>
+        <kf-shortcut-item>
+          <span>Toggle sidebar</span>
+          <kf-kbd-group>
+            <kbd>Ctrl</kbd>
+            <kbd>B</kbd>
+          </kf-kbd-group>
+        </kf-shortcut-item>
+        <kf-shortcut-item>
+          <span>Toggle sound</span>
+          <kbd>M</kbd>
+        </kf-shortcut-item>
+        <kf-shortcut-item>
+          <span>Close panel</span>
+          <kbd>Esc</kbd>
+        </kf-shortcut-item>
+      </kf-shortcut-list>
+    </kf-card-body>
+  </kf-card>
 </kf-section>

@@ -2,7 +2,7 @@
   <kf-topbar-left>
     <kf-logo id="logo-toggle" title="Click to open menu">
       <kf-logo-icon>
-        <wa-icon name="layer-group" family="duotone"></wa-icon>
+        <kf-icon name="layers"></kf-icon>
       </kf-logo-icon>
       <span>Kefine</span>
     </kf-logo>
@@ -10,19 +10,17 @@
 
   <kf-topbar-center>
     <kf-combobox placeholder="Search..." aria-label="Search">
-      <wa-icon slot="icon" name="magnifying-glass"></wa-icon>
+      <kf-icon slot="icon" name="search"></kf-icon>
     </kf-combobox>
   </kf-topbar-center>
 
   <kf-topbar-right>
-    <wa-tooltip content="Toggle sound (M)">
-      <wa-button id="sound-toggle" appearance="plain" variant="neutral" size="small" aria-label="Toggle sound">
-        <wa-icon name="volume-high"></wa-icon>
-      </wa-button>
-    </wa-tooltip>
-    <wa-button id="login-button" variant="brand" size="small">
-      <wa-icon slot="prefix" name="user"></wa-icon>
-      Login
-    </wa-button>
+    <button id="sound-toggle" aria-label="Toggle sound (M)" title="Toggle sound (M)">
+      <kf-icon name="volume-up"></kf-icon>
+    </button>
+    <button id="login-button" type="button">
+      <kf-icon name="user"></kf-icon>
+      <span>Login</span>
+    </button>
   </kf-topbar-right>
 </kf-topbar>

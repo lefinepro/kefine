@@ -1,15 +1,6 @@
-// Import WebAwesome components individually
-import "@awesome.me/webawesome/dist/components/button/button.js";
-import "@awesome.me/webawesome/dist/components/card/card.js";
-import "@awesome.me/webawesome/dist/components/input/input.js";
-import "@awesome.me/webawesome/dist/components/icon/icon.js";
-import "@awesome.me/webawesome/dist/components/badge/badge.js";
-import "@awesome.me/webawesome/dist/components/switch/switch.js";
-import "@awesome.me/webawesome/dist/components/progress-bar/progress-bar.js";
-import "@awesome.me/webawesome/dist/components/tooltip/tooltip.js";
-import "@awesome.me/webawesome/dist/components/select/select.js";
-
 // Import our custom Lit components for interactive elements
+// No external icon libraries - all icons are local Carbon Design System SVGs
+import "./components/kf-icon.js";
 import "./components/overlay.js";
 import "./components/counter.js";
 import "./components/filter-option.js";
@@ -17,17 +8,13 @@ import "./components/nav-item.js";
 import "./components/setting-item.js";
 import "./components/kf-combobox/kf-combobox.js";
 
-// WebAwesome uses Font Awesome Free icons by default
-// No need to register a custom icon library - icons work out of the box
-
 /**
  * Kefine Application TypeScript
  * Handles sidebar toggle, search combobox, keyboard shortcuts, posts, and settings
  * Interactive elements are handled by Lit components, static templates remain as ECR
  */
 
-// WebAwesome components are already registered when we import their files above
-// No need to define them again
+// All components are custom kf-* elements using local SVG icons
 
 // ===== Types =====
 type KFElement = HTMLElement & (HTMLElement | Element);
@@ -316,7 +303,7 @@ class KefineApp {
       post.addEventListener("click", (e: Event) => {
         const target = e.target as HTMLElement;
         // Don't expand if clicking on action buttons
-        if (target.closest("kf-post-action") || target.closest("wa-button")) {
+        if (target.closest("kf-post-action") || target.closest("button")) {
           return;
         }
         const postId = post.getAttribute("data-post-id");
@@ -342,15 +329,12 @@ class KefineApp {
 
     // Add close button if not exists
     if (!post.querySelector(".kf-post-close")) {
-      const closeBtn = document.createElement("wa-button");
+      const closeBtn = document.createElement("button");
       closeBtn.className = "kf-post-close";
-      closeBtn.setAttribute("appearance", "plain");
-      closeBtn.setAttribute("variant", "neutral");
-      closeBtn.setAttribute("size", "small");
       closeBtn.setAttribute("aria-label", "Close post");
-      closeBtn.innerHTML = '<wa-icon name="xmark"></wa-icon>';
+      closeBtn.innerHTML = '<kf-icon name="close"></kf-icon>';
       closeBtn.style.cssText =
-        "position: absolute; top: 1rem; right: 1rem; z-index: 10;";
+        "position: absolute; top: 1rem; right: 1rem; z-index: 10; background: transparent; border: none; cursor: pointer; padding: 0.5rem; color: inherit;";
       closeBtn.addEventListener("click", (e: Event) => {
         e.stopPropagation();
         this.collapsePost();
@@ -408,11 +392,11 @@ class KefineApp {
         String(this.state.isSoundEnabled),
       );
       // Update icon or visual state
-      const icon = this.elements.soundToggle.querySelector("wa-icon");
+      const icon = this.elements.soundToggle.querySelector("kf-icon");
       if (icon) {
         icon.setAttribute(
           "name",
-          this.state.isSoundEnabled ? "volume-high" : "volume-xmark",
+          this.state.isSoundEnabled ? "volume-up" : "volume-off",
         );
       }
     }
