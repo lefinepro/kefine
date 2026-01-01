@@ -1,5 +1,6 @@
-import { LitElement, html, css } from "lit";
+import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
+import { kfPostCloseStyles } from "./kf-post-close.css.js";
 
 /**
  * kf-post-close - Close button for expanded posts
@@ -11,39 +12,7 @@ import { customElement } from "lit/decorators.js";
  */
 @customElement("kf-post-close")
 export class KfPostClose extends LitElement {
-  static styles = css`
-    :host {
-      position: absolute;
-      top: 1rem;
-      right: 1rem;
-      z-index: 10;
-      display: none;
-    }
-
-    :host([visible]) {
-      display: block;
-    }
-
-    button {
-      background: transparent;
-      border: none;
-      cursor: pointer;
-      padding: 0.5rem;
-      color: inherit;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    button:hover {
-      opacity: 0.8;
-    }
-
-    button:focus-visible {
-      outline: 2px solid var(--kf-focus-ring-color, #3b82f6);
-      outline-offset: 2px;
-    }
-  `;
+  static styles = kfPostCloseStyles;
 
   private handleClick(e: Event) {
     e.stopPropagation();

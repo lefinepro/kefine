@@ -4,36 +4,42 @@
  * Using local Carbon Design System icons
  * Reference: tac.org methodology
  * Dense layout with no border-radius
+ * Light theme by default (frappe.io inspired)
  */
 
 :root {
   /* ===== Color Tokens ===== */
-  /* Using Web Awesome color system with dark theme inspired by types.kitlangton.com */
+  /* Light theme (default) - inspired by frappe.io */
 
-  /* Surface colors - dark theme */
-  --kf-color-bg-primary: #000000;
-  --kf-color-bg-secondary: #0a0a0a;
-  --kf-color-bg-tertiary: #111111;
-  --kf-color-bg-surface: #1a1a1a;
-  --kf-color-bg-elevated: #222222;
+  /* Surface colors - light theme */
+  --kf-color-bg-primary: #ffffff;
+  --kf-color-bg-secondary: #f8f8f8;
+  --kf-color-bg-tertiary: #f5f5f5;
+  --kf-color-bg-surface: #fafafa;
+  --kf-color-bg-elevated: #ffffff;
 
   /* Text colors */
-  --kf-color-text-primary: #f1efe8;
-  --kf-color-text-secondary: #a0a0a0;
-  --kf-color-text-muted: #666666;
-  --kf-color-text-accent: #7dd3fc;
+  --kf-color-text-primary: #171717;
+  --kf-color-text-secondary: #525252;
+  --kf-color-text-muted: #7c7c7c;
+  --kf-color-text-accent: #0066cc;
 
   /* Border colors */
-  --kf-color-border-default: #333333;
-  --kf-color-border-subtle: #222222;
-  --kf-color-border-accent: #444444;
+  --kf-color-border-default: #ededed;
+  --kf-color-border-subtle: #f0f0f0;
+  --kf-color-border-accent: #d4d4d4;
 
   /* Accent colors */
-  --kf-color-accent-primary: #7dd3fc;
-  --kf-color-accent-secondary: #a78bfa;
-  --kf-color-accent-success: #4ade80;
-  --kf-color-accent-warning: #fbbf24;
-  --kf-color-accent-error: #f87171;
+  --kf-color-accent-primary: #0066cc;
+  --kf-color-accent-secondary: #7c3aed;
+  --kf-color-accent-success: #16a34a;
+  --kf-color-accent-warning: #ca8a04;
+  --kf-color-accent-error: #dc2626;
+
+  /* Interactive states */
+  --kf-color-hover-bg: #f5f5f5;
+  --kf-color-active-bg: #e5e5e5;
+  --kf-color-selected-bg: #e7f1ff;
 
   /* ===== Typography Tokens ===== */
   --kf-font-family-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -73,7 +79,7 @@
   --kf-space-3xl: 3rem;       /* 48px */
 
   /* ===== Layout Tokens ===== */
-  --kf-sidebar-width: 240px;
+  --kf-sidebar-width: 250px;
   --kf-topbar-height: 48px;
   --kf-content-max-width: 100%;
 
@@ -89,10 +95,10 @@
   --kf-border-width-medium: 2px;
 
   /* ===== Shadow Tokens ===== */
-  --kf-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
-  --kf-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.5);
-  --kf-shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
-  --kf-shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.5);
+  --kf-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --kf-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+  --kf-shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+  --kf-shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.12);
 
   /* ===== Transition Tokens ===== */
   --kf-transition-fast: 150ms ease;
@@ -105,6 +111,45 @@
   --kf-z-index-sidebar: 200;
   --kf-z-index-modal: 300;
   --kf-z-index-toast: 400;
+}
+
+/* Dark theme */
+[data-theme="dark"] {
+  /* Surface colors - dark theme */
+  --kf-color-bg-primary: #000000;
+  --kf-color-bg-secondary: #0a0a0a;
+  --kf-color-bg-tertiary: #111111;
+  --kf-color-bg-surface: #1a1a1a;
+  --kf-color-bg-elevated: #222222;
+
+  /* Text colors */
+  --kf-color-text-primary: #f1efe8;
+  --kf-color-text-secondary: #a0a0a0;
+  --kf-color-text-muted: #666666;
+  --kf-color-text-accent: #7dd3fc;
+
+  /* Border colors */
+  --kf-color-border-default: #333333;
+  --kf-color-border-subtle: #222222;
+  --kf-color-border-accent: #444444;
+
+  /* Accent colors */
+  --kf-color-accent-primary: #7dd3fc;
+  --kf-color-accent-secondary: #a78bfa;
+  --kf-color-accent-success: #4ade80;
+  --kf-color-accent-warning: #fbbf24;
+  --kf-color-accent-error: #f87171;
+
+  /* Interactive states */
+  --kf-color-hover-bg: #1a1a1a;
+  --kf-color-active-bg: #2a2a2a;
+  --kf-color-selected-bg: #1e3a5f;
+
+  /* Shadows for dark theme */
+  --kf-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --kf-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.5);
+  --kf-shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
+  --kf-shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.5);
 }
 
 /* Global overrides for dense layout */

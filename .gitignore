@@ -26,7 +26,6 @@ Thumbs.db
 public/dist
 node_modules/
 
-# Build logs and npm artifacts (project uses bun)
+# Build logs
 *.log
-package-lock.json
 
