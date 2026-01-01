@@ -1,50 +1,83 @@
 <kf-sidebar-header>
-  <kf-logo>
-    <kf-logo-icon>
-      <kf-icon name="layers"></kf-icon>
-    </kf-logo-icon>
-    <span>Kefine</span>
-  </kf-logo>
   <button id="sidebar-close" aria-label="Close sidebar">
     <kf-icon name="close"></kf-icon>
   </button>
 </kf-sidebar-header>
 
-<!-- Search Section -->
-<kf-sidebar-section>
-  <kf-search-input>
-    <kf-icon name="search"></kf-icon>
-    <input id="sidebar-search" type="search" placeholder="Search..." autocomplete="off">
-  </kf-search-input>
-</kf-sidebar-section>
-
 <!-- Filters Section -->
 <kf-sidebar-section title="Filters">
   <kf-filters>
-    <kf-filter-group title="Category">
+    <!-- Repository Filter -->
+    <kf-filter-group title="Repository">
+      <kf-filter-search>
+        <input type="text" name="repo-search" placeholder="Search repositories..." autocomplete="off">
+      </kf-filter-search>
       <kf-filter-option selected>
-        <label><input type="checkbox" checked> All</label>
+        <label><input type="checkbox" name="repo" value="all" checked> All</label>
       </kf-filter-option>
       <kf-filter-option>
-        <label><input type="checkbox"> Components</label>
+        <label><input type="checkbox" name="repo" value="public"> Public</label>
       </kf-filter-option>
       <kf-filter-option>
-        <label><input type="checkbox"> Layouts</label>
+        <label><input type="checkbox" name="repo" value="private"> Private</label>
       </kf-filter-option>
       <kf-filter-option>
-        <label><input type="checkbox"> Patterns</label>
+        <label><input type="checkbox" name="repo" value="fork"> Forks</label>
       </kf-filter-option>
     </kf-filter-group>
 
-    <kf-filter-group title="Status">
+    <!-- Price Filter -->
+    <kf-filter-group title="Price">
+      <kf-filter-range>
+        <kf-range-inputs>
+          <input type="number" name="price-min" placeholder="Min $" min="0" step="10">
+          <span>—</span>
+          <input type="number" name="price-max" placeholder="Max $" min="0" step="10">
+        </kf-range-inputs>
+      </kf-filter-range>
       <kf-filter-option>
-        <label><input type="checkbox"> Active</label>
+        <label><input type="checkbox" name="price" value="free"> Free</label>
       </kf-filter-option>
       <kf-filter-option>
-        <label><input type="checkbox"> Completed</label>
+        <label><input type="checkbox" name="price" value="under50"> Under $50</label>
       </kf-filter-option>
       <kf-filter-option>
-        <label><input type="checkbox"> Pending</label>
+        <label><input type="checkbox" name="price" value="50-100"> $50 - $100</label>
+      </kf-filter-option>
+      <kf-filter-option>
+        <label><input type="checkbox" name="price" value="100-500"> $100 - $500</label>
+      </kf-filter-option>
+      <kf-filter-option>
+        <label><input type="checkbox" name="price" value="over500"> $500+</label>
+      </kf-filter-option>
+    </kf-filter-group>
+
+    <!-- Count of Solvers Filter -->
+    <kf-filter-group title="Solvers">
+      <kf-filter-option selected>
+        <label><input type="checkbox" name="solvers" value="any" checked> Any</label>
+      </kf-filter-option>
+      <kf-filter-option>
+        <label><input type="checkbox" name="solvers" value="0"> No solvers yet</label>
+      </kf-filter-option>
+      <kf-filter-option>
+        <label><input type="checkbox" name="solvers" value="1-5"> 1-5 solvers</label>
+      </kf-filter-option>
+      <kf-filter-option>
+        <label><input type="checkbox" name="solvers" value="5+"> 5+ solvers</label>
+      </kf-filter-option>
+    </kf-filter-group>
+
+    <!-- Auction Filter -->
+    <kf-filter-group title="Auction">
+      <kf-filter-option selected>
+        <label><input type="radio" name="auction" value="all" checked> All</label>
+      </kf-filter-option>
+      <kf-filter-option>
+        <label><input type="radio" name="auction" value="yes"> Auction active</label>
+      </kf-filter-option>
+      <kf-filter-option>
+        <label><input type="radio" name="auction" value="no"> No auction</label>
       </kf-filter-option>
     </kf-filter-group>
   </kf-filters>
@@ -89,14 +122,6 @@
         <small>Enable UI animations</small>
       </kf-setting-label>
       <kf-switch slot="control" id="animations-toggle" name="animations" checked>
-      </kf-switch>
-    </kf-setting-item>
-    <kf-setting-item>
-      <kf-setting-label slot="label">
-        <span>Sound Effects</span>
-        <small>Play interaction sounds</small>
-      </kf-setting-label>
-      <kf-switch slot="control" id="sound-effects-toggle" name="sound-effects">
       </kf-switch>
     </kf-setting-item>
   </kf-settings>

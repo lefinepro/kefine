@@ -13,36 +13,29 @@ export const kfComboboxStyles = css`
 
   .combobox-input {
     width: 100%;
-    padding: 0.5rem 2.5rem 0.5rem 2.5rem;
+    padding: 0.5rem 2.5rem 0.5rem 0.75rem;
     font-size: 0.875rem;
-    border: 1px solid var(--kf-border-color, #dee2e6);
-    border-radius: var(--kf-radius-md, 0.375rem);
-    background: var(--kf-surface-bg, #fff);
-    color: var(--kf-text-primary, #212529);
+    border: 1px solid var(--kf-color-border-default);
+    background: var(--kf-color-bg-surface);
+    color: var(--kf-color-text-primary);
     transition:
       border-color 0.15s ease-in-out,
       box-shadow 0.15s ease-in-out;
+    /* CSS Anchor Positioning - anchor name for the input */
+    anchor-name: --combobox-anchor;
   }
 
   .combobox-input:focus {
     outline: none;
-    border-color: var(--kf-primary, #0d6efd);
-    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    border-color: var(--kf-color-accent-primary);
   }
 
   .combobox-input::placeholder {
-    color: var(--kf-text-muted, #6c757d);
+    color: var(--kf-color-text-muted);
   }
 
   .combobox-icon {
-    position: absolute;
-    left: 0.75rem;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--kf-text-muted, #6c757d);
-    pointer-events: none;
-    display: flex;
-    align-items: center;
+    display: none;
   }
 
   .combobox-clear {
@@ -53,9 +46,8 @@ export const kfComboboxStyles = css`
     padding: 0.25rem;
     border: none;
     background: transparent;
-    color: var(--kf-text-muted, #6c757d);
+    color: var(--kf-color-text-muted);
     cursor: pointer;
-    border-radius: var(--kf-radius-sm, 0.25rem);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -64,8 +56,8 @@ export const kfComboboxStyles = css`
   }
 
   .combobox-clear:hover {
-    color: var(--kf-text-primary, #212529);
-    background: var(--kf-hover-bg, #e9ecef);
+    color: var(--kf-color-text-primary);
+    background: var(--kf-color-hover-bg);
   }
 
   .combobox-wrapper:focus-within .combobox-clear,
@@ -74,19 +66,41 @@ export const kfComboboxStyles = css`
   }
 
   .combobox-listbox {
+    /* Fallback for browsers without anchor positioning support */
     position: absolute;
     top: 100%;
     left: 0;
     right: 0;
     margin-top: 0.25rem;
-    padding: 0.25rem;
-    background: var(--kf-surface-bg, #fff);
-    border: 1px solid var(--kf-border-color, #dee2e6);
-    border-radius: var(--kf-radius-md, 0.375rem);
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-    max-height: 20rem;
+
+    /* CSS Anchor Positioning - for modern browsers */
+    position-anchor: --combobox-anchor;
+    inset: unset;
+    top: anchor(bottom);
+    left: anchor(left);
+    right: anchor(right);
+    width: anchor-size(width);
+
+    padding: 0;
+    background: var(--kf-color-bg-surface);
+    border: 1px solid var(--kf-color-border-default);
+    border-radius: 0.25rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    max-height: 16rem;
     overflow-y: auto;
-    z-index: 1000;
+    z-index: var(--kf-z-index-dropdown, 100);
+  }
+
+  /* Fallback styles when anchor positioning is not supported */
+  @supports not (anchor-name: --foo) {
+    .combobox-listbox {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      width: auto;
+      margin-top: 0.25rem;
+    }
   }
 
   .combobox-listbox[hidden] {
@@ -99,22 +113,25 @@ export const kfComboboxStyles = css`
     gap: 0.5rem;
     padding: 0.5rem 0.75rem;
     cursor: pointer;
-    border-radius: var(--kf-radius-sm, 0.25rem);
     transition: background-color 0.15s ease-in-out;
+  }
+
+  .combobox-option:not(:last-child) {
+    border-bottom: 1px solid var(--kf-color-border-subtle, rgba(0, 0, 0, 0.05));
   }
 
   .combobox-option:hover,
   .combobox-option[aria-selected="true"] {
-    background: var(--kf-hover-bg, #e9ecef);
+    background: var(--kf-color-hover-bg);
   }
 
   .combobox-option[aria-selected="true"] {
-    background: var(--kf-selected-bg, #e7f1ff);
+    background: var(--kf-color-selected-bg);
   }
 
   .combobox-option-icon {
     flex-shrink: 0;
-    color: var(--kf-text-muted, #6c757d);
+    color: var(--kf-color-text-muted);
   }
 
   .combobox-option-label {
@@ -123,25 +140,26 @@ export const kfComboboxStyles = css`
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    color: var(--kf-color-text-primary);
   }
 
   .combobox-option-type {
     flex-shrink: 0;
     font-size: 0.75rem;
-    color: var(--kf-text-muted, #6c757d);
+    color: var(--kf-color-text-muted);
   }
 
   .combobox-empty {
     padding: 1rem;
     text-align: center;
-    color: var(--kf-text-muted, #6c757d);
+    color: var(--kf-color-text-muted);
     font-size: 0.875rem;
   }
 
   .combobox-loading {
     padding: 1rem;
     text-align: center;
-    color: var(--kf-text-muted, #6c757d);
+    color: var(--kf-color-text-muted);
     font-size: 0.875rem;
   }
 `;
