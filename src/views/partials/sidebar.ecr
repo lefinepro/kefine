@@ -1,20 +1,21 @@
 <kf-sidebar-header>
   <kf-logo>
     <kf-logo-icon>
-      <wa-icon name="layer-group" family="duotone"></wa-icon>
+      <kf-icon name="layers"></kf-icon>
     </kf-logo-icon>
     <span>Kefine</span>
   </kf-logo>
-  <wa-button id="sidebar-close" appearance="plain" variant="neutral" size="small" aria-label="Close sidebar">
-    <wa-icon name="xmark"></wa-icon>
-  </wa-button>
+  <button id="sidebar-close" aria-label="Close sidebar">
+    <kf-icon name="close"></kf-icon>
+  </button>
 </kf-sidebar-header>
 
 <!-- Search Section -->
 <kf-sidebar-section>
-  <wa-input id="sidebar-search" placeholder="Search..." autocomplete="off">
-    <wa-icon slot="start" name="magnifying-glass"></wa-icon>
-  </wa-input>
+  <kf-search-input>
+    <kf-icon name="search"></kf-icon>
+    <input id="sidebar-search" type="search" placeholder="Search..." autocomplete="off">
+  </kf-search-input>
 </kf-sidebar-section>
 
 <!-- Filters Section -->
@@ -22,28 +23,28 @@
   <kf-filters>
     <kf-filter-group title="Category">
       <kf-filter-option selected>
-        <wa-checkbox checked>All</wa-checkbox>
+        <label><input type="checkbox" checked> All</label>
       </kf-filter-option>
       <kf-filter-option>
-        <wa-checkbox>Components</wa-checkbox>
+        <label><input type="checkbox"> Components</label>
       </kf-filter-option>
       <kf-filter-option>
-        <wa-checkbox>Layouts</wa-checkbox>
+        <label><input type="checkbox"> Layouts</label>
       </kf-filter-option>
       <kf-filter-option>
-        <wa-checkbox>Patterns</wa-checkbox>
+        <label><input type="checkbox"> Patterns</label>
       </kf-filter-option>
     </kf-filter-group>
 
     <kf-filter-group title="Status">
       <kf-filter-option>
-        <wa-checkbox>Active</wa-checkbox>
+        <label><input type="checkbox"> Active</label>
       </kf-filter-option>
       <kf-filter-option>
-        <wa-checkbox>Completed</wa-checkbox>
+        <label><input type="checkbox"> Completed</label>
       </kf-filter-option>
       <kf-filter-option>
-        <wa-checkbox>Pending</wa-checkbox>
+        <label><input type="checkbox"> Pending</label>
       </kf-filter-option>
     </kf-filter-group>
   </kf-filters>
@@ -51,22 +52,24 @@
 
 <!-- Navigation Section -->
 <kf-sidebar-section title="Navigation">
-  <kf-nav-item active>
-    <wa-icon name="house"></wa-icon>
-    <span>Home</span>
-  </kf-nav-item>
-  <kf-nav-item>
-    <wa-icon name="grid-2"></wa-icon>
-    <span>Components</span>
-  </kf-nav-item>
-  <kf-nav-item>
-    <wa-icon name="file-lines"></wa-icon>
-    <span>Documentation</span>
-  </kf-nav-item>
-  <kf-nav-item>
-    <wa-icon name="sliders"></wa-icon>
-    <span>Examples</span>
-  </kf-nav-item>
+  <nav>
+    <kf-nav-item active>
+      <kf-icon name="home"></kf-icon>
+      <span>Home</span>
+    </kf-nav-item>
+    <kf-nav-item>
+      <kf-icon name="grid"></kf-icon>
+      <span>Components</span>
+    </kf-nav-item>
+    <kf-nav-item>
+      <kf-icon name="document"></kf-icon>
+      <span>Documentation</span>
+    </kf-nav-item>
+    <kf-nav-item>
+      <kf-icon name="settings"></kf-icon>
+      <span>Examples</span>
+    </kf-nav-item>
+  </nav>
 </kf-sidebar-section>
 
 <!-- Settings Section -->
@@ -77,27 +80,30 @@
         <span>Dark Mode</span>
         <small>Toggle dark theme</small>
       </kf-setting-label>
-      <wa-switch slot="control" id="dark-mode-toggle" checked></wa-switch>
+      <kf-switch slot="control" id="dark-mode-toggle" name="dark-mode">
+      </kf-switch>
     </kf-setting-item>
     <kf-setting-item>
       <kf-setting-label slot="label">
         <span>Animations</span>
         <small>Enable UI animations</small>
       </kf-setting-label>
-      <wa-switch slot="control" id="animations-toggle" checked></wa-switch>
+      <kf-switch slot="control" id="animations-toggle" name="animations" checked>
+      </kf-switch>
     </kf-setting-item>
     <kf-setting-item>
       <kf-setting-label slot="label">
         <span>Sound Effects</span>
         <small>Play interaction sounds</small>
       </kf-setting-label>
-      <wa-switch slot="control" id="sound-effects-toggle"></wa-switch>
+      <kf-switch slot="control" id="sound-effects-toggle" name="sound-effects">
+      </kf-switch>
     </kf-setting-item>
   </kf-settings>
 </kf-sidebar-section>
 
 <!-- Footer -->
-<div class="mt-auto p-md border-t text-center text-muted text-xs">
-  <p>Built with <a href="https://kemalcr.com">Kemal</a> + <a href="https://webawesome.com">Web Awesome</a></p>
-  <p class="mt-xs">TAC CSS Architecture</p>
-</div>
+<kf-sidebar-footer>
+  <p>Built with <a href="https://kemalcr.com">Kemal</a></p>
+  <p>TAC CSS Architecture</p>
+</kf-sidebar-footer>

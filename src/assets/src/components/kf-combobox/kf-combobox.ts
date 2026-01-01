@@ -60,7 +60,7 @@ export class KFCombobox extends LitElement {
       <div class="combobox-wrapper">
         <span class="combobox-icon">
           <slot name="icon">
-            <wa-icon name="magnifying-glass"></wa-icon>
+            <kf-icon name="search"></kf-icon>
           </slot>
         </span>
 
@@ -91,7 +91,7 @@ export class KFCombobox extends LitElement {
                 @mousedown="${this.handleClear}"
                 aria-label="Clear search"
               >
-                <wa-icon name="xmark"></wa-icon>
+                <kf-icon name="close"></kf-icon>
               </button>
             `
           : null}
@@ -116,11 +116,11 @@ export class KFCombobox extends LitElement {
                       @mouseenter="${() => (this.selectedIndex = index)}"
                     >
                       <span class="combobox-option-icon">
-                        <wa-icon
+                        <kf-icon
                           name="${option.type === "page"
-                            ? "file-lines"
-                            : "puzzle-piece"}"
-                        ></wa-icon>
+                            ? "document"
+                            : "grid"}"
+                        ></kf-icon>
                       </span>
                       <span class="combobox-option-label">${option.label}</span>
                       ${option.type

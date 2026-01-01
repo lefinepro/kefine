@@ -1,4 +1,6 @@
 import { defineConfig } from "vite";
+import path from "path";
+import { copyIconsPlugin } from "./plugins/copy-icons";
 
 export default defineConfig({
   mode: "rolldown",
@@ -19,12 +21,19 @@ export default defineConfig({
         },
       },
     },
+    watch: {
+      include: ["src/**/*"],
+    },
   },
+  plugins: [copyIconsPlugin()],
   publicDir: "../public",
   server: {
     host: true,
     port: 3000,
     open: true,
+    watch: {
+      usePolling: true,
+    },
   },
   root: ".",
   base: "/dist/",
@@ -33,7 +42,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      "@": "./src",
+      "@": path.resolve(__dirname, "./src"),
     },
   },
 });

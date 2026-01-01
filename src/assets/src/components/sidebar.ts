@@ -83,16 +83,17 @@ export class KFSidebar extends LitElement {
         <div class="sidebar-header">
           <h2>Sidebar</h2>
           <button class="close-btn" @click="${this.handleCloseClick}">
-            <wa-icon name="x-lg"></wa-icon>
+            <kf-icon name="close"></kf-icon>
           </button>
         </div>
 
         <div class="search-container">
-          <wa-input
+          <input
             id="sidebar-search"
+            type="search"
             placeholder="Search..."
             @input="${this.handleSearchInput}"
-          ></wa-input>
+          />
         </div>
 
         <div class="nav-container">
@@ -100,21 +101,21 @@ export class KFSidebar extends LitElement {
             class="nav-item"
             @click="${() => this.handleNavClick("dashboard")}"
           >
-            <wa-icon name="house-door"></wa-icon>
+            <kf-icon name="home"></kf-icon>
             <span>Dashboard</span>
           </div>
           <div
             class="nav-item"
             @click="${() => this.handleNavClick("settings")}"
           >
-            <wa-icon name="gear"></wa-icon>
+            <kf-icon name="gear"></kf-icon>
             <span>Settings</span>
           </div>
           <div
             class="nav-item"
             @click="${() => this.handleNavClick("profile")}"
           >
-            <wa-icon name="person"></wa-icon>
+            <kf-icon name="user"></kf-icon>
             <span>Profile</span>
           </div>
         </div>

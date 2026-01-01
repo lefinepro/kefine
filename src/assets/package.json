@@ -1,7 +1,7 @@
 {
   "name": "kefine",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -18,7 +18,6 @@
     "oxlint": "^1.35.0"
   },
   "dependencies": {
-    "@awesome.me/webawesome": "^3.1.0",
     "@fontsource/commit-mono": "^5.0.13",
     "@fontsource/inter": "^5.0.18",
     "@lit/localize": "^0.12.2",

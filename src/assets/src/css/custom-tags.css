@@ -4,7 +4,8 @@
  * Reference: tac.org methodology
  *
  * Using kf- prefix for Kefine components
- * Integrated with Web Awesome (https://webawesome.com) component library
+ * All icons are local Carbon Design System SVGs
+ * Dense layout with no border-radius
  */
 
 /* ===== kf-app - Main Application Container ===== */
@@ -170,8 +171,6 @@ kf-content {
   flex: 1;
   display: block;
   padding: var(--kf-space-xl);
-  max-width: var(--kf-content-max-width);
-  margin: 0 auto;
   width: 100%;
 }
 
@@ -696,6 +695,228 @@ kf-overlay {
 kf-overlay[visible] {
   opacity: 1;
   visibility: visible;
+}
+
+/* ===== kf-sidebar-footer - Sidebar Footer ===== */
+kf-sidebar-footer {
+  margin-top: auto;
+  padding: var(--kf-space-md);
+  border-top: 1px solid var(--kf-color-border-default);
+  text-align: center;
+  font-size: var(--kf-font-size-xs);
+  color: var(--kf-color-text-muted);
+}
+
+kf-sidebar-footer a {
+  color: var(--kf-color-accent-primary);
+  text-decoration: none;
+}
+
+kf-sidebar-footer a:hover {
+  text-decoration: underline;
+}
+
+/* ===== kf-search-input - Search Input Container ===== */
+kf-search-input {
+  display: flex;
+  align-items: center;
+  gap: var(--kf-space-xs);
+  background-color: var(--kf-color-bg-surface);
+  padding: var(--kf-space-xs) var(--kf-space-sm);
+  border: 1px solid var(--kf-color-border-default);
+}
+
+kf-search-input input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--kf-color-text-primary);
+  font-size: var(--kf-font-size-sm);
+  outline: none;
+}
+
+kf-search-input input::placeholder {
+  color: var(--kf-color-text-muted);
+}
+
+/* ===== Native button styling ===== */
+button {
+  background-color: var(--kf-color-bg-surface);
+  border: 1px solid var(--kf-color-border-default);
+  color: var(--kf-color-text-primary);
+  padding: var(--kf-space-xs) var(--kf-space-sm);
+  font-size: var(--kf-font-size-sm);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--kf-space-xs);
+  transition: all var(--kf-transition-fast);
+}
+
+button:hover {
+  background-color: var(--kf-color-bg-elevated);
+  color: var(--kf-color-accent-primary);
+}
+
+button[variant="primary"] {
+  background-color: var(--kf-color-accent-primary);
+  color: var(--kf-color-bg-primary);
+  border-color: var(--kf-color-accent-primary);
+}
+
+button[variant="primary"]:hover {
+  opacity: 0.9;
+}
+
+button[variant="secondary"] {
+  background-color: transparent;
+  border-color: var(--kf-color-border-accent);
+}
+
+button[variant="success"] {
+  background-color: var(--kf-color-accent-success);
+  color: var(--kf-color-bg-primary);
+  border-color: var(--kf-color-accent-success);
+}
+
+/* ===== Toggle switch - now using kf-switch Lit component ===== */
+/* Styles are defined in components/kf-switch.ts */
+
+/* ===== Native input styling ===== */
+input[type="text"],
+input[type="search"],
+input[type="email"],
+input[type="password"] {
+  background-color: var(--kf-color-bg-surface);
+  border: 1px solid var(--kf-color-border-default);
+  color: var(--kf-color-text-primary);
+  padding: var(--kf-space-xs) var(--kf-space-sm);
+  font-size: var(--kf-font-size-sm);
+  width: 100%;
+}
+
+input::placeholder {
+  color: var(--kf-color-text-muted);
+}
+
+input:focus {
+  outline: none;
+  border-color: var(--kf-color-accent-primary);
+}
+
+/* ===== Native progress styling ===== */
+progress {
+  width: 100%;
+  height: 8px;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+progress::-webkit-progress-bar {
+  background-color: var(--kf-color-bg-elevated);
+}
+
+progress::-webkit-progress-value {
+  background-color: var(--kf-color-accent-primary);
+}
+
+/* ===== kbd styling ===== */
+kbd {
+  display: inline-flex;
+  padding: var(--kf-space-2xs) var(--kf-space-xs);
+  background-color: var(--kf-color-bg-surface);
+  border: 1px solid var(--kf-color-border-default);
+  font-family: var(--kf-font-family-mono);
+  font-size: var(--kf-font-size-xs);
+  color: var(--kf-color-text-secondary);
+}
+
+/* ===== Group elements ===== */
+kf-button-group,
+kf-badge-group,
+kf-icon-group,
+kf-switch-group,
+kf-progress-group,
+kf-input-group,
+kf-kbd-group {
+  display: flex;
+  align-items: center;
+  gap: var(--kf-space-xs);
+  flex-wrap: wrap;
+}
+
+kf-switch-group,
+kf-progress-group {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+kf-switch-group label {
+  display: flex;
+  align-items: center;
+  gap: var(--kf-space-sm);
+  cursor: pointer;
+}
+
+/* ===== Feature items ===== */
+kf-feature-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: var(--kf-space-md);
+}
+
+kf-feature-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--kf-space-sm);
+  color: var(--kf-color-accent-primary);
+}
+
+kf-feature-item h4 {
+  margin: 0 0 var(--kf-space-xs) 0;
+  font-size: var(--kf-font-size-md);
+  font-weight: var(--kf-font-weight-semibold);
+  color: var(--kf-color-text-primary);
+}
+
+kf-feature-item p {
+  margin: 0;
+  font-size: var(--kf-font-size-sm);
+  color: var(--kf-color-text-secondary);
+}
+
+/* ===== Shortcut list ===== */
+kf-shortcut-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--kf-space-sm);
+}
+
+kf-shortcut-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--kf-space-sm);
+  background-color: var(--kf-color-bg-secondary);
+}
+
+kf-shortcut-item span {
+  color: var(--kf-color-text-secondary);
+}
+
+/* ===== Grid item ===== */
+kf-grid-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--kf-space-xs);
+  background-color: var(--kf-color-bg-surface);
+  text-align: center;
+  font-size: var(--kf-font-size-xs);
+  color: var(--kf-color-text-secondary);
 }
 
 /* ===== Responsive Adjustments ===== */
