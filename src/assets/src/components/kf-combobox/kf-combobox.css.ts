@@ -21,6 +21,8 @@ export const kfComboboxStyles = css`
     transition:
       border-color 0.15s ease-in-out,
       box-shadow 0.15s ease-in-out;
+    /* CSS Anchor Positioning - anchor name for the input */
+    anchor-name: --combobox-anchor;
   }
 
   .combobox-input:focus {
@@ -64,11 +66,21 @@ export const kfComboboxStyles = css`
   }
 
   .combobox-listbox {
+    /* Fallback for browsers without anchor positioning support */
     position: absolute;
     top: 100%;
     left: 0;
     right: 0;
     margin-top: 0.25rem;
+
+    /* CSS Anchor Positioning - for modern browsers */
+    position-anchor: --combobox-anchor;
+    inset: unset;
+    top: anchor(bottom);
+    left: anchor(left);
+    right: anchor(right);
+    width: anchor-size(width);
+
     padding: 0;
     background: var(--kf-color-bg-surface);
     border: 1px solid var(--kf-color-border-default);
@@ -77,6 +89,18 @@ export const kfComboboxStyles = css`
     max-height: 16rem;
     overflow-y: auto;
     z-index: var(--kf-z-index-dropdown, 100);
+  }
+
+  /* Fallback styles when anchor positioning is not supported */
+  @supports not (anchor-name: --foo) {
+    .combobox-listbox {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      width: auto;
+      margin-top: 0.25rem;
+    }
   }
 
   .combobox-listbox[hidden] {

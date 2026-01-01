@@ -2,6 +2,14 @@
 import './css/style.css';
 import './app';
 
+// CSS Anchor Positioning Polyfill for older browsers
+// https://github.com/oddbird/css-anchor-positioning
+if (!CSS.supports('anchor-name', '--foo')) {
+  import('@oddbird/css-anchor-positioning/fn').then((module) => {
+    module.default();
+  });
+}
+
 interface AppInfo {
   name: string;
   framework: string;
