@@ -64,19 +64,19 @@ export const kfComboboxStyles = css`
   }
 
   .combobox-listbox {
-    position: fixed;
-    top: 0;
+    position: absolute;
+    top: 100%;
     left: 0;
     right: 0;
-    bottom: 0;
-    margin: 0;
-    padding: var(--kf-space-md);
-    background: var(--kf-color-bg-primary);
-    border: none;
-    box-shadow: none;
-    max-height: 100vh;
+    margin-top: 0.25rem;
+    padding: 0;
+    background: var(--kf-color-bg-surface);
+    border: 1px solid var(--kf-color-border-default);
+    border-radius: 0.25rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    max-height: 16rem;
     overflow-y: auto;
-    z-index: var(--kf-z-index-modal, 300);
+    z-index: var(--kf-z-index-dropdown, 100);
   }
 
   .combobox-listbox[hidden] {
@@ -87,10 +87,13 @@ export const kfComboboxStyles = css`
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    padding: var(--kf-space-md);
+    padding: 0.5rem 0.75rem;
     cursor: pointer;
     transition: background-color 0.15s ease-in-out;
-    border-bottom: 1px solid var(--kf-color-border-default);
+  }
+
+  .combobox-option:not(:last-child) {
+    border-bottom: 1px solid var(--kf-color-border-subtle, rgba(0, 0, 0, 0.05));
   }
 
   .combobox-option:hover,
