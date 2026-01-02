@@ -3,7 +3,6 @@
 import "./components/kf-icon/kf-icon.js";
 import "./components/kf-switch/kf-switch.js";
 import "./components/kf-card-close/kf-card-close.js";
-import "./components/kf-overlay/kf-overlay.js";
 import "./components/kf-combobox/kf-combobox.js";
 
 /**
@@ -50,8 +49,12 @@ class KefineApp {
 
   private initEventListeners(): void {
     // Sidebar toggle
-    document.getElementById("logo-toggle")?.addEventListener("click", () => this.toggleSidebar());
-    document.getElementById("sidebar-close")?.addEventListener("click", () => this.closeSidebar());
+    document
+      .getElementById("logo-toggle")
+      ?.addEventListener("click", () => this.toggleSidebar());
+    document
+      .getElementById("sidebar-close")
+      ?.addEventListener("click", () => this.closeSidebar());
 
     // Overlay click closes sidebar
     document.addEventListener("click", (e) => {
@@ -69,10 +72,16 @@ class KefineApp {
     });
 
     // Post cards - using kf-card[variant="post"]
-    this.cards = Array.from(document.querySelectorAll('kf-card[variant="post"]'));
+    this.cards = Array.from(
+      document.querySelectorAll('kf-card[variant="post"]'),
+    );
     this.cards.forEach((card, index) => {
-      card.addEventListener("click", (e) => this.handleCardClick(e, card, index));
-      card.querySelector("kf-card-close")?.addEventListener("close", () => this.collapseCard());
+      card.addEventListener("click", (e) =>
+        this.handleCardClick(e, card, index),
+      );
+      card
+        .querySelector("kf-card-close")
+        ?.addEventListener("close", () => this.collapseCard());
 
       // Comment toggle button - shows comment form when clicked
       const commentToggle = card.querySelector(".comment-toggle");
@@ -101,7 +110,8 @@ class KefineApp {
         entries.forEach((entry) => {
           if (entry.isIntersecting && this.state.expandedCardId) {
             const cardIndex = this.cards.findIndex(
-              (c) => c.getAttribute("data-post-id") === this.state.expandedCardId
+              (c) =>
+                c.getAttribute("data-post-id") === this.state.expandedCardId,
             );
             if (cardIndex !== -1) {
               this.state.currentCardIndex = cardIndex;
@@ -109,7 +119,7 @@ class KefineApp {
           }
         });
       },
-      { threshold: 0.5 }
+      { threshold: 0.5 },
     );
 
     this.cards.forEach((card) => observer.observe(card));
@@ -121,11 +131,17 @@ class KefineApp {
 
     switch (target.id) {
       case "dark-mode-toggle":
-        document.documentElement.setAttribute("data-theme", target.checked ? "dark" : "light");
+        document.documentElement.setAttribute(
+          "data-theme",
+          target.checked ? "dark" : "light",
+        );
         localStorage.setItem("theme", target.checked ? "dark" : "light");
         break;
       case "animations-toggle":
-        document.documentElement.classList.toggle("reduce-motion", !target.checked);
+        document.documentElement.classList.toggle(
+          "reduce-motion",
+          !target.checked,
+        );
         localStorage.setItem("animations", String(target.checked));
         break;
     }
@@ -133,7 +149,11 @@ class KefineApp {
 
   private handleCardClick(e: Event, card: Element, index: number): void {
     const target = e.target as HTMLElement;
-    if (target.closest("kf-card-action") || target.closest("button") || target.closest("kf-card-close")) {
+    if (
+      target.closest("kf-card-action") ||
+      target.closest("button") ||
+      target.closest("kf-card-close")
+    ) {
       return;
     }
     const cardId = card.getAttribute("data-post-id");
@@ -144,7 +164,9 @@ class KefineApp {
   }
 
   private handleKeydown(e: KeyboardEvent): void {
-    const isTyping = ["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName || "");
+    const isTyping = ["INPUT", "TEXTAREA", "SELECT"].includes(
+      document.activeElement?.tagName || "",
+    );
 
     if (e.key === "Escape") {
       if (this.state.expandedCardId) {
@@ -249,7 +271,9 @@ class KefineApp {
   collapseCard(): void {
     if (!this.state.expandedCardId) return;
 
-    const card = document.querySelector(`kf-card[data-post-id="${this.state.expandedCardId}"]`);
+    const card = document.querySelector(
+      `kf-card[data-post-id="${this.state.expandedCardId}"]`,
+    );
     card?.removeAttribute("expanded");
     card?.querySelector("kf-card-close")?.removeAttribute("visible");
     document.body.style.overflow = "";

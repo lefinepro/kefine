@@ -1,14 +1,42 @@
-<!-- Posts Feed - Infinite Scroll Layout -->
 <kf-feed>
   <kf-card data-post-id="post-1" variant="post" role="article" tabindex="0" aria-label="Post: Getting Started with Kefine">
     <kf-card-close></kf-card-close>
     <kf-card-header>
-      <kf-card-avatar aria-hidden="true">
-        <kf-icon name="user"></kf-icon>
-      </kf-card-avatar>
       <kf-card-meta>
-        <kf-card-author>Admin</kf-card-author>
-        <kf-card-date>December 31, 2025</kf-card-date>
+        <kf-card-author>
+            <a
+                            :href="`/${ticket.project.domain}`"
+                            class="issue-card__favicon-link"
+                        >
+                            <img
+                                :src="getFaviconFromDomain(ticket.project)"
+                                :alt="`${ticket.project.domain} favicon`"
+                                class="issue-card__favicon"
+                            />
+                        </a>
+                        <div class="issue-card__project-links">
+                            <a
+                                :href="`/${ticket.project.domain}/${ticket.project.owner}`"
+                                class="issue-card__project-link"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                >{{ ticket.project.owner }}</a
+                            ><a
+                                :href="`/${ticket.project.domain}/${ticket.project.owner}/${ticket.project.name}`"
+                                class="issue-card__project-link"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                >/{{ ticket.project.name }}</a
+                            ><a
+                                :href="`/${ticket.project.domain}/${ticket.project.owner}/${ticket.project.name}/issues/${ticket.id}`"
+                                class="issue-card__project-link text-indigo-500!"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                >#{{ ticket.id }}</a
+                            >
+                        </div>
+        </kf-card-author>
+        <kf-card-date></kf-card-date>
       </kf-card-meta>
     </kf-card-header>
     <kf-card-body>
@@ -47,116 +75,6 @@
           <kf-comment-date>5 hours ago</kf-comment-date>
         </kf-comment-header>
         <kf-comment-body>Looking forward to trying this out in my next project.</kf-comment-body>
-      </kf-comment>
-      <kf-comment-form hidden>
-        <kf-combobox placeholder="Write a comment..." min-chars="0" aria-label="Comment input">
-        </kf-combobox>
-        <kf-comment-actions>
-          <button type="button" variant="secondary" title="Save as draft">
-            <kf-icon name="document"></kf-icon>
-            Draft
-          </button>
-          <button type="submit" variant="primary">Post</button>
-        </kf-comment-actions>
-      </kf-comment-form>
-    </kf-card-comments>
-  </kf-card>
-
-  <kf-card data-post-id="post-2" variant="post" role="article" tabindex="0" aria-label="Post: Lit Components">
-    <kf-card-close></kf-card-close>
-    <kf-card-header>
-      <kf-card-avatar aria-hidden="true">
-        <kf-icon name="code"></kf-icon>
-      </kf-card-avatar>
-      <kf-card-meta>
-        <kf-card-author>Developer</kf-card-author>
-        <kf-card-date>December 30, 2025</kf-card-date>
-      </kf-card-meta>
-    </kf-card-header>
-    <kf-card-body>
-      <kf-card-title>Exploring Lit Components</kf-card-title>
-      <kf-card-content>
-        Discover the power of Lit's lightweight web components. From buttons and badges to complex form controls, everything is designed with accessibility in mind.
-      </kf-card-content>
-    </kf-card-body>
-    <kf-card-footer>
-      <kf-card-action aria-label="Like post">
-        <kf-icon name="heart"></kf-icon>
-        <span>42</span>
-      </kf-card-action>
-      <kf-card-action class="comment-toggle" aria-label="Write a comment" title="Write a comment">
-        <kf-icon name="comment"></kf-icon>
-        <span>15</span>
-      </kf-card-action>
-      <kf-card-action aria-label="Share post">
-        <kf-icon name="share"></kf-icon>
-      </kf-card-action>
-    </kf-card-footer>
-    <kf-card-comments aria-label="Comments section">
-      <kf-card-comments-header>
-        <span>Comments (15)</span>
-      </kf-card-comments-header>
-      <kf-comment>
-        <kf-comment-header>
-          <kf-comment-author>Alex Chen</kf-comment-author>
-          <kf-comment-date>1 day ago</kf-comment-date>
-        </kf-comment-header>
-        <kf-comment-body>The accessibility features are fantastic. Great work!</kf-comment-body>
-      </kf-comment>
-      <kf-comment-form hidden>
-        <kf-combobox placeholder="Write a comment..." min-chars="0" aria-label="Comment input">
-        </kf-combobox>
-        <kf-comment-actions>
-          <button type="button" variant="secondary" title="Save as draft">
-            <kf-icon name="document"></kf-icon>
-            Draft
-          </button>
-          <button type="submit" variant="primary">Post</button>
-        </kf-comment-actions>
-      </kf-comment-form>
-    </kf-card-comments>
-  </kf-card>
-
-  <kf-card data-post-id="post-3" variant="post" role="article" tabindex="0" aria-label="Post: TAC CSS Deep Dive">
-    <kf-card-close></kf-card-close>
-    <kf-card-header>
-      <kf-card-avatar aria-hidden="true">
-        <kf-icon name="palette"></kf-icon>
-      </kf-card-avatar>
-      <kf-card-meta>
-        <kf-card-author>Designer</kf-card-author>
-        <kf-card-date>December 29, 2025</kf-card-date>
-      </kf-card-meta>
-    </kf-card-header>
-    <kf-card-body>
-      <kf-card-title>TAC CSS: A Deep Dive</kf-card-title>
-      <kf-card-content>
-        Understanding the Tags, Attributes, Classes hierarchy. Learn why this approach leads to more maintainable and scalable stylesheets in your web component projects.
-      </kf-card-content>
-    </kf-card-body>
-    <kf-card-footer>
-      <kf-card-action aria-label="Like post">
-        <kf-icon name="heart"></kf-icon>
-        <span>67</span>
-      </kf-card-action>
-      <kf-card-action class="comment-toggle" aria-label="Write a comment" title="Write a comment">
-        <kf-icon name="comment"></kf-icon>
-        <span>23</span>
-      </kf-card-action>
-      <kf-card-action aria-label="Share post">
-        <kf-icon name="share"></kf-icon>
-      </kf-card-action>
-    </kf-card-footer>
-    <kf-card-comments aria-label="Comments section">
-      <kf-card-comments-header>
-        <span>Comments (23)</span>
-      </kf-card-comments-header>
-      <kf-comment>
-        <kf-comment-header>
-          <kf-comment-author>Sarah Wilson</kf-comment-author>
-          <kf-comment-date>2 days ago</kf-comment-date>
-        </kf-comment-header>
-        <kf-comment-body>This changed how I think about CSS architecture. Brilliant!</kf-comment-body>
       </kf-comment>
       <kf-comment-form hidden>
         <kf-combobox placeholder="Write a comment..." min-chars="0" aria-label="Comment input">
