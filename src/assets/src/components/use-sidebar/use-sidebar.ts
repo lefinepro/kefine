@@ -17,12 +17,8 @@ export class SidebarHandler {
 
   private initEventListeners(): void {
     // Sidebar toggle
-    document
-      .getElementById("logo-toggle")
-      ?.addEventListener("click", () => this.toggleSidebar());
-    document
-      .getElementById("sidebar-close")
-      ?.addEventListener("click", () => this.closeSidebar());
+    document.getElementById("logo-toggle")?.addEventListener("click", () => this.toggleSidebar());
+    document.getElementById("sidebar-close")?.addEventListener("click", () => this.closeSidebar());
 
     // Overlay click closes sidebar
     document.addEventListener("click", (e) => {

@@ -27,8 +27,7 @@ export class ScrollHandler {
         entries.forEach((entry) => {
           if (entry.isIntersecting && this.state.expandedCardId) {
             const cardIndex = cards.findIndex(
-              (c) =>
-                c.getAttribute("data-post-id") === this.state.expandedCardId,
+              (c) => c.getAttribute("data-post-id") === this.state.expandedCardId,
             );
             if (cardIndex !== -1) {
               this.state.currentCardIndex = cardIndex;

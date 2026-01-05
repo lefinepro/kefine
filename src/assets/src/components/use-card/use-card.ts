@@ -21,16 +21,10 @@ export class CardHandler {
 
   private initCards(): void {
     // Post cards - using kf-card[variant="post"]
-    this.cards = Array.from(
-      document.querySelectorAll('kf-card[variant="post"]'),
-    );
+    this.cards = Array.from(document.querySelectorAll('kf-card[variant="post"]'));
     this.cards.forEach((card, index) => {
-      card.addEventListener("click", (e) =>
-        this.handleCardClick(e, card, index),
-      );
-      card
-        .querySelector("kf-card-close")
-        ?.addEventListener("close", () => this.collapseCard());
+      card.addEventListener("click", (e) => this.handleCardClick(e, card, index));
+      card.querySelector("kf-card-close")?.addEventListener("close", () => this.collapseCard());
 
       // Comment toggle button - shows comment form when clicked
       const commentToggle = card.querySelector(".comment-toggle");
@@ -72,9 +66,7 @@ export class CardHandler {
   collapseCard(): void {
     if (!this.state.expandedCardId) return;
 
-    const card = document.querySelector(
-      `kf-card[data-post-id="${this.state.expandedCardId}"]`,
-    );
+    const card = document.querySelector(`kf-card[data-post-id="${this.state.expandedCardId}"]`);
     card?.removeAttribute("expanded");
     card?.querySelector("kf-card-close")?.removeAttribute("visible");
     document.body.style.overflow = "";
@@ -146,7 +138,7 @@ export class CardHandler {
 
   // Method to update scroll handler when state changes
   updateScrollHandler(scrollHandler: any): void {
-    if (scrollHandler && typeof scrollHandler.updateState === 'function') {
+    if (scrollHandler && typeof scrollHandler.updateState === "function") {
       scrollHandler.updateState(this.state.expandedCardId, this.state.currentCardIndex);
     }
   }

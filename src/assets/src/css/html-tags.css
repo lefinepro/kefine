@@ -32,7 +32,12 @@ body {
 }
 
 /* ===== Typography ===== */
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-family: var(--kf-font-family-mono);
   font-weight: var(--kf-font-weight-semibold);
   line-height: var(--kf-line-height-tight);
@@ -80,11 +85,13 @@ a:hover {
   text-decoration: underline;
 }
 
-strong, b {
+strong,
+b {
   font-weight: var(--kf-font-weight-semibold);
 }
 
-em, i {
+em,
+i {
   font-style: italic;
 }
 
@@ -124,7 +131,8 @@ blockquote {
 }
 
 /* ===== Lists ===== */
-ul, ol {
+ul,
+ol {
   padding-left: var(--kf-space-lg);
   margin-bottom: var(--kf-space-md);
 }
@@ -164,7 +172,9 @@ button:disabled {
   cursor: not-allowed;
 }
 
-input, textarea, select {
+input,
+textarea,
+select {
   font-family: var(--kf-font-family-mono);
   font-size: var(--kf-font-size-sm);
   padding: var(--kf-space-xs) var(--kf-space-sm);
@@ -176,12 +186,15 @@ input, textarea, select {
   transition: border-color var(--kf-transition-fast);
 }
 
-input:focus, textarea:focus, select:focus {
+input:focus,
+textarea:focus,
+select:focus {
   outline: none;
   border-color: var(--kf-color-accent-primary);
 }
 
-input::placeholder, textarea::placeholder {
+input::placeholder,
+textarea::placeholder {
   color: var(--kf-color-text-muted);
 }
 
@@ -202,7 +215,8 @@ table {
   margin-bottom: var(--kf-space-md);
 }
 
-th, td {
+th,
+td {
   padding: var(--kf-space-sm);
   text-align: left;
   border-bottom: var(--kf-border-width-thin) solid var(--kf-color-border-default);
