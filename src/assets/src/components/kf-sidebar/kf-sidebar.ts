@@ -55,9 +55,7 @@ export class KFSidebar extends LitElement {
   }
 
   private handleCloseClick() {
-    this.dispatchEvent(
-      new CustomEvent("close", { bubbles: true, composed: true }),
-    );
+    this.dispatchEvent(new CustomEvent("close", { bubbles: true, composed: true }));
   }
 
   private handleSearchInput(e: Event) {

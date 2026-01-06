@@ -101,9 +101,7 @@ class KefineApp {
     });
 
     // Set up scroll handler with cards from card handler
-    const cards = Array.from(
-      document.querySelectorAll('kf-card[variant="post"]'),
-    );
+    const cards = Array.from(document.querySelectorAll('kf-card[variant="post"]'));
     if (typeof this.scrollHandler.initInfiniteScrollWithCards === "function") {
       this.scrollHandler.initInfiniteScrollWithCards(cards);
     }

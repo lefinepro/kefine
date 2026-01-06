@@ -36,17 +36,11 @@ export class SettingsHandler {
 
     switch (target.id) {
       case "dark-mode-toggle":
-        document.documentElement.setAttribute(
-          "data-theme",
-          target.checked ? "dark" : "light",
-        );
+        document.documentElement.setAttribute("data-theme", target.checked ? "dark" : "light");
         localStorage.setItem("theme", target.checked ? "dark" : "light");
         break;
       case "animations-toggle":
-        document.documentElement.classList.toggle(
-          "reduce-motion",
-          !target.checked,
-        );
+        document.documentElement.classList.toggle("reduce-motion", !target.checked);
         localStorage.setItem("animations", String(target.checked));
         break;
     }
