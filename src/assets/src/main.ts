@@ -1,8 +1,4 @@
-<<<<<<< Updated upstream
 // public/src/main.ts
-import "./css/style.css";
-import "./app";
-=======
 import "./components/kf-icon/kf-icon.js";
 import "./components/kf-switch/kf-switch.js";
 import "./components/kf-card-close/kf-card-close.js";
@@ -136,7 +132,6 @@ if (document.readyState === "loading") {
 } else {
   new KefineApp();
 }
->>>>>>> Stashed changes
 
 // CSS Anchor Positioning Polyfill for older browsers
 // https://github.com/oddbird/css-anchor-positioning
@@ -145,28 +140,3 @@ if (!CSS.supports("anchor-name", "--foo")) {
     module.default();
   });
 }
-<<<<<<< Updated upstream
-
-interface AppInfo {
-  name: string;
-  framework: string;
-  buildTool: string;
-}
-
-const appInfo: AppInfo = {
-  name: "Kemal Template",
-  framework: "Kemal (Crystal)",
-  buildTool: "Vite + Rollup with TypeScript",
-};
-
-console.log(`${appInfo.buildTool} running for ${appInfo.name}`);
-console.log("Framework:", appInfo.framework);
-
-// Example of a simple function
-const initializeApp = (): void => {
-  console.log("Application initialized successfully");
-};
-
-initializeApp();
-=======
->>>>>>> Stashed changes
