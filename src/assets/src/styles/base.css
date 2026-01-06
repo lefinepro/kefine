@@ -1,0 +1,40 @@
+/**
+ * Base Styles with Encapsulation Principles
+ * Following Lit CSS best practices for component encapsulation
+ */
+
+/* Encapsulated CSS custom properties */
+.kf-base {
+  /* Define scoped custom properties */
+  --kf-base-padding: var(--kf-space-md, 0.75rem);
+  --kf-base-margin: var(--kf-space-sm, 0.5rem);
+  --kf-base-border: var(--kf-border-width-thin, 1px) solid var(--kf-color-border-default, #c0c0c0);
+  --kf-base-radius: var(--kf-border-radius-sm, 0);
+  --kf-base-bg: var(--kf-color-bg-surface, #f5f5f5);
+  --kf-base-color: var(--kf-color-text-primary, #0a0a0a);
+}
+
+/* CSS containment for performance and encapsulation */
+.kf-base {
+  contain: layout style paint;
+}
+
+/* Base reset for component internals */
+.kf-base *,
+.kf-base *::before,
+.kf-base *::after {
+  box-sizing: border-box;
+}
+
+/* Utility classes with namespace to prevent conflicts */
+.kf-base .kf-text-primary { color: var(--kf-color-text-primary); }
+.kf-base .kf-text-secondary { color: var(--kf-color-text-secondary); }
+.kf-base .kf-bg-surface { background-color: var(--kf-color-bg-surface); }
+.kf-base .kf-border-default { border: var(--kf-border-width-thin) solid var(--kf-color-border-default); }
+
+/* CSS anchor positioning polyfill support */
+@supports not (anchor-name: --trigger) {
+  .kf-base .kf-anchor-fallback {
+    position: relative;
+  }
+}

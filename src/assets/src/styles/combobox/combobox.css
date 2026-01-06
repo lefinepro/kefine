@@ -1,0 +1,96 @@
+/**
+ * Combobox Component Styles
+ * Encapsulated CSS for Lit components
+ */
+
+/* Combobox container with encapsulation */
+.kf-combobox {
+  /* Containment for performance */
+  contain: layout style paint;
+  
+  /* Custom properties with fallbacks */
+  --kf-combobox-padding: var(--kf-space-sm, 0.5rem);
+  --kf-combobox-margin: var(--kf-space-xs, 0.25rem);
+  --kf-combobox-border: var(--kf-border-width-thin, 1px) solid var(--kf-color-border-default, #c0c0c0);
+  --kf-combobox-radius: var(--kf-border-radius-sm, 0);
+  --kf-combobox-bg: var(--kf-color-bg-surface, #f5f5f5);
+  --kf-combobox-shadow: var(--kf-shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
+  
+  /* Base styles */
+  position: relative;
+  display: block;
+  width: 100%;
+  font-family: var(--kf-font-family-primary, 'Inter', sans-serif);
+}
+
+/* Combobox input */
+.kf-combobox-input {
+  width: 100%;
+  padding: var(--kf-space-xs, 0.25rem) var(--kf-space-sm, 0.5rem);
+  background-color: var(--kf-combobox-bg);
+  border: var(--kf-combobox-border);
+  border-radius: var(--kf-combobox-radius);
+  font-size: var(--kf-font-size-sm, 0.875rem);
+  color: var(--kf-color-text-primary, #0a0a0a);
+  transition: border-color var(--kf-transition-fast, 150ms ease);
+}
+
+.kf-combobox-input:focus {
+  outline: none;
+  border-color: var(--kf-color-accent-primary, #0052a3);
+  box-shadow: 0 0 0 2px rgba(0, 82, 163, 0.2);
+}
+
+/* Combobox dropdown list */
+.kf-combobox-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: var(--kf-z-index-dropdown, 100);
+  max-height: 200px;
+  overflow-y: auto;
+  background-color: var(--kf-color-bg-elevated, #ffffff);
+  border: var(--kf-combobox-border);
+  border-top: none;
+  border-radius: 0 0 var(--kf-combobox-radius) var(--kf-combobox-radius);
+  box-shadow: var(--kf-combobox-shadow);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Combobox option */
+.kf-combobox-option {
+  padding: var(--kf-space-xs, 0.25rem) var(--kf-space-sm, 0.5rem);
+  cursor: pointer;
+  font-size: var(--kf-font-size-sm, 0.875rem);
+  color: var(--kf-color-text-primary, #0a0a0a);
+  transition: background-color var(--kf-transition-fast, 150ms ease);
+}
+
+.kf-combobox-option:hover,
+.kf-combobox-option:focus {
+  background-color: var(--kf-color-hover-bg, #e8e8e8);
+}
+
+.kf-combobox-option[active] {
+  background-color: var(--kf-color-selected-bg, #cce0f5);
+  color: var(--kf-color-accent-primary, #0052a3);
+}
+
+/* Combobox icon */
+.kf-combobox-icon {
+  position: absolute;
+  right: var(--kf-space-sm, 0.5rem);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--kf-color-text-muted, #555555);
+  pointer-events: none;
+}
+
+/* Disabled state */
+.kf-combobox[disabled] .kf-combobox-input {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

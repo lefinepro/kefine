@@ -1,0 +1,68 @@
+/**
+ * Card Component Styles
+ * Encapsulated CSS for Lit components
+ */
+
+/* Card container with encapsulation */
+.kf-card {
+  /* Containment for performance */
+  contain: layout style paint;
+  
+  /* Custom properties with fallbacks */
+  --kf-card-padding: var(--kf-space-lg, 1rem);
+  --kf-card-margin: var(--kf-space-md, 0.75rem);
+  --kf-card-border: var(--kf-border-width-thin, 1px) solid var(--kf-color-border-default, #c0c0c0);
+  --kf-card-radius: var(--kf-border-radius-md, 0);
+  --kf-card-bg: var(--kf-color-bg-surface, #f5f5f5);
+  --kf-card-shadow: var(--kf-shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
+  
+  /* Base styles */
+  display: block;
+  padding: var(--kf-card-padding);
+  margin: var(--kf-card-margin);
+  background-color: var(--kf-card-bg);
+  border: var(--kf-card-border);
+  border-radius: var(--kf-card-radius);
+  box-shadow: var(--kf-card-shadow);
+  
+  /* Font and text */
+  font-family: var(--kf-font-family-primary, 'Inter', sans-serif);
+  color: var(--kf-color-text-primary, #0a0a0a);
+}
+
+/* Card header */
+.kf-card-header {
+  margin-bottom: var(--kf-space-md, 0.75rem);
+}
+
+.kf-card-header h1,
+.kf-card-header h2,
+.kf-card-header h3,
+.kf-card-header h4,
+.kf-card-header h5,
+.kf-card-header h6 {
+  margin: 0;
+  font-size: var(--kf-font-size-lg, 1.125rem);
+  font-weight: var(--kf-font-weight-semibold, 600);
+  color: var(--kf-color-text-primary, #0a0a0a);
+}
+
+/* Card content */
+.kf-card-content {
+  padding: var(--kf-space-md, 0.75rem) 0;
+}
+
+/* Card footer */
+.kf-card-footer {
+  margin-top: var(--kf-space-md, 0.75rem);
+  padding-top: var(--kf-space-md, 0.75rem);
+  border-top: var(--kf-border-width-thin, 1px) solid var(--kf-color-border-default, #c0c0c0);
+}
+
+/* Responsive behavior */
+@media (max-width: 768px) {
+  .kf-card {
+    margin: var(--kf-space-sm, 0.5rem);
+    padding: var(--kf-space-md, 0.75rem);
+  }
+}

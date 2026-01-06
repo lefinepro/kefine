@@ -1,7 +1,5 @@
 {
-  "name": "kefine",
   "private": true,
-  "version": "0.3.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,19 +10,17 @@
   },
   "devDependencies": {
     "vite": "npm:rolldown-vite@latest",
-    "@typescript/native-preview": "^7.0.0-dev.20251227.1",
+    "@typescript/native-preview": "^7.0.0-dev.20260102.1",
     "@types/bun": "latest",
-    "oxfmt": "^0.20.0",
+    "oxfmt": "^0.21.0",
     "oxlint": "^1.35.0"
   },
   "dependencies": {
     "@fontsource/commit-mono": "^5.0.13",
     "@fontsource/inter": "^5.0.18",
     "@lit/localize": "^0.12.2",
-    "@lit/reactive-element": "^2.1.2",
     "@oddbird/css-anchor-positioning": "^0.8.0",
-    "lit": "^3.3.2",
-    "lit-html": "^3.3.2"
+    "lit": "^3.3.2"
   },
   "overrides": {
     "vite": "npm:rolldown-vite@latest"

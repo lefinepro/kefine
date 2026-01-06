@@ -1,0 +1,27 @@
+/**
+ * Main Styles Entry Point
+ * Imports all component-specific styles with encapsulation
+ */
+
+/* Import base styles */
+@import './base.css';
+
+/* Import component-specific styles */
+@import './card/card.css';
+@import './combobox/combobox.css';
+@import './switch/switch.css';
+@import './icon/icon.css';
+
+/* Global component utilities that follow encapsulation principles */
+.kf-container {
+  contain: layout style paint;
+}
+
+/* CSS custom properties that can be overridden by components */
+.kf-theme {
+  --kf-theme-primary: var(--kf-color-accent-primary, #0052a3);
+  --kf-theme-secondary: var(--kf-color-accent-secondary, #6d28d9);
+  --kf-theme-success: var(--kf-color-accent-success, #15803d);
+  --kf-theme-warning: var(--kf-color-accent-warning, #b45309);
+  --kf-theme-error: var(--kf-color-accent-error, #b91c1c);
+}

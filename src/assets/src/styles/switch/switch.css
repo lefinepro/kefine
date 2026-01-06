@@ -1,0 +1,98 @@
+/**
+ * Switch Component Styles
+ * Encapsulated CSS for Lit components
+ */
+
+/* Switch container with encapsulation */
+.kf-switch {
+  /* Containment for performance */
+  contain: layout style paint;
+  
+  /* Custom properties with fallbacks */
+  --kf-switch-width: 40px;
+  --kf-switch-height: 24px;
+  --kf-switch-thumb-size: 20px;
+  --kf-switch-padding: 2px;
+  --kf-switch-bg-off: var(--kf-color-text-muted, #555555);
+  --kf-switch-bg-on: var(--kf-color-accent-primary, #0052a3);
+  --kf-switch-thumb-bg: var(--kf-color-bg-elevated, #ffffff);
+  --kf-switch-radius: var(--kf-border-radius-full, 9999px);
+  
+  /* Base styles */
+  position: relative;
+  display: inline-block;
+  width: var(--kf-switch-width);
+  height: var(--kf-switch-height);
+}
+
+/* Switch input (hidden) */
+.kf-switch-input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+/* Switch track */
+.kf-switch-track {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--kf-switch-bg-off);
+  transition: background-color var(--kf-transition-fast, 150ms ease);
+  border-radius: var(--kf-switch-radius);
+}
+
+/* Switch thumb */
+.kf-switch-thumb {
+  position: absolute;
+  cursor: pointer;
+  top: var(--kf-switch-padding);
+  left: var(--kf-switch-padding);
+  height: var(--kf-switch-thumb-size);
+  width: var(--kf-switch-thumb-size);
+  background-color: var(--kf-switch-thumb-bg);
+  transition: transform var(--kf-transition-fast, 150ms ease);
+  border-radius: var(--kf-switch-radius);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Switch when checked */
+.kf-switch-input:checked + .kf-switch-track {
+  background-color: var(--kf-switch-bg-on);
+}
+
+.kf-switch-input:checked + .kf-switch-track + .kf-switch-thumb {
+  transform: translateX(calc(var(--kf-switch-width) - var(--kf-switch-thumb-size) - calc(var(--kf-switch-padding) * 2)));
+}
+
+/* Switch focus state */
+.kf-switch-input:focus + .kf-switch-track {
+  box-shadow: 0 0 0 2px rgba(0, 82, 163, 0.3);
+}
+
+/* Switch disabled state */
+.kf-switch[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.kf-switch[disabled] .kf-switch-track {
+  cursor: not-allowed;
+}
+
+/* Switch label */
+.kf-switch-label {
+  margin-left: var(--kf-space-md, 0.75rem);
+  font-size: var(--kf-font-size-sm, 0.875rem);
+  color: var(--kf-color-text-primary, #0a0a0a);
+  cursor: pointer;
+}
+
+/* Switch wrapper */
+.kf-switch-wrapper {
+  display: flex;
+  align-items: center;
+}

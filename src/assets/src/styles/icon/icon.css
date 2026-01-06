@@ -1,0 +1,126 @@
+/**
+ * Icon Component Styles
+ * Encapsulated CSS for Lit components
+ */
+
+/* Icon container with encapsulation */
+.kf-icon {
+  /* Containment for performance */
+  contain: layout style paint;
+  
+  /* Custom properties with fallbacks */
+  --kf-icon-size: var(--kf-font-size-lg, 1.125rem);
+  --kf-icon-color: var(--kf-color-text-primary, #0a0a0a);
+  --kf-icon-spacing: var(--kf-space-sm, 0.5rem);
+  
+  /* Base styles */
+  display: inline-block;
+  width: var(--kf-icon-size);
+  height: var(--kf-icon-size);
+  flex-shrink: 0;
+  color: var(--kf-icon-color);
+}
+
+/* Icon SVG element */
+.kf-icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
+  stroke: currentColor;
+  stroke-width: 0;
+}
+
+/* Icon sizes */
+.kf-icon--small {
+  --kf-icon-size: var(--kf-font-size-md, 1rem);
+}
+
+.kf-icon--large {
+  --kf-icon-size: var(--kf-font-size-xl, 1.25rem);
+}
+
+.kf-icon--x-large {
+  --kf-icon-size: var(--kf-font-size-2xl, 1.5rem);
+}
+
+/* Icon colors */
+.kf-icon--primary {
+  --kf-icon-color: var(--kf-color-text-primary, #0a0a0a);
+}
+
+.kf-icon--secondary {
+  --kf-icon-color: var(--kf-color-text-secondary, #333333);
+}
+
+.kf-icon--muted {
+  --kf-icon-color: var(--kf-color-text-muted, #555555);
+}
+
+.kf-icon--accent {
+  --kf-icon-color: var(--kf-color-accent-primary, #0052a3);
+}
+
+.kf-icon--success {
+  --kf-icon-color: var(--kf-color-accent-success, #15803d);
+}
+
+.kf-icon--warning {
+  --kf-icon-color: var(--kf-color-accent-warning, #b45309);
+}
+
+.kf-icon--error {
+  --kf-icon-color: var(--kf-color-accent-error, #b91c1c);
+}
+
+/* Icon alignment */
+.kf-icon--left {
+  margin-right: var(--kf-icon-spacing);
+}
+
+.kf-icon--right {
+  margin-left: var(--kf-icon-spacing);
+}
+
+.kf-icon--top {
+  margin-bottom: var(--kf-icon-spacing);
+}
+
+.kf-icon--bottom {
+  margin-top: var(--kf-icon-spacing);
+}
+
+/* Icon rotation */
+.kf-icon--rotate-90 {
+  transform: rotate(90deg);
+}
+
+.kf-icon--rotate-180 {
+  transform: rotate(180deg);
+}
+
+.kf-icon--rotate-270 {
+  transform: rotate(270deg);
+}
+
+.kf-icon--flip-horizontal {
+  transform: scaleX(-1);
+}
+
+.kf-icon--flip-vertical {
+  transform: scaleY(-1);
+}
+
+/* Icon animation */
+.kf-icon--spin {
+  animation: kf-icon-spin 1s linear infinite;
+}
+
+@keyframes kf-icon-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
