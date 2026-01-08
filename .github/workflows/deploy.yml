@@ -5,6 +5,10 @@ on:
     branches:
       - release
       - main
+  pull_request:
+    branches:
+      - release
+      - main
   workflow_dispatch:
 
 permissions:
@@ -13,7 +17,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: "pages"
+  group: "pages-${{ github.ref }}"
   cancel-in-progress: true
 
 jobs:
@@ -31,31 +35,101 @@ jobs:
       - name: Install dependencies
         run: shards install
 
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install frontend dependencies
+        run: |
+          cd src/assets
+          bun install
+
+      - name: Build frontend assets
+        run: |
+          cd src/assets
+          bun run build
+
       - name: Build static site
         run: |
           # Create output directory
           mkdir -p _site
 
-          # Copy public files
-          cp -r public/* _site/
+          # Copy public files (built assets)
+          if [ -d "public" ]; then
+            cp -r public/* _site/
+          fi
 
           # Generate static HTML pages using Crystal/ECR
           crystal run scripts/generate_static.cr
 
+      - name: Upload build artifact for testing
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-build
+          path: _site
+          retention-days: 1
+
       - name: Setup Pages
+        if: github.event_name == 'push'
         uses: actions/configure-pages@v4
 
-      - name: Upload artifact
+      - name: Upload pages artifact
+        if: github.event_name == 'push'
         uses: actions/upload-pages-artifact@v3
         with:
           path: _site
 
+  test:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: site-build
+          path: _site
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install E2E test dependencies
+        run: |
+          cd e2e
+          npm ci
+
+      - name: Install Playwright browsers
+        run: |
+          cd e2e
+          npx playwright install --with-deps chromium
+
+      - name: Start server and run E2E tests
+        run: |
+          cd e2e
+          npx serve ../_site -l 8080 &
+          sleep 3
+          BASE_URL=http://localhost:8080 npm test
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: e2e/playwright-report
+          retention-days: 7
+
   deploy:
+    if: github.event_name == 'push'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-    needs: build
+    needs: [build, test]
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
