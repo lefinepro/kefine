@@ -27,8 +27,14 @@ module KemalTemplate
     @@vite_process
   end
 
-  # Home page route
+  # Landing page route (new default)
   get "/" do |env|
+    env.response.content_type = "text/html"
+    render_landing_page("landing", "Kefine - Deadline's on fire")
+  end
+
+  # Home page route (original app)
+  get "/app" do |env|
     env.response.content_type = "text/html"
     render_page("home", "Kemal Template")
   end
@@ -44,6 +50,18 @@ module KemalTemplate
     env.response.content_type = "application/json"
     query = env.params.query["q"]? || ""
     {results: [] of String, query: query}.to_json
+  end
+
+  # API endpoint to serve use-cases data
+  get "/data/use-cases.json" do |env|
+    env.response.content_type = "application/json"
+    File.read("src/assets/src/data/use-cases.json")
+  end
+
+  # API endpoint to serve i18n messages
+  get "/data/messages.json" do |env|
+    env.response.content_type = "application/json"
+    File.read("src/assets/src/data/messages.json")
   end
 
   # Static file serving is handled automatically by Kemal from public/

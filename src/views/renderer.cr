@@ -35,6 +35,35 @@ module KemalTemplate
     render_layout(title) { content }
   end
 
+  # Layout wrapper for landing pages (uses landing layout)
+  def self.render_landing_layout(title : String, &block)
+    content = yield
+
+    # Process any ECR in the content first
+    processed_content = process_ecr(content)
+
+    # Read the landing layout file and replace placeholders
+    layout_content = File.read("src/views/layouts/landing.ecr")
+    processed_layout = layout_content.gsub("<%= content %>", processed_content)
+                                   .gsub("<%= title %>", h(title))
+
+    # Process any ECR in the layout
+    process_ecr(processed_layout)
+  end
+
+  # Render a landing page with the landing layout
+  def self.render_landing_page(page_name : String, title : String)
+    content = case page_name
+              when "landing"
+                File.read("src/views/pages/landing.ecr")
+              else
+                "<p>Page not found</p>"
+              end
+
+    # Use the landing layout renderer
+    render_landing_layout(title) { content }
+  end
+
   # Render a partial component
   def self.render_partial(partial_name : String)
     content = case partial_name

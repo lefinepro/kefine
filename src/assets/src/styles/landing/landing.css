@@ -1,0 +1,83 @@
+/**
+ * Landing Page Styles
+ * Styles for the landing page with hero section and use-case carousel
+ */
+
+/* Landing page app container */
+kf-app.landing-app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: var(--kf-color-bg-primary);
+}
+
+/* Landing page container */
+kf-landing-page {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* Hero section base styles */
+kf-landing-hero {
+  display: block;
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* Use-case section base styles */
+kf-use-case-section {
+  display: block;
+  width: 100%;
+}
+
+/* Responsive layout adjustments */
+@media (max-width: 768px) {
+  kf-landing-hero {
+    min-height: 80vh;
+  }
+}
+
+/* Focus visible styles for accessibility */
+kf-landing-page *:focus-visible {
+  outline: 2px solid var(--kf-color-accent-primary);
+  outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  kf-landing-page {
+    --kf-color-border-default: #000000;
+    --kf-color-text-primary: #000000;
+    --kf-color-bg-primary: #ffffff;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  kf-landing-page,
+  kf-landing-page * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* Print styles */
+@media print {
+  kf-landing-hero {
+    min-height: auto;
+    page-break-after: always;
+  }
+
+  kf-use-case-section {
+    page-break-before: always;
+  }
+
+  .carousel-nav,
+  .carousel-arrows,
+  .swipe-indicator {
+    display: none !important;
+  }
+}

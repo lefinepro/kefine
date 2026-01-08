@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Deadline's on fire — but the fix is already in hand. Explore our use-cases for Analytics, Reporting, Automation, and more.">
+  <title><%= title %></title>
+  <link rel="stylesheet" href="/dist/assets/style.css">
+  <!-- Preload critical assets for performance -->
+  <link rel="preload" href="/dist/assets/main.js" as="script" crossorigin>
+  <!-- Content Security Policy -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src https: data:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
+</head>
+<body>
+  <kf-app class="landing-app">
+    <%= content %>
+  </kf-app>
+  <script type="module" src="/dist/assets/main.js"></script>
+  <script>
+    // Initialize landing page functionality
+    document.addEventListener('DOMContentLoaded', () => {
+      const hero = document.querySelector('kf-landing-hero');
+      const useCaseSection = document.querySelector('kf-use-case-section');
+
+      if (hero && useCaseSection) {
+        // Pass use-cases from hero to section when loaded
+        hero.addEventListener('kf-landing-select', (e) => {
+          const detail = e.detail;
+          console.log('Use-case selected:', detail.useCaseId);
+
+          // Scroll to use-case section
+          useCaseSection.scrollIntoView({ behavior: 'smooth' });
+        });
+
+        // Scroll-triggered visibility
+        const observer = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              if (entry.isIntersecting) {
+                useCaseSection.setAttribute('visible', '');
+              }
+            });
+          },
+          { threshold: 0.1 }
+        );
+
+        observer.observe(useCaseSection);
+
+        // Share use-cases between components when hero loads data
+        const syncUseCases = () => {
+          if (hero.loadedUseCases && hero.loadedUseCases.length > 0) {
+            useCaseSection.useCases = hero.loadedUseCases;
+          }
+        };
+
+        // Try to sync immediately and after a delay (for async loading)
+        syncUseCases();
+        setTimeout(syncUseCases, 500);
+        setTimeout(syncUseCases, 1500);
+      }
+    });
+  </script>
+</body>
+</html>

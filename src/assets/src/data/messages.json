@@ -1,0 +1,32 @@
+{
+  "en": {
+    "landing": {
+      "slogan": "Deadline's on fire — but the fix is already in hand.",
+      "comboboxPlaceholder": "Select a use-case",
+      "useCasesTitle": "Use-Cases",
+      "learnMore": "Learn More",
+      "errorLoading": "Failed to load use-cases. Please try again.",
+      "noResults": "No use-cases found"
+    },
+    "common": {
+      "loading": "Loading...",
+      "error": "An error occurred",
+      "retry": "Retry"
+    }
+  },
+  "es": {
+    "landing": {
+      "slogan": "La fecha limite esta en llamas — pero la solucion ya esta en mano.",
+      "comboboxPlaceholder": "Selecciona un caso de uso",
+      "useCasesTitle": "Casos de Uso",
+      "learnMore": "Saber Mas",
+      "errorLoading": "Error al cargar los casos de uso. Intentalo de nuevo.",
+      "noResults": "No se encontraron casos de uso"
+    },
+    "common": {
+      "loading": "Cargando...",
+      "error": "Ocurrio un error",
+      "retry": "Reintentar"
+    }
+  }
+}

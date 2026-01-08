@@ -18,6 +18,9 @@
 @import './custom-tags.css';
 @import './utility-classes.css';
 
+/* Import landing page styles */
+@import './landing/landing.css';
+
 /* Your application styles */
 body {
   font-family: 'Inter', sans-serif;

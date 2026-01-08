@@ -1,0 +1,49 @@
+{
+  "useCases": [
+    {
+      "id": "analytics",
+      "label": "Analytics",
+      "value": "analytics",
+      "icon": "chart",
+      "title": "Analytics Dashboard",
+      "description": "Track and visualize your key metrics in real-time with comprehensive dashboards.",
+      "learnMoreUrl": "/use-cases/analytics"
+    },
+    {
+      "id": "reporting",
+      "label": "Reporting",
+      "value": "reporting",
+      "icon": "document",
+      "title": "Automated Reporting",
+      "description": "Generate detailed reports automatically with customizable templates and schedules.",
+      "learnMoreUrl": "/use-cases/reporting"
+    },
+    {
+      "id": "automation",
+      "label": "Automation",
+      "value": "automation",
+      "icon": "gear",
+      "title": "Workflow Automation",
+      "description": "Streamline repetitive tasks and boost productivity with intelligent automation.",
+      "learnMoreUrl": "/use-cases/automation"
+    },
+    {
+      "id": "integration",
+      "label": "Integration",
+      "value": "integration",
+      "icon": "link",
+      "title": "Seamless Integration",
+      "description": "Connect with your favorite tools and services through our robust API ecosystem.",
+      "learnMoreUrl": "/use-cases/integration"
+    },
+    {
+      "id": "custom",
+      "label": "Custom",
+      "value": "custom",
+      "icon": "settings",
+      "title": "Custom Solutions",
+      "description": "Build tailored solutions to meet your unique business requirements and goals.",
+      "learnMoreUrl": "/use-cases/custom"
+    }
+  ]
+}

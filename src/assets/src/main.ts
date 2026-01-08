@@ -5,6 +5,8 @@ import "./components/kf-card-close/kf-card-close.js";
 import "./components/kf-combobox/kf-combobox.js";
 import "./components/kf-sidebar/kf-sidebar.js";
 import "./components/kf-setting-item/kf-setting-item.js";
+import "./components/kf-landing-hero/kf-landing-hero.js";
+import "./components/kf-use-case-section/kf-use-case-section.js";
 
 import { SidebarHandler } from "./components/use-sidebar/use-sidebar.js";
 import { CardHandler } from "./components/use-card/use-card.js";
