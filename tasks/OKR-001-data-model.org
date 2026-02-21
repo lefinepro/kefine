@@ -1,0 +1,65 @@
+#+TITLE: OKR-001 - OKR Data Model
+#+DATE: 2026-02-20
+#+STARTUP: overview
+
+* Overview
+Define the data schemas and types for Objectives, Key Results, and Task-OKR links.
+
+* Tasks
+
+** OKR-001.1: Define Objective Schema
+*** Task 1.1.1: Create Objective interface
+- [ ] Define id property (string, unique identifier)
+- [ ] Define title property (string, required field)
+- [ ] Define description property (string, optional)
+- [ ] Define quarter property (enum: Q1, Q2, Q3, Q4)
+- [ ] Define year property (number, 4 digits)
+- [ ] Define createdAt property (Date object)
+- [ ] Define updatedAt property (Date object)
+- [ ] Define status property (enum: active, completed, archived)
+
+*** Task 1.1.2: Add Objective type to stores/okrs.js
+- [ ] Create TypeScript interface or JSDoc type definition
+- [ ] Export type for use in other modules
+- [ ] Add type validation comments
+
+** OKR-001.2: Define Key Result Schema
+*** Task 1.2.1: Create KeyResult interface
+- [ ] Define id property (string, unique identifier)
+- [ ] Define objectiveId property (string, foreign key reference)
+- [ ] Define title property (string, required field)
+- [ ] Define description property (string, optional)
+- [ ] Define targetType property (enum: number, percentage, boolean)
+- [ ] Define targetValue property (number)
+- [ ] Define currentValue property (number, default 0)
+- [ ] Define unit property (string, e.g., "%", "users", "$")
+- [ ] Define weight property (number, for weighted calculations)
+- [ ] Define createdAt property (Date object)
+- [ ] Define updatedAt property (Date object)
+
+*** Task 1.2.2: Add KeyResult type to stores/okrs.js
+- [ ] Create TypeScript interface or JSDoc type definition
+- [ ] Export type for use in other modules
+- [ ] Add type validation comments
+
+** OKR-001.3: Define Task-OKR Link Schema
+*** Task 1.3.1: Create OKRLink interface
+- [ ] Define id property (string, unique identifier)
+- [ ] Define taskId property (string, reference to task)
+- [ ] Define objectiveId property (string, optional, reference to objective)
+- [ ] Define keyResultId property (string, optional, reference to KR)
+- [ ] Define linkType property (enum: objective, keyresult)
+- [ ] Define createdAt property (Date object)
+
+*** Task 1.3.2: Add OKRLink type to stores/tasks.js
+- [ ] Create TypeScript interface or JSDoc type definition
+- [ ] Export type for use in other modules
+- [ ] Update Task interface to include okrLinks array
+- [ ] Add type validation comments
+
+* Dependencies
+- None (foundation task)
+
+* Files to Create/Modify
+- stores/okrs.js
+- stores/tasks.js

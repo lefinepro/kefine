@@ -1,0 +1,103 @@
+#+TITLE: OKR-007 - Task-OKR Linking
+#+DATE: 2026-02-20
+#+STARTUP: overview
+
+* Overview
+Implement the linking system between tasks and OKRs, including UI for selecting and displaying links.
+
+* Tasks
+
+** OKR-007.1: Update Task Store
+*** Task 7.1.1: Add okrLinks to task schema
+- [ ] Update Task interface
+- [ ] Add okrLinks array property
+
+*** Task 7.1.2: Update stores/tasks.js
+- [ ] Modify task creation to include okrLinks
+- [ ] Modify task update to handle okrLinks
+
+*** Task 7.1.3: Add linking functions
+- [ ] Create linkTaskToOKR function
+- [ ] Create unlinkTaskFromOKR function
+- [ ] Create getLinkedOKRs function
+
+** OKR-007.2: OKR Selector in Modal
+*** Task 7.2.1: Create dropdown component
+- [ ] Add select element in modal
+- [ ] Populate with objectives
+
+*** Task 7.2.2: Show available objectives
+- [ ] Filter active objectives
+- [ ] Display objective titles
+
+*** Task 7.2.3: Show key results
+- [ ] Group KRs under objectives
+- [ ] Use optgroup or nested structure
+
+*** Task 7.2.4: Support multi-select
+- [ ] Allow multiple selections
+- [ ] Display selected items as tags
+
+*** Task 7.2.5: Add search/filter
+- [ ] Add search input
+- [ ] Filter OKRs by query
+
+** OKR-007.3: Display OKR Badge on Task
+*** Task 7.3.1: Create OKRBadge component
+- [ ] Create components/shared/OKRBadge.svelte
+- [ ] Display OKR title/quarter
+
+*** Task 7.3.2: Show linked OKR
+- [ ] Get linked OKR from task
+- [ ] Render badge in task row
+
+*** Task 7.3.3: Color by quarter
+- [ ] Q1: spring color
+- [ ] Q2: summer color
+- [ ] Q3: autumn color
+- [ ] Q4: winter color
+
+*** Task 7.3.4: Click to navigate
+- [ ] Add click handler
+- [ ] Navigate to OKR view
+- [ ] Highlight objective
+
+** OKR-007.4: Filter Tasks by OKR
+*** Task 7.4.1: Add filter dropdown
+- [ ] Create filter selector in task list
+- [ ] Populate with OKRs
+
+*** Task 7.4.2: Show OKR options
+- [ ] List all linked OKRs
+- [ ] Add "All" and "None" options
+
+*** Task 7.4.3: Update task list
+- [ ] Filter tasks by selected OKR
+- [ ] Re-render on change
+
+*** Task 7.4.4: Clear filter
+- [ ] Add clear button
+- [ ] Reset to show all tasks
+
+** OKR-007.5: OKR Progress from Tasks
+*** Task 7.5.1: Count completed tasks
+- [ ] Get tasks linked to KR
+- [ ] Count completed tasks
+- [ ] Calculate percentage
+
+*** Task 7.5.2: Update KR progress
+- [ ] Create auto-update function
+- [ ] Update KR currentValue
+
+*** Task 7.5.3: Optional auto-update
+- [ ] Add toggle in settings
+- [ ] Enable/disable feature
+
+* Dependencies
+- OKR-002 (Store)
+- Task Store
+
+* Files to Create/Modify
+- stores/tasks.js
+- components/shared/OKRBadge.svelte
+- components/shared/OKRBadge.css

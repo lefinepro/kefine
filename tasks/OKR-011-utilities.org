@@ -1,0 +1,66 @@
+#+TITLE: OKR-011 - OKR Utilities
+#+DATE: 2026-02-20
+#+STARTUP: overview
+
+* Overview
+Create utility functions for formatting, helpers, and color utilities for OKR management.
+
+* Tasks
+
+** OKR-011.1: Create OKR Formatters
+*** Task 11.1.1: Add to utils/formatters.js
+- [ ] Create/open formatters file
+
+*** Task 11.1.2: formatQuarter function
+- [ ] Accept quarter and year
+- [ ] Return "Q1 2026" format
+
+*** Task 11.1.3: formatProgress function
+- [ ] Accept progress value
+- [ ] Return "75%" format
+- [ ] Handle decimals
+
+*** Task 11.1.4: formatStatus function
+- [ ] Accept status string
+- [ ] Capitalize first letter
+- [ ] Return formatted string
+
+** OKR-011.2: Create OKR Helpers
+*** Task 11.2.1: Add to utils/okr-helpers.js
+- [ ] Create new file
+
+*** Task 11.2.2: getQuarterFromDate function
+- [ ] Accept Date object
+- [ ] Return Q1-Q4
+
+*** Task 11.2.3: getCurrentQuarter function
+- [ ] Get current date
+- [ ] Return quarter and year
+
+*** Task 11.2.4: getQuartersList function
+- [ ] Return array of quarters
+- [ ] Format for dropdown
+
+*** Task 11.2.5: getYearsList function
+- [ ] Accept start and end
+- [ ] Return array of years
+
+** OKR-011.3: Color Utilities
+*** Task 11.3.1: getStatusColor function
+- [ ] Accept status
+- [ ] Return color value/hex
+
+*** Task 11.3.2: getPriorityColor function
+- [ ] Accept priority
+- [ ] Return color value/hex
+
+*** Task 11.3.3: getProgressColor function
+- [ ] Accept percentage
+- [ ] Return color based on range
+
+* Dependencies
+- None (independent utilities)
+
+* Files to Create/Modify
+- utils/formatters.js
+- utils/okr-helpers.js

@@ -1,0 +1,998 @@
+#+TITLE: wacli ForgeFed Tasks Integration
+#+DATE: 2026-02-21
+#+STARTUP: overview
+
+* Overview
+Integration of **wacli** with **Crater** (ForgeFed proxy service) for managing tasks (Ticket/Issue) via ActivityPub.
+
+* Quick Start
+
+#+BEGIN_SRC bash
+# Initialize tool
+wacli ain server-api.example.org
+
+# Authentication (HTTP Signatures for ForgeFed)
+wacli auth server-api.example.org --key ~/.wacli/forgefed-key.pem
+
+# Create ticket interactively
+wacli server-api.example.org create
+
+# Create ticket from Org file
+wacli server-api.example.org create file.org
+
+# List all tickets (table output)
+wacli server-api.example.org tasks
+
+# Update ticket
+wacli server-api.example.org update 123 --status closed
+#+END_SRC
+
+* wacli Configuration
+
+** 1. Tool Manifest (remote)
+
+Host on server: ~https://server-api.example.org/.well-known/wacli.json~
+
+#+BEGIN_SRC json
+{
+  "name": "crater-forgeféd",
+  "version": "1.0.0",
+  "description": "ForgeFed Ticket Tracker via Crater Proxy",
+  "base_url": "https://server-api.example.org",
+  "auth": {
+    "type": "http-signature",
+    "key_param": "key",
+    "header": "Signature"
+  },
+  "openapi": "https://server-api.example.org/.well-known/openapi.json",
+  "operations": {
+    "create": {
+      "method": "POST",
+      "path": "/api/tickets",
+      "description": "Create new ticket (ForgeFed Issue)",
+      "interactive": true,
+      "input": {
+        "kind": {
+          "type": "select",
+          "options": ["bug", "feature", "support", "task", "review"],
+          "required": true,
+          "prompt": "Ticket kind"
+        },
+        "title": {
+          "type": "string",
+          "required": true,
+          "prompt": "Title"
+        },
+        "description": {
+          "type": "text",
+          "required": true,
+          "prompt": "Description (Markdown)"
+        },
+        "priority": {
+          "type": "select",
+          "options": ["low", "medium", "high", "critical"],
+          "default": "medium",
+          "prompt": "Priority"
+        },
+        "labels": {
+          "type": "array",
+          "delimiter": ",",
+          "prompt": "Labels (comma-separated)"
+        },
+        "milestone": {
+          "type": "string",
+          "prompt": "Milestone"
+        },
+        "due_date": {
+          "type": "date",
+          "format": "YYYY-MM-DD",
+          "prompt": "Due date"
+        }
+      }
+    },
+    "create_file": {
+      "method": "POST",
+      "path": "/api/tickets",
+      "description": "Create ticket from Org file",
+      "input_file": true,
+      "parser": "org"
+    },
+    "tasks": {
+      "method": "GET",
+      "path": "/api/tickets",
+      "description": "List all tickets",
+      "render": "table",
+      "table": {
+        "columns": [
+          {"field": "id", "header": "ID", "width": 6},
+          {"field": "kind", "header": "Type", "width": 8},
+          {"field": "title", "header": "Title", "width": 40},
+          {"field": "status", "header": "Status", "width": 10},
+          {"field": "priority", "header": "Priority", "width": 10},
+          {"field": "assignee.name", "header": "Assignee", "width": 15},
+          {"field": "due_date", "header": "Due", "width": 12}
+        ],
+        "style": "border"
+      }
+    },
+    "task": {
+      "method": "GET",
+      "path": "/api/tickets/{id}",
+      "description": "Get ticket details",
+      "render": "json"
+    },
+    "update": {
+      "method": "PUT",
+      "path": "/api/tickets/{id}",
+      "description": "Update ticket",
+      "interactive": true,
+      "path_params": ["id"],
+      "input": {
+        "status": {
+          "type": "select",
+          "options": ["open", "closed", "merged", "rejected"],
+          "prompt": "Status"
+        },
+        "priority": {
+          "type": "select",
+          "options": ["low", "medium", "high", "critical"],
+          "prompt": "Priority"
+        },
+        "assignee_id": {
+          "type": "string",
+          "prompt": "Assignee ID"
+        },
+        "labels": {
+          "type": "array",
+          "delimiter": ",",
+          "prompt": "Labels"
+        },
+        "title": {
+          "type": "string",
+          "prompt": "Title"
+        },
+        "description": {
+          "type": "text",
+          "prompt": "Description"
+        }
+      }
+    },
+    "close": {
+      "method": "POST",
+      "path": "/api/tickets/{id}/close",
+      "description": "Close ticket (ForgeFed Resolve)",
+      "path_params": ["id"]
+    },
+    "reopen": {
+      "method": "POST",
+      "path": "/api/tickets/{id}/reopen",
+      "description": "Reopen ticket (ForgeFed Undo Resolve)",
+      "path_params": ["id"]
+    },
+    "assign": {
+      "method": "POST",
+      "path": "/api/tickets/{id}/assign",
+      "description": "Assign ticket",
+      "path_params": ["id"],
+      "input": {
+        "assignee_id": {
+          "type": "string",
+          "required": true,
+          "prompt": "Assignee ID"
+        }
+      }
+    },
+    "comment": {
+      "method": "POST",
+      "path": "/api/tickets/{id}/comments",
+      "description": "Add comment to ticket",
+      "path_params": ["id"],
+      "input": {
+        "content": {
+          "type": "text",
+          "required": true,
+          "prompt": "Comment (Markdown)"
+        }
+      }
+    },
+    "comments": {
+      "method": "GET",
+      "path": "/api/tickets/{id}/comments",
+      "description": "Get ticket comments",
+      "render": "table",
+      "table": {
+        "columns": [
+          {"field": "id", "header": "ID", "width": 6},
+          {"field": "author.name", "header": "Author", "width": 15},
+          {"field": "content", "header": "Comment", "width": 60},
+          {"field": "created_at", "header": "Date", "width": 12}
+        ]
+      }
+    },
+    "delete": {
+      "method": "DELETE",
+      "path": "/api/tickets/{id}",
+      "description": "Delete ticket",
+      "path_params": ["id"],
+      "confirm": true
+    }
+  },
+  "aliases": {
+    "list": "tasks",
+    "show": "task",
+    "edit": "update"
+  }
+}
+#+END_SRC
+
+** 2. OpenAPI Specification
+
+~https://server-api.example.org/.well-known/openapi.json~
+
+#+BEGIN_SRC json
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Crater ForgeFed API",
+    "version": "1.0.0",
+    "description": "Simple REST API for ForgeFed Ticket management"
+  },
+  "servers": [
+    {
+      "url": "https://server-api.example.org"
+    }
+  ],
+  "paths": {
+    "/api/tickets": {
+      "get": {
+        "summary": "List all tickets",
+        "operationId": "listTickets",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {"type": "integer", "default": 1}
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {"type": "integer", "default": 20}
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "schema": {"type": "string", "enum": ["bug", "feature", "support", "task", "review"]}
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {"type": "string", "enum": ["open", "closed", "merged", "rejected"]}
+          },
+          {
+            "name": "priority",
+            "in": "query",
+            "schema": {"type": "string", "enum": ["low", "medium", "high", "critical"]}
+          },
+          {
+            "name": "assignee",
+            "in": "query",
+            "schema": {"type": "string"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of tickets",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {"$ref": "#/components/schemas/Ticket"}
+                    },
+                    "pagination": {
+                      "type": "object",
+                      "properties": {
+                        "page": {"type": "integer"},
+                        "pageSize": {"type": "integer"},
+                        "total": {"type": "integer"}
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create new ticket",
+        "operationId": "createTicket",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTicketRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Ticket created",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/Ticket"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tickets/{id}": {
+      "get": {
+        "summary": "Get ticket by ID",
+        "operationId": "getTicket",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ticket details",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/Ticket"}
+              }
+            }
+          },
+          "404": {
+            "description": "Ticket not found"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update ticket",
+        "operationId": "updateTicket",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string"}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTicketRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ticket updated",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/Ticket"}
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete ticket",
+        "operationId": "deleteTicket",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string"}
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Ticket deleted"
+          }
+        }
+      }
+    },
+    "/api/tickets/{id}/close": {
+      "post": {
+        "summary": "Close ticket",
+        "operationId": "closeTicket",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ticket closed",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/Ticket"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tickets/{id}/reopen": {
+      "post": {
+        "summary": "Reopen ticket",
+        "operationId": "reopenTicket",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ticket reopened",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/Ticket"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tickets/{id}/assign": {
+      "post": {
+        "summary": "Assign ticket",
+        "operationId": "assignTicket",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string"}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "assignee_id": {"type": "string"}
+                },
+                "required": ["assignee_id"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ticket assigned",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/Ticket"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tickets/{id}/comments": {
+      "get": {
+        "summary": "Get ticket comments",
+        "operationId": "getTicketComments",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of comments",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {"$ref": "#/components/schemas/Comment"}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Add comment",
+        "operationId": "addComment",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string"}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "content": {"type": "string"}
+                },
+                "required": ["content"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Comment added",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/Comment"}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Ticket": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "kind": {"type": "string", "enum": ["bug", "feature", "support", "task", "review"]},
+          "title": {"type": "string"},
+          "description": {"type": "string"},
+          "status": {"type": "string", "enum": ["open", "closed", "merged", "rejected"]},
+          "priority": {"type": "string", "enum": ["low", "medium", "high", "critical"]},
+          "reporter": {"$ref": "#/components/schemas/Person"},
+          "assignee": {"$ref": "#/components/schemas/Person"},
+          "labels": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "milestone": {"type": "string"},
+          "due_date": {"type": "string", "format": "date-time"},
+          "created_at": {"type": "string", "format": "date-time"},
+          "updated_at": {"type": "string", "format": "date-time"}
+        }
+      },
+      "CreateTicketRequest": {
+        "type": "object",
+        "properties": {
+          "kind": {"type": "string", "enum": ["bug", "feature", "support", "task", "review"]},
+          "title": {"type": "string"},
+          "description": {"type": "string"},
+          "priority": {"type": "string", "enum": ["low", "medium", "high", "critical"]},
+          "labels": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "assignee_id": {"type": "string"},
+          "milestone": {"type": "string"},
+          "due_date": {"type": "string", "format": "date"}
+        },
+        "required": ["kind", "title", "description"]
+      },
+      "UpdateTicketRequest": {
+        "type": "object",
+        "properties": {
+          "title": {"type": "string"},
+          "description": {"type": "string"},
+          "status": {"type": "string", "enum": ["open", "closed", "merged", "rejected"]},
+          "priority": {"type": "string", "enum": ["low", "medium", "high", "critical"]},
+          "assignee_id": {"type": "string"},
+          "labels": {
+            "type": "array",
+            "items": {"type": "string"}
+          }
+        }
+      },
+      "Comment": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "content": {"type": "string"},
+          "author": {"$ref": "#/components/schemas/Person"},
+          "created_at": {"type": "string", "format": "date-time"}
+        }
+      },
+      "Person": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "name": {"type": "string"},
+          "email": {"type": "string"}
+        }
+      }
+    }
+  }
+}
+#+END_SRC
+
+* wacli Commands
+
+** create - Create Ticket
+
+*** Interactively
+#+BEGIN_SRC bash
+wacli server-api.example.org create
+#+END_SRC
+
+Interactive mode will prompt:
+1. Ticket kind (bug/feature/support/task/review)
+2. Title
+3. Description (Markdown, multiline)
+4. Priority (low/medium/high/critical)
+5. Labels (comma-separated)
+6. Milestone (optional)
+7. Due date (YYYY-MM-DD)
+
+*** From File
+#+BEGIN_SRC bash
+wacli server-api.example.org create file.org
+#+END_SRC
+
+Org file format:
+#+BEGIN_SRC org
+* Bug: Login page crashes on mobile
+:PROPERTIES:
+:kind: bug
+:priority: high
+:labels: bug,mobile,critical
+:milestone: v1.0
+:due_date: 2026-03-01
+:END:
+
+** Description
+Steps to reproduce:
+1. Open app on mobile
+2. Navigate to login page
+3. App crashes
+
+** Expected behavior
+App should display login form
+
+** Actual behavior
+App crashes with segmentation fault
+#+END_SRC
+
+** tasks - List Tickets
+
+#+BEGIN_SRC bash
+wacli server-api.example.org tasks
+#+END_SRC
+
+Table output:
+#+BEGIN_SRC text
+┌──────┬─────────┬─────────────────────────────────────────┬────────┬──────────┬─────────────┬────────────┐
+│ ID   │ Type    │ Title                                   │ Status │ Priority │ Assignee    │ Due        │
+├──────┼─────────┼─────────────────────────────────────────┼────────┼──────────┼─────────────┼────────────┤
+│ 123  │ bug     │ Login page crashes on mobile            │ open   │ high     │ Alice       │ 2026-03-01 │
+│ 124  │ feature │ Add dark mode support                   │ open   │ medium   │ Bob         │            │
+│ 125  │ support │ How to export data?                     │ closed │ low      │             │            │
+└──────┴─────────┴─────────────────────────────────────────┴────────┴──────────┴─────────────┴────────────┘
+#+END_SRC
+
+*** Filtering
+#+BEGIN_SRC bash
+# By type
+wacli server-api.example.org tasks --kind=bug
+
+# By status
+wacli server-api.example.org tasks --status=open
+
+# By priority
+wacli server-api.example.org tasks --priority=high
+
+# By assignee
+wacli server-api.example.org tasks --assignee=alice
+
+# Combination
+wacli server-api.example.org tasks --status=open --priority=high
+#+END_SRC
+
+** task - Show Ticket
+
+#+BEGIN_SRC bash
+wacli server-api.example.org task 123
+#+END_SRC
+
+Output (formatted JSON):
+#+BEGIN_SRC json
+{
+  "id": "123",
+  "kind": "bug",
+  "title": "Login page crashes on mobile",
+  "description": "Steps to reproduce...",
+  "status": "open",
+  "priority": "high",
+  "reporter": {
+    "id": "user-alice",
+    "name": "Alice"
+  },
+  "assignee": {
+    "id": "user-bob",
+    "name": "Bob"
+  },
+  "labels": ["bug", "mobile", "critical"],
+  "milestone": "v1.0",
+  "due_date": "2026-03-01T00:00:00Z",
+  "created_at": "2026-02-21T10:00:00Z",
+  "updated_at": "2026-02-21T15:30:00Z"
+}
+#+END_SRC
+
+** update - Update Ticket
+
+#+BEGIN_SRC bash
+wacli server-api.example.org update 123
+#+END_SRC
+
+Interactively prompts for fields to update.
+
+*** Specific Fields
+#+BEGIN_SRC bash
+# Change status
+wacli server-api.example.org update 123 --status=closed
+
+# Change priority
+wacli server-api.example.org update 123 --priority=critical
+
+# Assign to user
+wacli server-api.example.org update 123 --assignee_id=user-charlie
+
+# Multiple fields
+wacli server-api.example.org update 123 --status=closed --priority=high --assignee_id=user-bob
+#+END_SRC
+
+** close - Close Ticket
+
+#+BEGIN_SRC bash
+wacli server-api.example.org close 123
+#+END_SRC
+
+Sends ForgeFed ~Resolve~ activity.
+
+** reopen - Reopen Ticket
+
+#+BEGIN_SRC bash
+wacli server-api.example.org reopen 123
+#+END_SRC
+
+Sends ForgeFed ~Undo~ of ~Resolve~ activity.
+
+** assign - Assign Ticket
+
+#+BEGIN_SRC bash
+wacli server-api.example.org assign 123
+#+END_SRC
+
+Interactively prompts for ~assignee_id~.
+
+*** Direct
+#+BEGIN_SRC bash
+wacli server-api.example.org assign 123 --assignee_id=user-alice
+#+END_SRC
+
+Sends ForgeFed ~Assign~ activity.
+
+** comment - Add Comment
+
+#+BEGIN_SRC bash
+wacli server-api.example.org comment 123
+#+END_SRC
+
+Interactively prompts for comment text (Markdown).
+
+*** From File
+#+BEGIN_SRC bash
+wacli server-api.example.org comment 123 --file=comment.md
+#+END_SRC
+
+** comments - List Comments
+
+#+BEGIN_SRC bash
+wacli server-api.example.org comments 123
+#+END_SRC
+
+Table output:
+#+BEGIN_SRC text
+┌──────┬─────────────┬─────────────────────────────────────────────────────┬────────────┐
+│ ID   │ Author      │ Comment                                             │ Date       │
+├──────┼─────────────┼─────────────────────────────────────────────────────┼────────────┤
+│ 456  │ Alice       │ I can reproduce this issue...                       │ 2026-02-21 │
+│ 457  │ Bob         │ Working on a fix, will submit PR soon.              │ 2026-02-22 │
+└──────┴─────────────┴─────────────────────────────────────────────────────┴────────────┘
+#+END_SRC
+
+** delete - Delete Ticket
+
+#+BEGIN_SRC bash
+wacli server-api.example.org delete 123
+#+END_SRC
+
+Prompts for confirmation.
+
+Sends ForgeFed ~Delete~ activity.
+
+* Aliases
+
+#+BEGIN_SRC bash
+# Short names
+wacli server-api.example.org list          # tasks
+wacli server-api.example.org show 123      # task 123
+wacli server-api.example.org edit 123      # update 123
+#+END_SRC
+
+* ForgeFed Integration
+
+** ActivityPub Mapping
+
+| wacli Command | ForgeFed Activity | Description |
+|---------------|-------------------|-------------|
+| ~create~ | ~Offer~ (Ticket) | Create ticket |
+| ~update~ | ~Edit~ | Update metadata |
+| ~close~ | ~Resolve~ | Close ticket |
+| ~reopen~ | ~Undo~ (Resolve) | Reopen ticket |
+| ~assign~ | ~Assign~ | Assign ticket |
+| ~delete~ | ~Delete~ | Delete ticket |
+| ~comment~ | ~Create~ (Note) | Add comment |
+
+** HTTP Signatures
+
+ForgeFed uses HTTP Signatures for authentication:
+
+#+BEGIN_SRC bash
+# Generate key
+openssl genrsa -out ~/.wacli/forgefed-key.pem 2048
+
+# Authenticate
+wacli auth server-api.example.org --key ~/.wacli/forgefed-key.pem
+
+# Verify
+wacli server-api.example.org tasks
+#+END_SRC
+
+** Federation Flow
+
+#+BEGIN_SRC text
+┌──────────┐    Offer (Ticket)     ┌───────────────┐
+│  wacli   │ ────────────────────→ │  Crater       │
+│  (CLI)   │                       │  (Proxy)      │
+│          │ ← ─ ─ Accept/Reject ─ │               │
+└──────────┘    result = issue URI └───────────────┘
+       │                                  │
+       │         ActivityPub/Fediverse    │
+       └────────────────────────────────→ │
+                                          │
+                                  ┌───────┴───────┐
+                                  │   Federated   │
+                                  │   Servers     │
+                                  │   (ForgeFed)  │
+                                  └───────────────┘
+#+END_SRC
+
+* Examples
+
+** 1. Create Bug Report
+
+#+BEGIN_SRC bash
+wacli server-api.example.org create <<EOF
+kind=bug
+title=Login page crashes on mobile
+description=Steps to reproduce:\n1. Open app\n2. Navigate to login\n3. Crash
+priority=high
+labels=bug,mobile,critical
+milestone=v1.0
+due_date=2026-03-01
+EOF
+#+END_SRC
+
+** 2. List All Open Bugs
+
+#+BEGIN_SRC bash
+wacli server-api.example.org tasks --status=open --kind=bug
+#+END_SRC
+
+** 3. Assign Ticket to Self
+
+#+BEGIN_SRC bash
+wacli server-api.example.org assign 123 --assignee_id=user-me
+#+END_SRC
+
+** 4. Close Ticket
+
+#+BEGIN_SRC bash
+wacli server-api.example.org close 123
+#+END_SRC
+
+** 5. Add Comment
+
+#+BEGIN_SRC bash
+wacli server-api.example.org comment 123 --file=fix-explanation.md
+#+END_SRC
+
+** 6. Export to Org
+
+#+BEGIN_SRC bash
+wacli server-api.example.org task 123 --render=org > task-123.org
+#+END_SRC
+
+* Configuration
+
+** Local Config (~/.config/wacli/wacfg.json)
+
+#+BEGIN_SRC json
+{
+  "db_path": "~/.config/wacli/wacli.db",
+  "install_dir": "~/.config/wacli/tools",
+  "uri_schemes": {
+    "server-api.example.org": {
+      "base_url": "https://server-api.example.org",
+      "manifest": "/.well-known/wacli.json",
+      "auth": {
+        "type": "http-signature",
+        "key_file": "~/.wacli/forgefed-key.pem"
+      }
+    }
+  },
+  "render": {
+    "default": "table",
+    "table": {
+      "style": "border",
+      "max_width": 120
+    }
+  }
+}
+#+END_SRC
+
+* Debugging
+
+#+BEGIN_SRC bash
+# Show request without executing
+wacli server-api.example.org tasks --dry-run
+
+# Show headers
+wacli server-api.example.org tasks --verbose
+
+# Save response
+wacli server-api.example.org tasks --out=tickets.json
+
+# Validate OpenAPI
+wacli oas validate https://server-api.example.org/.well-known/openapi.json
+#+END_SRC
+
+* See Also
+- [[https://github.com/kogeletey/wacli][wacli GitHub]]
+- [[https://forgefed.org/spec/#issues][ForgeFed Issues Specification]]
+- [[https://www.w3.org/TR/activitypub/][ActivityPub Specification]]
+- [[file:OKR-016-forgefед-crater-proxy.org][OKR-016: ForgeFed Crater Proxy]]

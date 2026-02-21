@@ -1,0 +1,79 @@
+#+TITLE: OKR Tasks Index
+#+DATE: 2026-02-20
+#+STARTUP: overview
+
+* Overview
+This directory contains individual task files for the OKR Task Dashboard implementation.
+Each file represents a feature group with detailed implementation tasks.
+
+* Task Files
+
+| File | Feature | Tasks | Status |
+|------+---------+-------+--------|
+| [[file:OKR-001-data-model.org][OKR-001-data-model.org]] | OKR Data Model | 6 | pending |
+| [[file:OKR-002-store-implementation.org][OKR-002-store-implementation.org]] | OKR Store Implementation | 26 | pending |
+| [[file:OKR-003-okrindex-component.org][OKR-003-okrindex-component.org]] | OKRIndex Component | 17 | pending |
+| [[file:OKR-004-objectivecard-component.org][OKR-004-objectivecard-component.org]] | ObjectiveCard Component | 20 | pending |
+| [[file:OKR-005-keyresultrow-component.org][OKR-005-keyresultrow-component.org]] | KeyResultRow Component | 18 | pending |
+| [[file:OKR-006-progressring-component.org][OKR-006-progressring-component.org]] | ProgressRing Component | 17 | pending |
+| [[file:OKR-007-task-okr-linking.org][OKR-007-task-okr-linking.org]] | Task-OKR Linking | 19 | pending |
+| [[file:OKR-008-advanced-task-modal.org][OKR-008-advanced-task-modal.org]] | Advanced Task Modal | 26 | pending |
+| [[file:OKR-009-okr-modals.org][OKR-009-okr-modals.org]] | OKR Creation/Edit Modals | 24 | pending |
+| [[file:OKR-010-dashboard-views.org][OKR-010-dashboard-views.org]] | OKR Dashboard Views | 17 | pending |
+| [[file:OKR-011-utilities.org][OKR-011-utilities.org]] | OKR Utilities | 11 | pending |
+| [[file:OKR-012-testing-qa.org][OKR-012-testing-qa.org]] | Testing & QA | 16 | pending |
+| [[file:OKR-013-activitypub-forgefed-integration.org][OKR-013-activitypub-forgefed-integration.org]] | ActivityPub/ForgeFed Integration | 100+ | deprecated |
+| [[file:OKR-014-micro-tasks.org][OKR-014-micro-tasks.org]] | Micro-Tasks (Ultra-granular) | 200+ | deprecated |
+| [[file:OKR-015-reown-appkit-auth.org][OKR-015-reown-appkit-auth.org]] | Reown AppKit Authentication | 30 | pending |
+| [[file:OKR-016-forgefед-crater-proxy.org][OKR-016-forgefед-crater-proxy.org]] | ForgeFed Crater Proxy | 40 | pending |
+| [[file:OKR-017-service-architecture.org][OKR-017-service-architecture.org]] | Service Architecture (4-Layer) | 60+ | pending |
+|------+---------+-------+--------|
+| *Total* | *17 Features* | *630+* | |
+
+* Implementation Order
+
+1. [[file:OKR-001-data-model.org][OKR-001]] - Data Model (Foundation)
+2. [[file:OKR-002-store-implementation.org][OKR-002]] - Store Implementation (State management)
+3. [[file:OKR-011-utilities.org][OKR-011]] - Utilities (Helper functions)
+4. [[file:OKR-006-progressring-component.org][OKR-006]] - ProgressRing (Independent component)
+5. [[file:OKR-005-keyresultrow-component.org][OKR-005]] - KeyResultRow (Depends on OKR-006)
+6. [[file:OKR-004-objectivecard-component.org][OKR-004]] - ObjectiveCard (Depends on OKR-005, OKR-006)
+7. [[file:OKR-003-okrindex-component.org][OKR-003]] - OKRIndex (Depends on OKR-004)
+8. [[file:OKR-007-task-okr-linking.org][OKR-007]] - Task-OKR Linking (Depends on OKR-002)
+9. [[file:OKR-008-advanced-task-modal.org][OKR-008]] - Advanced Modal (Depends on OKR-007)
+10. [[file:OKR-009-okr-modals.org][OKR-009]] - OKR Modals (Depends on OKR-002)
+11. [[file:OKR-010-dashboard-views.org][OKR-010]] - Dashboard Views (Depends on OKR-003, OKR-004)
+12. [[file:OKR-012-testing-qa.org][OKR-012]] - Testing & QA (All previous)
+13. [[file:OKR-015-reown-appkit-auth.org][OKR-015]] - Reown AppKit Authentication (Independent)
+14. [[file:OKR-016-forgefед-crater-proxy.org][OKR-016]] - ForgeFed Crater Proxy (Independent service)
+15. [[file:OKR-017-service-architecture.org][OKR-017]] - Service Architecture (4-Layer Design)
+16. ~~[[file:OKR-013-activitypub-forgefed-integration.org][OKR-013]]~~ - ActivityPub/ForgeFed Integration (DEPRECATED - replaced by OKR-016)
+17. ~~[[file:OKR-014-micro-tasks.org][OKR-014]]~~ - Micro-Tasks (DEPRECATED - replaced by OKR-016)
+
+* Dependencies Diagram
+
+#+BEGIN_SRC text
+OKR-001 (Data Model) → OKR-002 (Store)
+OKR-002 (Store) → OKR-003, OKR-004, OKR-005, OKR-007, OKR-008, OKR-009
+OKR-006 (ProgressRing) → (independent)
+OKR-005 (KeyResultRow) → OKR-006
+OKR-004 (ObjectiveCard) → OKR-005, OKR-006
+OKR-003 (OKRIndex) → OKR-004
+OKR-007 (Linking) → OKR-002, Task Store
+OKR-008 (Advanced Modal) → OKR-007
+OKR-010 (Dashboard) → OKR-003, OKR-004
+OKR-011 (Utilities) → (independent, used by all)
+OKR-012 (Testing) → (all previous)
+OKR-015 (Reown AppKit) → (independent)
+OKR-016 (Crater Proxy) → (independent service, optional integration with main app)
+OKR-017 (Service Architecture) → (foundation for OKR-016, defines all layers)
+~~OKR-013 (ActivityPub/ForgeFed)~~ → DEPRECATED (replaced by OKR-016)
+~~OKR-014 (Micro-Tasks)~~ → DEPRECATED (replaced by OKR-016)
+#+END_SRC
+
+* Related Files
+
+- [[file:../okr-tasks.org][okr-tasks.org]] - High-level phase task breakdown
+- [[file:../okr-implementation-plan.org][okr-implementation-plan.org]] - Full implementation plan with architecture
+- [[file:../org-activitypub-forgefed-mapping.org][org-activitypub-forgefed-mapping.org]] - Org ↔ ActivityPub ↔ ForgeFed specification
+- [[file:../TASK-ESTIMATE-SUMMARY.org][TASK-ESTIMATE-SUMMARY.org]] - Complete time and cost estimates

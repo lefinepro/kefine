@@ -1,0 +1,2861 @@
+#+TITLE: OKR-017: Service Architecture (4-Layer Design)
+#+DATE: 2026-02-21
+#+STARTUP: overview
+
+* Overview
+Define and implement the 4-layer service architecture for Kefine, separating concerns across Proxy, API, Local Store, and Federation layers. This architecture enables clean separation between the frontend, business logic, data persistence, and external federation.
+
+* Architecture Layers
+
+#+BEGIN_SRC text
+┌─────────────────────────────────────────────────────────┐
+│                    Kefine Frontend                      │
+│              (Svelte App with Reown Auth)               │
+└────────────────────────┬────────────────────────────────┘
+                         │
+                         │ Direct connection to proxies
+                         ▼
+┌─────────────────────────────────────────────────────────┐
+│              Layer 1: Proxy Service Layer               │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐ │
+│  │   Crater    │  │   Future    │  │    Future       │ │
+│  │  (ForgeFed  │  │   Proxy     │  │    Proxy        │ │
+│  │   Proxy)    │  │             │  │                 │ │
+│  │  Stateless  │  │  Stateless  │  │   Stateless     │ │
+│  └──────┬──────┘  └──────┬──────┘  └────────┬────────┘ │
+└─────────┼────────────────┼──────────────────┼──────────┘
+          │                │                  │
+          │ Internal REST  │ Internal REST    │ Internal REST
+          │ API            │ API              │ API
+          ▼                ▼                  ▼
+┌─────────────────────────────────────────────────────────┐
+│              Layer 2: Data API Layer                    │
+│  ┌─────────────────────────────────────────────────────┐│
+│  │              Simple API Service                     ││
+│  │         (REST API - Business Logic)                 ││
+│  │              Stateless Service                      ││
+│  └─────────────────────┬───────────────────────────────┘│
+└────────────────────────┼────────────────────────────────┘
+                         │
+                         │ Database Protocol
+                         ▼
+┌─────────────────────────────────────────────────────────┐
+│              Layer 3: Local Store Layer                 │
+│  ┌─────────────────────────────────────────────────────┐│
+│  │              Database Service                       ││
+│  │    (PostgreSQL / SQLite / In-Memory Store)          ││
+│  │              Persistent Storage                     ││
+│  └─────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────┘
+          ▲
+          │ Federation Protocol (ActivityPub/ForgeFed)
+          │
+┌─────────────────────────────────────────────────────────┐
+│         Layer 4: External Federation Servers            │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐ │
+│  │  ForgeFed   │  │ ActivityPub │  │   Other Fed     │ │
+│  │  Servers    │  │  Servers    │  │   Servers       │ │
+│  │ (Distributed│  │ (Mastodon,  │  │                 │ │
+│  │   Store)    │  │  etc.)      │  │                 │ │
+│  └─────────────┘  └─────────────┘  └─────────────────┘ │
+└─────────────────────────────────────────────────────────┘
+#+END_SRC
+
+* Layer Definitions
+
+** Layer 1: Proxy Service Layer (Stateless)
+- Direct access from Kefine Frontend
+- Protocol translation and adaptation
+- No database, no persistence
+- Can be deployed independently
+- Examples: Crater (ForgeFed), Auth Proxy, Sync Proxy
+
+** Layer 2: Data API Layer (Stateless)
+- Simple REST API for CRUD operations
+- Business logic and validation
+- Used by all proxy services
+- No direct frontend access
+- Single source of truth for data operations
+
+** Layer 3: Local Store Layer (Persistent)
+- Database service with persistence
+- Manages task/project/user state
+- Primary data store
+- Can be PostgreSQL, SQLite, or in-memory
+
+** Layer 4: External Federation Servers (Distributed)
+- ForgeFed servers for federated data
+- ActivityPub servers for activities
+- Data replicated across federation
+- Distributed storage via federation protocol
+
+* Key Principles
+- **Direct proxy access**: Frontend connects directly to proxy services
+- **Stateless proxies**: No database, pure translation/adaptation
+- **Simple API is internal**: Used by proxies, not directly by frontend
+- **Dual storage**: Local store + External federation servers
+- **Federation as storage**: External servers act as distributed data store
+- **Independent deployment**: Each layer can scale/deploy separately
+- **Proxies are optional**: Main app can work without federation proxy
+
+* Dependencies
+- [[file:OKR-001-data-model.org][OKR-001-data-model.org]] - Task data model
+- [[file:OKR-002-store-implementation.org][OKR-002-store-implementation.org]] - State management
+- [[file:OKR-015-reown-appkit-auth.org][OKR-015-reown-appkit-auth.org]] - Authentication
+- [[file:OKR-016-forgefед-crater-proxy.org][OKR-016-forgefед-crater-proxy.org]] - Crater proxy reference
+
+* Implementation Tasks
+
+** Phase 1: Architecture Setup & Configuration
+
+*** Task 1.1: Create project structure
+- [ ] Create root directory structure:
+  - ~/apps/~ - Application services
+  - ~/services/~ - Shared services
+  - ~/packages/~ - Shared packages/libraries
+  - ~/docs/~ - Documentation
+- [ ] Create ~/apps/kefine/~ for main frontend
+- [ ] Create ~/apps/simple-api/~ for API service
+- [ ] Create ~/services/crater/~ for Crater proxy
+- [ ] Create workspace configuration (pnpm-workspace.yaml or package.json workspaces)
+- [ ] Commit: ~chore: create project structure~
+
+*** Task 1.2: Create shared types package
+- [ ] Create ~/packages/types/~ directory
+- [ ] Create ~package.json~ with name @kefine/types
+- [ ] Create ~src/index.ts~ for exports
+- [ ] Create ~src/task.ts~ for Task types
+- [ ] Create ~src/project.ts~ for Project types
+- [ ] Create ~src/user.ts~ for User types
+- [ ] Export all types from index
+- [ ] Commit: ~feat(types): create shared types package~
+
+*** Task 1.3: Create configuration management
+- [ ] Create ~/packages/config/~ directory
+- [ ] Create environment loader utility
+- [ ] Define configuration schema
+- [ ] Create default configurations for each service
+- [ ] Add validation for required env vars
+- [ ] Commit: ~feat(config): create configuration package~
+
+** Phase 2: Layer 2 - Simple API Service
+
+*** Task 2.1: Initialize Simple API project
+- [ ] Create ~/apps/simple-api/~ directory
+- [ ] Initialize Node.js project with ~package.json~
+- [ ] Add dependencies:
+  - ~express~ or ~fastify~ (web framework)
+  - ~@effect/schema~ (validation)
+  - ~cors~ (CORS handling)
+  - ~helmet~ (security headers)
+  - ~winston~ (logging)
+- [ ] Add dev dependencies:
+  - ~typescript~
+  - ~@types/node~
+  - ~@types/express~
+  - ~vitest~ (testing)
+- [ ] Create ~tsconfig.json~
+- [ ] Commit: ~chore(api): initialize Simple API project~
+
+*** Task 2.2: Create API types and schemas (Part 1)
+- [ ] Create ~src/types/task.ts~:
+
+#+BEGIN_SRC typescript
+// Task types for Simple API
+export interface Task {
+  id: string;
+  title: string;
+  description?: string;
+  status: 'todo' | 'in_progress' | 'done' | 'blocked';
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  assigneeId?: string;
+  projectId?: string;
+  parentTaskId?: string;
+  tags: string[];
+  dueDate?: string;
+  estimatedHours?: number;
+  actualHours?: number;
+  createdAt: string;
+  updatedAt: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface CreateTaskRequest {
+  title: string;
+  description?: string;
+  status?: Task['status'];
+  priority?: Task['priority'];
+  assigneeId?: string;
+  projectId?: string;
+  parentTaskId?: string;
+  tags?: string[];
+  dueDate?: string;
+  estimatedHours?: number;
+  metadata?: Record<string, unknown>;
+}
+#+END_SRC
+
+- [ ] Commit: ~feat(api): add task types part 1~
+
+*** Task 2.3: Create API types and schemas (Part 2)
+- [ ] Create ~src/types/task-response.ts~:
+
+#+BEGIN_SRC typescript
+// Task response types
+export interface TaskResponse {
+  data: Task;
+  meta: {
+    requestId: string;
+    timestamp: string;
+  };
+}
+
+export interface ListResponse<T> {
+  data: T[];
+  meta: {
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+    requestId: string;
+    timestamp: string;
+  };
+  links?: {
+    self: string;
+    first: string;
+    last: string;
+    next?: string;
+    prev?: string;
+  };
+}
+
+export interface ErrorResponse {
+  error: {
+    code: string;
+    message: string;
+    details?: Record<string, string[]>;
+  };
+  meta: {
+    requestId: string;
+    timestamp: string;
+  };
+}
+#+END_SRC
+
+- [ ] Commit: ~feat(api): add task types part 2~
+
+*** Task 2.4: Create API types and schemas (Part 3)
+- [ ] Create ~src/schemas/task-schema.ts~:
+
+#+BEGIN_SRC typescript
+import * as S from '@effect/schema/Schema';
+
+export const TaskSchema = S.struct({
+  id: S.string,
+  title: S.string.pipe(S.minLength(1)),
+  description: S.optional(S.string),
+  status: S.enums(['todo', 'in_progress', 'done', 'blocked']),
+  priority: S.enums(['low', 'medium', 'high', 'critical']),
+  assigneeId: S.optional(S.string),
+  projectId: S.optional(S.string),
+  parentTaskId: S.optional(S.string),
+  tags: S.array(S.string),
+  dueDate: S.optional(S.string.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}$/))),
+  estimatedHours: S.optional(S.number.pipe(S.greaterThan(0))),
+  actualHours: S.optional(S.number.pipe(S.greaterThan(0))),
+  createdAt: S.string.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)),
+  updatedAt: S.string.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)),
+  metadata: S.optional(S.record(S.string, S.unknown)),
+});
+
+export const CreateTaskSchema = TaskSchema.pipe(
+  S.omit('id', 'createdAt', 'updatedAt', 'actualHours')
+);
+
+export const UpdateTaskSchema = CreateTaskSchema.pipe(S.partial());
+#+END_SRC
+
+- [ ] Commit: ~feat(api): add task schemas~
+
+*** Task 2.5: Create API server entry point
+- [ ] Create ~src/index.ts~:
+
+#+BEGIN_SRC typescript
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import { config } from './config.js';
+import { taskRoutes } from './routes/tasks.js';
+import { healthRoutes } from './routes/health.js';
+import { errorHandler } from './middleware/error.js';
+import { requestLogger } from './middleware/logger.js';
+
+const app = express();
+
+// Middleware
+app.use(helmet());
+app.use(cors({ origin: config.allowedOrigins }));
+app.use(express.json());
+app.use(requestLogger);
+
+// Routes
+app.use('/health', healthRoutes);
+app.use('/api/tasks', taskRoutes);
+
+// Error handling
+app.use(errorHandler);
+
+// Start server
+app.listen(config.port, () => {
+  console.log(`Simple API running on port ${config.port}`);
+});
+
+export default app;
+#+END_SRC
+
+- [ ] Create ~src/config.ts~ for environment configuration
+- [ ] Commit: ~feat(api): create server entry point~
+
+*** Task 2.6: Create middleware (logging & error)
+- [ ] Create ~src/middleware/logger.ts~:
+
+#+BEGIN_SRC typescript
+import { Request, Response, NextFunction } from 'express';
+import { v4 as uuidv4 } from 'uuid';
+
+export interface RequestWithId extends Request {
+  requestId: string;
+}
+
+export function requestLogger(
+  req: RequestWithId,
+  _res: Response,
+  next: NextFunction
+) {
+  req.requestId = uuidv4();
+  
+  const start = Date.now();
+  
+  console.log(`[${req.requestId}] ${req.method} ${req.path}`);
+  
+  next();
+}
+
+export function responseTime(
+  req: RequestWithId,
+  res: Response,
+  next: NextFunction
+) {
+  const start = Date.now();
+  
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    console.log(`[${req.requestId}] ${res.statusCode} - ${duration}ms`);
+  });
+  
+  next();
+}
+#+END_SRC
+
+- [ ] Commit: ~feat(api): add logging middleware~
+
+*** Task 2.7: Create error handling middleware
+- [ ] Create ~src/middleware/error.ts~:
+
+#+BEGIN_SRC typescript
+import { Request, Response, NextFunction } from 'express';
+import { RequestWithId } from './logger.js';
+
+export class ApiError extends Error {
+  constructor(
+    public code: string,
+    public status: number,
+    message: string,
+    public details?: Record<string, string[]>
+  ) {
+    super(message);
+  }
+}
+
+export function errorHandler(
+  err: Error,
+  req: Request,
+  res: Response,
+  _next: NextFunction
+) {
+  const requestId = (req as RequestWithId).requestId || 'unknown';
+  
+  if (err instanceof ApiError) {
+    res.status(err.status).json({
+      error: {
+        code: err.code,
+        message: err.message,
+        details: err.details,
+      },
+      meta: {
+        requestId,
+        timestamp: new Date().toISOString(),
+      },
+    });
+    return;
+  }
+  
+  console.error(`[${requestId}] Unhandled error:`, err);
+  
+  res.status(500).json({
+    error: {
+      code: 'INTERNAL_ERROR',
+      message: 'An unexpected error occurred',
+    },
+    meta: {
+      requestId,
+      timestamp: new Date().toISOString(),
+    },
+  });
+}
+#+END_SRC
+
+- [ ] Commit: ~feat(api): add error middleware~
+
+*** Task 2.8: Implement task routes (Part 1)
+- [ ] Create ~src/routes/tasks.ts~ (Part 1):
+
+#+BEGIN_SRC typescript
+import { Router } from 'express';
+import { TaskService } from '../services/task.js';
+import { ApiError } from '../middleware/error.js';
+import { CreateTaskSchema, UpdateTaskSchema } from '../schemas/task-schema.js';
+import { parseError } from '@effect/schema/ParseResult';
+import { RequestWithId } from '../middleware/logger.js';
+
+const router = Router();
+const taskService = new TaskService();
+
+// GET /api/tasks - List all tasks
+router.get('/', async (req, res, next) => {
+  try {
+    const { page = '1', pageSize = '20', status, priority } = req.query;
+    
+    const tasks = await taskService.list({
+      page: parseInt(page),
+      pageSize: parseInt(pageSize),
+      status: status as string,
+      priority: priority as string,
+    });
+    
+    res.json(tasks);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET /api/tasks/:id - Get single task
+router.get('/:id', async (req, res, next) => {
+  try {
+    const task = await taskService.getById(req.params.id);
+    
+    if (!task) {
+      throw new ApiError('NOT_FOUND', 404, 'Task not found');
+    }
+    
+    res.json({ data: task, meta: getRequestMeta(req) });
+  } catch (error) {
+    next(error);
+  }
+});
+#+END_SRC
+
+- [ ] Commit: ~feat(api): add task routes part 1~
+
+*** Task 2.9: Implement task routes (Part 2)
+- [ ] Create ~src/routes/tasks.ts~ (Part 2 - append):
+
+#+BEGIN_SRC typescript
+// POST /api/tasks - Create task
+router.post('/', async (req, res, next) => {
+  try {
+    const result = CreateTaskSchema(req.body);
+    
+    if (result._tag === 'Failure') {
+      const errors = parseError(result);
+      throw new ApiError(
+        'VALIDATION_ERROR',
+        400,
+        'Invalid task data',
+        { fields: errors.map(e => e.message) }
+      );
+    }
+    
+    const task = await taskService.create(result.value);
+    
+    res.status(201).json({
+      data: task,
+      meta: getRequestMeta(req),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// PUT /api/tasks/:id - Update task
+router.put('/:id', async (req, res, next) => {
+  try {
+    const result = UpdateTaskSchema(req.body);
+    
+    if (result._tag === 'Failure') {
+      const errors = parseError(result);
+      throw new ApiError(
+        'VALIDATION_ERROR',
+        400,
+        'Invalid task data',
+        { fields: errors.map(e => e.message) }
+      );
+    }
+    
+    const task = await taskService.update(req.params.id, result.value);
+    
+    if (!task) {
+      throw new ApiError('NOT_FOUND', 404, 'Task not found');
+    }
+    
+    res.json({ data: task, meta: getRequestMeta(req) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// DELETE /api/tasks/:id - Delete task
+router.delete('/:id', async (req, res, next) => {
+  try {
+    const deleted = await taskService.delete(req.params.id);
+    
+    if (!deleted) {
+      throw new ApiError('NOT_FOUND', 404, 'Task not found');
+    }
+    
+    res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+});
+
+function getRequestMeta(req: RequestWithId) {
+  return {
+    requestId: req.requestId,
+    timestamp: new Date().toISOString(),
+  };
+}
+
+export { router as taskRoutes };
+#+END_SRC
+
+- [ ] Commit: ~feat(api): add task routes part 2~
+
+*** Task 2.10: Implement task service
+- [ ] Create ~src/services/task.ts~:
+
+#+BEGIN_SRC typescript
+import { Task, CreateTaskRequest } from '../types/task.js';
+import { ListResponse } from '../types/task-response.js';
+
+export class TaskService {
+  private tasks: Map<string, Task> = new Map();
+
+  async list(options: {
+    page: number;
+    pageSize: number;
+    status?: string;
+    priority?: string;
+  }): Promise<ListResponse<Task>> {
+    let tasks = Array.from(this.tasks.values());
+    
+    if (options.status) {
+      tasks = tasks.filter(t => t.status === options.status);
+    }
+    
+    if (options.priority) {
+      tasks = tasks.filter(t => t.priority === options.priority);
+    }
+    
+    const start = (options.page - 1) * options.pageSize;
+    const end = start + options.pageSize;
+    const paginated = tasks.slice(start, end);
+    
+    return {
+      data: paginated,
+      meta: {
+        total: tasks.length,
+        page: options.page,
+        pageSize: options.pageSize,
+        totalPages: Math.ceil(tasks.length / options.pageSize),
+        requestId: '',
+        timestamp: new Date().toISOString(),
+      },
+    };
+  }
+
+  async getById(id: string): Promise<Task | undefined> {
+    return this.tasks.get(id);
+  }
+
+  async create(data: CreateTaskRequest): Promise<Task> {
+    const id = crypto.randomUUID();
+    const now = new Date().toISOString();
+    
+    const task: Task = {
+      ...data,
+      id,
+      status: data.status || 'todo',
+      priority: data.priority || 'medium',
+      tags: data.tags || [],
+      createdAt: now,
+      updatedAt: now,
+    };
+    
+    this.tasks.set(id, task);
+    return task;
+  }
+
+  async update(id: string, updates: Partial<CreateTaskRequest>): Promise<Task | undefined> {
+    const task = this.tasks.get(id);
+    if (!task) return undefined;
+    
+    const updated = { ...task, ...updates, updatedAt: new Date().toISOString() };
+    this.tasks.set(id, updated);
+    return updated;
+  }
+
+  async delete(id: string): Promise<boolean> {
+    return this.tasks.delete(id);
+  }
+}
+#+END_SRC
+
+- [ ] Commit: ~feat(api): implement task service~
+
+*** Task 2.11: Create health check endpoint
+- [ ] Create ~src/routes/health.ts~:
+
+#+BEGIN_SRC typescript
+import { Router } from 'express';
+
+const router = Router();
+
+router.get('/', (_req, res) => {
+  res.json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+  });
+});
+
+router.get('/ready', (_req, res) => {
+  res.json({ ready: true });
+});
+
+router.get('/live', (_req, res) => {
+  res.json({ alive: true });
+});
+
+export { router as healthRoutes };
+#+END_SRC
+
+- [ ] Commit: ~feat(api): add health endpoints~
+
+** Phase 3: Layer 1 - Crater Proxy Service (Crystal)
+
+*** Task 3.1: Initialize Crater Crystal project
+- [ ] Create ~/services/crater/~ directory
+- [ ] Run ~crystal init app crater~
+- [ ] Create directory structure:
+  - ~src/crater/handlers/~
+  - ~src/crater/activitypub/~
+  - ~src/crater/forgefed/~
+  - ~src/crater/middleware/~
+  - ~src/crater/utils/~
+  - ~spec/~
+- [ ] Commit: ~chore(crater): initialize Crystal project~
+
+*** Task 3.2: Configure Crystal dependencies
+- [ ] Edit ~shard.yml~:
+
+#+BEGIN_SRC yaml
+name: crater
+version: 0.1.0
+
+authors:
+  - Kefine Team
+
+targets:
+  crater:
+    main: src/crater.cr
+
+dependencies:
+  kemal:
+    github: kemalcr/kemal
+  http-signature:
+    github: samueleaton/http-signature-crystal
+  jwt:
+    github: crystal-community/jwt
+
+crystal: ">= 1.10.0"
+
+license: MIT
+#+END_SRC
+
+- [ ] Run ~shards install~
+- [ ] Commit: ~feat(crater): add dependencies~
+
+*** Task 3.3: Create ActivityPub types (Part 1)
+- [ ] Create ~src/crater/activitypub/types.cr~ (Part 1):
+
+#+BEGIN_SRC crystal
+module Crater
+  module ActivityPub
+    # Base ActivityPub context
+    ACTIVITYPub_CONTEXT = "https://www.w3.org/ns/activitystreams"
+    SECURITY_CONTEXT = "https://w3id.org/security/v1"
+
+    # Activity types
+    enum ActivityType
+      Create
+      Update
+      Delete
+      Follow
+      Accept
+      Reject
+      Add
+      Remove
+      Like
+      Announce
+    end
+
+    # Base Activity struct
+    struct Activity
+      include JSON::Serializable
+
+      @[JSON::Field(key: "@context")]
+      context : Array(String)
+
+      id : String
+      type : String
+      actor : String
+      object : JSON::Any
+      published : Time
+      to : Array(String)?
+      cc : Array(String)?
+
+      def activity_type : ActivityType
+        ActivityType.parse(type)
+      end
+    end
+#+END_SRC
+
+- [ ] Commit: ~feat(crater): add ActivityPub types part 1~
+
+*** Task 3.4: Create ActivityPub types (Part 2)
+- [ ] Create ~src/crater/activitypub/types.cr~ (Part 2 - append):
+
+#+BEGIN_SRC crystal
+    # Actor types
+    struct Person
+      include JSON::Serializable
+
+      @[JSON::Field(key: "@context")]
+      context : Array(String)
+
+      id : String
+      type : String = "Person"
+      preferred_username : String
+      name : String
+      inbox : String
+      outbox : String
+      public_key : PublicKey
+      endpoints : Endpoints?
+
+      struct PublicKey
+        include JSON::Serializable
+        id : String
+        owner : String
+        public_key_pem : String
+      end
+
+      struct Endpoints
+        include JSON::Serializable
+        shared_inbox : String?
+      end
+    end
+
+    # OrderedCollection for outbox/inbox
+    struct OrderedCollection
+      include JSON::Serializable
+
+      @[JSON::Field(key: "@context")]
+      context : Array(String)
+
+      id : String
+      type : String = "OrderedCollection"
+      total_items : Int32
+      ordered_items : Array(JSON::Any)
+      first : String?
+      last : String?
+    end
+  end
+end
+#+END_SRC
+
+- [ ] Commit: ~feat(crater): add ActivityPub types part 2~
+
+*** Task 3.5: Create ForgeFed types (Part 1)
+- [ ] Create ~src/crater/forgefed/types.cr~ (Part 1):
+
+#+BEGIN_SRC crystal
+module Crater
+  module ForgeFed
+    # ForgeFed context
+    FORGEFED_CONTEXT = "https://forgefed.org/ns"
+
+    # Ticket kinds
+    enum TicketKind
+      Bug
+      Feature
+      Support
+      Task
+      Review
+    end
+
+    # Ticket status
+    enum TicketStatus
+      Open
+      Closed
+      Merged
+      Rejected
+    end
+
+    # Ticket priority
+    enum TicketPriority
+      Low
+      Medium
+      High
+      Critical
+    end
+
+    # ForgeFed Project type
+    struct Project
+      include JSON::Serializable
+
+      @[JSON::Field(key: "@context")]
+      context : Array(String)
+
+      id : String
+      type : String = "Project"
+      name : String
+      summary : String
+      description : String?
+      source_repository : String?
+      issue_tracker : String?
+      members : OrderedCollection?
+      administrators : Array(String)
+      created : Time
+      updated : Time
+    end
+#+END_SRC
+
+- [ ] Commit: ~feat(crater): add ForgeFed types part 1~
+
+*** Task 3.6: Create ForgeFed types (Part 2)
+- [ ] Create ~src/crater/forgefed/types.cr~ (Part 2 - append):
+
+#+BEGIN_SRC crystal
+    # ForgeFed Ticket type
+    struct Ticket
+      include JSON::Serializable
+
+      @[JSON::Field(key: "@context")]
+      context : Array(String)
+
+      id : String
+      type : String = "Ticket"
+      name : String
+      content : String
+      status : TicketStatus
+      kind : TicketKind
+      priority : TicketPriority
+      reporter : String
+      assignee : String?
+      labels : Array(String)
+      milestone : String?
+      due_date : Time?
+      created : Time
+      updated : Time
+      comments : OrderedCollection?
+      attachments : Array(Attachment)?
+
+      struct Attachment
+        include JSON::Serializable
+        name : String
+        url : String
+        media_type : String
+        size : Int64?
+      end
+    end
+
+    # Ticket comment
+    struct TicketComment
+      include JSON::Serializable
+
+      @[JSON::Field(key: "@context")]
+      context : Array(String)
+
+      id : String
+      type : String = "Note"
+      in_reply_to : String
+      content : String
+      author : String
+      published : Time
+    end
+  end
+end
+#+END_SRC
+
+- [ ] Commit: ~feat(crater): add ForgeFed types part 2~
+
+*** Task 3.7: Create Task-Activity mapper
+- [ ] Create ~src/crater/activitypub/mapper.cr~:
+
+#+BEGIN_SRC crystal
+module Crater
+  class TaskActivityMapper
+    def initialize(@base_url : String)
+    end
+
+    # Convert internal task to Create activity
+    def task_to_create_activity(task : Hash(String, JSON::Any)) : ActivityPub::Activity
+      ActivityPub::Activity.new(
+        context: [ActivityPub::ACTIVITYPub_CONTEXT, ForgeFed::FORGEFED_CONTEXT],
+        id: "#{@base_url}/activities/#{task["id"]}/create",
+        type: "Create",
+        actor: "#{@base_url}/actor",
+        object: task_to_object(task),
+        published: Time.utc,
+        to: ["https://www.w3.org/ns/activitystreams#Public"]
+      )
+    end
+
+    # Convert internal task to ActivityPub object
+    def task_to_object(task : Hash(String, JSON::Any)) : Hash(String, JSON::Any)
+      {
+        "id" => "#{@base_url}/tasks/#{task["id"]}",
+        "type" => "Ticket",
+        "name" => task["title"],
+        "content" => task["description"] || "",
+        "status" => map_status(task["status"]),
+        "priority" => map_priority(task["priority"]),
+        "kind" => "Task",
+        "published" => task["createdAt"],
+        "updated" => task["updatedAt"],
+      }
+    end
+
+    private def map_status(status : JSON::Any) : String
+      case status.as_s
+      when "todo" then "Open"
+      when "in_progress" then "Open"
+      when "done" then "Closed"
+      when "blocked" then "Open"
+      else "Open"
+      end
+    end
+
+    private def map_priority(priority : JSON::Any) : String
+      case priority.as_s
+      when "low" then "Low"
+      when "medium" then "Medium"
+      when "high" then "High"
+      when "critical" then "Critical"
+      else "Medium"
+      end
+    end
+  end
+end
+#+END_SRC
+
+- [ ] Commit: ~feat(crater): create task-activity mapper~
+
+*** Task 3.8: Create Crater server entry point
+- [ ] Create ~src/crater.cr~:
+
+#+BEGIN_SRC crystal
+require "kemal"
+require "./crater/**"
+
+module Crater
+  class Server
+    def self.run
+      # WebFinger endpoint
+      get "/.well-known/webfinger" do |env|
+        WebFingerHandler.handle(env)
+      end
+
+      # NodeInfo endpoints
+      get "/.well-known/nodeinfo" do |env|
+        NodeInfoHandler.well_known(env)
+      end
+
+      get "/nodeinfo/2.0" do |env|
+        NodeInfoHandler.nodeinfo(env)
+      end
+
+      # Actor endpoint
+      get "/actor" do |env|
+        ActorHandler.handle(env)
+      end
+
+      # Inbox endpoint
+      post "/inbox" do |env|
+        InboxHandler.handle(env)
+      end
+
+      # Outbox endpoint
+      get "/outbox" do |env|
+        OutboxHandler.handle(env)
+      end
+
+      # Shared inbox
+      post "/shared-inbox" do |env|
+        SharedInboxHandler.handle(env)
+      end
+
+      # Project endpoints
+      get "/projects" do |env|
+        ProjectHandler.list(env)
+      end
+
+      get "/projects/:id" do |env|
+        ProjectHandler.show(env)
+      end
+
+      # Start server
+      Kemal.run(ENV.fetch("PORT", "3001"))
+    end
+  end
+end
+
+Crater::Server.run
+#+END_SRC
+
+- [ ] Commit: ~feat(crater): create server entry point~
+
+*** Task 3.9: Create WebFinger handler
+- [ ] Create ~src/crater/handlers/webfinger.cr~:
+
+#+BEGIN_SRC crystal
+module Crater
+  class WebFingerHandler
+    def self.handle(env : HTTP::Server::Context)
+      resource = env.params.query["resource"]?
+      
+      unless resource
+        env.response.status_code = 400
+        return "Missing resource parameter"
+      end
+
+      # Parse resource (acct: or https:)
+      username = extract_username(resource)
+      
+      unless username
+        env.response.status_code = 404
+        return "Resource not found"
+      end
+
+      response = {
+        "subject" => resource,
+        "aliases" => [
+          "#{base_url}/actor",
+          "#{base_url}/u/#{username}",
+        ],
+        "links" => [
+          {
+            "rel" => "self",
+            "type" => "application/activity+json",
+            "href" => "#{base_url}/actor",
+          },
+          {
+            "rel" => "http://webfinger.net/rel/profile-page",
+            "type" => "text/html",
+            "href" => "#{base_url}/u/#{username}",
+          },
+        ],
+      }
+
+      env.response.content_type = "application/jrd+json"
+      response.to_json
+    end
+
+    private def self.extract_username(resource : String) : String?
+      if resource.starts_with?("acct:")
+        resource.sub("acct:", "").split("@").first
+      elsif resource.starts_with?("https://")
+        resource.trim_prefix("#{base_url}/u/").split("/").first
+      else
+        nil
+      end
+    end
+
+    private def self.base_url : String
+      ENV.fetch("BASE_URL", "http://localhost:3001")
+    end
+  end
+end
+#+END_SRC
+
+- [ ] Commit: ~feat(crater): add WebFinger handler~
+
+*** Task 3.10: Create NodeInfo handler
+- [ ] Create ~src/crater/handlers/nodeinfo.cr~:
+
+#+BEGIN_SRC crystal
+module Crater
+  class NodeInfoHandler
+    VERSION = "0.1.0"
+
+    def self.well_known(env : HTTP::Server::Context)
+      response = {
+        "links" => [
+          {
+            "rel" => "http://nodeinfo.diaspora.software/ns/schema/2.0",
+            "href" => "#{base_url}/nodeinfo/2.0",
+          },
+        ],
+      }
+
+      env.response.content_type = "application/json"
+      response.to_json
+    end
+
+    def self.nodeinfo(env : HTTP::Server::Context)
+      response = {
+        "version" => "2.0",
+        "software" => {
+          "name" => "Crater",
+          "version" => VERSION,
+        },
+        "protocols" => ["activitypub", "forgefed"],
+        "services" => {
+          "inbound" => [] of String,
+          "outbound" => [] of String,
+        },
+        "usage" => {
+          "users" => {
+            "total" => 0,
+            "activeMonth" => 0,
+            "activeHalfyear" => 0,
+          },
+          "localPosts" => 0,
+        },
+        "openRegistrations" => false,
+      }
+
+      env.response.content_type = "application/json"
+      response.to_json
+    end
+
+    private def self.base_url : String
+      ENV.fetch("BASE_URL", "http://localhost:3001")
+    end
+  end
+end
+#+END_SRC
+
+- [ ] Commit: ~feat(crater): add NodeInfo handler~
+
+*** Task 3.11: Create Actor handler
+- [ ] Create ~src/crater/handlers/actor.cr~:
+
+#+BEGIN_SRC crystal
+module Crater
+  class ActorHandler
+    def self.handle(env : HTTP::Server::Context)
+      actor = {
+        "@context" => [
+          ActivityPub::ACTIVITYPub_CONTEXT,
+          ActivityPub::SECURITY_CONTEXT,
+          ForgeFed::FORGEFED_CONTEXT,
+        ],
+        "id" => "#{base_url}/actor",
+        "type" => "Application",
+        "preferredUsername" => "crater",
+        "name" => "Crater Proxy",
+        "summary" => "ForgeFed ActivityPub Proxy for Kefine",
+        "inbox" => "#{base_url}/inbox",
+        "outbox" => "#{base_url}/outbox",
+        "endpoints" => {
+          "sharedInbox" => "#{base_url}/shared-inbox",
+        },
+        "publicKey" => {
+          "id" => "#{base_url}/actor#main-key",
+          "owner" => "#{base_url}/actor",
+          "publicKeyPem" => public_key_pem,
+        },
+        "forgeFed" => {
+          "capabilities" => ["projects", "tickets", "memberships"],
+        },
+      }
+
+      env.response.content_type = "application/activity+json"
+      actor.to_json
+    end
+
+    private def self.base_url : String
+      ENV.fetch("BASE_URL", "http://localhost:3001")
+    end
+
+    private def self.public_key_pem : String
+      # Load from config or generate
+      ENV.fetch("PUBLIC_KEY", "")
+    end
+  end
+end
+#+END_SRC
+
+- [ ] Commit: ~feat(crater): add Actor handler~
+
+*** Task 3.12: Create Simple API client for Crater
+- [ ] Create ~src/crater/utils/simple_api_client.cr~:
+
+#+BEGIN_SRC crystal
+module Crater
+  class SimpleApiClient
+    getter base_url : String
+
+    def initialize(@base_url : String)
+    end
+
+    def fetch_tasks : Array(Hash(String, JSON::Any))
+      response = HTTP::Client.get("#{@base_url}/api/tasks")
+      
+      unless response.success?
+        raise "Failed to fetch tasks: #{response.status_code}"
+      end
+
+      json = JSON.parse(response.body)
+      json["data"].as_a.map(&.as_h)
+    end
+
+    def fetch_task(id : String) : Hash(String, JSON::Any)?
+      response = HTTP::Client.get("#{@base_url}/api/tasks/#{id}")
+      
+      return nil unless response.success?
+
+      json = JSON.parse(response.body)
+      json["data"].as_h
+    end
+
+    def create_task(task : Hash(String, JSON::Any)) : Hash(String, JSON::Any)
+      body = task.to_json
+      headers = HTTP::Headers{"Content-Type" => "application/json"}
+      
+      response = HTTP::Client.post(
+        "#{@base_url}/api/tasks",
+        headers: headers,
+        body: body
+      )
+
+      unless response.success?
+        raise "Failed to create task: #{response.status_code}"
+      end
+
+      json = JSON.parse(response.body)
+      json["data"].as_h
+    end
+
+    def update_task(id : String, updates : Hash(String, JSON::Any)) : Hash(String, JSON::Any)?
+      body = updates.to_json
+      headers = HTTP::Headers{"Content-Type" => "application/json"}
+      
+      response = HTTP::Client.put(
+        "#{@base_url}/api/tasks/#{id}",
+        headers: headers,
+        body: body
+      )
+
+      return nil unless response.success?
+
+      json = JSON.parse(response.body)
+      json["data"].as_h
+    end
+
+    def delete_task(id : String) : Bool
+      response = HTTP::Client.delete("#{@base_url}/api/tasks/#{id}")
+      response.success?
+    end
+  end
+end
+#+END_SRC
+
+- [ ] Commit: ~feat(crater): add Simple API client~
+
+*** Task 3.13: Create Inbox handler (Part 1)
+- [ ] Create ~src/crater/handlers/inbox.cr~ (Part 1):
+
+#+BEGIN_SRC crystal
+module Crater
+  class InboxHandler
+    def self.handle(env : HTTP::Server::Context)
+      # Verify HTTP signature (implement in middleware task)
+      # verify_signature(env)
+
+      body = env.body.gets_and_close
+      activity = JSON.parse(body)
+
+      activity_type = activity["type"].as_s
+
+      case activity_type
+      when "Create"
+        handle_create(activity)
+      when "Update"
+        handle_update(activity)
+      when "Delete"
+        handle_delete(activity)
+      when "Follow"
+        handle_follow(activity, env)
+      else
+        env.response.status_code = 400
+        return "Unknown activity type: #{activity_type}"
+      end
+
+      env.response.status_code = 202
+      "Accepted"
+    end
+
+    private def self.handle_create(activity : JSON::Any)
+      object = activity["object"]
+      object_type = object["type"].as_s
+
+      case object_type
+      when "Ticket", "Task"
+        create_ticket(object)
+      when "Note"
+        create_comment(object)
+      else
+        # Unknown object type, ignore
+      end
+    end
+
+    private def self.create_ticket(object : JSON::Any)
+      # Convert ForgeFed ticket to internal format
+      task_data = {
+        "title" => object["name"],
+        "description" => object["content"]?,
+        "status" => map_forgeféd_status(object["status"]?),
+        "priority" => map_forgeféd_priority(object["priority"]?),
+        "metadata" => {
+          "forgefed_id" => object["id"],
+          "kind" => object["kind"]?,
+        },
+      }
+
+      client = SimpleApiClient.new(simple_api_url)
+      client.create_task(task_data)
+    end
+#+END_SRC
+
+- [ ] Commit: ~feat(crater): add Inbox handler part 1~
+
+*** Task 3.14: Create Inbox handler (Part 2)
+- [ ] Create ~src/crater/handlers/inbox.cr~ (Part 2 - append):
+
+#+BEGIN_SRC crystal
+    private def self.handle_update(activity : JSON::Any)
+      object = activity["object"]
+      object_id = extract_local_id(object["id"].as_s)
+
+      updates = {
+        "title" => object["name"]?,
+        "description" => object["content"]?,
+        "status" => map_forgeféd_status(object["status"]?),
+        "priority" => map_forgeféd_priority(object["priority"]?),
+      }.compact
+
+      client = SimpleApiClient.new(simple_api_url)
+      client.update_task(object_id, updates)
+    end
+
+    private def self.handle_delete(activity : JSON::Any)
+      object = activity["object"]
+      object_id = extract_local_id(object.as_s)
+
+      client = SimpleApiClient.new(simple_api_url)
+      client.delete_task(object_id)
+    end
+
+    private def self.handle_follow(activity : JSON::Any, env : HTTP::Server::Context)
+      # Implement Follow handling for ForgeFed
+      actor = activity["actor"].as_s
+      
+      # Send Accept activity back
+      send_accept(activity, actor)
+    end
+
+    private def self.map_forgeféd_status(status : JSON::Any?) : String
+      return "todo" unless status
+
+      case status.as_s.downcase
+      when "open" then "in_progress"
+      when "closed", "merged" then "done"
+      when "rejected" then "blocked"
+      else "todo"
+      end
+    end
+
+    private def self.map_forgeféd_priority(priority : JSON::Any?) : String
+      return "medium" unless priority
+
+      case priority.as_s.downcase
+      when "low" then "low"
+      when "medium" then "medium"
+      when "high" then "high"
+      when "critical" then "critical"
+      else "medium"
+      end
+    end
+
+    private def self.extract_local_id(url : String) : String
+      url.split("/").last
+    end
+
+    private def self.simple_api_url : String
+      ENV.fetch("SIMPLE_API_URL", "http://localhost:4000")
+    end
+
+    private def self.send_accept(activity : JSON::Any, actor : String)
+      # Implement Accept activity sending
+    end
+  end
+end
+#+END_SRC
+
+- [ ] Commit: ~feat(crater): add Inbox handler part 2~
+
+*** Task 3.15: Create Outbox handler
+- [ ] Create ~src/crater/handlers/outbox.cr~:
+
+#+BEGIN_SRC crystal
+module Crater
+  class OutboxHandler
+    def self.handle(env : HTTP::Server::Context)
+      page = env.params.query["page"]?
+      
+      if page
+        render_page(page.to_i, env)
+      else
+        render_collection(env)
+      end
+    end
+
+    private def self.render_collection(env : HTTP::Server::Context)
+      client = SimpleApiClient.new(simple_api_url)
+      tasks = client.fetch_tasks
+
+      collection = {
+        "@context" => ActivityPub::ACTIVITYPub_CONTEXT,
+        "id" => "#{base_url}/outbox",
+        "type" => "OrderedCollection",
+        "totalItems" => tasks.size,
+        "first" => "#{base_url}/outbox?page=1",
+        "last" => "#{base_url}/outbox?page=#{(tasks.size / 20.0).ceil}",
+      }
+
+      env.response.content_type = "application/activity+json"
+      collection.to_json
+    end
+
+    private def self.render_page(page : Int32, env : HTTP::Server::Context)
+      client = SimpleApiClient.new(simple_api_url)
+      tasks = client.fetch_tasks
+
+      page_size = 20
+      start = (page - 1) * page_size
+      page_tasks = tasks[start, page_size]? || [] of typeof(tasks.first)
+
+      items = page_tasks.map do |task|
+        {
+          "id" => "#{base_url}/activities/#{task["id"]}/create",
+          "type" => "Create",
+          "actor" => "#{base_url}/actor",
+          "object" => {
+            "id" => "#{base_url}/tasks/#{task["id"]}",
+            "type" => "Ticket",
+            "name" => task["title"],
+          },
+          "published" => task["createdAt"],
+        }
+      end
+
+      collection = {
+        "@context" => ActivityPub::ACTIVITYPub_CONTEXT,
+        "id" => "#{base_url}/outbox?page=#{page}",
+        "type" => "OrderedCollectionPage",
+        "orderedItems" => items,
+        "partOf" => "#{base_url}/outbox",
+      }
+
+      env.response.content_type = "application/activity+json"
+      collection.to_json
+    end
+
+    private def self.base_url : String
+      ENV.fetch("BASE_URL", "http://localhost:3001")
+    end
+
+    private def self.simple_api_url : String
+      ENV.fetch("SIMPLE_API_URL", "http://localhost:4000")
+    end
+  end
+end
+#+END_SRC
+
+- [ ] Commit: ~feat(crater): add Outbox handler~
+
+** Phase 4: Layer 3 - Local Store Integration
+
+*** Task 4.1: Create database abstraction layer
+- [ ] Create ~/apps/simple-api/src/database/~ directory
+- [ ] Create ~src/database/interface.ts~:
+
+#+BEGIN_SRC typescript
+export interface DatabaseAdapter {
+  connect(): Promise<void>;
+  disconnect(): Promise<void>;
+  
+  // Task operations
+  findTasks(query: TaskQuery): Promise<Task[]>;
+  findTaskById(id: string): Promise<Task | null>;
+  insertTask(task: Task): Promise<void>;
+  updateTask(id: string, updates: Partial<Task>): Promise<boolean>;
+  deleteTask(id: string): Promise<boolean>;
+  
+  // Transaction support
+  transaction<T>(fn: () => Promise<T>): Promise<T>;
+}
+
+export interface TaskQuery {
+  status?: string;
+  priority?: string;
+  assigneeId?: string;
+  projectId?: string;
+  page?: number;
+  pageSize?: number;
+}
+#+END_SRC
+
+- [ ] Commit: ~feat(db): create database interface~
+
+*** Task 4.2: Create in-memory database adapter
+- [ ] Create ~src/database/memory-adapter.ts~:
+
+#+BEGIN_SRC typescript
+import { DatabaseAdapter, TaskQuery } from './interface.js';
+import { Task } from '../types/task.js';
+
+export class MemoryAdapter implements DatabaseAdapter {
+  private tasks: Map<string, Task> = new Map();
+  private connected = false;
+
+  async connect(): Promise<void> {
+    this.connected = true;
+  }
+
+  async disconnect(): Promise<void> {
+    this.connected = false;
+  }
+
+  async findTasks(query: TaskQuery): Promise<Task[]> {
+    let tasks = Array.from(this.tasks.values());
+
+    if (query.status) {
+      tasks = tasks.filter(t => t.status === query.status);
+    }
+
+    if (query.priority) {
+      tasks = tasks.filter(t => t.priority === query.priority);
+    }
+
+    if (query.assigneeId) {
+      tasks = tasks.filter(t => t.assigneeId === query.assigneeId);
+    }
+
+    if (query.projectId) {
+      tasks = tasks.filter(t => t.projectId === query.projectId);
+    }
+
+    const page = query.page || 1;
+    const pageSize = query.pageSize || 20;
+    const start = (page - 1) * pageSize;
+
+    return tasks.slice(start, start + pageSize);
+  }
+
+  async findTaskById(id: string): Promise<Task | null> {
+    return this.tasks.get(id) || null;
+  }
+
+  async insertTask(task: Task): Promise<void> {
+    this.tasks.set(task.id, task);
+  }
+
+  async updateTask(id: string, updates: Partial<Task>): Promise<boolean> {
+    const task = this.tasks.get(id);
+    if (!task) return false;
+
+    this.tasks.set(id, { ...task, ...updates });
+    return true;
+  }
+
+  async deleteTask(id: string): Promise<boolean> {
+    return this.tasks.delete(id);
+  }
+
+  async transaction<T>(fn: () => Promise<T>): Promise<T> {
+    return fn();
+  }
+}
+#+END_SRC
+
+- [ ] Commit: ~feat(db): add memory adapter~
+
+*** Task 4.3: Create SQLite database adapter (Part 1)
+- [ ] Create ~src/database/sqlite-adapter.ts~ (Part 1):
+
+#+BEGIN_SRC typescript
+import Database from 'better-sqlite3';
+import { DatabaseAdapter, TaskQuery } from './interface.js';
+import { Task } from '../types/task.js';
+
+export class SqliteAdapter implements DatabaseAdapter {
+  private db: Database.Database | null = null;
+
+  async connect(): Promise<void> {
+    const dbPath = process.env.DATABASE_PATH || ':memory:';
+    this.db = new Database(dbPath);
+    
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS tasks (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        description TEXT,
+        status TEXT DEFAULT 'todo',
+        priority TEXT DEFAULT 'medium',
+        assignee_id TEXT,
+        project_id TEXT,
+        parent_task_id TEXT,
+        tags TEXT DEFAULT '[]',
+        due_date TEXT,
+        estimated_hours REAL,
+        actual_hours REAL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        metadata TEXT
+      )
+    `);
+  }
+
+  async disconnect(): Promise<void> {
+    this.db?.close();
+    this.db = null;
+  }
+#+END_SRC
+
+- [ ] Commit: ~feat(db): add SQLite adapter part 1~
+
+*** Task 4.4: Create SQLite database adapter (Part 2)
+- [ ] Create ~src/database/sqlite-adapter.ts~ (Part 2 - append):
+
+#+BEGIN_SRC typescript
+  async findTasks(query: TaskQuery): Promise<Task[]> {
+    if (!this.db) throw new Error('Database not connected');
+
+    let sql = 'SELECT * FROM tasks WHERE 1=1';
+    const params: unknown[] = [];
+
+    if (query.status) {
+      sql += ' AND status = ?';
+      params.push(query.status);
+    }
+
+    if (query.priority) {
+      sql += ' AND priority = ?';
+      params.push(query.priority);
+    }
+
+    const page = query.page || 1;
+    const pageSize = query.pageSize || 20;
+    sql += ' LIMIT ? OFFSET ?';
+    params.push(pageSize, (page - 1) * pageSize);
+
+    const stmt = this.db.prepare(sql);
+    const rows = stmt.all(...params) as Array<Record<string, unknown>>;
+
+    return rows.map(row => this.rowToTask(row));
+  }
+
+  async findTaskById(id: string): Promise<Task | null> {
+    if (!this.db) throw new Error('Database not connected');
+
+    const stmt = this.db.prepare('SELECT * FROM tasks WHERE id = ?');
+    const row = stmt.get(id) as Record<string, unknown> | undefined;
+
+    return row ? this.rowToTask(row) : null;
+  }
+
+  async insertTask(task: Task): Promise<void> {
+    if (!this.db) throw new Error('Database not connected');
+
+    const stmt = this.db.prepare(`
+      INSERT INTO tasks (id, title, description, status, priority, tags, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    stmt.run(
+      task.id,
+      task.title,
+      task.description || null,
+      task.status,
+      task.priority,
+      JSON.stringify(task.tags),
+      task.createdAt,
+      task.updatedAt
+    );
+  }
+
+  async updateTask(id: string, updates: Partial<Task>): Promise<boolean> {
+    if (!this.db) throw new Error('Database not connected');
+
+    const task = await this.findTaskById(id);
+    if (!task) return false;
+
+    const fields: string[] = [];
+    const values: unknown[] = [];
+
+    for (const [key, value] of Object.entries(updates)) {
+      if (value !== undefined) {
+        const colName = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+        fields.push(`${colName} = ?`);
+        values.push(key === 'tags' ? JSON.stringify(value) : value);
+      }
+    }
+
+    if (fields.length === 0) return true;
+
+    values.push(id);
+    const stmt = this.db.prepare(`
+      UPDATE tasks SET ${fields.join(', ')} WHERE id = ?
+    `);
+
+    stmt.run(...values);
+    return true;
+  }
+
+  async deleteTask(id: string): Promise<boolean> {
+    if (!this.db) throw new Error('Database not connected');
+
+    const stmt = this.db.prepare('DELETE FROM tasks WHERE id = ?');
+    const result = stmt.run(id);
+
+    return (result.changes || 0) > 0;
+  }
+
+  async transaction<T>(fn: () => Promise<T>): Promise<T> {
+    if (!this.db) throw new Error('Database not connected');
+
+    return this.db.transaction(() => fn())();
+  }
+
+  private rowToTask(row: Record<string, unknown>): Task {
+    return {
+      id: row.id as string,
+      title: row.title as string,
+      description: row.description as string | undefined,
+      status: row.status as Task['status'],
+      priority: row.priority as Task['priority'],
+      assigneeId: row.assignee_id as string | undefined,
+      projectId: row.project_id as string | undefined,
+      parentTaskId: row.parent_task_id as string | undefined,
+      tags: JSON.parse(row.tags as string) as string[],
+      dueDate: row.due_date as string | undefined,
+      estimatedHours: row.estimated_hours as number | undefined,
+      actualHours: row.actual_hours as number | undefined,
+      createdAt: row.created_at as string,
+      updatedAt: row.updated_at as string,
+      metadata: row.metadata ? JSON.parse(row.metadata as string) : undefined,
+    };
+  }
+}
+#+END_SRC
+
+- [ ] Commit: ~feat(db): add SQLite adapter part 2~
+
+*** Task 4.5: Update task service to use database
+- [ ] Update ~src/services/task.ts~:
+
+#+BEGIN_SRC typescript
+import { Task, CreateTaskRequest } from '../types/task.js';
+import { ListResponse } from '../types/task-response.js';
+import { DatabaseAdapter } from '../database/interface.js';
+
+export class TaskService {
+  constructor(private db: DatabaseAdapter) {}
+
+  async list(options: {
+    page: number;
+    pageSize: number;
+    status?: string;
+    priority?: string;
+  }): Promise<ListResponse<Task>> {
+    const tasks = await this.db.findTasks({
+      status: options.status,
+      priority: options.priority,
+      page: options.page,
+      pageSize: options.pageSize,
+    });
+
+    return {
+      data: tasks,
+      meta: {
+        total: 0, // Would need COUNT query
+        page: options.page,
+        pageSize: options.pageSize,
+        totalPages: 0,
+        requestId: '',
+        timestamp: new Date().toISOString(),
+      },
+    };
+  }
+
+  async getById(id: string): Promise<Task | undefined> {
+    const task = await this.db.findTaskById(id);
+    return task || undefined;
+  }
+
+  async create(data: CreateTaskRequest): Promise<Task> {
+    const id = crypto.randomUUID();
+    const now = new Date().toISOString();
+
+    const task: Task = {
+      ...data,
+      id,
+      status: data.status || 'todo',
+      priority: data.priority || 'medium',
+      tags: data.tags || [],
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    await this.db.insertTask(task);
+    return task;
+  }
+
+  async update(id: string, updates: Partial<CreateTaskRequest>): Promise<Task | undefined> {
+    const success = await this.db.updateTask(id, updates);
+    if (!success) return undefined;
+
+    return this.getById(id);
+  }
+
+  async delete(id: string): Promise<boolean> {
+    return this.db.deleteTask(id);
+  }
+}
+#+END_SRC
+
+- [ ] Commit: ~feat(api): update task service with DB~
+
+** Phase 5: Integration & Testing
+
+*** Task 5.1: Create integration test setup
+- [ ] Create ~/apps/simple-api/tests/~ directory
+- [ ] Create ~tests/setup.ts~:
+
+#+BEGIN_SRC typescript
+import { beforeAll, afterAll } from 'vitest';
+import { MemoryAdapter } from '../src/database/memory-adapter.js';
+import { TaskService } from '../src/services/task.js';
+
+export let testDb: MemoryAdapter;
+export let taskService: TaskService;
+
+beforeAll(async () => {
+  testDb = new MemoryAdapter();
+  await testDb.connect();
+  taskService = new TaskService(testDb);
+});
+
+afterAll(async () => {
+  await testDb.disconnect();
+});
+#+END_SRC
+
+- [ ] Commit: ~test(api): add test setup~
+
+*** Task 5.2: Create task service tests
+- [ ] Create ~tests/task-service.test.ts~ (Part 1):
+
+#+BEGIN_SRC typescript
+import { describe, it, expect, beforeEach } from 'vitest';
+import { TaskService } from '../src/services/task.js';
+import { MemoryAdapter } from '../src/database/memory-adapter.js';
+
+describe('TaskService', () => {
+  let service: TaskService;
+  let db: MemoryAdapter;
+
+  beforeEach(async () => {
+    db = new MemoryAdapter();
+    await db.connect();
+    service = new TaskService(db);
+  });
+
+  afterEach(async () => {
+    await db.disconnect();
+  });
+
+  describe('create', () => {
+    it('should create a task with required fields', async () => {
+      const task = await service.create({
+        title: 'Test Task',
+      });
+
+      expect(task.id).toBeDefined();
+      expect(task.title).toBe('Test Task');
+      expect(task.status).toBe('todo');
+      expect(task.priority).toBe('medium');
+    });
+
+    it('should create a task with all fields', async () => {
+      const task = await service.create({
+        title: 'Full Task',
+        description: 'Description',
+        status: 'in_progress',
+        priority: 'high',
+        tags: ['tag1', 'tag2'],
+        dueDate: '2026-03-01',
+        estimatedHours: 10,
+      });
+
+      expect(task.description).toBe('Description');
+      expect(task.status).toBe('in_progress');
+      expect(task.priority).toBe('high');
+      expect(task.tags).toEqual(['tag1', 'tag2']);
+    });
+  });
+});
+#+END_SRC
+
+- [ ] Commit: ~test(api): add task service tests part 1~
+
+*** Task 5.3: Create task service tests (Part 2)
+- [ ] Create ~tests/task-service.test.ts~ (Part 2 - append):
+
+#+BEGIN_SRC typescript
+  describe('getById', () => {
+    it('should return a task by id', async () => {
+      const created = await service.create({ title: 'Test' });
+      const found = await service.getById(created.id);
+
+      expect(found).toBeDefined();
+      expect(found?.id).toBe(created.id);
+    });
+
+    it('should return undefined for non-existent task', async () => {
+      const found = await service.getById('non-existent');
+      expect(found).toBeUndefined();
+    });
+  });
+
+  describe('update', () => {
+    it('should update a task', async () => {
+      const created = await service.create({ title: 'Original' });
+      const updated = await service.update(created.id, {
+        title: 'Updated',
+        status: 'done',
+      });
+
+      expect(updated?.title).toBe('Updated');
+      expect(updated?.status).toBe('done');
+    });
+
+    it('should return undefined for non-existent task', async () => {
+      const updated = await service.update('non-existent', {
+        title: 'Updated',
+      });
+      expect(updated).toBeUndefined();
+    });
+  });
+
+  describe('delete', () => {
+    it('should delete a task', async () => {
+      const created = await service.create({ title: 'To Delete' });
+      const deleted = await service.delete(created.id);
+
+      expect(deleted).toBe(true);
+      expect(await service.getById(created.id)).toBeUndefined();
+    });
+
+    it('should return false for non-existent task', async () => {
+      const deleted = await service.delete('non-existent');
+      expect(deleted).toBe(false);
+    });
+  });
+
+  describe('list', () => {
+    it('should return paginated tasks', async () => {
+      await service.create({ title: 'Task 1' });
+      await service.create({ title: 'Task 2' });
+
+      const result = await service.list({ page: 1, pageSize: 10 });
+
+      expect(result.data.length).toBe(2);
+      expect(result.meta.page).toBe(1);
+      expect(result.meta.pageSize).toBe(10);
+    });
+
+    it('should filter by status', async () => {
+      await service.create({ title: 'Todo', status: 'todo' });
+      await service.create({ title: 'Done', status: 'done' });
+
+      const result = await service.list({
+        page: 1,
+        pageSize: 10,
+        status: 'todo',
+      });
+
+      expect(result.data.length).toBe(1);
+      expect(result.data[0].title).toBe('Todo');
+    });
+  });
+});
+#+END_SRC
+
+- [ ] Commit: ~test(api): add task service tests part 2~
+
+*** Task 5.4: Create API endpoint tests
+- [ ] Create ~tests/api-tasks.test.ts~:
+
+#+BEGIN_SRC typescript
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import request from 'supertest';
+import app from '../src/index.js';
+import { MemoryAdapter } from '../src/database/memory-adapter.js';
+import { TaskService } from '../src/services/task.js';
+
+describe('Task API', () => {
+  let db: MemoryAdapter;
+
+  beforeAll(async () => {
+    db = new MemoryAdapter();
+    await db.connect();
+  });
+
+  afterAll(async () => {
+    await db.disconnect();
+  });
+
+  describe('POST /api/tasks', () => {
+    it('should create a task', async () => {
+      const response = await request(app)
+        .post('/api/tasks')
+        .send({ title: 'New Task' })
+        .expect(201);
+
+      expect(response.body.data.title).toBe('New Task');
+      expect(response.body.data.status).toBe('todo');
+    });
+
+    it('should reject invalid task', async () => {
+      const response = await request(app)
+        .post('/api/tasks')
+        .send({})
+        .expect(400);
+
+      expect(response.body.error.code).toBe('VALIDATION_ERROR');
+    });
+  });
+
+  describe('GET /api/tasks', () => {
+    it('should list tasks', async () => {
+      const response = await request(app)
+        .get('/api/tasks')
+        .expect(200);
+
+      expect(response.body.data).toBeInstanceOf(Array);
+      expect(response.body.meta).toBeDefined();
+    });
+  });
+
+  describe('GET /api/tasks/:id', () => {
+    it('should get a task', async () => {
+      const create = await request(app)
+        .post('/api/tasks')
+        .send({ title: 'Test' });
+
+      const response = await request(app)
+        .get(`/api/tasks/${create.body.data.id}`)
+        .expect(200);
+
+      expect(response.body.data.id).toBe(create.body.data.id);
+    });
+
+    it('should return 404 for non-existent', async () => {
+      await request(app)
+        .get('/api/tasks/non-existent')
+        .expect(404);
+    });
+  });
+});
+#+END_SRC
+
+- [ ] Commit: ~test(api): add API endpoint tests~
+
+*** Task 5.5: Create Crater integration tests
+- [ ] Create ~/services/crater/spec/handlers/inbox_spec.cr~:
+
+#+BEGIN_SRC crystal
+require "../../spec_helper"
+require "../../../src/crater/handlers/inbox"
+
+describe Crater::InboxHandler do
+  describe ".handle" do
+    it "accepts Create activity" do
+      activity = {
+        "type" => "Create",
+        "object" => {
+          "type" => "Ticket",
+          "name" => "Test Ticket",
+          "content" => "Description",
+        },
+      }.to_json
+
+      env = create_test_env("POST", "/inbox", activity)
+      Crater::InboxHandler.handle(env)
+
+      env.response.status_code.should eq(202)
+    end
+
+    it "accepts Update activity" do
+      activity = {
+        "type" => "Update",
+        "object" => {
+          "id" => "http://localhost:4000/api/tasks/123",
+          "type" => "Ticket",
+          "name" => "Updated",
+        },
+      }.to_json
+
+      env = create_test_env("POST", "/inbox", activity)
+      Crater::InboxHandler.handle(env)
+
+      env.response.status_code.should eq(202)
+    end
+
+    it "accepts Delete activity" do
+      activity = {
+        "type" => "Delete",
+        "object" => "http://localhost:4000/api/tasks/123",
+      }.to_json
+
+      env = create_test_env("POST", "/inbox", activity)
+      Crater::InboxHandler.handle(env)
+
+      env.response.status_code.should eq(202)
+    end
+
+    it "rejects unknown activity type" do
+      activity = {
+        "type" => "Unknown",
+      }.to_json
+
+      env = create_test_env("POST", "/inbox", activity)
+      Crater::InboxHandler.handle(env)
+
+      env.response.status_code.should eq(400)
+    end
+  end
+end
+#+END_SRC
+
+- [ ] Commit: ~test(crater): add inbox handler tests~
+
+*** Task 5.6: Create end-to-end test (Part 1)
+- [ ] Create ~tests/e2e/flow.test.ts~ (Part 1):
+
+#+BEGIN_SRC typescript
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { TaskService } from '../../apps/simple-api/src/services/task.js';
+import { MemoryAdapter } from '../../apps/simple-api/src/database/memory-adapter.js';
+
+describe('End-to-End Flow', () => {
+  let db: MemoryAdapter;
+  let taskService: TaskService;
+
+  beforeAll(async () => {
+    db = new MemoryAdapter();
+    await db.connect();
+    taskService = new TaskService(db);
+  });
+
+  afterAll(async () => {
+    await db.disconnect();
+  });
+
+  it('should complete full task lifecycle', async () => {
+    // 1. Create task
+    const task = await taskService.create({
+      title: 'E2E Test Task',
+      description: 'Testing full lifecycle',
+      priority: 'high',
+    });
+
+    expect(task.id).toBeDefined();
+    expect(task.status).toBe('todo');
+
+    // 2. Update task status
+    const updated = await taskService.update(task.id, {
+      status: 'in_progress',
+    });
+
+    expect(updated?.status).toBe('in_progress');
+
+    // 3. Update task to done
+    const completed = await taskService.update(task.id, {
+      status: 'done',
+    });
+
+    expect(completed?.status).toBe('done');
+
+    // 4. Delete task
+    const deleted = await taskService.delete(task.id);
+    expect(deleted).toBe(true);
+
+    // 5. Verify deletion
+    const found = await taskService.getById(task.id);
+    expect(found).toBeUndefined();
+  });
+});
+#+END_SRC
+
+- [ ] Commit: ~test(e2e): add flow tests part 1~
+
+*** Task 5.7: Create end-to-end test (Part 2)
+- [ ] Create ~tests/e2e/flow.test.ts~ (Part 2 - append):
+
+#+BEGIN_SRC typescript
+  it('should handle multiple tasks with filtering', async () => {
+    // Create multiple tasks
+    await taskService.create({
+      title: 'Task 1',
+      status: 'todo',
+      priority: 'low',
+    });
+
+    await taskService.create({
+      title: 'Task 2',
+      status: 'in_progress',
+      priority: 'high',
+    });
+
+    await taskService.create({
+      title: 'Task 3',
+      status: 'done',
+      priority: 'medium',
+    });
+
+    // List all
+    const all = await taskService.list({ page: 1, pageSize: 10 });
+    expect(all.data.length).toBe(3);
+
+    // Filter by status
+    const todo = await taskService.list({
+      page: 1,
+      pageSize: 10,
+      status: 'todo',
+    });
+    expect(todo.data.length).toBe(1);
+    expect(todo.data[0].title).toBe('Task 1');
+
+    // Filter by priority
+    const high = await taskService.list({
+      page: 1,
+      pageSize: 10,
+      priority: 'high',
+    });
+    expect(high.data.length).toBe(1);
+    expect(high.data[0].title).toBe('Task 2');
+  });
+
+  it('should handle pagination', async () => {
+    // Create 25 tasks
+    for (let i = 1; i <= 25; i++) {
+      await taskService.create({ title: `Task ${i}` });
+    }
+
+    // Page 1
+    const page1 = await taskService.list({ page: 1, pageSize: 10 });
+    expect(page1.data.length).toBe(10);
+    expect(page1.meta.page).toBe(1);
+
+    // Page 2
+    const page2 = await taskService.list({ page: 2, pageSize: 10 });
+    expect(page2.data.length).toBe(10);
+    expect(page2.meta.page).toBe(2);
+
+    // Page 3
+    const page3 = await taskService.list({ page: 3, pageSize: 10 });
+    expect(page3.data.length).toBe(5);
+    expect(page3.meta.page).toBe(3);
+  });
+});
+#+END_SRC
+
+- [ ] Commit: ~test(e2e): add flow tests part 2~
+
+*** Task 5.8: Create Docker configuration
+- [ ] Create ~docker-compose.yml~:
+
+#+BEGIN_SRC yaml
+version: '3.8'
+
+services:
+  simple-api:
+    build:
+      context: ./apps/simple-api
+      dockerfile: Dockerfile
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+      - DATABASE_PATH=/data/tasks.db
+    volumes:
+      - simple-api-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  crater:
+    build:
+      context: ./services/crater
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - BASE_URL=http://localhost:3001
+      - SIMPLE_API_URL=http://simple-api:4000
+    depends_on:
+      simple-api:
+        condition: service_healthy
+
+  kefine-frontend:
+    build:
+      context: ./apps/kefine
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:3001
+    depends_on:
+      - crater
+
+volumes:
+  simple-api-data:
+#+END_SRC
+
+- [ ] Commit: ~chore: add docker-compose configuration~
+
+*** Task 5.9: Create Simple API Dockerfile
+- [ ] Create ~/apps/simple-api/Dockerfile~:
+
+#+BEGIN_SRC dockerfile
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+RUN npm run build
+
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+
+COPY --from=builder /app/dist ./dist
+
+EXPOSE 4000
+
+CMD ["node", "dist/index.js"]
+#+END_SRC
+
+- [ ] Commit: ~chore(api): add Dockerfile~
+
+*** Task 5.10: Create Crater Dockerfile
+- [ ] Create ~/services/crater/Dockerfile~:
+
+#+BEGIN_SRC dockerfile
+FROM crystallang/crystal:1.10 AS builder
+
+WORKDIR /app
+COPY shard.yml shard.lock ./
+RUN shards install
+
+COPY . .
+RUN crystal build src/crater.cr -o crater --release
+
+FROM alpine:latest
+
+RUN apk --no-cache add libevent openssl
+
+WORKDIR /app
+COPY --from=builder /app/crater .
+
+EXPOSE 3001
+
+CMD ["./crater"]
+#+END_SRC
+
+- [ ] Commit: ~chore(crater): add Dockerfile~
+
+* File Structure
+
+** Root Structure
+#+BEGIN_SRC text
+kefine/
+├── apps/
+│   ├── kefine/           # Main frontend (Svelte)
+│   └── simple-api/       # Simple API service
+├── services/
+│   └── crater/           # Crater proxy (Crystal)
+├── packages/
+│   ├── types/            # Shared TypeScript types
+│   └── config/           # Shared configuration
+├── docs/
+│   └── architecture/     # Architecture documentation
+├── docker-compose.yml
+└── pnpm-workspace.yaml
+#+END_SRC
+
+** Simple API Structure
+#+BEGIN_SRC text
+apps/simple-api/
+├── src/
+│   ├── index.ts          # Server entry point
+│   ├── config.ts         # Configuration
+│   ├── types/
+│   │   ├── task.ts       # Task types
+│   │   └── task-response.ts
+│   ├── schemas/
+│   │   └── task-schema.ts
+│   ├── routes/
+│   │   ├── tasks.ts      # Task routes
+│   │   └── health.ts     # Health routes
+│   ├── services/
+│   │   └── task.ts       # Task service
+│   ├── middleware/
+│   │   ├── logger.ts     # Request logging
+│   │   └── error.ts      # Error handling
+│   └── database/
+│       ├── interface.ts  # DB adapter interface
+│       ├── memory-adapter.ts
+│       └── sqlite-adapter.ts
+├── tests/
+│   ├── setup.ts
+│   ├── task-service.test.ts
+│   └── api-tasks.test.ts
+├── package.json
+├── tsconfig.json
+└── Dockerfile
+#+END_SRC
+
+** Crater Structure
+#+BEGIN_SRC text
+services/crater/
+├── src/
+│   ├── crater.cr         # Server entry point
+│   ├── crater/
+│   │   ├── activitypub/
+│   │   │   ├── types.cr  # ActivityPub types
+│   │   │   └── mapper.cr # Task-Activity mapper
+│   │   ├── forgefed/
+│   │   │   └── types.cr  # ForgeFed types
+│   │   ├── handlers/
+│   │   │   ├── webfinger.cr
+│   │   │   ├── nodeinfo.cr
+│   │   │   ├── actor.cr
+│   │   │   ├── inbox.cr
+│   │   │   ├── outbox.cr
+│   │   │   └── shared_inbox.cr
+│   │   ├── middleware/
+│   │   │   └── http_signature.cr
+│   │   └── utils/
+│   │       └── simple_api_client.cr
+├── spec/
+│   ├── spec_helper.cr
+│   └── handlers/
+│       └── inbox_spec.cr
+├── shard.yml
+└── Dockerfile
+#+END_SRC
+
+* API Specifications
+
+** Simple API - Task Endpoints (Part 1)
+#+BEGIN_SRC text
+GET /api/tasks
+  Query Parameters:
+    - page: number (default: 1)
+    - pageSize: number (default: 20)
+    - status: 'todo' | 'in_progress' | 'done' | 'blocked'
+    - priority: 'low' | 'medium' | 'high' | 'critical'
+  
+  Response 200:
+    {
+      "data": [Task],
+      "meta": {
+        "total": number,
+        "page": number,
+        "pageSize": number,
+        "totalPages": number,
+        "requestId": string,
+        "timestamp": string
+      }
+    }
+
+GET /api/tasks/:id
+  Response 200:
+    {
+      "data": Task,
+      "meta": { "requestId", "timestamp" }
+    }
+  
+  Response 404:
+    {
+      "error": {
+        "code": "NOT_FOUND",
+        "message": "Task not found"
+      },
+      "meta": { "requestId", "timestamp" }
+    }
+#+END_SRC
+
+** Simple API - Task Endpoints (Part 2)
+#+BEGIN_SRC text
+POST /api/tasks
+  Request Body:
+    {
+      "title": string (required),
+      "description": string (optional),
+      "status": string (optional, default: "todo"),
+      "priority": string (optional, default: "medium"),
+      "assigneeId": string (optional),
+      "projectId": string (optional),
+      "tags": string[] (optional),
+      "dueDate": string (optional, ISO date),
+      "estimatedHours": number (optional),
+      "metadata": object (optional)
+    }
+  
+  Response 201:
+    {
+      "data": Task,
+      "meta": { "requestId", "timestamp" }
+    }
+  
+  Response 400:
+    {
+      "error": {
+        "code": "VALIDATION_ERROR",
+        "message": "Invalid task data",
+        "details": { "fields": string[] }
+      },
+      "meta": { "requestId", "timestamp" }
+    }
+#+END_SRC
+
+** Simple API - Task Endpoints (Part 3)
+#+BEGIN_SRC text
+PUT /api/tasks/:id
+  Request Body:
+    {
+      "title": string (optional),
+      "description": string (optional),
+      "status": string (optional),
+      "priority": string (optional),
+      "assigneeId": string (optional),
+      "tags": string[] (optional),
+      "dueDate": string (optional),
+      "estimatedHours": number (optional),
+      "metadata": object (optional)
+    }
+  
+  Response 200:
+    {
+      "data": Task,
+      "meta": { "requestId", "timestamp" }
+    }
+  
+  Response 404:
+    {
+      "error": {
+        "code": "NOT_FOUND",
+        "message": "Task not found"
+      },
+      "meta": { "requestId", "timestamp" }
+    }
+
+DELETE /api/tasks/:id
+  Response 204: No Content
+  
+  Response 404:
+    {
+      "error": {
+        "code": "NOT_FOUND",
+        "message": "Task not found"
+      },
+      "meta": { "requestId", "timestamp" }
+    }
+#+END_SRC
+
+** Crater - ActivityPub Endpoints (Part 1)
+#+BEGIN_SRC text
+GET /.well-known/webfinger
+  Query Parameters:
+    - resource: string (acct:username@domain or https://...)
+  
+  Response 200 (JRD):
+    {
+      "subject": "acct:crater@localhost:3001",
+      "aliases": [
+        "http://localhost:3001/actor",
+        "http://localhost:3001/u/crater"
+      ],
+      "links": [
+        {
+          "rel": "self",
+          "type": "application/activity+json",
+          "href": "http://localhost:3001/actor"
+        }
+      ]
+    }
+
+GET /.well-known/nodeinfo
+  Response 200:
+    {
+      "links": [{
+        "rel": "http://nodeinfo.diaspora.software/ns/schema/2.0",
+        "href": "http://localhost:3001/nodeinfo/2.0"
+      }]
+    }
+#+END_SRC
+
+** Crater - ActivityPub Endpoints (Part 2)
+#+BEGIN_SRC text
+GET /nodeinfo/2.0
+  Response 200:
+    {
+      "version": "2.0",
+      "software": {
+        "name": "Crater",
+        "version": "0.1.0"
+      },
+      "protocols": ["activitypub", "forgefed"],
+      "services": {
+        "inbound": [],
+        "outbound": []
+      },
+      "usage": {
+        "users": { "total": 0, "activeMonth": 0 },
+        "localPosts": 0
+      },
+      "openRegistrations": false
+    }
+
+GET /actor
+  Response 200:
+    {
+      "@context": [...],
+      "id": "http://localhost:3001/actor",
+      "type": "Application",
+      "preferredUsername": "crater",
+      "name": "Crater Proxy",
+      "inbox": "http://localhost:3001/inbox",
+      "outbox": "http://localhost:3001/outbox",
+      "endpoints": { "sharedInbox": "..." },
+      "publicKey": { ... }
+    }
+#+END_SRC
+
+** Crater - ActivityPub Endpoints (Part 3)
+#+BEGIN_SRC text
+POST /inbox
+  Request Body: ActivityPub Activity
+    {
+      "@context": "...",
+      "type": "Create" | "Update" | "Delete" | "Follow",
+      "id": "...",
+      "actor": "...",
+      "object": { ... }
+    }
+  
+  Response 202: Accepted
+  Response 400: Bad Request (unknown activity type)
+  Response 401: Unauthorized (signature verification failed)
+
+GET /outbox
+  Query Parameters:
+    - page: number (optional)
+  
+  Response 200 (Collection):
+    {
+      "@context": "...",
+      "id": ".../outbox",
+      "type": "OrderedCollection",
+      "totalItems": number,
+      "first": ".../outbox?page=1",
+      "last": ".../outbox?page=N"
+    }
+  
+  Response 200 (Page):
+    {
+      "@context": "...",
+      "id": ".../outbox?page=1",
+      "type": "OrderedCollectionPage",
+      "orderedItems": [...],
+      "partOf": ".../outbox"
+    }
+#+END_SRC
+
+** Crater - ForgeFed Project Endpoints
+#+BEGIN_SRC text
+GET /projects
+  Response 200:
+    {
+      "data": [Project],
+      "meta": { ... }
+    }
+
+GET /projects/:id
+  Response 200:
+    {
+      "data": Project,
+      "meta": { ... }
+    }
+  
+  Project Object:
+    {
+      "@context": ["https://www.w3.org/ns/activitystreams", "https://forgefed.org/ns"],
+      "id": "...",
+      "type": "Project",
+      "name": "...",
+      "summary": "...",
+      "description": "...",
+      "sourceRepository": "...",
+      "issueTracker": "...",
+      "members": { "type": "OrderedCollection", ... },
+      "administrators": ["..."]
+    }
+
+GET /projects/:id/tickets
+  Response 200:
+    {
+      "data": [Ticket],
+      "meta": { ... }
+    }
+#+END_SRC
+
+* Data Flow Examples
+
+** Create Task Flow**
+#+BEGIN_SRC text
+1. User creates task in Kefine Frontend
+   POST http://localhost:3001/api/tasks
+   { "title": "New Task", "priority": "high" }
+
+2. Crater Proxy receives request
+   - Validates request format
+   - Generates ActivityPub Create activity
+
+3. Crater calls Simple API
+   POST http://localhost:4000/api/tasks
+   { "title": "New Task", "priority": "high", ... }
+
+4. Simple API processes request
+   - Validates against schema
+   - Creates task in database
+   - Returns created task
+
+5. Crater receives response
+   - Converts task to ActivityPub object
+   - Stores activity in outbox
+   - Returns response to frontend
+
+6. (Optional) Federation delivery
+   - Crater sends Create activity to followers
+   - External servers receive and process
+#+END_SRC
+
+** Receive Federated Task Flow**
+#+BEGIN_SRC text
+1. External ForgeFed server sends activity
+   POST http://localhost:3001/inbox
+   {
+     "type": "Create",
+     "actor": "https://forge.example.org/user/alice",
+     "object": {
+       "type": "Ticket",
+       "name": "Bug Report",
+       "content": "Found a bug...",
+       "priority": "Critical"
+     }
+   }
+
+2. Crater verifies HTTP signature
+   - Fetches actor's public key
+   - Verifies request signature
+   - Rejects if invalid
+
+3. Crater processes activity
+   - Identifies as Create activity
+   - Extracts Ticket object
+   - Maps to internal task format
+
+4. Crater calls Simple API
+   POST http://localhost:4000/api/tasks
+   {
+     "title": "Bug Report",
+     "description": "Found a bug...",
+     "priority": "critical",
+     "metadata": { "forgefed_id": "..." }
+   }
+
+5. Simple API creates task
+   - Stores in local database
+   - Returns created task
+
+6. Crater sends Accept activity
+   - Creates Accept activity
+   - Signs with Crater's key
+   - Sends to original actor's inbox
+#+END_SRC
+
+* Dependencies
+- [[file:OKR-001-data-model.org][OKR-001-data-model.org]] - Task data model
+- [[file:OKR-002-store-implementation.org][OKR-002-store-implementation.org]] - State management
+- [[file:OKR-015-reown-appkit-auth.org][OKR-015-reown-appkit-auth.org]] - Authentication
+- [[file:OKR-016-forgefед-crater-proxy.org][OKR-016-forgefед-crater-proxy.org]] - Crater proxy reference
+
+* Related Files
+- [[file:../docs/wacli-forgefed-tasks.org][wacli-forgefed-tasks.org]] - wacli integration
+- [[file:../docs/architecture/][docs/architecture/]] - Architecture documentation

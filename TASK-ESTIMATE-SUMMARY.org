@@ -1,0 +1,230 @@
+#+TITLE: Task Estimate Summary
+#+DATE: 2026-02-21
+#+STARTUP: overview
+
+* Executive Summary
+
+| Metric | Value |
+|--------+-------|
+| *Total OKR Features* | 14 |
+| *Total Tasks* | 547 |
+| *Total Estimated Time* | 273.5 hours |
+| *Working Days (8h/day)* | ~34 days |
+| *Working Weeks* | ~7 weeks |
+
+* Detailed Breakdown by OKR
+
+** Core OKR Features (OKR-001 to OKR-012)
+
+| OKR | Feature | Tasks | Est. Hours | Days |
+|-----+---------+-------+------------+------|
+| OKR-001 | Data Model | 13 | 6.5 | 0.8 |
+| OKR-002 | Store Implementation | 38 | 22 | 2.75 |
+| OKR-003 | OKRIndex Component | 20 | 12 | 1.5 |
+| OKR-004 | ObjectiveCard Component | 23 | 14 | 1.75 |
+| OKR-005 | KeyResultRow Component | 21 | 12.5 | 1.5 |
+| OKR-006 | ProgressRing Component | 20 | 10 | 1.25 |
+| OKR-007 | Task-OKR Linking | 22 | 13 | 1.6 |
+| OKR-008 | Advanced Task Modal | 30 | 20 | 2.5 |
+| OKR-009 | OKR Modals | 28 | 16 | 2 |
+| OKR-010 | Dashboard Views | 19 | 12 | 1.5 |
+| OKR-011 | Utilities | 11 | 5.5 | 0.7 |
+| OKR-012 | Testing & QA | 22 | 16 | 2 |
+|------+----------------------------+--------+------------+------|
+| *Subtotal (Core)* | | *267* | *159.5* | *~20 days* |
+
+** ActivityPub/ForgeFed Integration (OKR-013 to OKR-014)
+
+| OKR | Feature | Tasks | Est. Hours | Days |
+|-----+---------+-------+------------+------|
+| OKR-013 | ActivityPub/ForgeFed Integration | 100 | 120 | 15 |
+| OKR-014 | Micro-Tasks (Granular) | 180 | 90 | 11.25 |
+|------+----------------------------------+--------+------------+------|
+| *Subtotal (Integration)* | | *280* | *210* | *~26 days* |
+
+* Task Time Estimation Rules
+
+** Standard Task Durations
+
+| Task Type | Time per Task |
+|-----------+---------------|
+| Simple (file create, import) | 5-10 min |
+| Medium (function implement) | 15-30 min |
+| Complex (component, integration) | 45-90 min |
+| Testing (unit, integration) | 20-40 min |
+
+** By OKR Category
+
+| Category | Avg Time | Notes |
+|----------+----------+-------|
+| Data Models | 30 min/task | Type definitions |
+| Store/State | 35 min/task | Logic + tests |
+| Components | 40 min/task | UI + CSS + events |
+| Utilities | 25 min/task | Pure functions |
+| Integration | 60 min/task | Complex flows |
+| Testing | 30 min/task | Test setup + cases |
+| Micro-tasks | 30 min/task | Very granular |
+
+* Phase Breakdown
+
+** Phase 1: Foundation (OKR-001, OKR-002, OKR-011)
+- Tasks: 62
+- Hours: 34
+- Days: 4.25
+- Deliverables: Data models, store, utilities
+
+** Phase 2: Core Components (OKR-003 to OKR-006)
+- Tasks: 84
+- Hours: 48.5
+- Days: 6
+- Deliverables: OKR display components
+
+** Phase 3: Task Integration (OKR-007, OKR-008)
+- Tasks: 52
+- Hours: 33
+- Days: 4
+- Deliverables: Task-OKR linking, advanced modal
+
+** Phase 4: OKR Management (OKR-009, OKR-010)
+- Tasks: 47
+- Hours: 28
+- Days: 3.5
+- Deliverables: Modals, dashboard views
+
+** Phase 5: Quality (OKR-012)
+- Tasks: 22
+- Hours: 16
+- Days: 2
+- Deliverables: Test suite, accessibility
+
+** Phase 6: ActivityPub/ForgeFed (OKR-013, OKR-014)
+- Tasks: 280
+- Hours: 210
+- Days: 26
+- Deliverables: Federation, passkey auth, Org mode
+
+* Implementation Timeline Options
+
+** Option A: Full-Time (40h/week)
+| Phase | Weeks |
+|-------+-------|
+| Core Features (OKR-001 to OKR-012) | 5 weeks |
+| ActivityPub/ForgeFed (OKR-013 to OKR-014) | 6.5 weeks |
+| Buffer (15%) | 1.5 weeks |
+| *Total* | *13 weeks (~3 months)* |
+
+** Option B: Part-Time (20h/week)
+| Phase | Weeks |
+|-------+-------|
+| Core Features (OKR-001 to OKR-012) | 10 weeks |
+| ActivityPub/ForgeFed (OKR-013 to OKR-014) | 13 weeks |
+| Buffer (15%) | 3.5 weeks |
+| *Total* | *26.5 weeks (~6 months)* |
+
+** Option C: Minimal Viable Product (Core Only)
+| Phase | Weeks |
+|-------+-------|
+| Core Features Only | 5 weeks |
+| Buffer (15%) | 1 week |
+| *Total* | *6 weeks (~1.5 months)* |
+
+* Risk Factors
+
+** High Risk Items
+- ActivityPub/ForgeFed integration complexity (+20-30% time)
+- Passkey authentication backend (+10% time)
+- Org mode parsing edge cases (+10% time)
+
+** Mitigation
+- Start with MVP (core OKR features)
+- Defer ActivityPub/ForgeFed to Phase 2
+- Use existing libraries (uniorg, simplewebauthn)
+
+* Recommended Approach
+
+*** Sprint 1-2: MVP Core (Weeks 1-2)
+- OKR-001: Data Model
+- OKR-002: Store Implementation
+- OKR-011: Utilities
+- *Result: Working local OKR management*
+
+*** Sprint 3-4: UI Components (Weeks 3-4)
+- OKR-003 to OKR-006: Display components
+- OKR-009: Modals
+- *Result: Complete UI for OKR CRUD*
+
+*** Sprint 5: Task Integration (Week 5)
+- OKR-007: Task-OKR Linking
+- OKR-008: Advanced Modal
+- OKR-010: Dashboard
+- *Result: Full task-OKR system*
+
+*** Sprint 6: Quality (Week 6)
+- OKR-012: Testing & QA
+- *Result: Production-ready core*
+
+*** Sprint 7-12: Advanced Features (Weeks 7-12)
+- OKR-013: ActivityPub/ForgeFed
+- OKR-014: Micro-tasks implementation
+- *Result: Federated OKR system*
+
+* Files Summary
+
+** Files to Create/Modify
+
+| Category | Count |
+|----------+-------|
+| Type Definitions | 5 |
+| Store Files | 3 |
+| Components (Svelte/JS) | 25+ |
+| CSS Files | 20+ |
+| Utils | 5 |
+| Tests | 15+ |
+| ActivityPub Modules | 15+ |
+| ForgeFed Modules | 10+ |
+| Org Mode Modules | 8+ |
+| Auth Modules | 6+ |
+| Sync Modules | 5+ |
+| *Total* | *~115 files* |
+
+* Cost Estimation (If Outsourcing)
+
+| Role | Rate | Hours | Cost |
+|------+-------+-------+------|
+| Senior Frontend Dev | $80/h | 150h | $12,000 |
+| Backend Dev (ActivityPub) | $90/h | 100h | $9,000 |
+| QA Engineer | $60/h | 40h | $2,400 |
+| UX Designer | $75/h | 20h | $1,500 |
+| *Total* | | *310h* | *~$25,000* |
+
+* Notes
+
+1. Estimates based on experienced developer familiar with:
+   - Svelte 5 / JavaScript
+   - ActivityPub protocol
+   - WebAuthn/Passkeys
+   - Org mode syntax
+
+2. Does NOT include:
+   - Project management overhead
+   - Team communication time
+   - Documentation writing
+   - Deployment/DevOps
+
+3. Add 20% buffer for:
+   - Bug fixes
+   - Refactoring
+   - Learning curve
+   - Unexpected complexity
+
+* Conclusion
+
+For a *single developer* working *full-time*:
+- *MVP (Core only)*: 6 weeks
+- *Full system*: 13 weeks (3 months)
+
+For *part-time* development:
+- *MVP (Core only)*: 12 weeks
+- *Full system*: 26 weeks (6 months)
+
+*Recommendation*: Start with MVP (OKR-001 to OKR-012), validate the product, then proceed with ActivityPub/ForgeFed integration based on user feedback.

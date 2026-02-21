@@ -1,0 +1,143 @@
+#+TITLE: OKR-008 - Advanced Task Modal with OKR
+#+DATE: 2026-02-20
+#+STARTUP: overview
+
+* Overview
+Create the advanced task modal with OKR linking, priority, due date, repository links, and file attachments.
+
+* Tasks
+
+** OKR-008.1: Modal Structure
+*** Task 8.1.1: Create component files
+- [ ] Create components/tasks/AdvancedTaskModal.svelte
+- [ ] Create components/tasks/AdvancedTaskModal.css
+
+*** Task 8.1.2: Import Modal component
+- [ ] Import shared Modal component
+- [ ] Wrap content in Modal
+
+*** Task 8.1.3: Set up form
+- [ ] Create form element
+- [ ] Add form sections
+- [ ] Add submit handler
+
+** OKR-008.2: OKR Linking Section
+*** Task 8.2.1: Add section header
+- [ ] Create "Link to OKR" heading
+- [ ] Add section container
+
+*** Task 8.2.2: Add OKR selector
+- [ ] Import/create OKR selector component
+- [ ] Place in section
+
+*** Task 8.2.3: Display selected OKRs
+- [ ] Show selected OKRs as tags
+- [ ] Allow removal
+
+*** Task 8.2.4: Remove link option
+- [ ] Add X button on each tag
+- [ ] Remove from selection
+
+** OKR-008.3: Priority Configuration
+*** Task 8.3.1: Add priority selector
+- [ ] Create select dropdown
+- [ ] Add P1, P2, P3, P4 options
+
+*** Task 8.3.2: Color coding
+- [ ] P1: red
+- [ ] P2: orange
+- [ ] P3: yellow
+- [ ] P4: green
+
+*** Task 8.3.3: Store in task data
+- [ ] Add priority to task object
+- [ ] Save on submit
+
+** OKR-008.4: Due Date Picker
+*** Task 8.4.1: Add date input
+- [ ] Create input type="date"
+- [ ] Set min to today
+
+*** Task 8.4.2: Add time input
+- [ ] Create input type="time"
+- [ ] Make optional
+
+*** Task 8.4.3: Display formatted date
+- [ ] Combine date and time
+- [ ] Format for display
+
+*** Task 8.4.4: Support clear/reset
+- [ ] Add clear button
+- [ ] Reset to null/empty
+
+** OKR-008.5: Repository Links Section
+*** Task 8.5.1: Add URL input field
+- [ ] Create text input for URL
+- [ ] Add placeholder
+
+*** Task 8.5.2: Add "Add Link" button
+- [ ] Create button next to input
+- [ ] Validate URL on click
+
+*** Task 8.5.3: Display linked repos
+- [ ] Show list of added repos
+- [ ] Display repo name
+
+*** Task 8.5.4: Fetch metadata
+- [ ] Call GitHub/GitLab API
+- [ ] Get repo name, branch
+- [ ] Display metadata
+
+*** Task 8.5.5: Remove link option
+- [ ] Add remove button per repo
+- [ ] Remove from list
+
+** OKR-008.6: File Attachments Section
+*** Task 8.6.1: Add drag-and-drop zone
+- [ ] Create drop zone container
+- [ ] Add dragover/drop handlers
+- [ ] Show visual feedback
+
+*** Task 8.6.2: Add file picker button
+- [ ] Create button
+- [ ] Trigger file input click
+
+*** Task 8.6.3: Display file list
+- [ ] Show attached files
+- [ ] Display file name and icon
+
+*** Task 8.6.4: Show file size
+- [ ] Calculate file size
+- [ ] Format as KB/MB
+
+*** Task 8.6.5: Remove attachment
+- [ ] Add remove button per file
+- [ ] Remove from list
+
+** OKR-008.7: Modal Actions
+*** Task 8.7.1: Add Cancel button
+- [ ] Create cancel button
+- [ ] Close modal on click
+- [ ] Bind to Esc key
+
+*** Task 8.7.2: Add Save button
+- [ ] Create save button
+- [ ] Validate form on click
+- [ ] Bind to Enter key
+
+*** Task 8.7.3: Form validation
+- [ ] Validate required fields
+- [ ] Show error messages
+- [ ] Prevent invalid submit
+
+*** Task 8.7.4: Close on save
+- [ ] Close modal after save
+- [ ] Dispatch saved event
+
+* Dependencies
+- OKR-007 (Task-OKR Linking)
+- Modal component
+
+* Files to Create/Modify
+- components/tasks/AdvancedTaskModal.svelte
+- components/tasks/AdvancedTaskModal.css

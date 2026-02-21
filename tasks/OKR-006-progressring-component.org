@@ -1,0 +1,99 @@
+#+TITLE: OKR-006 - ProgressRing Component
+#+DATE: 2026-02-20
+#+STARTUP: overview
+
+* Overview
+Create a reusable inline SVG progress ring with animation and color variants.
+Uses native <svg>, <circle>, <text> elements - no custom component needed, or minimal custom element wrapper.
+
+* Tasks
+
+** OKR-006.1: SVG Ring Structure
+*** Task 6.1.1: Create utility file or custom element
+- [ ] Option A: Create components/okrs/okr-progress-ring.js (custom element wrapper)
+- [ ] Option B: Create components/okrs/svg-utils.js (pure functions)
+- [ ] Create components/okrs/okr-progress-ring.css (if custom element)
+
+*** Task 6.1.2: Define attributes/properties
+- [ ] Add progress attribute (0-100)
+- [ ] Add size attribute (sm, md, lg)
+- [ ] Add color attribute
+
+*** Task 6.1.3: Calculate dimensions
+- [ ] Set viewBox (0 0 100 100)
+- [ ] Calculate radius (45)
+- [ ] Calculate circumference (2 * π * r)
+
+*** Task 6.1.4: Draw background circle
+- [ ] Create <circle> element for track/background
+- [ ] Apply light gray fill/stroke
+
+*** Task 6.1.5: Draw progress circle
+- [ ] Create <circle> element for progress
+- [ ] Set stroke color
+- [ ] Apply stroke-dasharray
+
+** OKR-006.2: Progress Animation
+*** Task 6.2.1: Calculate stroke-dashoffset
+- [ ] Formula: circumference - (progress/100 * circumference)
+- [ ] Set via CSS custom property or attribute
+
+*** Task 6.2.2: Add CSS transition
+- [ ] Transition stroke-dashoffset
+- [ ] Set duration (500ms)
+- [ ] Use ease-out timing
+
+*** Task 6.2.3: Support reverse animation
+- [ ] Ensure transition works both ways
+- [ ] Test increasing and decreasing progress
+
+** OKR-006.3: Percentage Display
+*** Task 6.3.1: Add text element
+- [ ] Create <text> element
+- [ ] Center horizontally and vertically
+
+*** Task 6.3.2: Format percentage
+- [ ] Round to whole number
+- [ ] Add % symbol
+
+*** Task 6.3.3: Style text
+- [ ] Set font-size
+- [ ] Set font-weight
+- [ ] Set fill color
+
+** OKR-006.4: Color Variants
+*** Task 6.4.1: Accept color attribute
+- [ ] Define color attribute with default
+- [ ] Apply to stroke attribute via CSS custom property
+
+*** Task 6.4.2: Default primary color
+- [ ] Set default to brand primary (CSS variable)
+
+*** Task 6.4.3: Auto color by progress
+- [ ] >80%: green (success)
+- [ ] 50-80%: yellow/orange (warning)
+- [ ] <50%: red (danger)
+
+** OKR-006.5: Size Variants
+*** Task 6.5.1: Accept size attribute
+- [ ] Define size attribute (sm, md, lg)
+- [ ] Default to md
+
+*** Task 6.5.2: Small size (32px)
+- [ ] Set width/height to 32
+- [ ] Adjust font-size for text
+
+*** Task 6.5.3: Medium size (48px)
+- [ ] Set width/height to 48
+- [ ] Adjust font-size for text
+
+*** Task 6.5.4: Large size (64px)
+- [ ] Set width/height to 64
+- [ ] Adjust font-size for text
+
+* Dependencies
+- None (independent - uses native SVG)
+
+* Files to Create/Modify
+- components/okrs/okr-progress-ring.js (optional custom element wrapper)
+- components/okrs/okr-progress-ring.css

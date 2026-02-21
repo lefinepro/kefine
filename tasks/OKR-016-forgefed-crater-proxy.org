@@ -1,0 +1,1082 @@
+#+TITLE: OKR-016: ForgeFed Crater Proxy Service
+#+DATE: 2026-02-21
+#+STARTUP: overview
+
+* Overview
+Create "Crater" - a stateless proxy service written in **Crystal** that converts the simple task API to **ActivityPub + ForgeFed** format. This separates concerns: the main application uses a simple REST API, while Crater handles all federation complexity as a translation layer.
+
+* Why Crystal?
+- **Performance**: Near Ruby speed with C-like efficiency
+- **Concurrency**: Fiber-based lightweight concurrency
+- **Type safety**: Compile-time type checking
+- **Syntax**: Clean, Ruby-like syntax
+- **HTTP built-in**: Excellent HTTP client/server in stdlib
+- **JSON handling**: Native JSON support with types
+- **Small binaries**: Easy deployment
+- **No runtime**: Single static binary
+
+* ForgeFed Support
+Crater implements full **ForgeFed** protocol on top of ActivityPub:
+- **Project** type (federated project metadata)
+- **Membership** management (Add/Remove activities)
+- **Project Follow** (Follow/Accept activities)
+- **Repository** linking
+- **Issue Tracker** integration
+
+* Ticket Types
+Crater supports multiple ticket types for ForgeFed:
+- **Bug Report**: Issue with reproduction steps, severity
+- **Feature Request**: New feature proposal with description
+- **Support Ticket**: User support request
+- **Task**: General work item
+- **Review**: Code review or documentation review
+
+* Architecture
+
+#+BEGIN_SRC text
+┌─────────────────┐
+│   Kefine App    │
+│   (Frontend)    │
+└────────┬────────┘
+         │
+         │ Direct connection to proxy services
+         ▼
+┌─────────────────────────────────────────────┐
+│           Proxy Service Layer               │
+│  ┌─────────────┐    ┌─────────────────────┐ │
+│  │   Crater    │    │  (Future Proxies:   │ │
+│  │  (Stateless │    │   Auth, Sync, etc.) │ │
+│  │   Proxy)    │    │                     │ │
+│  └──────┬──────┘    └─────────────────────┘ │
+└─────────┼───────────────────────────────────┘
+          │
+          │ Internal API (Simple REST)
+          ▼
+┌─────────────────┐         ┌─────────────────┐
+│   Simple API    │ ──────▶ │  Local Store    │
+│   (REST)        │         │  (Database)     │
+└─────────────────┘         └─────────────────┘
+          ▲
+          │
+          │ Federation protocol (ActivityPub/ForgeFed)
+          ▼
+┌─────────────────────────────────────────────┐
+│         External Federation Servers         │
+│  ┌─────────────┐    ┌─────────────────────┐ │
+│  │  ForgeFed   │    │  ActivityPub        │ │
+│  │  Server     │    │  Servers            │ │
+│  │  (Store)    │    │  (Store)            │ │
+│  └─────────────┘    └─────────────────────┘ │
+└─────────────────────────────────────────────┘
+#+END_SRC
+
+* Architecture Layers
+
+** Layer 1: Proxy Service Layer (Direct Access)
+- Kefine App connects directly to proxy services
+- Crater handles all federation complexity
+- Future proxies: Auth, Sync, Analytics, etc.
+- =Stateless services, no database=
+
+** Layer 2: Data API Layer (Simple API)
+- Simple REST API for CRUD operations
+- Used by Crater (and other proxies) to persist data
+- Business logic and validation
+- =Stateless service=
+
+** Layer 3: Local Store (Primary Database)
+- Local database service with persistence
+- Manages task/project/user state
+- Can be PostgreSQL, SQLite, or any database
+- =Primary data store=
+
+** Layer 4: External Federation Servers (Distributed Store)
+- ForgeFed servers store federated data
+- ActivityPub servers store federated activities
+- Data is replicated across federation
+- =Distributed storage via federation protocol=
+
+* Key Principles
+- **Direct proxy access**: Kefine App connects directly to proxy services
+- **Crater is stateless**: No database, no persistence, pure translation
+- **Simple API is internal**: Used by proxies, not directly by frontend
+- **Dual storage**: Local store + External federation servers
+- **Federation as storage**: External servers act as distributed data store
+- **Independent deployment**: Each layer can scale/deploy separately
+- **Crater is optional**: Main app can work without federation proxy
+
+* Scope
+
+** In Scope (Crater Service)
+- ForgeFed ActivityPub protocol implementation
+- Task ↔ Activity mapping (Create, Update, Delete, Comment)
+- Actor representation (User ↔ Actor)
+- Project ↔ Collection/OrderedCollection mapping
+- Signature verification for incoming requests
+- HTTP signature for outgoing requests
+- WebFinger endpoint support
+- NodeInfo endpoint support
+- Inbox/Outbox handling
+
+** In Scope (Main App Integration)
+- Simple task API (REST or GraphQL)
+- Basic CRUD operations
+- User authentication (Reown AppKit from OKR-015)
+- Optional Crater connection configuration
+
+** Out of Scope
+- Direct ForgeFed integration in main app
+- Complex federation logic in frontend
+- State management for federation in main app
+
+* Dependencies
+- [[file:OKR-001-data-model.org][OKR-001-data-model.org]] - Task data model
+- [[file:OKR-002-store-implementation.org][OKR-002-store-implementation.org]] - State management
+- [[file:OKR-015-reown-appkit-auth.org][OKR-015-reown-appkit-auth]] - Authentication (for user identity)
+
+* Implementation Tasks
+
+** Phase 1: Simple API Design (Main App)
+
+*** Task 1.1: Design simple task API specification
+- [ ] Define REST endpoints:
+  - GET /api/tasks - List all tasks
+  - GET /api/tasks/:id - Get single task
+  - POST /api/tasks - Create task
+  - PUT /api/tasks/:id - Update task
+  - DELETE /api/tasks/:id - Delete task
+  - POST /api/tasks/:id/comments - Add comment
+- [ ] Define request/response schemas
+- [ ] Define error response format
+- [ ] Document API in OpenAPI/Swagger format
+- [ ] Commit: ~feat(api): design simple task API specification~
+
+*** Task 1.2: Create API types and schemas
+- [ ] Create ~src/lib/api/types.ts~
+- [ ] Define ~Task~ interface
+- [ ] Define ~CreateTaskRequest~ interface
+- [ ] Define ~UpdateTaskRequest~ interface
+- [ ] Define ~TaskResponse~ interface
+- [ ] Define ~ListResponse<T>~ interface
+- [ ] Define ~ErrorResponse~ interface
+- [ ] Use Effect/Schema for runtime validation
+- [ ] Commit: ~feat(api): create API types and schemas~
+
+*** Task 1.3: Implement API client
+- [ ] Create ~src/lib/api/client.ts~
+- [ ] Implement ~fetchTasks()~ function
+- [ ] Implement ~fetchTask(id)~ function
+- [ ] Implement ~createTask(task)~ function
+- [ ] Implement ~updateTask(id, task)~ function
+- [ ] Implement ~deleteTask(id)~ function
+- [ ] Implement ~addComment(id, comment)~ function
+- [ ] Add error handling
+- [ ] Add request/response logging (dev mode)
+- [ ] Commit: ~feat(api): implement API client~
+
+** Phase 2: Crater Service Setup (Crystal)
+
+*** Task 2.1: Create Crater project structure
+- [ ] Create new directory: ~services/crater/~
+- [ ] Initialize Crystal project: ~crystal init app crater~
+- [ ] Create directory structure:
+  - ~src/crater/~
+  - ~src/crater/handlers/~
+  - ~src/crater/activitypub/~
+  - ~src/crater/forgefed/~
+  - ~src/crater/middleware/~
+  - ~src/crater/utils/~
+  - ~spec/~ (Crystal tests)
+- [ ] Add ~.gitignore~ for Crystal
+- [ ] Add ~.env.example~
+- [ ] Commit: ~chore(crater): initialize Crystal project~
+
+*** Task 2.2: Configure Crystal dependencies (shard.yml)
+- [ ] Edit ~shard.yml~ with dependencies:
+  - ~kemal~ (web framework - https://kemalcr.com)
+  - ~http-signature~ (for Fediverse auth)
+  - ~json-schema~ (for validation)
+- [ ] Run ~shards install~
+- [ ] Verify ~lib/~ directory created
+- [ ] Commit: ~feat(crater): add Crystal dependencies~
+
+*** Task 2.3: Configure Crater environment
+- [ ] Create ~.env~ file with:
+  - PORT=3001
+  - BASE_URL=http://localhost:3001
+  - SIMPLE_API_URL=http://localhost:5173/api
+  - ACTOR_NAME=crater
+  - DOMAIN=localhost:3001
+  - CRYSTAL_ENV=development
+- [ ] Create ~src/crater/config.cr~ to load env vars
+- [ ] Use ~ENV~ with defaults
+- [ ] Validate environment variables on startup
+- [ ] Commit: ~chore(crater): add environment configuration~
+
+** Phase 3: Crater Core Implementation (Crystal)
+
+*** Task 3.1: Implement ActivityPub types (Crystal)
+- [ ] Create ~src/crater/activitypub/types.cr~
+- [ ] Define ~Activity~ struct (Create, Update, Delete, etc.)
+- [ ] Define ~Actor~ struct (Person, Application, Service)
+- [ ] Define ~Object~ structs (Note, Article, etc.)
+- [ ] Define ~Collection~ and ~OrderedCollection~
+- [ ] Define ~Inbox~ and ~Outbox~ types
+- [ ] Use Crystal's ~struct~ for immutability
+- [ ] Implement ~from_json~ and ~to_json~ methods
+- [ ] Commit: ~feat(crater): implement ActivityPub types~
+
+*** Task 3.2: Implement ForgeFed extensions including Tickets (Crystal)
+- [ ] Create ~src/crater/forgefed/types.cr~
+- [ ] Define ~Project~ struct (extends AP Collection)
+  - @context: https://forgefed.org
+  - type: Project
+  - id, name, summary, description
+  - sourceRepository, issueTracker, etc.
+- [ ] Define ~Ticket~ struct (ForgeFed-specific)
+  - @context: https://forgefed.org
+  - type: Ticket (or Issue)
+  - id, name, content
+  - status: open | closed | merged | rejected
+  - priority: low | medium | high | critical
+  - kind: bug | feature | support | task | review
+  - assignee: Person?
+  - reporter: Person
+  - labels: Array(String)
+  - milestone: String?
+  - dueDate: Time?
+  - createdAt, updatedAt: Time
+  - comments: OrderedCollection?
+  - attachments: Array(Document)?
+- [ ] Define ~TicketComment~ struct
+  - type: Note
+  - inReplyTo: Ticket
+  - content: String
+  - author: Person
+- [ ] Define ~Membership~ struct
+- [ ] Define ~ProjectRole~ enum (Admin, Member, Viewer)
+- [ ] Define ~TicketKind~ enum (Bug, Feature, Support, Task, Review)
+- [ ] Define ~TicketStatus~ enum (Open, Closed, Merged, Rejected)
+- [ ] Define ~TicketPriority~ enum (Low, Medium, High, Critical)
+- [ ] Implement ForgeFed @context
+- [ ] Map ForgeFed types to ActivityPub base types
+- [ ] Support ForgeFed activities:
+  - Create, Update, Delete (from AP)
+  - Add, Remove (membership)
+  - Follow, Accept (project follow)
+  - Create (Ticket)
+  - Update (Ticket status change)
+- [ ] Commit: ~feat(crater): implement ForgeFed extensions with Tickets~
+
+*** Task 3.3: Implement Task ↔ Activity mapper (Crystal)
+- [ ] Create ~src/crater/activitypub/mapper.cr~
+- [ ] Implement ~task_to_create_activity(task : Task) : Create~
+- [ ] Implement ~task_to_update_activity(task : Task) : Update~
+- [ ] Implement ~task_to_delete_activity(task_id : String) : Delete~
+- [ ] Implement ~activity_to_task(activity : Activity) : Task?~
+- [ ] Implement ~comment_to_create_activity(comment) : Create~
+- [ ] Handle context (@context) properly
+- [ ] Add ID generation (UUID or URL-based)
+- [ ] Use Crystal's ~UUID~ module
+- [ ] Commit: ~feat(crater): implement task-activity mapper~
+
+*** Task 3.4: Implement HTTP signature middleware (Crystal)
+- [ ] Create ~src/crater/middleware/http_signature.cr~
+- [ ] Implement signature verification for incoming requests
+- [ ] Implement signature generation for outgoing requests
+- [ ] Parse ~Signature~ header
+- [ ] Verify digest against request body
+- [ ] Validate signature with actor's public key
+- [ ] Sign outgoing ActivityPub requests
+- [ ] Handle key rotation
+- [ ] Store public keys (in-memory or config)
+- [ ] Use Crystal's ~OpenSSL~ module for crypto
+- [ ] Commit: ~feat(crater): implement HTTP signature middleware~
+
+** Phase 4: Crater API Endpoints (Crystal + ForgeFed)
+
+*** Task 4.1: Implement WebFinger endpoint (Crystal)
+- [ ] Create ~src/crater/handlers/webfinger.cr~
+- [ ] Implement GET /.well-known/webfinger
+- [ ] Parse resource parameter
+- [ ] Return JRD (JSON Resource Descriptor)
+- [ ] Support acct: and https: schemes
+- [ ] Link to Actor profile
+- [ ] Link to ForgeFed project endpoints
+- [ ] Use Crystal's ~HTTP::Server~ routes
+- [ ] Commit: ~feat(crater): implement WebFinger endpoint~
+
+*** Task 4.2: Implement NodeInfo endpoints (Crystal)
+- [ ] Create ~src/crater/handlers/nodeinfo.cr~
+- [ ] Implement GET /.well-known/nodeinfo
+- [ ] Implement GET /nodeinfo/2.0 (or 2.1)
+- [ ] Return software info (name: "Crater", version)
+- [ ] Return usage statistics (users, projects, tasks)
+- [ ] Return protocols supported (ActivityPub 1.0, ForgeFed)
+- [ ] Return services (optional)
+- [ ] Set ~software.name~ = "Crater"
+- [ ] Set ~software.version~ = crate version
+- [ ] Set ~protocols~ include "forgefed"
+- [ ] Commit: ~feat(crater): implement NodeInfo endpoints~
+
+*** Task 4.3: Implement Actor endpoint (Crystal)
+- [ ] Create ~src/crater/handlers/actor.cr~
+- [ ] Implement GET /actor (or /u/:username)
+- [ ] Implement GET /project/:id (ForgeFed Project)
+- [ ] Return Actor object (Person or Application)
+- [ ] Include ForgeFed extensions:
+  - @context: [ActivityPub, ForgeFed]
+  - type: Person/Application
+  - preferredUsername, name, summary
+  - inbox, outbox
+  - publicKey
+  - endpoints (sharedInbox)
+  - forgeFed capabilities
+- [ ] For Project actor:
+  - type: Project (ForgeFed)
+  - sourceRepository
+  - issueTracker
+  - members (OrderedCollection)
+  - administrators
+- [ ] Set correct Content-Type (application/activity+json)
+- [ ] Commit: ~feat(crater): implement Actor endpoint~
+
+*** Task 4.4: Implement Inbox endpoint with Ticket support (Crystal)
+- [ ] Create ~src/crater/handlers/inbox.cr~
+- [ ] Implement POST /inbox (or /u/:username/inbox)
+- [ ] Implement POST /project/:id/inbox (ForgeFed Project Inbox)
+- [ ] Verify HTTP signature
+- [ ] Parse incoming Activity (JSON → Activity struct)
+- [ ] Route by activity type:
+  - Create → Create task/project/ticket
+  - Update → Update task/project/ticket
+  - Delete → Delete task/project/ticket
+  - Follow → Handle project follow (ForgeFed)
+  - Accept → Accept follow request
+  - Add → Add member to project (ForgeFed)
+  - Remove → Remove member from project
+- [ ] Support ForgeFed Ticket activities:
+  - Create Ticket (bug, feature, support, task, review)
+  - Update Ticket (status, priority, assignee changes)
+  - Comment on Ticket
+  - Close/Merge/Reject Ticket
+- [ ] Support Ticket-specific fields:
+  - kind, priority, status
+  - labels, milestone, dueDate
+  - attachments, comments
+- [ ] Return appropriate response (2xx)
+- [ ] Handle errors gracefully
+- [ ] Use Crystal's ~begin/rescue~ for error handling
+- [ ] Commit: ~feat(crater): implement Inbox endpoint with Ticket support~
+
+*** Task 4.5: Implement Outbox endpoint with Tickets (Crystal)
+- [ ] Create ~src/crater/handlers/outbox.cr~
+- [ ] Implement GET /outbox (or /u/:username/outbox)
+- [ ] Implement GET /project/:id/outbox (ForgeFed Project)
+- [ ] Return OrderedCollection of activities
+- [ ] Support pagination (page, page_size)
+- [ ] Include ForgeFed activities:
+  - Project creation
+  - Ticket/Issue changes
+  - Membership changes
+  - Comments
+  - Ticket status changes (open → closed, etc.)
+- [ ] Include Ticket activities:
+  - Create: Bug reports, Feature requests, Support tickets
+  - Update: Status changes, priority updates, assignee changes
+  - Comment: Comments on tickets
+  - Close/Merge/Reject: Ticket resolution
+- [ ] Include activity metadata
+- [ ] Set correct Content-Type
+- [ ] Commit: ~feat(crater): implement Outbox endpoint with Tickets~
+
+*** Task 4.6: Implement Shared Inbox endpoint (Crystal)
+- [ ] Create ~src/crater/handlers/shared_inbox.cr~
+- [ ] Implement POST /shared-inbox
+- [ ] Handle activities for multiple actors
+- [ ] Route to appropriate handler
+- [ ] Optimize for batch processing
+- [ ] Use Crystal fibers for concurrent delivery
+- [ ] Commit: ~feat(crater): implement Shared Inbox endpoint~
+
+*** Task 4.7: Implement ForgeFed Project endpoints with Tickets
+- [ ] Create ~src/crater/handlers/project.cr~
+- [ ] Implement GET /projects - List all projects
+- [ ] Implement GET /projects/:id - Get project details
+- [ ] Implement GET /projects/:id/tickets - List project tickets
+- [ ] Implement GET /projects/:id/tickets/:id - Get ticket details
+- [ ] Return ForgeFed Project object
+- [ ] Include:
+  - Project metadata (name, summary, description)
+  - Members list
+  - Administrators
+  - Associated repositories
+  - Issue tracker link
+  - Tickets collection
+- [ ] Support Ticket filtering:
+  - By kind (bug, feature, support, task, review)
+  - By status (open, closed, merged, rejected)
+  - By priority (low, medium, high, critical)
+  - By assignee
+  - By labels
+- [ ] Support project filtering
+- [ ] Commit: ~feat(crater): implement ForgeFed Project endpoints with Tickets~
+
+** Phase 5: Crater ↔ Simple API Integration (Crystal)
+
+*** Task 5.1: Create Simple API client for Crater (Crystal)
+- [ ] Create ~src/crater/utils/simple_api_client.cr~
+- [ ] Implement ~fetch_tasks : Array(Task)~
+- [ ] Implement ~fetch_task(id : String) : Task?~
+- [ ] Implement ~create_task(task : Task) : Task~
+- [ ] Implement ~update_task(id : String, task : Task) : Task~
+- [ ] Implement ~delete_task(id : String) : Bool~
+- [ ] Use Crystal's ~HTTP::Client~
+- [ ] Add error handling with ~begin/rescue~
+- [ ] Add retry logic for transient failures
+- [ ] Add connection pooling
+- [ ] Commit: ~feat(crater): create Simple API client~
+
+*** Task 5.2: Implement Create Activity handler (Crystal)
+- [ ] In inbox handler, add Create activity routing
+- [ ] Extract object from Create activity
+- [ ] Validate object type (Task, Comment)
+- [ ] Call Simple API client to create task
+- [ ] Handle duplicates (idempotency)
+- [ ] Return success response (201 Created)
+- [ ] Commit: ~feat(crater): implement Create activity handler~
+
+*** Task 5.3: Implement Update Activity handler (Crystal)
+- [ ] In inbox handler, add Update activity routing
+- [ ] Extract object from Update activity
+- [ ] Validate object type
+- [ ] Call Simple API client to update task
+- [ ] Handle non-existent tasks (404 Not Found)
+- [ ] Return success response (200 OK)
+- [ ] Commit: ~feat(crater): implement Update activity handler~
+
+*** Task 5.4: Implement Delete Activity handler (Crystal)
+- [ ] In inbox handler, add Delete activity routing
+- [ ] Extract object ID from Delete activity
+- [ ] Call Simple API client to delete task
+- [ ] Handle non-existent tasks (idempotent, 204 No Content)
+- [ ] Return success response
+- [ ] Commit: ~feat(crater): implement Delete activity handler~
+
+*** Task 5.5: Implement outgoing federation (Crystal)
+- [ ] Create ~src/crater/federation/outgoing.cr~
+- [ ] Listen for task changes (webhook or polling)
+- [ ] Convert to ActivityPub activities
+- [ ] Sign with HTTP signatures (using OpenSSL)
+- [ ] Send to follower inboxes
+- [ ] Handle delivery failures
+- [ ] Implement retry queue (in-memory or Redis)
+- [ ] Use Crystal fibers for concurrent delivery
+- [ ] Commit: ~feat(crater): implement outgoing federation~
+
+** Phase 6: Main App API Server (REST)
+
+*** Task 6.1: Setup API server in main app
+- [ ] Choose approach:
+  - Option A: SvelteKit routes (if using SvelteKit)
+  - Option B: Express/Fastify embedded server
+  - Option C: Separate API service
+- [ ] Create API server structure
+- [ ] Configure CORS for Crater communication
+- [ ] Add request logging
+- [ ] Commit: ~feat(api): setup REST API server~
+
+*** Task 6.2: Implement task CRUD endpoints (REST)
+- [ ] Implement GET /api/tasks - List all tasks
+- [ ] Implement GET /api/tasks/:id - Get single task
+- [ ] Implement POST /api/tasks - Create task
+- [ ] Implement PUT /api/tasks/:id - Update task
+- [ ] Implement DELETE /api/tasks/:id - Delete task
+- [ ] Implement POST /api/tasks/:id/comments - Add comment
+- [ ] Add validation middleware
+- [ ] Add error handling middleware
+- [ ] Return JSON responses
+- [ ] Commit: ~feat(api): implement task CRUD endpoints~
+
+*** Task 6.3: Implement Crater webhook endpoint (optional)
+- [ ] Create POST /api/webhooks/crater
+- [ ] Verify webhook signature
+- [ ] Parse incoming ActivityPub activities
+- [ ] Update local state
+- [ ] Return acknowledgment
+- [ ] Commit: ~feat(api): implement Crater webhook~
+
+*** Task 6.4: Integrate API with store
+- [ ] Connect API client to OKR store
+- [ ] Replace mock data with real API calls
+- [ ] Handle loading states
+- [ ] Handle error states
+- [ ] Implement optimistic updates (optional)
+- [ ] Commit: ~feat(store): integrate with API~
+
+** Phase 7: wacli Integration
+
+*** Task 7.1: Create wacli manifest
+- [ ] Create ~.well-known/wacli.json~ on Crater server
+- [ ] Tool reference: ~server-api.example.org~ (domain-based)
+- [ ] Define operations:
+  - ~create~ - Create ticket (interactive)
+  - ~create_file~ - Create from Org file
+  - ~tasks~ - List tickets (table output)
+  - ~task~ - Get ticket details
+  - ~update~ - Update ticket (interactive)
+  - ~close~ - Close ticket (Resolve)
+  - ~reopen~ - Reopen ticket (Undo Resolve)
+  - ~assign~ - Assign ticket
+  - ~comment~ - Add comment
+  - ~comments~ - List comments (table)
+  - ~delete~ - Delete ticket
+- [ ] Define table column configuration
+- [ ] Define interactive prompts
+- [ ] Define Org file parser
+- [ ] Commit: ~feat(crater): create wacli manifest~
+
+*** Task 7.2: Create OpenAPI specification
+- [ ] Create ~.well-known/openapi.json~
+- [ ] Define all endpoints:
+  - GET/POST /api/tickets
+  - GET/PUT/DELETE /api/tickets/:id
+  - POST /api/tickets/:id/close
+  - POST /api/tickets/:id/reopen
+  - POST /api/tickets/:id/assign
+  - GET/POST /api/tickets/:id/comments
+- [ ] Define schemas:
+  - Ticket
+  - CreateTicketRequest
+  - UpdateTicketRequest
+  - Comment
+  - Person
+- [ ] Add query parameters for filtering
+- [ ] Validate with ~wacli oas validate~
+- [ ] Commit: ~feat(crater): create OpenAPI specification~
+
+*** Task 7.3: Implement HTTP Signature auth for wacli
+- [ ] Generate key pair documentation
+- [ ] Implement signature verification in Crater
+- [ ] Store public keys for users
+- [ ] Document ~wacli auth~ command
+- [ ] Test signature verification
+- [ ] Commit: ~feat(crater): implement HTTP signature auth~
+
+*** Task 7.4: Create wacli documentation
+- [ ] Create ~docs/wacli-forgeféd-tasks.org~
+- [ ] Document all commands
+- [ ] Document table output format
+- [ ] Document interactive mode
+- [ ] Document Org file format
+- [ ] Document ForgeFed activity mapping
+- [ ] Add examples
+- [ ] Commit: ~docs(crater): add wacli integration guide~
+
+*** Task 7.5: Test wacli integration
+- [ ] Test ~wacli ain~ (initialize tool)
+- [ ] Test ~wacli auth~ (authentication)
+- [ ] Test ~create~ (interactive)
+- [ ] Test ~create file.org~ (from file)
+- [ ] Test ~tasks~ (table output)
+- [ ] Test ~update~ (interactive)
+- [ ] Test ~close~, ~reopen~
+- [ ] Test ~assign~
+- [ ] Test ~comment~, ~comments~
+- [ ] Test filters (--status, --priority, etc.)
+- [ ] Test aliases (list, show, edit)
+- [ ] Commit: ~test(crater): test wacli integration~
+
+** Phase 8: Testing & QA
+
+*** Task 8.1: Test Crater endpoints
+- [ ] Test WebFinger endpoint
+- [ ] Test NodeInfo endpoint
+- [ ] Test Actor endpoint
+- [ ] Test Inbox endpoint (various activities)
+- [ ] Test Outbox endpoint
+- [ ] Test Shared Inbox
+- [ ] Verify Content-Type headers
+- [ ] Commit: ~test(crater): test all endpoints~
+
+*** Task 8.2: Test ActivityPub federation
+- [ ] Test Create activity → task creation
+- [ ] Test Update activity → task update
+- [ ] Test Delete activity → task deletion
+- [ ] Test activity validation
+- [ ] Test signature verification
+- [ ] Test with external ActivityPub servers (Mastodon, etc.)
+- [ ] Commit: ~test(crater): test federation~
+
+*** Task 8.3: Test Simple API
+- [ ] Test all CRUD endpoints
+- [ ] Test validation errors
+- [ ] Test authentication (if applicable)
+- [ ] Test error responses
+- [ ] Test pagination
+- [ ] Test sorting/filtering
+- [ ] Commit: ~test(api): test Simple API~
+
+*** Task 8.4: Test Crater ↔ Simple API integration
+- [ ] Test end-to-end Create flow
+- [ ] Test end-to-end Update flow
+- [ ] Test end-to-end Delete flow
+- [ ] Test error propagation
+- [ ] Test network failures
+- [ ] Test concurrent requests
+- [ ] Commit: ~test(integration): test Crater integration~
+
+*** Task 8.5: Load testing (optional)
+- [ ] Benchmark Crater performance
+- [ ] Test concurrent inbox deliveries
+- [ ] Measure latency
+- [ ] Identify bottlenecks
+- [ ] Optimize if needed
+- [ ] Commit: ~perf(crater): load testing~
+
+* File Structure
+
+** Main App
+#+BEGIN_SRC text
+src/
+├── lib/
+│   ├── api/
+│   │   ├── types.ts           # API types
+│   │   ├── schemas.ts         # Validation schemas
+│   │   └── client.ts          # API client
+│   └── components/
+│       └── ...
+└── routes/
+    └── api/
+        ├── tasks/
+        │   ├── +server.ts     # GET, POST
+        │   └── [id]/
+        │       └── +server.ts # GET, PUT, DELETE
+        └── webhooks/
+            └── crater/
+                └── +server.ts
+#+END_SRC
+
+** Crater Service (Crystal + Kemal)
+#+BEGIN_SRC text
+services/crater/
+├── src/
+│   ├── crater/
+│   │   ├── activitypub/
+│   │   │   ├── types.cr       # ActivityPub types
+│   │   │   └── mapper.cr      # Task ↔ Activity mapper
+│   │   ├── forgefed/
+│   │   │   └── types.cr       # ForgeFed extensions
+│   │   ├── handlers/
+│   │   │   ├── webfinger.cr
+│   │   │   ├── nodeinfo.cr
+│   │   │   ├── actor.cr
+│   │   │   ├── inbox.cr
+│   │   │   ├── outbox.cr
+│   │   │   └── shared_inbox.cr
+│   │   ├── middleware/
+│   │   │   └── http_signature.cr
+│   │   ├── federation/
+│   │   │   └── outgoing.cr    # Outgoing federation
+│   │   ├── utils/
+│   │   │   └── simple_api_client.cr
+│   │   ├── config.cr
+│   │   └── server.cr          # Kemal server entry
+│   └── crater.cr              # Main module (runs Kemal)
+├── spec/
+│   ├── crater_spec.cr
+│   └── handlers/
+├── shard.yml                  # Crystal dependencies
+├── shard.lock
+├── .env.example
+└── Makefile                   # Build commands
+#+END_SRC
+
+** Kemal Server Example (src/crater.cr) - Pure API
+#+BEGIN_SRC crystal
+require "kemal"
+require "./crater/**"
+
+# WebFinger endpoint - pure JSON API
+get "/.well-known/webfinger" do |env|
+  env.response.content_type = "application/jrd+json"
+  WebFingerHandler.handle(env).to_json
+end
+
+# Actor endpoint - ActivityPub JSON
+get "/actor" do |env|
+  env.response.content_type = "application/activity+json"
+  ActorHandler.handle(env).to_json
+end
+
+# Inbox endpoint - receives ActivityPub JSON
+post "/inbox" do |env|
+  body = env.request.body.gets_to_end
+  activity = Activity.from_json(body)
+  InboxHandler.handle(activity)
+  env.response.status_code = 202
+  {"status": "accepted"}.to_json
+end
+
+# Outbox endpoint - pure JSON collection
+get "/outbox" do |env|
+  env.response.content_type = "application/activity+json"
+  OutboxHandler.handle(env).to_json
+end
+
+# Health check endpoint
+get "/health" do |env|
+  env.response.content_type = "application/json"
+  {"status": "ok", "service": "crater"}.to_json
+end
+
+# Start Kemal server (API only, no templates)
+Kemal.run
+#+END_SRC
+
+* API Specification
+
+** Simple Task API
+
+#+BEGIN_SRC typescript
+// GET /api/tasks
+Response: {
+  data: Task[]
+  pagination: {
+    page: number
+    pageSize: number
+    total: number
+  }
+}
+
+// GET /api/tasks/:id
+Response: {
+  data: Task
+}
+
+// GET /api/tickets
+Response: {
+  data: Ticket[]
+  pagination: {
+    page: number
+    pageSize: number
+    total: number
+  }
+}
+
+// GET /api/tickets/:id
+Response: {
+  data: Ticket
+}
+
+// POST /api/tickets
+Request: {
+  kind: 'bug' | 'feature' | 'support' | 'task' | 'review'
+  title: string
+  description: string
+  priority?: 'low' | 'medium' | 'high' | 'critical'
+  labels?: string[]
+  assigneeId?: string
+  milestone?: string
+  dueDate?: string
+}
+Response: {
+  data: Ticket
+}
+
+// PUT /api/tickets/:id
+Request: {
+  title?: string
+  description?: string
+  status?: 'open' | 'closed' | 'merged' | 'rejected'
+  priority?: 'low' | 'medium' | 'high' | 'critical'
+  assigneeId?: string
+  labels?: string[]
+}
+Response: {
+  data: Ticket
+}
+
+// POST /api/tickets/:id/comments
+Request: {
+  content: string
+}
+Response: {
+  data: Comment
+}
+#+END_SRC
+
+** ForgeFed Ticket Activity Examples
+
+#+BEGIN_SRC json
+// Create Ticket Activity (Bug Report)
+{
+  "@context": [
+    "https://www.w3.org/ns/activitystreams",
+    "https://forgefed.org"
+  ],
+  "type": "Create",
+  "id": "https://crater.example.com/activity/create-ticket-123",
+  "actor": "https://crater.example.com/users/alice",
+  "to": "https://crater.example.com/projects/kefine",
+  "object": {
+    "type": "Ticket",
+    "id": "https://crater.example.com/tickets/123",
+    "name": "Login page crashes on mobile",
+    "content": "Steps to reproduce: 1. Open app on mobile...",
+    "inReplyTo": "https://crater.example.com/projects/kefine",
+    "kind": "Bug",
+    "status": "open",
+    "priority": "high",
+    "reporter": {
+      "type": "Person",
+      "id": "https://crater.example.com/users/alice",
+      "name": "Alice"
+    },
+    "assignee": null,
+    "labels": ["bug", "mobile", "critical"],
+    "milestone": "v1.0",
+    "dueDate": "2026-03-01T00:00:00Z",
+    "published": "2026-02-21T10:00:00Z",
+    "updated": "2026-02-21T10:00:00Z"
+  }
+}
+
+// Update Ticket Activity (Status Change)
+{
+  "@context": [
+    "https://www.w3.org/ns/activitystreams",
+    "https://forgefed.org"
+  ],
+  "type": "Update",
+  "id": "https://crater.example.com/activity/update-ticket-123",
+  "actor": "https://crater.example.com/users/bob",
+  "to": "https://crater.example.com/projects/kefine",
+  "object": {
+    "type": "Ticket",
+    "id": "https://crater.example.com/tickets/123",
+    "status": "closed",
+    "assignee": {
+      "type": "Person",
+      "id": "https://crater.example.com/users/bob",
+      "name": "Bob"
+    },
+    "updated": "2026-02-22T15:30:00Z"
+  }
+}
+
+// Feature Request Ticket
+{
+  "@context": [
+    "https://www.w3.org/ns/activitystreams",
+    "https://forgefed.org"
+  ],
+  "type": "Create",
+  "actor": "https://crater.example.com/users/charlie",
+  "object": {
+    "type": "Ticket",
+    "kind": "Feature",
+    "name": "Add dark mode support",
+    "content": "Users have requested a dark mode theme...",
+    "priority": "medium",
+    "labels": ["enhancement", "ui"]
+  }
+}
+
+// Support Ticket
+{
+  "@context": [
+    "https://www.w3.org/ns/activitystreams",
+    "https://forgefed.org"
+  ],
+  "type": "Create",
+  "actor": "https://crater.example.com/users/dave",
+  "object": {
+    "type": "Ticket",
+    "kind": "Support",
+    "name": "How to export data?",
+    "content": "I need to export all my tasks to CSV...",
+    "priority": "low",
+    "labels": ["question"]
+  }
+}
+#+END_SRC
+
+* Environment Variables
+
+** Main App
+#+BEGIN_SRC env
+# .env
+VITE_API_URL=http://localhost:3001
+VITE_CRATER_ENABLED=false
+VITE_CRATER_URL=http://localhost:3001
+#+END_SRC
+
+** Crater Service
+#+BEGIN_SRC env
+# .env
+PORT=3001
+BASE_URL=http://localhost:3001
+SIMPLE_API_URL=http://localhost:5173/api
+ACTOR_NAME=crater
+DOMAIN=localhost:3001
+PRIVATE_KEY= # Generated on first run
+#+END_SRC
+
+* Dependencies
+
+** Main App
+#+BEGIN_SRC json
+{
+  "dependencies": {
+    "@effect/schema": "^latest"
+  }
+}
+#+END_SRC
+
+** Crater Service (Crystal)
+#+BEGIN_SRC yaml
+# shard.yml
+name: crater
+version: 0.1.0
+
+authors:
+  - Kefine Team
+
+crystal: 1.11.0
+
+license: MIT
+
+dependencies:
+  # Web framework - fast, minimalist
+  kemal:
+    github: kemalcr/kemal
+    version: ~> 1.5.0
+
+  # HTTP signatures for ActivityPub/Fediverse
+  http-signature:
+    github: samueleaton/http-signature
+    version: ~> 0.1.0
+
+  # JSON Schema validation
+  json-schema:
+    github: json-schema-cr/json-schema
+    version: ~> 0.2.0
+
+  # Redis for retry queue (optional)
+  redis:
+    github: stefanwille/crystal-redis
+    version: ~> 2.8.0
+
+development_dependencies:
+  spec2:
+    github: lucasvieirasilva/spec2
+    version: ~> 0.5.0
+#+END_SRC
+
+* Deployment
+
+** Main App
+- Deploy to Vercel, Netlify, or any static host
+- API can be serverless functions or separate service
+
+** Crater Service (Crystal)
+- Build static binary: ~crystal build src/crater.cr --release --static~
+- Deploy binary to:
+  - Railway (Docker with Crystal base image)
+  - Render (Docker)
+  - Fly.io (native binary)
+  - AWS Lambda (custom runtime)
+- Requires persistent domain for federation
+- SSL certificate mandatory (HTTPS via reverse proxy)
+- Stateless - can scale horizontally
+- Docker image size: ~10-20MB (static binary)
+
+** Docker Example
+#+BEGIN_SRC dockerfile
+FROM crystallang/crystal:1.11.0-alpine AS builder
+WORKDIR /app
+COPY shard.yml shard.lock ./
+RUN shards install
+COPY src ./src
+RUN crystal build src/crater.cr -o crater --release
+
+FROM alpine:latest
+RUN apk --no-cache add ca-certificates
+WORKDIR /root/
+COPY --from=builder /app/crater .
+EXPOSE 3001
+CMD ["./crater"]
+#+END_SRC
+
+* Acceptance Criteria
+- [ ] Simple API supports all CRUD operations
+- [ ] Crater service starts and responds to health checks
+- [ ] WebFinger endpoint returns valid JRD
+- [ ] NodeInfo endpoint returns valid response with ForgeFed protocol
+- [ ] Actor endpoint returns valid ActivityPub Actor
+- [ ] Project endpoint returns valid ForgeFed Project
+- [ ] Ticket endpoint returns valid ForgeFed Ticket
+- [ ] Inbox accepts and processes Create activities
+- [ ] Inbox accepts and processes Update activities
+- [ ] Inbox accepts and processes Delete activities
+- [ ] Inbox accepts ForgeFed Follow activities (project follow)
+- [ ] Inbox accepts ForgeFed Add/Remove activities (membership)
+- [ ] Inbox accepts Create Ticket activities (bug, feature, support, task, review)
+- [ ] Inbox accepts Update Ticket activities (status, priority changes)
+- [ ] Outbox returns ForgeFed activities including Tickets
+- [ ] HTTP signatures are verified correctly
+- [ ] Tasks created via federation appear in main app
+- [ ] Tickets created via federation appear in main app
+- [ ] Projects can be federated via ForgeFed
+- [ ] Tickets can be federated via ForgeFed
+- [ ] Ticket filtering works correctly (kind, status, priority)
+- [ ] Tasks/Tickets created in main app can be federated out (optional)
+- [ ] All tests pass
+- [ ] Documentation is complete
+
+* Risks & Mitigation
+
+| Risk | Impact | Mitigation |
+|------+--------+------------|
+| ActivityPub complexity | High | Use libraries, follow specs strictly |
+| HTTP signature issues | High | Test with known-good implementations |
+| Federation delivery failures | Medium | Implement retry queue, logging |
+| Security vulnerabilities | High | Validate all inputs, use HTTPS |
+| Performance bottlenecks | Medium | Benchmark early, optimize hot paths |
+| Crater service downtime | Low | Main app works independently |
+
+* Resources
+- [[https://crystal-lang.org][Crystal Programming Language]]
+- [[https://crystal-lang.org/reference][Crystal Reference Documentation]]
+- [[https://kemalcr.com][Kemal Web Framework]]
+- [[https://www.w3.org/TR/activitypub/][ActivityPub Specification]]
+- [[https://forgefed.org][ForgeFed Documentation]]
+- [[https://forgefed.org/spec/#issues][ForgeFed Issues Specification]]
+- [[https://datatracker.ietf.org/doc/html/draft-cavage-http-signatures][HTTP Signatures]]
+- [[https://github.com/crystal-community][Crystal Community GitHub]]
+- [[https://github.com/kogeletey/wacli][wacli GitHub]]
+- [[file:../docs/wacli-forgeféd-tasks.org][wacli ForgeFed Tasks Integration Guide]]
+
+* Estimated Effort
+- Simple API Design: 3-4 hours
+- Crater Setup (Crystal): 2-3 hours
+- Crater Core Implementation (Crystal): 8-12 hours
+- Crater API Endpoints (Crystal): 6-8 hours
+- Integration: 4-6 hours
+- Main App API Server: 4-6 hours
+- wacli Integration: 4-6 hours
+- Testing & QA: 6-8 hours
+- **Total: 37-53 hours** (~5-7 days)
+
+* Status
+PENDING
+
+* Notes
+- Crater can be developed independently from main app
+- Crystal's type system ensures correctness at compile time
+- Start with minimal federation (Create/Update/Delete only)
+- Add Follow/Accept activities later if needed
+- Keep Crater stateless - no database required
+- Crystal fibers provide excellent concurrency for federation delivery
+- Static binary deployment simplifies operations

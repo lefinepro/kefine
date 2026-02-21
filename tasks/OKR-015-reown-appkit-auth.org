@@ -1,0 +1,381 @@
+#+TITLE: OKR-015: Reown AppKit Authentication
+#+DATE: 2026-02-21
+#+STARTUP: overview
+
+* Overview
+Integrate Reown AppKit for email and wallet authentication (Ethereum + Avalanche only). This provides users with seamless Web3 login options including email/social authentication and native wallet connections.
+
+* Scope
+** In Scope
+- Email authentication via Reown AppKit
+- Wallet connection (Ethereum + Avalanche chains only)
+- Basic wallet connection UI component
+- Authentication state management
+- Session persistence
+
+** Out of Scope
+- Other blockchain networks (Solana, Bitcoin, etc.)
+- Advanced DeFi features
+- Token swaps or transfers
+- NFT display
+
+* Dependencies
+- [[file:OKR-002-store-implementation.org][OKR-002-store-implementation.org]] - State management foundation
+- [[file:OKR-013-activitypub-forgefed-integration.org][OKR-013-activitypub-forgefed-integration.org]] - User identity system (optional integration)
+
+* Implementation Tasks
+
+** Phase 1: Setup & Configuration
+
+*** Task 1.1: Install Reown AppKit packages
+- [ ] Run: ~pnpm add @reown/appkit @reown/appkit-adapter-wagmi wagmi viem @tanstack/react-query~
+- [ ] Verify installation in ~package.json~
+- [ ] Check ~node_modules~ for installed packages
+- [ ] Commit: ~feat(auth): install Reown AppKit dependencies~
+
+*** Task 1.2: Create Reown project in dashboard
+- [ ] Navigate to https://dashboard.reown.com
+- [ ] Sign in / Create account
+- [ ] Create new project: "Kefine OKR Dashboard"
+- [ ] Select product: AppKit
+- [ ] Select framework: Svelte/Vite
+- [ ] Copy Project ID
+- [ ] Store Project ID in environment variables (create ~.env~ file)
+- [ ] Commit: ~chore(config): add Reown project ID to environment~
+
+*** Task 1.3: Configure supported networks
+- [ ] Create ~src/lib/auth/networks.ts~
+- [ ] Import ~mainnet~ from ~@reown/appkit/networks~
+- [ ] Import ~avalanche~ from ~@reown/appkit/networks~
+- [ ] Export ~networks~ array with only Ethereum and Avalanche
+- [ ] Add network metadata (name, chainId, rpcUrl, icon)
+- [ ] Commit: ~feat(auth): configure Ethereum and Avalanche networks~
+
+** Phase 2: AppKit Configuration
+
+*** Task 2.1: Create AppKit configuration module
+- [ ] Create ~src/lib/auth/appkit.ts~
+- [ ] Import ~createAppKit~ from ~@reown/appkit/svelte~
+- [ ] Import ~networks~ from local config
+- [ ] Read ~PROJECT_ID~ from environment
+- [ ] Configure metadata:
+  - name: "Kefine OKR Dashboard"
+  - description: "OKR-focused task dashboard"
+  - url: window.location.origin
+  - icons: [app icon URL]
+- [ ] Configure ~features~:
+  - analytics: true
+  - email: true
+  - socials: [] (disable social, keep only email)
+- [ ] Set ~themeMode: 'light'~ (match app theme)
+- [ ] Export ~appkit~ instance
+- [ ] Commit: ~feat(auth): create AppKit configuration~
+
+*** Task 2.2: Create authentication store
+- [ ] Create ~src/lib/auth/auth-store.svelte.ts~
+- [ ] Define ~AuthState~ interface:
+  - isConnected: boolean
+  - address: string | null
+  - chainId: number | null
+  - email: string | null
+  - authType: 'wallet' | 'email' | null
+- [ ] Create reactive ~authState~ store
+- [ ] Implement ~updateAuthState()~ function
+- [ ] Implement ~clearAuthState()~ function
+- [ ] Export store for use in components
+- [ ] Commit: ~feat(store): create authentication state store~
+
+** Phase 3: UI Components
+
+*** Task 3.1: Create AuthButton component
+- [ ] Create ~src/lib/components/auth/AuthButton.svelte~
+- [ ] Import ~appkit~ from config
+- [ ] Create button that triggers wallet/email modal
+- [ ] Show connected state when authenticated
+- [ ] Display truncated address when connected (0x1234...5678)
+- [ ] Show email when authenticated via email
+- [ ] Add disconnect functionality
+- [ ] Style with TAC methodology (token-atom-component)
+- [ ] Handle loading states
+- [ ] Handle error states
+- [ ] Add keyboard navigation
+- [ ] Add ARIA labels for accessibility
+- [ ] Commit: ~feat(ui): create AuthButton component~
+
+*** Task 3.2: Create AuthModal wrapper (optional)
+- [ ] Create ~src/lib/components/auth/AuthModal.svelte~
+- [ ] Wrap Reown modal with custom styling if needed
+- [ ] Add custom branding
+- [ ] Handle modal open/close events
+- [ ] Commit: ~feat(ui): create AuthModal wrapper~
+
+*** Task 3.3: Integrate AuthButton into header
+- [ ] Locate main header/layout component
+- [ ] Add ~AuthButton~ to header (top-right corner)
+- [ ] Ensure responsive behavior
+- [ ] Test on mobile viewports
+- [ ] Commit: ~feat(ui): integrate AuthButton into header~
+
+** Phase 4: Authentication Flow
+
+*** Task 4.1: Implement email authentication
+- [ ] Verify email feature is enabled in Reown dashboard
+- [ ] Test email login flow:
+  - Click AuthButton
+  - Select "Email" option
+  - Enter email address
+  - Receive verification code
+  - Enter verification code
+  - Complete authentication
+- [ ] Handle authentication success
+- [ ] Handle authentication errors
+- [ ] Store email in auth store
+- [ ] Persist session across page reloads
+- [ ] Commit: ~feat(auth): implement email authentication flow~
+
+*** Task 4.2: Implement wallet authentication
+- [ ] Test wallet connection flow:
+  - Click AuthButton
+  - Select wallet provider (MetaMask, WalletConnect, etc.)
+  - Connect wallet
+  - Switch to Ethereum or Avalanche network
+- [ ] Handle connection success
+- [ ] Handle connection errors
+- [ ] Handle network switch
+- [ ] Store address and chainId in auth store
+- [ ] Persist session across page reloads
+- [ ] Commit: ~feat(auth): implement wallet authentication flow~
+
+*** Task 4.3: Implement session management
+- [ ] Create ~src/lib/auth/session.ts~
+- [ ] Implement ~saveSession()~ function
+- [ ] Implement ~loadSession()~ function
+- [ ] Implement ~clearSession()~ function
+- [ ] Use localStorage for persistence
+- [ ] Handle session expiration
+- [ ] Auto-reconnect on page load
+- [ ] Commit: ~feat(auth): implement session management~
+
+** Phase 5: Error Handling & UX
+
+*** Task 5.1: Implement error handling
+- [ ] Create ~src/lib/auth/errors.ts~
+- [ ] Define error types:
+  - ConnectionError
+  - AuthenticationError
+  - NetworkError
+  - SessionExpiredError
+- [ ] Create error messages (user-friendly)
+- [ ] Implement error logging
+- [ ] Show error notifications to user
+- [ ] Commit: ~feat(auth): implement error handling~
+
+*** Task 5.2: Add loading states
+- [ ] Show loading spinner during connection
+- [ ] Show loading text with progress
+- [ ] Disable button during authentication
+- [ ] Add timeout handling
+- [ ] Commit: ~feat(ui): add authentication loading states~
+
+*** Task 5.3: Add success feedback
+- [ ] Show success message on connection
+- [ ] Display connected account info
+- [ ] Show network indicator (ETH/AVAX)
+- [ ] Add copy-to-clipboard for address
+- [ ] Commit: ~feat(ui): add authentication success feedback~
+
+** Phase 6: Testing & QA
+
+*** Task 6.1: Test email authentication
+- [ ] Test with valid email
+- [ ] Test with invalid email (error handling)
+- [ ] Test verification code flow
+- [ ] Test incorrect verification code
+- [ ] Test session persistence (refresh page)
+- [ ] Test logout and re-login
+- [ ] Test on different browsers (Chrome, Firefox, Safari)
+- [ ] Commit: ~test(auth): test email authentication~
+
+*** Task 6.2: Test wallet authentication
+- [ ] Test with MetaMask
+- [ ] Test with WalletConnect
+- [ ] Test with Coinbase Wallet
+- [ ] Test network switching (ETH ↔ AVAX)
+- [ ] Test disconnect and reconnect
+- [ ] Test session persistence
+- [ ] Test on mobile browsers
+- [ ] Commit: ~test(auth): test wallet authentication~
+
+*** Task 6.3: Test edge cases
+- [ ] Test slow network connection
+- [ ] Test network failure during auth
+- [ ] Test multiple simultaneous login attempts
+- [ ] Test session expiration
+- [ ] Test concurrent sessions (multiple tabs)
+- [ ] Test with ad blockers enabled
+- [ ] Commit: ~test(auth): test authentication edge cases~
+
+*** Task 6.4: Accessibility testing
+- [ ] Test keyboard navigation
+- [ ] Test screen reader compatibility
+- [ ] Verify ARIA labels
+- [ ] Test color contrast
+- [ ] Test focus indicators
+- [ ] Commit: ~test(a11y): verify authentication accessibility~
+
+* File Structure
+#+BEGIN_SRC text
+src/
+├── lib/
+│   ├── auth/
+│   │   ├── appkit.ts           # AppKit configuration
+│   │   ├── networks.ts         # Network configuration (ETH, AVAX)
+│   │   ├── auth-store.svelte.ts # Authentication state
+│   │   ├── session.ts          # Session management
+│   │   └── errors.ts           # Error types and handling
+│   └── components/
+│       └── auth/
+│           ├── AuthButton.svelte
+│           └── AuthModal.svelte (optional)
+└── routes/
+    └── +layout.svelte          # Integrate auth into layout
+#+END_SRC
+
+* Configuration Example
+
+#+BEGIN_SRC typescript
+// src/lib/auth/networks.ts
+import { mainnet, avalanche } from '@reown/appkit/networks'
+
+export const networks = [mainnet, avalanche]
+#+END_SRC
+
+#+BEGIN_SRC typescript
+// src/lib/auth/appkit.ts
+import { createAppKit } from '@reown/appkit/svelte'
+import { networks } from './networks'
+
+const projectId = import.meta.env.VITE_REOWN_PROJECT_ID
+
+const metadata = {
+  name: 'Kefine OKR Dashboard',
+  description: 'OKR-focused task dashboard',
+  url: window.location.origin,
+  icons: ['https://kefine.app/icon.png']
+}
+
+export const appkit = createAppKit({
+  adapters: [],
+  networks,
+  projectId,
+  metadata,
+  features: {
+    analytics: true,
+    email: true,
+    socials: [] // Only email, no social providers
+  },
+  themeMode: 'light'
+})
+#+END_SRC
+
+#+BEGIN_SRC svelte
+// src/lib/components/auth/AuthButton.svelte
+<script lang="ts">
+  import { appkit } from '$lib/auth/appkit'
+  import { authState } from '$lib/auth/auth-store'
+
+  function handleConnect() {
+    appkit.open()
+  }
+
+  function handleDisconnect() {
+    appkit.disconnect()
+  }
+</script>
+
+<button 
+  class="auth-button"
+  onclick={handleConnect}
+  aria-label={authState.isConnected ? 'Disconnect wallet' : 'Connect wallet or email'}
+>
+  {#if authState.isConnected}
+    <span class="connected-status">
+      {#if authState.email}
+        {authState.email}
+      {:else if authState.address}
+        {authState.address.slice(0, 6)}...{authState.address.slice(-4)}
+      {/if}
+    </span>
+  {:else}
+    Connect
+  {/if}
+</button>
+
+<style>
+  .auth-button {
+    /* TAC styling */
+  }
+</style>
+#+END_SRC
+
+* Environment Variables
+#+BEGIN_SRC env
+# .env
+VITE_REOWN_PROJECT_ID=your_project_id_here
+#+END_SRC
+
+* Dependencies
+#+BEGIN_SRC json
+{
+  "dependencies": {
+    "@reown/appkit": "^1.0.0",
+    "@reown/appkit-adapter-wagmi": "^1.0.0",
+    "wagmi": "^2.x",
+    "viem": "^2.x",
+    "@tanstack/react-query": "^5.x"
+  }
+}
+#+END_SRC
+
+* Acceptance Criteria
+- [ ] Users can authenticate via email
+- [ ] Users can connect Ethereum wallet
+- [ ] Users can connect Avalanche wallet
+- [ ] Session persists across page reloads
+- [ ] AuthButton displays correct state (connected/disconnected)
+- [ ] Error messages are user-friendly
+- [ ] Loading states are visible during authentication
+- [ ] Works on desktop and mobile browsers
+- [ ] Keyboard accessible
+- [ ] No TypeScript errors
+- [ ] All tests pass
+
+* Risks & Mitigation
+
+| Risk | Impact | Mitigation |
+|------+--------+------------|
+| Reown service downtime | High | Implement offline mode, show status indicator |
+| Wallet connection failures | Medium | Clear error messages, retry mechanism |
+| Email delivery delays | Medium | Show status, allow resend code |
+| Network switching issues | Low | Guide users to switch manually |
+| Privacy concerns | Medium | Document data collection, GDPR compliance |
+
+* Resources
+- [[https://docs.reown.com][Reown AppKit Documentation]]
+- [[https://dashboard.reown.com][Reown Dashboard]]
+- [[https://reown.com/blog][Reown Blog - Tutorials]]
+- [[https://discord.gg/reown][Reown Discord Support]]
+- [[https://wagmi.sh][Wagmi Documentation]]
+- [[https://viem.sh][Viem Documentation]]
+
+* Estimated Effort
+- Setup & Configuration: 2-3 hours
+- AppKit Configuration: 2-3 hours
+- UI Components: 4-6 hours
+- Authentication Flow: 4-6 hours
+- Error Handling & UX: 3-4 hours
+- Testing & QA: 4-6 hours
+- **Total: 19-28 hours** (~2.5-3.5 days)
+
+* Status
+PENDING

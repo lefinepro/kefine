@@ -1,0 +1,894 @@
+#+TITLE: OKR-014 - ActivityPub/ForgeFed Micro-Tasks
+#+DATE: 2026-02-21
+#+STARTUP: overview
+
+* Overview
+Ultra-granular task breakdown for ActivityPub/ForgeFed integration. Each task should take 1-4 hours maximum.
+
+* Phase 1: Core Infrastructure
+
+** OKR-014.1: Package Installation
+
+*** Task 1.1.1: Install uniorg-parse
+- [ ] Open terminal in project root
+- [ ] Run: pnpm add uniorg-parse
+- [ ] Verify installation in package.json
+- [ ] Check node_modules/uniorg-parse exists
+- [ ] Commit: chore(deps): add uniorg-parse
+
+*** Task 1.1.2: Install uniorg-stringify
+- [ ] Run: pnpm add uniorg-stringify
+- [ ] Verify installation in package.json
+- [ ] Check node_modules/uniorg-stringify exists
+- [ ] Commit: chore(deps): add uniorg-stringify
+
+*** Task 1.1.3: Install uniorg-rehype
+- [ ] Run: pnpm add uniorg-rehype
+- [ ] Verify installation in package.json
+- [ ] Check node_modules/uniorg-rehype exists
+- [ ] Commit: chore(deps): add uniorg-rehype
+
+*** Task 1.1.4: Install uniorg-extract-keywords
+- [ ] Run: pnpm add uniorg-extract-keywords
+- [ ] Verify installation in package.json
+- [ ] Check node_modules/uniorg-extract-keywords exists
+- [ ] Commit: chore(deps): add uniorg-extract-keywords
+
+*** Task 1.1.5: Install unified processor
+- [ ] Run: pnpm add unified
+- [ ] Verify installation in package.json
+- [ ] Check node_modules/unified exists
+- [ ] Commit: chore(deps): add unified
+
+*** Task 1.1.6: Install WebAuthn browser library
+- [ ] Run: pnpm add @simplewebauthn/browser
+- [ ] Verify installation in package.json
+- [ ] Check node_modules/@simplewebauthn/browser exists
+- [ ] Commit: chore(deps): add @simplewebauthn/browser
+
+*** Task 1.1.7: Install WebAuthn types
+- [ ] Run: pnpm add -D @simplewebauthn/types
+- [ ] Verify installation in package.json
+- [ ] Check node_modules/@simplewebauthn/types exists
+- [ ] Commit: chore(deps): add @simplewebauthn/types
+
+*** Task 1.1.8: Install TypeScript types
+- [ ] Run: pnpm add -D @types/node
+- [ ] Verify installation in package.json
+- [ ] Check node_modules/@types/node exists
+- [ ] Commit: chore(deps): add @types/node
+
+** OKR-014.2: Directory Structure
+
+*** Task 1.2.1: Create lib directory
+- [ ] Navigate to src/
+- [ ] Create directory: lib/
+- [ ] Verify directory exists
+- [ ] Add .gitkeep file
+
+*** Task 1.2.2: Create activitypub directory
+- [ ] Navigate to src/lib/
+- [ ] Create directory: activitypub/
+- [ ] Verify directory exists
+- [ ] Add .gitkeep file
+
+*** Task 1.2.3: Create forgefed directory
+- [ ] Navigate to src/lib/
+- [ ] Create directory: forgefed/
+- [ ] Verify directory exists
+- [ ] Add .gitkeep file
+
+*** Task 1.2.4: Create org-mode directory
+- [ ] Navigate to src/lib/
+- [ ] Create directory: org-mode/
+- [ ] Verify directory exists
+- [ ] Add .gitkeep file
+
+*** Task 1.2.5: Create auth directory
+- [ ] Navigate to src/lib/
+- [ ] Create directory: auth/
+- [ ] Verify directory exists
+- [ ] Add .gitkeep file
+
+*** Task 1.2.6: Create sync directory
+- [ ] Navigate to src/lib/
+- [ ] Create directory: sync/
+- [ ] Verify directory exists
+- [ ] Add .gitkeep file
+
+*** Task 1.2.7: Create types directory
+- [ ] Navigate to src/
+- [ ] Create directory: types/
+- [ ] Verify directory exists
+- [ ] Add .gitkeep file
+
+*** Task 1.2.8: Create components/federation directory
+- [ ] Navigate to src/components/
+- [ ] Create directory: federation/
+- [ ] Verify directory exists
+- [ ] Add .gitkeep file
+
+** OKR-014.3: ActivityPub Type Definitions
+
+*** Task 1.3.1: Create activitypub.ts file
+- [ ] Create file: src/types/activitypub.ts
+- [ ] Add file header comment
+- [ ] Add export statement
+- [ ] Save file
+- [ ] Verify file exists
+
+*** Task 1.3.2: Define ActivityPubContext type
+- [ ] Open src/types/activitypub.ts
+- [ ] Add type: export type ActivityPubContext = string | object | (string | object)[]
+- [ ] Save file
+- [ ] Run TypeScript check
+
+*** Task 1.3.3: Define ActivityPubActor interface
+- [ ] Open src/types/activitypub.ts
+- [ ] Add interface ActivityPubActor { @context: ActivityPubContext; id: string; type: string; }
+- [ ] Save file
+- [ ] Run TypeScript check
+
+*** Task 1.3.4: Add inbox property to Actor
+- [ ] Open src/types/activitypub.ts
+- [ ] Add to ActivityPubActor: inbox: string;
+- [ ] Save file
+- [ ] Run TypeScript check
+
+*** Task 1.3.5: Add outbox property to Actor
+- [ ] Open src/types/activitypub.ts
+- [ ] Add to ActivityPubActor: outbox: string;
+- [ ] Save file
+- [ ] Run TypeScript check
+
+*** Task 1.3.6: Add followers property to Actor
+- [ ] Open src/types/activitypub.ts
+- [ ] Add to ActivityPubActor: followers?: string;
+- [ ] Save file
+- [ ] Run TypeScript check
+
+*** Task 1.3.7: Add following property to Actor
+- [ ] Open src/types/activitypub.ts
+- [ ] Add to ActivityPubActor: following?: string;
+- [ ] Save file
+- [ ] Run TypeScript check
+
+*** Task 1.3.8: Add endpoints property to Actor
+- [ ] Open src/types/activitypub.ts
+- [ ] Add to ActivityPubActor: endpoints?: ActorEndpoints;
+- [ ] Save file
+- [ ] Run TypeScript check
+
+*** Task 1.3.9: Define ActorEndpoints interface
+- [ ] Open src/types/activitypub.ts
+- [ ] Add interface ActorEndpoints with oauthAuthorizationEndpoint?, oauthTokenEndpoint?, provideClientKey?, signClientKey?
+- [ ] Save file
+- [ ] Run TypeScript check
+
+*** Task 1.3.10: Define ActivityPubActivity interface
+- [ ] Open src/types/activitypub.ts
+- [ ] Add interface ActivityPubActivity with @context, id, type, actor, object, to, cc, published
+- [ ] Save file
+- [ ] Run TypeScript check
+
+*** Task 1.3.11: Define ActivityPubObject interface
+- [ ] Open src/types/activitypub.ts
+- [ ] Add interface ActivityPubObject with @context, id, type, attributedTo?, content?, published?
+- [ ] Save file
+- [ ] Run TypeScript check
+
+*** Task 1.3.12: Define ActivityPubCollection interface
+- [ ] Open src/types/activitypub.ts
+- [ ] Add interface ActivityPubCollection with @context, id, type, totalItems, items
+- [ ] Save file
+- [ ] Run TypeScript check
+
+*** Task 1.3.13: Export all ActivityPub types
+- [ ] Open src/types/activitypub.ts
+- [ ] Verify all types are exported
+- [ ] Add barrel export if needed
+- [ ] Save file
+- [ ] Run TypeScript check
+
+** OKR-014.4: ForgeFed Type Definitions
+
+*** Task 1.4.1: Create forgefed.ts file
+- [ ] Create file: src/types/forgefed.ts
+- [ ] Add file header comment
+- [ ] Add import from ./activitypub
+- [ ] Save file
+
+*** Task 1.4.2: Define OKRQuarter enum
+- [ ] Open src/types/forgefed.ts
+- [ ] Add enum OKRQuarter { Q1 = 'Q1', Q2 = 'Q2', Q3 = 'Q3', Q4 = 'Q4' }
+- [ ] Save file
+- [ ] Run TypeScript check
+
+*** Task 1.4.3: Define OKRStatus enum
+- [ ] Open src/types/forgefed.ts
+- [ ] Add enum OKRStatus { Active = 'active', Completed = 'completed', Archived = 'archived' }
+- [ ] Save file
+- [ ] Run TypeScript check
+
+*** Task 1.4.4: Define OKRTargetType enum
+- [ ] Open src/types/forgefed.ts
+- [ ] Add enum OKRTargetType { Number = 'number', Percentage = 'percentage', Boolean = 'boolean' }
+- [ ] Save file
+- [ ] Run TypeScript check
+
+*** Task 1.4.5: Define ForgeFedTicket interface
+- [ ] Open src/types/forgefed.ts
+- [ ] Add interface ForgeFedTicket extends ActivityPubObject
+- [ ] Add ticketsTrackedBy: string property
+- [ ] Save file
+
+*** Task 1.4.6: Add OKR properties to Ticket
+- [ ] Open src/types/forgefed.ts
+- [ ] Add to ForgeFedTicket: 'okr:quarter'?: OKRQuarter
+- [ ] Add: 'okr:year'?: number
+- [ ] Add: 'okr:status'?: OKRStatus
+- [ ] Save file
+
+*** Task 1.4.7: Add more OKR properties to Ticket
+- [ ] Open src/types/forgefed.ts
+- [ ] Add: 'okr:progress'?: number
+- [ ] Add: 'okr:keyResults'?: string[]
+- [ ] Add: isResolved?: boolean
+- [ ] Save file
+
+*** Task 1.4.8: Define ForgeFedKeyResult interface
+- [ ] Open src/types/forgefed.ts
+- [ ] Add interface ForgeFedKeyResult extends ForgeFedTicket
+- [ ] Add: 'okr:targetType': OKRTargetType
+- [ ] Add: 'okr:targetValue': number
+- [ ] Save file
+
+*** Task 1.4.9: Add current value to KeyResult
+- [ ] Open src/types/forgefed.ts
+- [ ] Add to ForgeFedKeyResult: 'okr:currentValue': number
+- [ ] Add: 'okr:unit': string
+- [ ] Add: 'okr:weight'?: number
+- [ ] Save file
+
+*** Task 1.4.10: Define ForgeFedGrant interface
+- [ ] Open src/types/forgefed.ts
+- [ ] Add interface ForgeFedGrant with type, id, context, target
+- [ ] Add: delegates?: string
+- [ ] Add: allows: string[]
+- [ ] Save file
+
+*** Task 1.4.11: Add Grant time properties
+- [ ] Open src/types/forgefed.ts
+- [ ] Add to ForgeFedGrant: role: string
+- [ ] Add: startTime?: string
+- [ ] Add: endTime?: string
+- [ ] Add: result: string
+- [ ] Save file
+
+*** Task 1.4.12: Export all ForgeFed types
+- [ ] Open src/types/forgefed.ts
+- [ ] Verify all types are exported
+- [ ] Save file
+- [ ] Run TypeScript check
+
+** OKR-014.5: Org Mode Type Definitions
+
+*** Task 1.5.1: Create org.ts file
+- [ ] Create file: src/types/org.ts
+- [ ] Add file header comment
+- [ ] Save file
+
+*** Task 1.5.2: Define OrgNodeType type
+- [ ] Open src/types/org.ts
+- [ ] Add type OrgNodeType = 'org-data' | 'headline' | 'section' | 'paragraph' | 'text' | 'keyword' | 'property-drawer' | 'property'
+- [ ] Save file
+
+*** Task 1.5.3: Define base OrgNode interface
+- [ ] Open src/types/org.ts
+- [ ] Add interface OrgNode { type: OrgNodeType; }
+- [ ] Save file
+
+*** Task 1.5.4: Define OrgHeadline interface
+- [ ] Open src/types/org.ts
+- [ ] Add interface OrgHeadline extends OrgNode
+- [ ] Add: type: 'headline'
+- [ ] Add: level: number
+- [ ] Save file
+
+*** Task 1.5.5: Add headline title property
+- [ ] Open src/types/org.ts
+- [ ] Add to OrgHeadline: title: OrgNode[]
+- [ ] Save file
+
+*** Task 1.5.6: Add headline tags property
+- [ ] Open src/types/org.ts
+- [ ] Add to OrgHeadline: tags?: string[]
+- [ ] Save file
+
+*** Task 1.5.7: Add headline property drawer
+- [ ] Open src/types/org.ts
+- [ ] Add to OrgHeadline: propertyDrawer?: OrgPropertyDrawer
+- [ ] Save file
+
+*** Task 1.5.8: Add headline contents
+- [ ] Open src/types/org.ts
+- [ ] Add to OrgHeadline: contents: OrgNode[]
+- [ ] Save file
+
+*** Task 1.5.9: Define OrgPropertyDrawer interface
+- [ ] Open src/types/org.ts
+- [ ] Add interface OrgPropertyDrawer extends OrgNode
+- [ ] Add: type: 'property-drawer'
+- [ ] Add: contents: OrgProperty[]
+- [ ] Save file
+
+*** Task 1.5.10: Define OrgProperty interface
+- [ ] Open src/types/org.ts
+- [ ] Add interface OrgProperty extends OrgNode
+- [ ] Add: type: 'property'
+- [ ] Add: key: string
+- [ ] Add: value: string
+- [ ] Save file
+
+*** Task 1.5.11: Define OrgFile interface
+- [ ] Open src/types/org.ts
+- [ ] Add interface OrgFile extends OrgNode
+- [ ] Add: type: 'org-data'
+- [ ] Add: contents: OrgNode[]
+- [ ] Save file
+
+*** Task 1.5.12: Add keywords to OrgFile
+- [ ] Open src/types/org.ts
+- [ ] Add to OrgFile: keywords?: Record<string, string>
+- [ ] Save file
+
+*** Task 1.5.13: Define type guard functions
+- [ ] Open src/types/org.ts
+- [ ] Add function isHeadline(node: OrgNode): node is OrgHeadline
+- [ ] Add function isPropertyDrawer(node: OrgNode): node is OrgPropertyDrawer
+- [ ] Add function isProperty(node: OrgNode): node is OrgProperty
+- [ ] Save file
+
+*** Task 1.5.14: Export all Org types
+- [ ] Open src/types/org.ts
+- [ ] Verify all types are exported
+- [ ] Save file
+- [ ] Run TypeScript check
+
+** OKR-014.6: Internal Model Types
+
+*** Task 1.6.1: Create models.ts file
+- [ ] Create file: src/types/models.ts
+- [ ] Add file header comment
+- [ ] Add imports from other type files
+- [ ] Save file
+
+*** Task 1.6.2: Define ObjectiveModel interface
+- [ ] Open src/types/models.ts
+- [ ] Add interface ObjectiveModel
+- [ ] Add: id: string
+- [ ] Add: title: string
+- [ ] Save file
+
+*** Task 1.6.3: Add objective description
+- [ ] Open src/types/models.ts
+- [ ] Add to ObjectiveModel: description?: string
+- [ ] Save file
+
+*** Task 1.6.4: Add objective quarter/year
+- [ ] Open src/types/models.ts
+- [ ] Add to ObjectiveModel: quarter: OKRQuarter
+- [ ] Add: year: number
+- [ ] Save file
+
+*** Task 1.6.5: Add objective status
+- [ ] Open src/types/models.ts
+- [ ] Add to ObjectiveModel: status: OKRStatus
+- [ ] Save file
+
+*** Task 1.6.6: Add AP/ForgeFed IDs
+- [ ] Open src/types/models.ts
+- [ ] Add to ObjectiveModel: apId?: string
+- [ ] Add: apActor?: string
+- [ ] Save file
+
+*** Task 1.6.7: Define KeyResultModel interface
+- [ ] Open src/types/models.ts
+- [ ] Add interface KeyResultModel
+- [ ] Add: id: string
+- [ ] Add: objectiveId: string
+- [ ] Save file
+
+*** Task 1.6.8: Add key result title/description
+- [ ] Open src/types/models.ts
+- [ ] Add to KeyResultModel: title: string
+- [ ] Add: description?: string
+- [ ] Save file
+
+*** Task 1.6.9: Add key result target properties
+- [ ] Open src/types/models.ts
+- [ ] Add to KeyResultModel: targetType: OKRTargetType
+- [ ] Add: targetValue: number
+- [ ] Add: currentValue: number
+- [ ] Save file
+
+*** Task 1.6.10: Add key result unit/weight
+- [ ] Open src/types/models.ts
+- [ ] Add to KeyResultModel: unit: string
+- [ ] Add: weight?: number
+- [ ] Save file
+
+*** Task 1.6.11: Add key result AP ID
+- [ ] Open src/types/models.ts
+- [ ] Add to KeyResultModel: apId?: string
+- [ ] Save file
+
+*** Task 1.6.12: Define TaskModel interface
+- [ ] Open src/types/models.ts
+- [ ] Add interface TaskModel
+- [ ] Add: id: string
+- [ ] Add: title: string
+- [ ] Save file
+
+*** Task 1.6.13: Add task status/priority
+- [ ] Open src/types/models.ts
+- [ ] Add to TaskModel: status: 'todo' | 'in_progress' | 'done'
+- [ ] Add: priority?: 'P1' | 'P2' | 'P3' | 'P4'
+- [ ] Save file
+
+*** Task 1.6.14: Add task OKR link
+- [ ] Open src/types/models.ts
+- [ ] Add to TaskModel: okrLink?: string
+- [ ] Add: okrLinkType?: 'objective' | 'keyresult'
+- [ ] Save file
+
+*** Task 1.6.15: Define OKRModel interface
+- [ ] Open src/types/models.ts
+- [ ] Add interface OKRModel
+- [ ] Add: objectives: ObjectiveModel[]
+- [ ] Add: keyResults: KeyResultModel[]
+- [ ] Add: tasks: TaskModel[]
+- [ ] Save file
+
+*** Task 1.6.16: Add metadata to OKRModel
+- [ ] Open src/types/models.ts
+- [ ] Add to OKRModel: metadata?: Record<string, string>
+- [ ] Save file
+
+*** Task 1.6.17: Export all model types
+- [ ] Open src/types/models.ts
+- [ ] Verify all types are exported
+- [ ] Save file
+- [ ] Run TypeScript check
+
+** OKR-014.7: Container Setup
+
+*** Task 1.7.1: Create container.ts file
+- [ ] Create file: src/lib/container.ts
+- [ ] Add file header comment
+- [ ] Save file
+
+*** Task 1.7.2: Define Container class
+- [ ] Open src/lib/container.ts
+- [ ] Add export class Container
+- [ ] Add private services: Map<string, any>
+- [ ] Save file
+
+*** Task 1.7.3: Add register method
+- [ ] Open src/lib/container.ts
+- [ ] Add method register(name: string, service: any): void
+- [ ] Save file
+
+*** Task 1.7.4: Add resolve method
+- [ ] Open src/lib/container.ts
+- [ ] Add method resolve<T>(name: string): T
+- [ ] Save file
+
+*** Task 1.7.5: Add has method
+- [ ] Open src/lib/container.ts
+- [ ] Add method has(name: string): boolean
+- [ ] Save file
+
+*** Task 1.7.6: Export container instance
+- [ ] Open src/lib/container.ts
+- [ ] Add export const container = new Container()
+- [ ] Save file
+- [ ] Run TypeScript check
+
+** OKR-014.8: Config Management
+
+*** Task 1.8.1: Create config.ts file
+- [ ] Create file: src/lib/config.ts
+- [ ] Add file header comment
+- [ ] Save file
+
+*** Task 1.8.2: Define Config interface
+- [ ] Open src/lib/config.ts
+- [ ] Add interface Config
+- [ ] Add: apActor?: string
+- [ ] Add: apInbox?: string
+- [ ] Save file
+
+*** Task 1.8.3: Add outbox to Config
+- [ ] Open src/lib/config.ts
+- [ ] Add to Config: apOutbox?: string
+- [ ] Add: forgeFedProject?: string
+- [ ] Save file
+
+*** Task 1.8.4: Create default config
+- [ ] Open src/lib/config.ts
+- [ ] Add const defaultConfig: Config = {}
+- [ ] Save file
+
+*** Task 1.8.5: Create config state
+- [ ] Open src/lib/config.ts
+- [ ] Add let currentConfig: Config = { ...defaultConfig }
+- [ ] Save file
+
+*** Task 1.8.6: Add getConfig function
+- [ ] Open src/lib/config.ts
+- [ ] Add export function getConfig(): Config
+- [ ] Return currentConfig
+- [ ] Save file
+
+*** Task 1.8.7: Add setConfig function
+- [ ] Open src/lib/config.ts
+- [ ] Add export function setConfig(config: Partial<Config>): void
+- [ ] Merge with currentConfig
+- [ ] Save file
+
+*** Task 1.8.8: Add resetConfig function
+- [ ] Open src/lib/config.ts
+- [ ] Add export function resetConfig(): void
+- [ ] Reset to defaultConfig
+- [ ] Save file
+
+*** Task 1.8.9: Export config types
+- [ ] Open src/lib/config.ts
+- [ ] Export Config interface
+- [ ] Save file
+- [ ] Run TypeScript check
+
+* Phase 2: Passkey Authentication
+
+** OKR-014.9: Passkey Registration UI
+
+*** Task 2.9.1: Create PasskeyRegistration component file
+- [ ] Create file: src/components/federation/PasskeyRegistration.svelte
+- [ ] Add <script> tag
+- [ ] Add </script> tag
+- [ ] Save file
+
+*** Task 2.9.2: Add component props
+- [ ] Open PasskeyRegistration.svelte
+- [ ] Add export let onSuccess?: () => void
+- [ ] Add export let onError?: (error: Error) => void
+- [ ] Save file
+
+*** Task 2.9.3: Add username state
+- [ ] Open PasskeyRegistration.svelte
+- [ ] Add let username = $state('')
+- [ ] Save file
+
+*** Task 2.9.4: Add status state
+- [ ] Open PasskeyRegistration.svelte
+- [ ] Add let status = $state<'idle' | 'loading' | 'success' | 'error'>('idle')
+- [ ] Add let errorMessage = $state('')
+- [ ] Save file
+
+*** Task 2.9.5: Add HTML input field
+- [ ] Open PasskeyRegistration.svelte
+- [ ] Add <input type="text" bind:value={username} placeholder="Username" />
+- [ ] Save file
+
+*** Task 2.9.6: Add register button
+- [ ] Open PasskeyRegistration.svelte
+- [ ] Add <button on:click={handleRegister} disabled={status === 'loading'}>
+- [ ] Add button text: Register Passkey
+- [ ] Save file
+
+*** Task 2.9.7: Add status message display
+- [ ] Open PasskeyRegistration.svelte
+- [ ] Add {#if errorMessage}<p class="error">{errorMessage}</p>{/if}
+- [ ] Add {#if status === 'success'}<p class="success">Success!</p>{/if}
+- [ ] Save file
+
+*** Task 2.9.8: Create handleRegister function stub
+- [ ] Open PasskeyRegistration.svelte
+- [ ] Add async function handleRegister() { }
+- [ ] Save file
+
+*** Task 2.9.9: Add validation to handleRegister
+- [ ] Open PasskeyRegistration.svelte
+- [ ] In handleRegister: if (!username.trim()) return
+- [ ] Save file
+
+*** Task 2.9.10: Add loading state
+- [ ] Open PasskeyRegistration.svelte
+- [ ] In handleRegister: status = 'loading'
+- [ ] In handleRegister: errorMessage = ''
+- [ ] Save file
+
+*** Task 2.9.11: Add try-catch block
+- [ ] Open PasskeyRegistration.svelte
+- [ ] Wrap logic in try-catch
+- [ ] Save file
+
+*** Task 2.9.12: Add error handling
+- [ ] Open PasskeyRegistration.svelte
+- [ ] In catch: status = 'error'
+- [ ] In catch: errorMessage = error.message
+- [ ] Save file
+
+*** Task 2.9.13: Add success handling
+- [ ] Open PasskeyRegistration.svelte
+- [ ] After try: status = 'success'
+- [ ] Add: onSuccess?.()
+- [ ] Save file
+
+*** Task 2.9.14: Create CSS file
+- [ ] Create file: src/components/federation/PasskeyRegistration.css
+- [ ] Add basic styles
+- [ ] Save file
+
+*** Task 2.9.15: Import CSS in component
+- [ ] Open PasskeyRegistration.svelte
+- [ ] Add <link rel="stylesheet" href="./PasskeyRegistration.css" />
+- [ ] Save file
+
+** OKR-014.10: Passkey Registration Backend
+
+*** Task 2.10.1: Create auth routes file
+- [ ] Create file: src/lib/auth/routes.ts
+- [ ] Add file header comment
+- [ ] Save file
+
+*** Task 2.10.2: Create in-memory user store
+- [ ] Open src/lib/auth/routes.ts
+- [ ] Add const users = new Map<string, any>()
+- [ ] Save file
+
+*** Task 2.10.3: Create credential store
+- [ ] Open src/lib/auth/routes.ts
+- [ ] Add const credentials = new Map<string, any[]>()
+- [ ] Save file
+
+*** Task 2.10.4: Create session store
+- [ ] Open src/lib/auth/routes.ts
+- [ ] Add const sessions = new Map<string, any>()
+- [ ] Save file
+
+*** Task 2.10.5: Import WebAuthn functions
+- [ ] Open src/lib/auth/routes.ts
+- [ ] Add import for generateRegistrationOptions
+- [ ] Add import for verifyRegistrationResponse
+- [ ] Save file
+
+*** Task 2.10.6: Create RP config
+- [ ] Open src/lib/auth/routes.ts
+- [ ] Add const rpName = 'Kefine OKR'
+- [ ] Add const rpID = window.location.hostname
+- [ ] Save file
+
+*** Task 2.10.7: Create startRegistration function
+- [ ] Open src/lib/auth/routes.ts
+- [ ] Add export async function startRegistration(username: string)
+- [ ] Save file
+
+*** Task 2.10.8: Implement user creation
+- [ ] Open src/lib/auth/routes.ts
+- [ ] In startRegistration: check if user exists
+- [ ] Create user if not exists
+- [ ] Save file
+
+*** Task 2.10.9: Generate registration options
+- [ ] Open src/lib/auth/routes.ts
+- [ ] Call generateRegistrationOptions with config
+- [ ] Save file
+
+*** Task 2.10.10: Store challenge in session
+- [ ] Open src/lib/auth/routes.ts
+- [ ] sessions.set(userId, { challenge: options.challenge })
+- [ ] Save file
+
+*** Task 2.10.11: Return options
+- [ ] Open src/lib/auth/routes.ts
+- [ ] Return options from startRegistration
+- [ ] Save file
+
+*** Task 2.10.12: Create finishRegistration function
+- [ ] Open src/lib/auth/routes.ts
+- [ ] Add export async function finishRegistration(username: string, attResp: any)
+- [ ] Save file
+
+*** Task 2.10.13: Get user and session
+- [ ] Open src/lib/auth/routes.ts
+- [ ] In finishRegistration: get user from users map
+- [ ] Get session from sessions map
+- [ ] Save file
+
+*** Task 2.10.14: Verify registration
+- [ ] Open src/lib/auth/routes.ts
+- [ ] Call verifyRegistrationResponse
+- [ ] Save file
+
+*** Task 2.10.15: Store credential
+- [ ] Open src/lib/auth/routes.ts
+- [ ] If verified: store credential in credentials map
+- [ ] Save file
+
+*** Task 2.10.16: Clean up session
+- [ ] Open src/lib/auth/routes.ts
+- [ ] sessions.delete(userId)
+- [ ] Return { verified: true }
+- [ ] Save file
+
+** OKR-014.11: Passkey Login UI
+
+*** Task 2.11.1: Create PasskeyLogin component file
+- [ ] Create file: src/components/federation/PasskeyLogin.svelte
+- [ ] Add <script> tag
+- [ ] Save file
+
+*** Task 2.11.2: Add component props
+- [ ] Open PasskeyLogin.svelte
+- [ ] Add export let onSuccess?: (userId: string) => void
+- [ ] Add export let onError?: (error: Error) => void
+- [ ] Save file
+
+*** Task 2.11.3: Add username state
+- [ ] Open PasskeyLogin.svelte
+- [ ] Add let username = $state('')
+- [ ] Save file
+
+*** Task 2.11.4: Add status state
+- [ ] Open PasskeyLogin.svelte
+- [ ] Add let status = $state<'idle' | 'loading' | 'success' | 'error'>('idle')
+- [ ] Add let errorMessage = $state('')
+- [ ] Save file
+
+*** Task 2.11.5: Add input field
+- [ ] Open PasskeyLogin.svelte
+- [ ] Add <input type="text" bind:value={username} placeholder="Username (optional)" />
+- [ ] Save file
+
+*** Task 2.11.6: Add login button
+- [ ] Open PasskeyLogin.svelte
+- [ ] Add <button on:click={handleLogin}>Login with Passkey</button>
+- [ ] Save file
+
+*** Task 2.11.7: Add status display
+- [ ] Open PasskeyLogin.svelte
+- [ ] Add error message display
+- [ ] Add success message display
+- [ ] Save file
+
+*** Task 2.11.8: Create handleLogin function
+- [ ] Open PasskeyLogin.svelte
+- [ ] Add async function handleLogin() { }
+- [ ] Save file
+
+*** Task 2.11.9: Add loading state
+- [ ] Open PasskeyLogin.svelte
+- [ ] In handleLogin: status = 'loading'
+- [ ] Save file
+
+*** Task 2.11.10: Add try-catch block
+- [ ] Open PasskeyLogin.svelte
+- [ ] Wrap in try-catch
+- [ ] Save file
+
+*** Task 2.11.11: Add error handling
+- [ ] Open PasskeyLogin.svelte
+- [ ] In catch: status = 'error'
+- [ ] Save file
+
+*** Task 2.11.12: Create CSS file
+- [ ] Create file: src/components/federation/PasskeyLogin.css
+- [ ] Add basic styles
+- [ ] Save file
+
+*** Task 2.11.13: Import CSS
+- [ ] Open PasskeyLogin.svelte
+- [ ] Import CSS file
+- [ ] Save file
+
+** OKR-014.12: Passkey Login Backend
+
+*** Task 2.12.1: Import auth functions
+- [ ] Open src/lib/auth/routes.ts
+- [ ] Add import for generateAuthenticationOptions
+- [ ] Add import for verifyAuthenticationResponse
+- [ ] Save file
+
+*** Task 2.12.2: Create startAuthentication function
+- [ ] Open src/lib/auth/routes.ts
+- [ ] Add export async function startAuthentication(username?: string)
+- [ ] Save file
+
+*** Task 2.12.3: Get user credentials
+- [ ] Open src/lib/auth/routes.ts
+- [ ] In startAuthentication: get credentials for user
+- [ ] Save file
+
+*** Task 2.12.4: Generate auth options
+- [ ] Open src/lib/auth/routes.ts
+- [ ] Call generateAuthenticationOptions
+- [ ] Save file
+
+*** Task 2.12.5: Store challenge
+- [ ] Open src/lib/auth/routes.ts
+- [ ] sessions.set(username || 'anon', { challenge: options.challenge })
+- [ ] Save file
+
+*** Task 2.12.6: Return options
+- [ ] Open src/lib/auth/routes.ts
+- [ ] Return options from startAuthentication
+- [ ] Save file
+
+*** Task 2.12.7: Create finishAuthentication function
+- [ ] Open src/lib/auth/routes.ts
+- [ ] Add export async function finishAuthentication(authnResp: any)
+- [ ] Save file
+
+*** Task 2.12.8: Find credential
+- [ ] Open src/lib/auth/routes.ts
+- [ ] Search for credential by rawId
+- [ ] Save file
+
+*** Task 2.12.9: Verify authentication
+- [ ] Open src/lib/auth/routes.ts
+- [ ] Call verifyAuthenticationResponse
+- [ ] Save file
+
+*** Task 2.12.10: Update counter
+- [ ] Open src/lib/auth/routes.ts
+- [ ] If verified: update credential counter
+- [ ] Save file
+
+*** Task 2.12.11: Create session
+- [ ] Open src/lib/auth/routes.ts
+- [ ] Create session token
+- [ ] Store in sessions
+- [ ] Save file
+
+*** Task 2.12.12: Return result
+- [ ] Open src/lib/auth/routes.ts
+- [ ] Return { verified: true, userId }
+- [ ] Save file
+
+* Testing
+
+** OKR-014.13: Type Tests
+
+*** Task 2.13.1: Create types test file
+- [ ] Create file: src/types/index.test.ts
+- [ ] Add test description
+- [ ] Save file
+
+*** Task 2.13.2: Test ActivityPub types compile
+- [ ] Open src/types/index.test.ts
+- [ ] Add test: ActivityPub types should compile
+- [ ] Import ActivityPubActor
+- [ ] Create instance
+- [ ] Save file
+
+*** Task 2.13.3: Test ForgeFed types compile
+- [ ] Open src/types/index.test.ts
+- [ ] Add test: ForgeFed types should compile
+- [ ] Import ForgeFedTicket
+- [ ] Create instance
+- [ ] Save file
+
+*** Task 2.13.4: Test Org types compile
+- [ ] Open src/types/index.test.ts
+- [ ] Add test: Org types should compile
+- [ ] Import OrgHeadline
+- [ ] Create instance
+- [ ] Save file
+
+*** Task 2.13.5: Run TypeScript check
+- [ ] Open terminal
+- [ ] Run: pnpm run check
+- [ ] Verify no errors
+- [ ] Save test results

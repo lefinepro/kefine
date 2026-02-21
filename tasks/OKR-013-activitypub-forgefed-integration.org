@@ -1,0 +1,810 @@
+#+TITLE: OKR-013 - ActivityPub/ForgeFed Integration
+#+DATE: 2026-02-21
+#+STARTUP: overview
+
+* Overview
+Implement ActivityPub client-to-server interactions with ForgeFed extensions and full Org mode support using uniorg parser and passkey-based authentication.
+
+* Dependencies
+- OKR-001 (Data Model)
+- OKR-002 (Store Implementation)
+- [[../org-activitypub-forgefed-mapping.org][Org ↔ ActivityPub ↔ ForgeFed Mapping]]
+
+* Phase 1: Core Infrastructure
+
+** OKR-013.1: Project Setup and Dependencies
+*** Task 1.1.1: Install uniorg packages
+- [ ] Install ~uniorg-parse~ package
+- [ ] Install ~uniorg-stringify~ package
+- [ ] Install ~uniorg-rehype~ package
+- [ ] Install ~uniorg-extract-keywords~ package
+- [ ] Install ~unified~ processor framework
+- [ ] Add TypeScript types for uniorg packages
+- [ ] Verify package compatibility with Svelte 5
+
+*** Task 1.1.2: Install WebAuthn/passkey packages
+- [ ] Install ~@simplewebauthn/browser~ for client-side
+- [ ] Install ~@simplewebauthn/server~ for backend (if needed)
+- [ ] Install ~@simplewebauthn/types~ for TypeScript definitions
+- [ ] Create wrapper module for browser API
+- [ ] Test browser compatibility (Chrome, Firefox, Safari)
+
+*** Task 1.1.3: Install ActivityPub utilities
+- [ ] Research existing ActivityPub client libraries
+- [ ] Evaluate ~activitystreams~ JSON-LD libraries
+- [ ] Install JSON-LD context processor
+- [ ] Create ~@context~ constant for ForgeFed namespace
+- [ ] Set up RDF/JSON-LD serialization utilities
+
+*** Task 1.1.4: Configure build tooling
+- [ ] Update Vite config for larger bundle sizes
+- [ ] Configure code splitting for AP client module
+- [ ] Set up environment variables for AP endpoints
+- [ ] Add CORS proxy configuration (if needed)
+- [ ] Configure development proxy for ForgeFed server
+
+** OKR-013.2: Core Type Definitions
+*** Task 1.2.1: Create ActivityPub type definitions
+- [ ] Define ~ActivityPubActor~ interface
+  - ~@context~, ~id~, ~type~, ~inbox~, ~outbox~, ~followers~, ~following~
+- [ ] Define ~ActivityPubActivity~ interface
+  - ~@context~, ~id~, ~type~, ~actor~, ~object~, ~to~, ~cc~, ~published~
+- [ ] Define ~ActivityPubObject~ interface
+  - ~@context~, ~id~, ~type~, ~attributedTo~, ~content~, ~published~
+- [ ] Define ~ActivityPubCollection~ interface
+  - ~@context~, ~id~, ~type~, ~totalItems~, ~items~, ~orderedItems~
+- [ ] Export all types from ~types/activitypub.ts~
+
+*** Task 1.2.2: Create ForgeFed type definitions
+- [ ] Define ~ForgeFedTicket~ interface (extends AP Object)
+  - ~ticketsTrackedBy~, ~isResolved~, ~assignments~, ~okr:*~ properties
+- [ ] Define ~ForgeFedGrant~ interface
+  - ~context~, ~target~, ~delegates~, ~allows~, ~role~, ~startTime~, ~endTime~, ~result~
+- [ ] Define ~ForgeFedProject~ interface
+  - ~managedBy~, ~sendPatchesTo~, ~forks~, ~isArchived~
+- [ ] Define ~ForgeFedTeam~ interface
+  - ~members~, ~subteams~, ~parentTeam~
+- [ ] Define OKR-specific extensions
+  - ~OKRQuarter~, ~OKRStatus~, ~OKRTargetType~ enums
+- [ ] Export all types from ~types/forgefed.ts~
+
+*** Task 1.2.3: Create Org mode type definitions
+- [ ] Define ~OrgHeadline~ interface (uniorg AST node)
+  - ~type~, ~level~, ~title~, ~tags~, ~propertyDrawer~, ~contents~
+- [ ] Define ~OrgPropertyDrawer~ interface
+  - ~type~, ~contents~ (array of properties)
+- [ ] Define ~OrgProperty~ interface
+  - ~key~, ~value~
+- [ ] Define ~OrgFile~ interface
+  - ~contents~, ~keywords~, ~headlines~
+- [ ] Create type guards for uniorg node types
+- [ ] Export all types from ~types/org.ts~
+
+*** Task 1.2.4: Create internal model types
+- [ ] Define ~OKRModel~ interface
+  - ~objectives~, ~keyResults~, ~tasks~, ~metadata~
+- [ ] Define ~ObjectiveModel~ interface
+  - Extends OKR-001 with AP/ForgeFed fields
+- [ ] Define ~KeyResultModel~ interface
+  - Extends OKR-001 with AP/ForgeFed fields
+- [ ] Define ~TaskModel~ interface
+  - Extends existing Task with AP/ForgeFed fields
+- [ ] Define ~SyncState~ interface
+  - ~lastSynced~, ~pendingActivities~, ~conflicts~
+- [ ] Export all types from ~types/models.ts~
+
+*** Task 1.2.5: Create transformation type definitions
+- [ ] Define ~Transformer~ generic interface
+  - ~transform(input: T): U~
+- [ ] Define ~BidirectionalTransformer~ interface
+  - ~to(target: T): U~, ~from(source: U): T~
+- [ ] Define ~TransformationError~ type
+  - Error with validation details
+- [ ] Create validation result types
+- [ ] Export all types from ~types/transformers.ts~
+
+** OKR-013.3: Module Architecture
+*** Task 1.3.1: Create module directory structure
+- [ ] Create ~src/lib/activitypub/~ directory
+- [ ] Create ~src/lib/forgefed/~ directory
+- [ ] Create ~src/lib/org-mode/~ directory
+- [ ] Create ~src/lib/auth/~ directory
+- [ ] Create ~src/lib/sync/~ directory
+- [ ] Update ~src/lib/index.ts~ barrel exports
+
+*** Task 1.3.2: Create dependency injection setup
+- [ ] Create ~Container~ class for service registration
+- [ ] Register ~ActivityPubClient~ service
+- [ ] Register ~ForgeFedAdapter~ service
+- [ ] Register ~OrgParser~ service
+- [ ] Register ~PasskeyAuth~ service
+- [ ] Register ~SyncManager~ service
+- [ ] Export container from ~lib/container.ts~
+
+*** Task 1.3.3: Create configuration management
+- [ ] Create ~Config~ interface
+  - ~apActor~, ~apInbox~, ~apOutbox~, ~forgeFedProject~, ~authEndpoint~
+- [ ] Create environment-based config loader
+- [ ] Support runtime config updates
+- [ ] Add config validation
+- [ ] Export config from ~lib/config.ts~
+
+* Phase 2: Passkey Authentication
+
+** OKR-013.4: Passkey Registration Flow
+*** Task 2.4.1: Create registration UI component
+- [ ] Create ~PasskeyRegistration.svelte~ component
+- [ ] Add username input field
+- [ ] Add "Register Passkey" button
+- [ ] Display registration status messages
+- [ ] Handle registration errors gracefully
+- [ ] Add co-located CSS styles
+- [ ] Write component tests
+
+*** Task 2.4.2: Implement registration start endpoint
+- [ ] Create ~auth/register/start~ API endpoint
+- [ ] Generate cryptographic challenge
+- [ ] Store challenge in session (with TTL)
+- [ ] Return WebAuthn creation options
+- [ ] Include ~authenticatorSelection~ for passkeys
+- [ ] Set ~residentKey: 'required'~
+- [ ] Add rate limiting
+
+*** Task 2.4.3: Implement registration finish endpoint
+- [ ] Create ~auth/register/finish~ API endpoint
+- [ ] Verify attestation response
+- [ ] Validate challenge match
+- [ ] Validate origin and RPID
+- [ ] Store credential in database
+- [ ] Store ~credentialPublicKey~ and ~counter~
+- [ ] Return verification result
+
+*** Task 2.4.4: Create client-side registration handler
+- [ ] Create ~startRegistration()~ function
+- [ ] Call registration start endpoint
+- [ ] Invoke browser's ~navigator.credentials.create()~
+- [ ] Handle browser prompts (biometric/PIN)
+- [ ] Send attestation to finish endpoint
+- [ ] Handle errors and retries
+- [ ] Store credential ID locally
+
+*** Task 2.4.5: Implement credential management
+- [ ] Create credential storage schema
+- [ ] Implement credential listing
+- [ ] Add credential deletion
+- [ ] Support multiple credentials per user
+- [ ] Display registered passkeys to user
+- [ ] Add credential naming (e.g., "Work Laptop")
+
+** OKR-013.5: Passkey Authentication Flow
+*** Task 2.5.1: Create authentication UI component
+- [ ] Create ~PasskeyLogin.svelte~ component
+- [ ] Add optional username field
+- [ ] Add "Login with Passkey" button
+- [ ] Display authentication status
+- [ ] Handle authentication errors
+- [ ] Add co-located CSS styles
+- [ ] Write component tests
+
+*** Task 2.5.2: Implement authentication start endpoint
+- [ ] Create ~auth/login/start~ API endpoint
+- [ ] Accept optional username
+- [ ] Fetch user's registered credentials
+- [ ] Generate authentication challenge
+- [ ] Return WebAuthn request options
+- [ ] Set ~allowCredentials~ list
+- [ ] Store challenge with TTL
+
+*** Task 2.5.3: Implement authentication finish endpoint
+- [ ] Create ~auth/login/finish~ API endpoint
+- [ ] Verify assertion response
+- [ ] Validate challenge match
+- [ ] Validate signature
+- [ ] Verify counter value (replay protection)
+- [ ] Update counter in database
+- [ ] Issue session token or cookie
+- [ ] Return authentication result
+
+*** Task 2.5.4: Create client-side authentication handler
+- [ ] Create ~startAuthentication()~ function
+- [ ] Call authentication start endpoint
+- [ ] Invoke browser's ~navigator.credentials.get()~
+- [ ] Handle browser prompts
+- [ ] Send assertion to finish endpoint
+- [ ] Store session token
+- [ ] Handle errors and retries
+
+*** Task 2.5.5: Implement session management
+- [ ] Create session storage mechanism
+- [ ] Implement session validation
+- [ ] Add session refresh logic
+- [ ] Handle session expiration
+- [ ] Implement logout functionality
+- [ ] Clear credentials on logout
+
+** OKR-013.6: Grant (OCap) Management
+*** Task 2.6.1: Create Grant type and validation
+- [ ] Implement ~Grant~ interface from ForgeFed spec
+- [ ] Create Grant validation function
+- [ ] Validate delegation chain
+- [ ] Validate time bounds
+- [ ] Validate role hierarchy
+- [ ] Write unit tests for validation
+
+*** Task 2.6.2: Implement Grant request flow
+- [ ] Create ~requestGrant()~ function
+- [ ] Send request to resource owner
+- [ ] Handle ~Invite~ activity
+- [ ] Receive ~Grant~ via ~Create~ activity
+- [ ] Store Grant securely
+- [ ] Set up Grant renewal logic
+
+*** Task 2.6.3: Implement Grant usage in requests
+- [ ] Add Grant to AP request headers
+- [ ] Include Grant in activity ~context~
+- [ ] Validate Grant before each request
+- [ ] Handle Grant expiration
+- [ ] Handle Grant revocation
+
+*** Task 2.6.4: Create Grant UI management
+- [ ] Display active Grants to user
+- [ ] Show Grant permissions
+- [ ] Allow Grant revocation
+- [ ] Display Grant expiration
+- [ ] Show delegation chain visually
+
+* Phase 3: ActivityPub Client
+
+** OKR-013.7: Actor Discovery and Configuration
+*** Task 3.7.1: Implement actor discovery
+- [ ] Create ~discoverActor(url)~ function
+- [ ] Fetch actor profile from URL
+- [ ] Parse JSON-LD actor object
+- [ ] Extract ~inbox~, ~outbox~, ~followers~, ~following~
+- [ ] Validate actor type (Person, Application, etc.)
+- [ ] Cache actor data
+- [ ] Handle discovery errors
+
+*** Task 3.7.2: Implement endpoint discovery
+- [ ] Extract ~endpoints~ property from actor
+- [ ] Parse ~oauthAuthorizationEndpoint~
+- [ ] Parse ~oauthTokenEndpoint~ (if present)
+- [ ] Parse ~provideClientKey~ (if present)
+- [ ] Parse ~signClientKey~ (if present)
+- [ ] Store endpoints in config
+
+*** Task 3.7.3: Create actor configuration UI
+- [ ] Create ~ActorConfig.svelte~ component
+- [ ] Add actor URL input
+- [ ] Display discovered endpoints
+- [ ] Show actor profile information
+- [ ] Allow actor switching
+- [ ] Validate actor connectivity
+
+** OKR-013.8: Outbox Interactions
+*** Task 3.8.1: Implement outbox POST for Create
+- [ ] Create ~postToOutbox(activity)~ function
+- [ ] Set correct ~Content-Type~ header
+- [ ] Include authentication (passkey session)
+- [ ] Serialize activity to JSON-LD
+- [ ] Handle ~201 Created~ response
+- [ ] Extract ~Location~ header for object ID
+- [ ] Handle errors (403, 405, 410)
+
+*** Task 3.8.2: Implement outbox POST for Update
+- [ ] Create ~updateObject(id, updates)~ function
+- [ ] Fetch current object state
+- [ ] Merge updates (partial update)
+- [ ] Wrap in ~Update~ activity
+- [ ] Post to outbox
+- [ ] Handle concurrent update conflicts
+
+*** Task 3.8.3: Implement outbox POST for Delete
+- [ ] Create ~deleteObject(id)~ function
+- [ ] Create ~Delete~ activity
+- [ ] Post to outbox
+- [ ] Handle tombstone creation
+- [ ] Update local state optimistically
+
+*** Task 3.8.4: Implement outbox POST for Like/Undo
+- [ ] Create ~likeObject(id)~ function
+- [ ] Create ~Like~ activity
+- [ ] Post to outbox
+- [ ] Create ~undoLike(id)~ function
+- [ ] Wrap original Like in ~Undo~
+- [ ] Post Undo to outbox
+
+*** Task 3.8.5: Implement outbox POST for Add/Remove
+- [ ] Create ~addToCollection(item, collection)~ function
+- [ ] Create ~Add~ activity with ~target~
+- [ ] Post to outbox
+- [ ] Create ~removeFromCollection(item, collection)~
+- [ ] Create ~Remove~ activity
+- [ ] Post to outbox
+
+*** Task 3.8.6: Implement outbox GET for retrieval
+- [ ] Create ~getOutboxActivities()~ function
+- [ ] Support pagination
+- [ ] Parse ~OrderedCollection~
+- [ ] Cache retrieved activities
+- [ ] Handle collection filtering
+
+** OKR-013.9: Inbox Interactions
+*** Task 3.9.1: Implement inbox GET
+- [ ] Create ~getInboxActivities()~ function
+- [ ] Fetch from inbox URL
+- [ ] Parse activities
+- [ ] Support pagination
+- [ ] Filter by activity type
+- [ ] Sort by published date
+
+*** Task 3.9.2: Implement activity processing
+- [ ] Create ~processActivity(activity)~ function
+- [ ] Route by activity type
+- [ ] Handle ~Create~ → create local object
+- [ ] Handle ~Update~ → update local object
+- [ ] Handle ~Delete~ → remove/tombstone local object
+- [ ] Handle ~Like~ → update like count
+- [ ] Handle ~Follow~ → add to followers
+
+*** Task 3.9.3: Implement notification system
+- [ ] Create ~Notification~ type
+- [ ] Create notification store
+- [ ] Generate notifications from inbox activities
+- [ ] Display notifications in UI
+- [ ] Mark notifications as read
+- [ ] Clear old notifications
+
+*** Task 3.9.4: Implement real-time updates (optional)
+- [ ] Research ActivityPub streaming extensions
+- [ ] Implement Server-Sent Events listener
+- [ ] Handle WebSocket updates (if supported)
+- [ ] Poll inbox periodically as fallback
+- [ ] Debounce rapid updates
+
+** OKR-013.10: Object Retrieval and Caching
+*** Task 3.10.1: Implement object GET by ID
+- [ ] Create ~getObject(id)~ function
+- [ ] Fetch object from URL
+- [ ] Set ~Accept~ header for JSON-LD
+- [ ] Parse object
+- [ ] Handle 403/404 for private objects
+- [ ] Handle tombstones (410 Gone)
+
+*** Task 3.10.2: Implement object caching
+- [ ] Create ~ObjectCache~ class
+- [ ] Implement LRU eviction
+- [ ] Set cache TTL
+- [ ] Invalidate cache on updates
+- [ ] Support cache preloading
+
+*** Task 3.10.3: Implement collection traversal
+- [ ] Create ~traverseCollection(url)~ function
+- [ ] Follow ~first~/~next~ pagination
+- [ ] Collect all items
+- [ ] Handle large collections efficiently
+- [ ] Support partial collection loading
+
+* Phase 4: ForgeFed Extensions
+
+** OKR-013.11: Ticket Type Implementation
+*** Task 4.11.1: Create Ticket serialization
+- [ ] Create ~serializeObjectiveToTicket()~ function
+- [ ] Map OKR properties to Ticket fields
+- [ ] Add ~okr:*~ namespace properties
+- [ ] Set ~ticketsTrackedBy~ reference
+- [ ] Include HTML content
+- [ ] Write unit tests
+
+*** Task 4.11.2: Create Ticket deserialization
+- [ ] Create ~deserializeTicketToObjective()~ function
+- [ ] Extract Ticket fields to OKR model
+- [ ] Parse ~okr:*~ properties
+- [ ] Validate required fields
+- [ ] Handle missing optional fields
+- [ ] Write unit tests
+
+*** Task 4.11.3: Implement Offer/Accept pattern for tickets
+- [ ] Create ~offerTicket(ticket, tracker)~ function
+- [ ] Create ~Offer~ activity
+- [ ] Set ~object~ without ~id~
+- [ ] Set ~target~ to TicketTracker
+- [ ] Handle ~Accept~ response with assigned ID
+- [ ] Handle ~Reject~ response
+- [ ] Store assigned ID in Org properties
+
+*** Task 4.11.4: Implement Ticket-Tracker linking
+- [ ] Verify bidirectional ~ticketsTrackedBy~ ↔ ~tracksTicketsFor~
+- [ ] Fetch tracker configuration
+- [ ] Validate tracker accepts tickets
+- [ ] Update tracker's ticket collection
+
+** OKR-013.12: Key Result as Sub-Ticket
+*** Task 4.12.1: Create Key Result serialization
+- [ ] Create ~serializeKeyResultToTicket()~ function
+- [ ] Map KR properties to Ticket fields
+- [ ] Add KR-specific ~okr:*~ properties
+- [ ] Set ~inReplyTo~ to parent objective
+- [ ] Include progress calculation
+- [ ] Write unit tests
+
+*** Task 4.12.2: Implement parent-child ticket linking
+- [ ] Create ~linkTicketToParent(child, parent)~ function
+- [ ] Set ~inReplyTo~ property
+- [ ] Update parent's ~okr:keyResults~ collection
+- [ ] Verify bidirectional link
+- [ ] Handle link removal
+
+*** Task 4.12.3: Implement Key Result progress updates
+- [ ] Create ~updateKeyResultProgress(krId, value)~ function
+- [ ] Calculate progress percentage
+- [ ] Create ~Update~ activity
+- [ ] Post to outbox
+- [ ] Update parent objective progress
+- [ ] Notify subscribers
+
+** OKR-013.13: Task-OKR Linking
+*** Task 4.13.1: Implement task linking to OKR
+- [ ] Create ~linkTaskToOKR(taskId, okrId, linkType)~ function
+- [ ] Create ~Assign~ activity
+- [ ] Set ~object~ = task, ~target~ = OKR
+- [ ] Post to outbox
+- [ ] Update local task model
+- [ ] Write integration tests
+
+*** Task 4.13.2: Implement task unlinking
+- [ ] Create ~unlinkTaskFromOKR(taskId)~ function
+- [ ] Create ~Remove~ activity
+- [ ] Post to outbox
+- [ ] Clear local link references
+- [ ] Update OKR task count
+
+*** Task 4.13.3: Display linked tasks in OKR view
+- [ ] Create ~LinkedTasks~ component
+- [ ] Fetch tasks linked to OKR
+- [ ] Display task list with status
+- [ ] Allow quick link/unlink
+- [ ] Show task contribution to OKR
+
+** OKR-013.14: Team and Project Structure
+*** Task 4.14.1: Implement Team discovery
+- [ ] Create ~discoverTeam(url)~ function
+- [ ] Fetch Team actor
+- [ ] Parse ~members~ collection
+- [ ] Parse ~subteams~ collection
+- [ ] Parse ~parentTeam~ reference
+- [ ] Cache team data
+
+*** Task 4.14.2: Implement Project configuration
+- [ ] Create ~discoverProject(url)~ function
+- [ ] Fetch Project actor
+- [ ] Parse ~sendPatchesTo~ reference
+- [ ] Parse ~forks~ collection
+- [ ] Check ~isArchived~ status
+- [ ] Store project config
+
+*** Task 4.14.3: Implement membership management
+- [ ] Create ~requestTeamMembership(team)~ function
+- [ ] Send ~Join~ activity
+- [ ] Handle ~Accept~ with Grant
+- [ ] Store team membership
+- [ ] Display membership status
+
+* Phase 5: Org Mode Parser/Serializer
+
+** OKR-013.15: uniorg Integration
+*** Task 5.15.1: Create unified processor setup
+- [ ] Create ~createOrgProcessor()~ function
+- [ ] Configure ~unified()~ with ~uniorg-parse~
+- [ ] Add ~uniorg-extract-keywords~ plugin
+- [ ] Set up processor caching
+- [ ] Export processor from ~lib/org-mode/processor.ts~
+
+*** Task 5.15.2: Implement Org file parsing
+- [ ] Create ~parseOrgFile(content)~ function
+- [ ] Run processor on content
+- [ ] Extract AST
+- [ ] Extract keywords
+- [ ] Handle parse errors
+- [ ] Return structured result
+- [ ] Write unit tests
+
+*** Task 5.15.3: Implement Org file serialization
+- [ ] Create ~serializeOrgFile(ast)~ function
+- [ ] Use ~uniorg-stringify~
+- [ ] Preserve formatting
+- [ ] Handle special characters
+- [ ] Write unit tests
+
+** OKR-013.16: Headline Extraction
+*** Task 5.16.1: Create headline finder
+- [ ] Create ~findHeadlines(ast, filters)~ function
+- [ ] Filter by level
+- [ ] Filter by tags
+- [ ] Filter by property values
+- [ ] Return array of headlines
+- [ ] Write unit tests
+
+*** Task 5.16.2: Create property extractor
+- [ ] Create ~extractProperties(headline)~ function
+- [ ] Parse property drawer
+- [ ] Convert to key-value object
+- [ ] Handle missing drawer
+- [ ] Type-coerce known properties
+- [ ] Write unit tests
+
+*** Task 5.16.3: Create tag extractor
+- [ ] Create ~extractTags(headline)~ function
+- [ ] Parse tag syntax
+- [ ] Normalize tag names
+- [ ] Handle special tags (TODO, DONE)
+- [ ] Return tag array
+- [ ] Write unit tests
+
+** OKR-013.17: Model Transformation
+*** Task 5.17.1: Create Org → OKR Model transformer
+- [ ] Create ~orgToOKRModel(ast)~ function
+- [ ] Extract file keywords as metadata
+- [ ] Find objective headlines
+- [ ] Transform each objective
+- [ ] Find key result headlines
+- [ ] Link KRs to objectives
+- [ ] Find task headlines
+- [ ] Link tasks to OKRs
+- [ ] Return complete OKRModel
+- [ ] Write integration tests
+
+*** Task 5.17.2: Create OKR Model → Org transformer
+- [ ] Create ~okrModelToOrg(model)~ function
+- [ ] Generate file keywords
+- [ ] Create objective headlines
+- [ ] Create property drawers
+- [ ] Create key result headlines
+- [ ] Create task headlines
+- [ ] Serialize to Org string
+- [ ] Write integration tests
+
+*** Task 5.17.3: Create incremental update system
+- [ ] Create ~updateHeadline(headline, changes)~ function
+- [ ] Update title if changed
+- [ ] Update properties if changed
+- [ ] Update tags if changed
+- [ ] Preserve content
+- [ ] Return updated AST
+- [ ] Write unit tests
+
+** OKR-013.18: Content Handling
+*** Task 5.18.1: Implement HTML ↔ Org conversion
+- [ ] Create ~htmlToOrg(html)~ function
+- [ ] Use ~uniorg-rehype~ for conversion
+- [ ] Handle common HTML elements
+- [ ] Preserve formatting
+- [ ] Create ~orgToHtml(org)~ function
+- [ ] Write unit tests
+
+*** Task 5.18.2: Implement attachment handling
+- [ ] Create ~extractAttachments(headline)~ function
+- [ ] Parse ~Attachments~ drawer
+- [ ] Extract file/org links
+- [ ] Parse attachment metadata
+- [ ] Return attachment array
+- [ ] Write unit tests
+
+*** Task 5.18.3: Implement logbook handling
+- [ ] Create ~extractLogbook(headline)~ function
+- [ ] Parse ~LOGBOOK~ drawer
+- [ ] Extract clock entries
+- [ ] Calculate total time
+- [ ] Parse state changes
+- [ ] Return logbook data
+- [ ] Write unit tests
+
+* Phase 6: Integration & Testing
+
+** OKR-013.19: Sync Manager
+*** Task 6.19.1: Create sync state management
+- [ ] Create ~SyncState~ store
+- [ ] Track last sync timestamp
+- [ ] Track pending activities queue
+- [ ] Track sync errors
+- [ ] Track conflict state
+- [ ] Export sync store
+
+*** Task 6.19.2: Implement activity queue
+- [ ] Create ~ActivityQueue~ class
+- [ ] Enqueue activities
+- [ ] Dequeue for processing
+- [ ] Retry failed activities
+- [ ] Implement exponential backoff
+- [ ] Persist queue to localStorage
+- [ ] Write unit tests
+
+*** Task 6.19.3: Implement sync trigger
+- [ ] Create ~triggerSync()~ function
+- [ ] Check online status
+- [ ] Process activity queue
+- [ ] Fetch inbox updates
+- [ ] Update sync state
+- [ ] Handle sync errors
+- [ ] Write integration tests
+
+*** Task 6.19.4: Implement conflict detection
+- [ ] Create ~detectConflicts(local, remote)~ function
+- [ ] Compare modification timestamps
+- [ ] Compare content hashes
+- [ ] Identify conflicting fields
+- [ ] Return conflict report
+- [ ] Write unit tests
+
+*** Task 6.19.5: Implement conflict resolution
+- [ ] Create ~resolveConflict(conflict, strategy)~ function
+- [ ] Support "last-write-wins"
+- [ ] Support "manual" resolution
+- [ ] Support "merge" for non-conflicting
+- [ ] Update both local and remote
+- [ ] Write integration tests
+
+** OKR-013.20: UI Integration
+*** Task 6.20.1: Create ActivityPub status indicator
+- [ ] Create ~APStatus~ component
+- [ ] Show connection status
+- [ ] Show sync status
+- [ ] Show pending activities count
+- [ ] Display errors
+- [ ] Add co-located CSS
+
+*** Task 6.20.2: Create federation settings panel
+- [ ] Create ~FederationSettings.svelte~ component
+- [ ] Configure actor URL
+- [ ] Configure ForgeFed project
+- [ ] Manage passkeys
+- [ ] View active Grants
+- [ ] Test connectivity
+- [ ] Add co-located CSS
+
+*** Task 6.20.3: Create Org file editor integration
+- [ ] Create ~OrgEditor.svelte~ component
+- [ ] Integrate Org mode parser
+- [ ] Display parsed OKRs
+- [ ] Allow inline editing
+- [ ] Serialize changes back to Org
+- [ ] Show syntax highlighting
+- [ ] Add co-located CSS
+
+*** Task 6.20.4: Create activity log viewer
+- [ ] Create ~ActivityLog.svelte~ component
+- [ ] Display sent activities
+- [ ] Display received activities
+- [ ] Filter by type
+- [ ] Show activity details
+- [ ] Add co-located CSS
+
+** OKR-013.21: Testing
+
+*** Task 6.21.1: Create unit test suite
+- [ ] Set up Vitest configuration
+- [ ] Write tests for type definitions
+- [ ] Write tests for transformers
+- [ ] Write tests for Org parser
+- [ ] Write tests for AP client
+- [ ] Write tests for ForgeFed adapter
+- [ ] Achieve >80% code coverage
+
+*** Task 6.21.2: Create integration test suite
+- [ ] Set up integration test framework
+- [ ] Mock ActivityPub server
+- [ ] Mock ForgeFed server
+- [ ] Test end-to-end flows
+- [ ] Test error scenarios
+- [ ] Test offline scenarios
+
+*** Task 6.21.3: Create E2E test suite
+- [ ] Set up Playwright
+- [ ] Test passkey registration
+- [ ] Test passkey authentication
+- [ ] Test OKR creation and federation
+- [ ] Test task-OKR linking
+- [ ] Test sync functionality
+- [ ] Test conflict resolution
+
+*** Task 6.21.4: Create test fixtures
+- [ ] Create sample Org files
+- [ ] Create sample ActivityPub activities
+- [ ] Create sample ForgeFed objects
+- [ ] Create mock server responses
+- [ ] Document fixture usage
+
+* Files to Create
+
+** Type Definitions
+- ~src/types/activitypub.ts~
+- ~src/types/forgefed.ts~
+- ~src/types/org.ts~
+- ~src/types/models.ts~
+- ~src/types/transformers.ts~
+
+** Core Modules
+- ~src/lib/activitypub/client.ts~
+- ~src/lib/activitypub/discovery.ts~
+- ~src/lib/activitypub/cache.ts~
+- ~src/lib/forgefed/ticket.ts~
+- ~src/lib/forgefed/grant.ts~
+- ~src/lib/forgefed/team.ts~
+- ~src/lib/org-mode/processor.ts~
+- ~src/lib/org-mode/transformers.ts~
+- ~src/lib/org-mode/headlines.ts~
+- ~src/lib/auth/passkey.ts~
+- ~src/lib/auth/session.ts~
+- ~src/lib/sync/manager.ts~
+- ~src/lib/sync/queue.ts~
+- ~src/lib/sync/conflicts.ts~
+- ~src/lib/container.ts~
+- ~src/lib/config.ts~
+
+** UI Components
+- ~src/components/federation/ActorConfig.svelte~
+- ~src/components/federation/PasskeyRegistration.svelte~
+- ~src/components/federation/PasskeyLogin.svelte~
+- ~src/components/federation/APStatus.svelte~
+- ~src/components/federation/FederationSettings.svelte~
+- ~src/components/federation/OrgEditor.svelte~
+- ~src/components/federation/ActivityLog.svelte~
+- ~src/components/federation/LinkedTasks.svelte~
+- ~src/components/federation/NotificationPanel.svelte~
+
+** Tests
+- ~src/lib/activitypub/*.test.ts~
+- ~src/lib/forgefed/*.test.ts~
+- ~src/lib/org-mode/*.test.ts~
+- ~src/lib/auth/*.test.ts~
+- ~src/lib/sync/*.test.ts~
+- ~tests/integration/*.test.ts~
+- ~tests/e2e/*.spec.ts~
+
+* Dependencies Summary
+
+** NPM Packages
+#+BEGIN_SRC json
+{
+  "dependencies": {
+    "uniorg-parse": "^latest",
+    "uniorg-stringify": "^latest",
+    "uniorg-rehype": "^latest",
+    "uniorg-extract-keywords": "^latest",
+    "unified": "^latest",
+    "@simplewebauthn/browser": "^latest",
+    "@simplewebauthn/types": "^latest"
+  },
+  "devDependencies": {
+    "@simplewebauthn/server": "^latest",
+    "@types/node": "^latest",
+    "vitest": "^latest",
+    "playwright": "^latest"
+  }
+}
+#+END_SRC
+
+** External Services
+- ActivityPub-compatible server (e.g., Mastodon, Pleroma, or custom)
+- ForgeFed-compatible forge (e.g., Forgejo, Gitea with ActivityPub)
+- Passkey authentication backend (custom or using library)
+
+* Implementation Order
+
+1. **Phase 1** (Week 1-2): Core infrastructure and types
+2. **Phase 2** (Week 3-4): Passkey authentication
+3. **Phase 3** (Week 5-6): ActivityPub client
+4. **Phase 4** (Week 7-8): ForgeFed extensions
+5. **Phase 5** (Week 9-10): Org mode parser/serializer
+6. **Phase 6** (Week 11-12): Integration and testing
+
+* Success Criteria
+
+- [ ] Users can register/login with passkeys
+- [ ] OKRs can be created in Org mode format
+- [ ] OKRs are federated via ActivityPub/ForgeFed
+- [ ] Tasks can be linked to OKRs
+- [ ] Changes sync bidirectionally
+- [ ] Offline changes queue and sync when online
+- [ ] Conflicts are detected and resolved
+- [ ] All tests pass with >80% coverage

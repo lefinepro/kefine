@@ -1,0 +1,165 @@
+#+TITLE: OKR-002 - OKR Store Implementation
+#+DATE: 2026-02-20
+#+STARTUP: overview
+
+* Overview
+Implement the Svelte store for managing OKR state, CRUD operations, progress calculation, and filtering.
+
+* Tasks
+
+** OKR-002.1: Create OKR Store Structure
+*** Task 2.1.1: Set up stores/okrs.js file
+- [ ] Create stores/okrs.js file
+- [ ] Import writable from 'svelte/store'
+- [ ] Define initial state object structure
+- [ ] Export empty store for testing
+
+*** Task 2.1.2: Define initial state
+- [ ] Create objectives array (empty)
+- [ ] Create keyResults array (empty)
+- [ ] Create okrLinks array (empty)
+- [ ] Create filters object (quarter, year, status, search)
+
+*** Task 2.1.3: Export store instance
+- [ ] Export okrsStore as writable store
+- [ ] Export helper getters for state access
+- [ ] Add JSDoc comments for store structure
+
+** OKR-002.2: Implement Objective CRUD
+*** Task 2.2.1: addObjective function
+- [ ] Create addObjective(objective) function
+- [ ] Generate unique ID for objective
+- [ ] Set createdAt and updatedAt timestamps
+- [ ] Add to objectives array using store update
+- [ ] Return created objective
+
+*** Task 2.2.2: updateObjective function
+- [ ] Create updateObjective(id, updates) function
+- [ ] Find objective by ID
+- [ ] Merge updates with existing data
+- [ ] Update updatedAt timestamp
+- [ ] Dispatch updated state
+
+*** Task 2.2.3: deleteObjective function
+- [ ] Create deleteObjective(id) function
+- [ ] Remove objective from array
+- [ ] Cascade delete associated key results
+- [ ] Remove associated links
+
+*** Task 2.2.4: getObjective function
+- [ ] Create getObjective(id) function
+- [ ] Return single objective by ID
+- [ ] Return undefined if not found
+
+*** Task 2.2.5: getAllObjectives function
+- [ ] Create getAllObjectives() function
+- [ ] Return all objectives array
+- [ ] Apply active filters if set
+
+** OKR-002.3: Implement Key Result CRUD
+*** Task 2.3.1: addKeyResult function
+- [ ] Create addKeyResult(keyResult) function
+- [ ] Generate unique ID for key result
+- [ ] Validate objectiveId exists
+- [ ] Set createdAt and updatedAt timestamps
+- [ ] Add to keyResults array
+
+*** Task 2.3.2: updateKeyResult function
+- [ ] Create updateKeyResult(id, updates) function
+- [ ] Find key result by ID
+- [ ] Merge updates with existing data
+- [ ] Update updatedAt timestamp
+- [ ] Recalculate progress if values changed
+
+*** Task 2.3.3: deleteKeyResult function
+- [ ] Create deleteKeyResult(id) function
+- [ ] Remove key result from array
+- [ ] Remove associated links
+- [ ] Recalculate parent objective progress
+
+*** Task 2.3.4: getKeyResult function
+- [ ] Create getKeyResult(id) function
+- [ ] Return single key result by ID
+- [ ] Return undefined if not found
+
+*** Task 2.3.5: getKeyResultsByObjective function
+- [ ] Create getKeyResultsByObjective(objectiveId) function
+- [ ] Filter key results by objectiveId
+- [ ] Return filtered array
+
+** OKR-002.4: Implement Progress Calculation
+*** Task 2.4.1: calculateKeyResultProgress function
+- [ ] Create calculateKeyResultProgress(kr) function
+- [ ] Handle percentage type: (current/target) * 100
+- [ ] Handle number type: (current/target) * 100
+- [ ] Handle boolean type: 0 or 100
+- [ ] Clamp result between 0-100
+- [ ] Return percentage value
+
+*** Task 2.4.2: calculateObjectiveProgress function
+- [ ] Create calculateObjectiveProgress(objectiveId) function
+- [ ] Get all key results for objective
+- [ ] Calculate individual KR progress
+- [ ] Apply weights if available
+- [ ] Return weighted average
+
+*** Task 2.4.3: calculateOverallProgress function
+- [ ] Create calculateOverallProgress(quarter, year) function
+- [ ] Filter objectives by quarter/year
+- [ ] Calculate each objective's progress
+- [ ] Return portfolio average
+
+*** Task 2.4.4: Support weighted progress
+- [ ] Check if KRs have weight property
+- [ ] Use weighted average formula
+- [ ] Fall back to simple average if no weights
+
+** OKR-002.5: Implement Filtering
+*** Task 2.5.1: filterByQuarter function
+- [ ] Create filterByQuarter(quarter) function
+- [ ] Filter objectives by quarter property
+- [ ] Update store filter state
+- [ ] Return filtered objectives
+
+*** Task 2.5.2: filterByYear function
+- [ ] Create filterByYear(year) function
+- [ ] Filter objectives by year property
+- [ ] Update store filter state
+- [ ] Return filtered objectives
+
+*** Task 2.5.3: filterByStatus function
+- [ ] Create filterByStatus(status) function
+- [ ] Filter objectives by status property
+- [ ] Update store filter state
+- [ ] Return filtered objectives
+
+*** Task 2.5.4: filterBySearch function
+- [ ] Create filterBySearch(query) function
+- [ ] Search in title and description
+- [ ] Case-insensitive matching
+- [ ] Return matching objectives
+
+** OKR-002.6: Implement Persistence
+*** Task 2.6.1: Save to localStorage
+- [ ] Create saveToLocalStorage() function
+- [ ] Serialize objectives and keyResults to JSON
+- [ ] Save to localStorage with key 'okr-data'
+- [ ] Handle storage quota errors
+
+*** Task 2.6.2: Load from localStorage
+- [ ] Create loadFromLocalStorage() function
+- [ ] Read from localStorage
+- [ ] Parse JSON data
+- [ ] Initialize store with loaded data
+- [ ] Handle parse errors gracefully
+
+*** Task 2.6.3: Auto-save on changes
+- [ ] Subscribe to store changes
+- [ ] Trigger save on every update
+- [ ] Debounce saves (500ms)
+
+* Dependencies
+- OKR-001 (Data Model)
+
+* Files to Create/Modify
+- stores/okrs.js

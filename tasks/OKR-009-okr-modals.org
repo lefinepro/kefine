@@ -1,0 +1,120 @@
+#+TITLE: OKR-009 - OKR Creation/Edit Modal
+#+DATE: 2026-02-20
+#+STARTUP: overview
+
+* Overview
+Create modals for creating and editing Objectives and Key Results.
+
+* Tasks
+
+** OKR-009.1: Create Objective Modal
+*** Task 9.1.1: Create component files
+- [ ] Create components/okrs/CreateObjectiveModal.svelte
+- [ ] Create CSS file
+
+*** Task 9.1.2: Add title input
+- [ ] Create text input
+- [ ] Mark as required
+- [ ] Add validation
+
+*** Task 9.1.3: Add description textarea
+- [ ] Create textarea element
+- [ ] Set rows (3-5)
+- [ ] Make optional
+
+*** Task 9.1.4: Add quarter selector
+- [ ] Create select dropdown
+- [ ] Add Q1-Q4 options
+
+*** Task 9.1.5: Add year selector
+- [ ] Create select dropdown
+- [ ] Generate year options
+
+*** Task 9.1.6: Add Save/Cancel actions
+- [ ] Create action buttons
+- [ ] Handle save
+- [ ] Handle cancel
+
+** OKR-009.2: Create Key Result Modal
+*** Task 9.2.1: Create component files
+- [ ] Create components/okrs/CreateKeyResultModal.svelte
+- [ ] Create CSS file
+
+*** Task 9.2.2: Add title input
+- [ ] Create text input
+- [ ] Mark as required
+
+*** Task 9.2.3: Add target type selector
+- [ ] Create select dropdown
+- [ ] Add number, percentage, boolean
+
+*** Task 9.2.4: Add target value input
+- [ ] Create number input
+- [ ] Set min/max constraints
+
+*** Task 9.2.5: Add unit input
+- [ ] Create text input
+- [ ] Add examples in placeholder
+
+*** Task 9.2.6: Add weight input
+- [ ] Create number input
+- [ ] Set default to 1
+- [ ] Explain weighting
+
+*** Task 9.2.7: Add parent objective selector
+- [ ] Create select dropdown
+- [ ] Populate with objectives
+
+*** Task 9.2.8: Add Save/Cancel actions
+- [ ] Create action buttons
+- [ ] Handle save
+- [ ] Handle cancel
+
+** OKR-009.3: Edit Objective Modal
+*** Task 9.3.1: Pre-fill existing data
+- [ ] Accept objective prop
+- [ ] Initialize form with values
+
+*** Task 9.3.2: Update all fields
+- [ ] Allow editing all fields
+- [ ] Maintain same structure as create
+
+*** Task 9.3.3: Validate changes
+- [ ] Validate required fields
+- [ ] Check for conflicts
+
+*** Task 9.3.4: Save updates
+- [ ] Call updateObjective
+- [ ] Close modal
+- [ ] Show success message
+
+** OKR-009.4: Edit Key Result Modal
+*** Task 9.4.1: Pre-fill existing data
+- [ ] Accept keyResult prop
+- [ ] Initialize form with values
+
+*** Task 9.4.2: Update all fields
+- [ ] Allow editing all fields
+- [ ] Maintain same structure as create
+
+*** Task 9.4.3: Validate changes
+- [ ] Validate required fields
+- [ ] Check currentValue <= targetValue
+
+*** Task 9.4.4: Save updates
+- [ ] Call updateKeyResult
+- [ ] Close modal
+- [ ] Show success message
+
+* Dependencies
+- OKR-002 (Store)
+
+* Files to Create/Modify
+- components/okrs/CreateObjectiveModal.svelte
+- components/okrs/CreateObjectiveModal.css
+- components/okrs/CreateKeyResultModal.svelte
+- components/okrs/CreateKeyResultModal.css
+- components/okrs/EditObjectiveModal.svelte
+- components/okrs/EditObjectiveModal.css
+- components/okrs/EditKeyResultModal.svelte
+- components/okrs/EditKeyResultModal.css

@@ -1,0 +1,120 @@
+#+TITLE: OKR-004 - ObjectiveCard Component
+#+DATE: 2026-02-20
+#+STARTUP: overview
+
+* Overview
+Create the ObjectiveCard custom element that displays individual objective details with progress and key results.
+Uses native HTML elements: <article>, <header>, <footer>, <progress>, <button>, etc.
+
+* Tasks
+
+** OKR-004.1: Card Structure
+*** Task 4.1.1: Create component files
+- [ ] Create components/okrs/okr-card.js (custom element)
+- [ ] Create components/okrs/okr-card.css
+- [ ] Extend HTMLElement class
+- [ ] Define customElements.define('okr-card')
+
+*** Task 4.1.2: Define properties
+- [ ] Add objective property (setter/getter)
+- [ ] Add keyResults property
+- [ ] Add progress property
+
+*** Task 4.1.3: Display title
+- [ ] Use <h3> element for title
+- [ ] Apply typography styles
+- [ ] Truncate long titles with text-overflow
+
+*** Task 4.1.4: Display description
+- [ ] Use <p> element for description
+- [ ] Apply secondary text styles
+- [ ] Limit to 3 lines with line-clamp
+
+** OKR-004.2: Progress Ring Integration
+*** Task 4.2.1: Use native <progress> or SVG
+- [ ] Option A: Use <progress> element with custom styling
+- [ ] Option B: Create inline <svg> for circular progress
+- [ ] Place in card header
+
+*** Task 4.2.2: Calculate progress
+- [ ] Get key results for objective
+- [ ] Calculate average progress
+- [ ] Set progress attribute
+
+*** Task 4.2.3: Display percentage
+- [ ] Use <span> for percentage text
+- [ ] Format as whole number
+- [ ] Add % symbol
+
+** OKR-004.3: Key Results List
+*** Task 4.3.1: Use native list elements
+- [ ] Use <ul> or <ol> for key results list
+- [ ] Use <li> for each key result
+- [ ] Place in card body
+
+*** Task 4.3.2: Map key results
+- [ ] Loop through keyResults array
+- [ ] Create <okr-key-result> custom element or <li>
+- [ ] Pass KR data via attributes
+
+*** Task 4.3.3: Show KR count
+- [ ] Use <small> or <span> for count label
+- [ ] Display "X Key Results"
+- [ ] Update dynamically
+
+*** Task 4.3.4: Add expand/collapse
+- [ ] Use <button type="button"> for toggle
+- [ ] Use aria-expanded attribute
+- [ ] Show/hide KR list with hidden attribute
+
+** OKR-004.4: Status Badge
+*** Task 4.4.1: Create badge element
+- [ ] Use <span> with status class
+- [ ] Position in card header
+- [ ] Use aria-label for accessibility
+
+*** Task 4.4.2: Color coding
+- [ ] Active: green background
+- [ ] Completed: blue background
+- [ ] Archived: gray background
+
+*** Task 4.4.3: Display status text
+- [ ] Capitalize status value
+- [ ] Apply badge text styles
+
+** OKR-004.5: Card Actions
+*** Task 4.5.1: Add edit button
+- [ ] Create <button type="button"> with icon
+- [ ] Dispatch custom event on click
+- [ ] Position in corner
+
+*** Task 4.5.2: Add delete button
+- [ ] Create <button type="button"> with icon
+- [ ] Show confirmation dialog
+- [ ] Dispatch custom event
+
+*** Task 4.5.3: Add archive toggle
+- [ ] Create <button type="button"> for archive/unarchive
+- [ ] Toggle objective status
+- [ ] Update store via event
+
+** OKR-004.6: Hover Effects
+*** Task 4.6.1: Add hover shadow
+- [ ] Increase box-shadow on :hover
+- [ ] Use CSS :hover pseudo-class
+
+*** Task 4.6.2: Add scale transform
+- [ ] Apply transform: scale(1.02)
+- [ ] Add transition property
+
+*** Task 4.6.3: Smooth transitions
+- [ ] Set transition duration (250ms)
+- [ ] Use ease timing function
+
+* Dependencies
+- OKR-005 (KeyResultRow custom element or native <li>)
+- OKR-006 (ProgressRing - inline SVG)
+
+* Files to Create/Modify
+- components/okrs/okr-card.js
+- components/okrs/okr-card.css

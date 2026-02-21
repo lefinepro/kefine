@@ -1,0 +1,87 @@
+#+TITLE: OKR-010 - OKR Dashboard Views
+#+DATE: 2026-02-20
+#+STARTUP: overview
+
+* Overview
+Create dashboard views for OKR overview, quarter view, year view, and personal OKRs.
+
+* Tasks
+
+** OKR-010.1: Overview Dashboard
+*** Task 10.1.1: Create component files
+- [ ] Create components/okrs/OKRDashboard.svelte
+- [ ] Create CSS file
+
+*** Task 10.1.2: Show overall progress
+- [ ] Calculate portfolio progress
+- [ ] Display in large progress ring
+- [ ] Add label
+
+*** Task 10.1.3: Display active objectives count
+- [ ] Count active objectives
+- [ ] Display as stat card
+
+*** Task 10.1.4: Show completion rate
+- [ ] Calculate completion rate
+- [ ] Display as percentage
+
+*** Task 10.1.5: Recent activity feed
+- [ ] Get recent changes
+- [ ] Display as list
+- [ ] Add timestamps
+
+** OKR-010.2: Quarter View
+*** Task 10.2.1: Focus on single quarter
+- [ ] Add quarter selector
+- [ ] Filter to selected quarter
+
+*** Task 10.2.2: Show all objectives
+- [ ] Display objectives for quarter
+- [ ] Use grid layout
+
+*** Task 10.2.3: Aggregate progress
+- [ ] Calculate quarter progress
+- [ ] Display summary
+
+*** Task 10.2.4: Compare with previous
+- [ ] Get previous quarter data
+- [ ] Show comparison
+- [ ] Highlight changes
+
+** OKR-010.3: Year View
+*** Task 10.3.1: Show all quarters
+- [ ] Display 4 quarter sections
+- [ ] Show objectives in each
+
+*** Task 10.3.2: Year-over-year comparison
+- [ ] Compare with previous year
+- [ ] Show trends
+
+*** Task 10.3.3: Trend visualization
+- [ ] Create simple chart
+- [ ] Show progress over time
+
+*** Task 10.3.4: Annual summary stats
+- [ ] Calculate yearly totals
+- [ ] Display statistics
+
+** OKR-010.4: My OKRs View
+*** Task 10.4.1: Filter to user's tasks
+- [ ] Get user's linked tasks
+- [ ] Find contributing OKRs
+
+*** Task 10.4.2: Show contributing OKRs
+- [ ] Display relevant OKRs
+- [ ] Highlight user's contribution
+
+*** Task 10.4.3: Personal progress view
+- [ ] Show personal progress
+- [ ] Display task completion
+
+* Dependencies
+- OKR-003 (OKRIndex)
+- OKR-004 (ObjectiveCard)
+
+* Files to Create/Modify
+- components/okrs/OKRDashboard.svelte
+- components/okrs/OKRDashboard.css

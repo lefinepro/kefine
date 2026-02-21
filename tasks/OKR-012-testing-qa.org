@@ -1,0 +1,98 @@
+#+TITLE: OKR-012 - Testing & QA
+#+DATE: 2026-02-20
+#+STARTUP: overview
+
+* Overview
+Comprehensive testing suite for OKR features including unit tests, component tests, integration tests, and accessibility testing.
+
+* Tasks
+
+** OKR-012.1: Unit Tests for Store
+*** Task 12.1.1: Test objective CRUD
+- [ ] Test addObjective
+- [ ] Test updateObjective
+- [ ] Test deleteObjective
+- [ ] Test getObjective
+
+*** Task 12.1.2: Test key result CRUD
+- [ ] Test addKeyResult
+- [ ] Test updateKeyResult
+- [ ] Test deleteKeyResult
+- [ ] Test getKeyResult
+
+*** Task 12.1.3: Test progress calculation
+- [ ] Test calculateKeyResultProgress
+- [ ] Test calculateObjectiveProgress
+- [ ] Test calculateOverallProgress
+- [ ] Test weighted progress
+
+*** Task 12.1.4: Test filtering functions
+- [ ] Test filterByQuarter
+- [ ] Test filterByYear
+- [ ] Test filterByStatus
+- [ ] Test filterBySearch
+
+** OKR-012.2: Component Tests
+*** Task 12.2.1: Test OKRIndex rendering
+- [ ] Test with objectives
+- [ ] Test empty state
+- [ ] Test loading state
+
+*** Task 12.2.2: Test ObjectiveCard rendering
+- [ ] Test card displays correctly
+- [ ] Test progress ring
+- [ ] Test actions
+
+*** Task 12.2.3: Test KeyResultRow interactions
+- [ ] Test slider interaction
+- [ ] Test edit mode
+- [ ] Test value display
+
+*** Task 12.2.4: Test ProgressRing animation
+- [ ] Test ring renders
+- [ ] Test progress animation
+- [ ] Test color variants
+
+** OKR-012.3: Integration Tests
+*** Task 12.3.1: Test task-OKR linking flow
+- [ ] Create task
+- [ ] Link to OKR
+- [ ] Verify link
+- [ ] Unlink
+
+*** Task 12.3.2: Test progress updates
+- [ ] Update KR progress
+- [ ] Verify objective progress
+- [ ] Verify dashboard updates
+
+*** Task 12.3.3: Test filter combinations
+- [ ] Apply multiple filters
+- [ ] Verify results
+- [ ] Clear filters
+
+** OKR-012.4: Accessibility Tests
+*** Task 12.4.1: Keyboard navigation
+- [ ] Test Tab navigation
+- [ ] Test Enter/Space activation
+- [ ] Test Esc to close
+
+*** Task 12.4.2: Screen reader compatibility
+- [ ] Test with NVDA/JAWS
+- [ ] Verify ARIA labels
+- [ ] Check announcements
+
+*** Task 12.4.3: Focus management
+- [ ] Test focus trapping in modals
+- [ ] Test focus restoration
+- [ ] Test visible focus indicators
+
+*** Task 12.4.4: ARIA labels
+- [ ] Add aria-label to buttons
+- [ ] Add aria-describedby where needed
+- [ ] Verify with validator
+
+* Dependencies
+- All previous OKR features
+
+* Files to Create/Modify
+- tests/okr/*.test.js
