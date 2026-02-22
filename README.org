@@ -3,18 +3,19 @@
 #+STARTUP: overview
 
 * Overview
-OKR-focused task dashboard built with Svelte, Vite (Rolldown), and TAC (Token-Atom-Component) styles methodology.
+OKR-focused task dashboard built with Svelte 5, Vite, TypeScript, and TAC (Token-Atom-Component) styles methodology.
 
 * Quick Start
 #+BEGIN_SRC shell
-cd okr-task-dashboard
-pnpm install
-pnpm dev
+cd kefine
+bun install
+bun run dev
 #+END_SRC
 
 * Documentation
-- [[okr-implementation-plan.org][Implementation Plan]]
-- [[okr-tasks.org][Task Breakdown]]
+- [[tasks/INDEX.org][Task Index]]
+- [[tasks/OKR-001-data-model.org][Data Model]]
+- [[tasks/OKR-002-store-implementation.org][Store Implementation]]
 
 * Features
 - OKR tracking with progress visualization
@@ -26,6 +27,38 @@ pnpm dev
 
 * Tech Stack
 - **Frontend:** Svelte 5
-- **Build:** Vite with Rolldown
+- **Language:** TypeScript (strict mode)
+- **Build:** Vite
+- **Package Manager:** Bun
+- **Linting:** Oxlint
 - **Styling:** TAC (Token-Atom-Component) CSS methodology
-- **Package Manager:** pnpm
+
+* Scripts
+| Command | Description |
+|---------+-------------|
+| ~bun run dev~ | Start development server |
+| ~bun run build~ | Build for production |
+| ~bun run preview~ | Preview production build |
+| ~bun run lint~ | Run Oxlint |
+| ~bun run lint:fix~ | Run Oxlint with auto-fix |
+| ~bun run check~ | Run TypeScript type check |
+
+* Project Structure
+#+BEGIN_SRC text
+kefine/
+├── src/
+│   ├── app.html          # HTML template
+│   ├── app.css           # Global styles (TAC)
+│   ├── lib/
+│   │   ├── types/        # TypeScript type definitions
+│   │   ├── stores/       # Svelte stores
+│   │   ├── utils/        # Utility functions
+│   │   └── components/   # Svelte components
+│   └── routes/           # SvelteKit routes
+├── tasks/                # Task definitions (Org mode)
+├── package.json
+├── tsconfig.json
+├── vite.config.ts
+├── svelte.config.js
+└── oxlint.json
+#+END_SRC
