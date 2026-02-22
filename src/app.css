@@ -122,7 +122,19 @@ skeleton-line,
 kr-type-badge,
 kr-title,
 kr-progress-bar,
-kr-progress-fill {
+kr-progress-fill,
+task-count,
+task-item-content,
+task-item-meta,
+task-priority-dot,
+task-item-title,
+task-status-badge,
+task-due-date,
+task-okr-count,
+task-repo-count,
+task-item-actions,
+task-okr-tags,
+task-okr-tag {
   display: block;
 }
 

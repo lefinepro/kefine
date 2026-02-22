@@ -1,13 +1,15 @@
 <script lang="ts">
   import { okrStore } from '$lib/stores/okrs';
+  import { taskStore } from '$lib/stores/tasks';
   import { untrack } from 'svelte';
-  import type { Objective, KeyResult, Quarter } from '$lib/types/okr';
+  import type { Objective, KeyResult, Task, Quarter } from '$lib/types/okr';
   import { getQuartersList, getYearsList, getCurrentQuarter } from '$lib/utils/helpers';
   import { formatProgress } from '$lib/utils/formatters';
   import ObjectiveCard from './ObjectiveCard.svelte';
   import ObjectiveModal from './ObjectiveModal.svelte';
   import KeyResultModal from './KeyResultModal.svelte';
   import ProgressRing from './ProgressRing.svelte';
+  import AdvancedTaskModal from '$lib/components/tasks/AdvancedTaskModal.svelte';
 
   /** Pure progress calculation that doesn't mutate store state */
   function calcKRProgress(kr: KeyResult): number {
@@ -29,6 +31,7 @@
   // storeData is updated reactively via the store subscription below
   let objectives: Objective[] = $state([]);
   let keyResults: KeyResult[] = $state([]);
+  let tasks: Task[] = $state([]);
   let isLoading = $state(true);
 
   // Modal state
@@ -37,6 +40,8 @@
   let showKeyResultModal = $state(false);
   let keyResultObjectiveId: string | undefined = $state(undefined);
   let editingKeyResult: KeyResult | undefined = $state(undefined);
+  let showTaskModal = $state(false);
+  let editingTask: Task | undefined = $state(undefined);
 
   // Filter state
   const { quarter: defaultQuarter, year: defaultYear } = getCurrentQuarter();
@@ -50,15 +55,24 @@
   // Load data once on mount
   $effect(() => {
     okrStore.loadFromLocalStorage();
+    taskStore.loadFromLocalStorage();
     // Subscribe to store changes — use untrack to safely update $state from store subscription
-    const unsubscribe = okrStore.subscribe((s) => {
+    const unsubscribeOKR = okrStore.subscribe((s) => {
       untrack(() => {
         objectives = s.objectives;
         keyResults = s.keyResults;
       });
     });
+    const unsubscribeTasks = taskStore.subscribe((s) => {
+      untrack(() => {
+        tasks = s.tasks;
+      });
+    });
     isLoading = false;
-    return unsubscribe;
+    return () => {
+      unsubscribeOKR();
+      unsubscribeTasks();
+    };
   });
 
   const filteredObjectives = $derived(
@@ -114,6 +128,28 @@
     editingKeyResult = undefined;
   }
 
+  function openCreateTask() {
+    editingTask = undefined;
+    showTaskModal = true;
+  }
+
+  function openEditTask(task: Task) {
+    editingTask = task;
+    showTaskModal = true;
+  }
+
+  function closeTaskModal() {
+    showTaskModal = false;
+    editingTask = undefined;
+  }
+
+  function handleDeleteTask(task: Task) {
+    if (confirm(`Delete task "${task.title}"?`)) {
+      taskStore.deleteTask(task.id);
+      taskStore.saveToLocalStorage();
+    }
+  }
+
   function clearFilters() {
     filterQuarter = '';
     filterYear = '';
@@ -155,6 +191,10 @@
         <button type="button" data-variant="muted" onclick={clearFilters}>Clear filters</button>
       {/if}
     </fieldset>
+
+    <button type="button" data-variant="ghost" onclick={openCreateTask}>
+      + New Task
+    </button>
 
     <button type="button" data-variant="primary" onclick={openCreateObjective}>
       + New Objective
@@ -215,6 +255,53 @@
       {/each}
     </ul>
   {/if}
+
+  <!-- Tasks Section -->
+  {#if tasks.length > 0}
+    <section class="task-section" aria-label="Tasks">
+      <header class="task-section-header">
+        <h2 class="task-section-title">Tasks</h2>
+        <task-count>{tasks.length} task{tasks.length !== 1 ? 's' : ''}</task-count>
+      </header>
+      <ul class="task-list" aria-label="Task list">
+        {#each tasks as task (task.id)}
+          <li class="task-item" data-status={task.status}>
+            <task-item-content>
+              <task-item-meta>
+                <task-priority-dot style="background: var(--priority-{task.priority})" aria-label="Priority: {task.priority}"></task-priority-dot>
+                <task-item-title>{task.title}</task-item-title>
+                <task-status-badge data-status={task.status}>{task.status.replace('_', ' ')}</task-status-badge>
+              </task-item-meta>
+              {#if task.dueDate}
+                <task-due-date>Due: {task.dueDate}{task.dueTime ? ` at ${task.dueTime}` : ''}</task-due-date>
+              {/if}
+              {#if task.okrLinks.length > 0}
+                <task-okr-count>{task.okrLinks.length} OKR link{task.okrLinks.length !== 1 ? 's' : ''}</task-okr-count>
+              {/if}
+              {#if task.repositoryLinks.length > 0}
+                <task-repo-count>{task.repositoryLinks.length} repo link{task.repositoryLinks.length !== 1 ? 's' : ''}</task-repo-count>
+              {/if}
+            </task-item-content>
+            <task-item-actions>
+              <button
+                type="button"
+                data-variant="action"
+                onclick={() => openEditTask(task)}
+                aria-label="Edit task"
+              >Edit</button>
+              <button
+                type="button"
+                data-variant="action"
+                data-danger
+                onclick={() => handleDeleteTask(task)}
+                aria-label="Delete task"
+              >Delete</button>
+            </task-item-actions>
+          </li>
+        {/each}
+      </ul>
+    </section>
+  {/if}
 </section>
 
 <!-- Objective Modal -->
@@ -234,3 +321,143 @@
     onClose={closeKeyResultModal}
   />
 {/if}
+
+<!-- Advanced Task Modal -->
+{#if showTaskModal}
+  <AdvancedTaskModal
+    task={editingTask}
+    {objectives}
+    {keyResults}
+    onClose={closeTaskModal}
+  />
+{/if}
+
+<style>
+  /* task-section: tasks list below the OKR grid */
+  .task-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--okr-space-3);
+    background: var(--okr-color-bg-card);
+    border-radius: var(--okr-radius-xl);
+    box-shadow: var(--okr-shadow-sm);
+    padding: var(--okr-space-4) var(--okr-space-6);
+  }
+
+  .task-section-header {
+    display: flex;
+    align-items: center;
+    gap: var(--okr-space-3);
+  }
+
+  .task-section-title {
+    font-size: var(--okr-font-size-lg);
+    font-weight: 700;
+    margin: 0;
+  }
+
+  task-count {
+    display: inline-block;
+    font-size: var(--okr-font-size-xs);
+    color: var(--okr-color-muted);
+    font-weight: 600;
+  }
+
+  .task-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--okr-space-2);
+  }
+
+  .task-item {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--okr-space-3);
+    padding: var(--okr-space-3) var(--okr-space-4);
+    border-radius: var(--okr-radius-md);
+    border: 1px solid var(--okr-color-border-light);
+    background: var(--okr-color-bg);
+    transition: border-color 150ms;
+  }
+
+  .task-item:hover {
+    border-color: var(--okr-color-border);
+  }
+
+  .task-item[data-status="completed"] {
+    opacity: 0.65;
+  }
+
+  task-item-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--okr-space-1);
+    flex: 1;
+    min-width: 0;
+  }
+
+  task-item-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--okr-space-2);
+  }
+
+  task-priority-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    --priority-high: #ef4444;
+    --priority-medium: #f59e0b;
+    --priority-low: #22c55e;
+  }
+
+  task-item-title {
+    display: block;
+    font-size: var(--okr-font-size-sm);
+    font-weight: 600;
+    color: var(--okr-color-text);
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  task-status-badge {
+    display: inline-block;
+    font-size: var(--okr-font-size-xs);
+    font-weight: 600;
+    text-transform: capitalize;
+    padding: 0.1rem 0.4rem;
+    border-radius: var(--okr-radius-full);
+    flex-shrink: 0;
+    background: #e5e7eb;
+    color: var(--okr-color-muted);
+  }
+
+  task-status-badge[data-status="in_progress"] {
+    background: rgba(59, 130, 246, 0.1);
+    color: var(--okr-color-primary);
+  }
+
+  task-status-badge[data-status="completed"] {
+    background: rgba(34, 197, 94, 0.1);
+    color: var(--okr-color-success);
+  }
+
+  task-due-date,
+  task-okr-count,
+  task-repo-count {
+    display: block;
+    font-size: var(--okr-font-size-xs);
+    color: var(--okr-color-muted);
+  }
+
+  task-item-actions {
+    display: flex;
+    gap: var(--okr-space-1);
+    flex-shrink: 0;
+  }
+</style>

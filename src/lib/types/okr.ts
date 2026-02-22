@@ -40,12 +40,21 @@ export interface OKRLink {
   createdAt: Date;
 }
 
+export interface RepositoryLink {
+  id: string;
+  url: string;
+  name?: string;
+}
+
 export interface Task {
   id: string;
   title: string;
   description?: string;
   status: TaskStatus;
   priority: Priority;
+  dueDate?: string; // ISO date string YYYY-MM-DD
+  dueTime?: string; // HH:MM
+  repositoryLinks: RepositoryLink[];
   createdAt: Date;
   updatedAt: Date;
   okrLinks: OKRLink[];
