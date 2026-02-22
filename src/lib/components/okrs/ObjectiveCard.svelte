@@ -54,15 +54,14 @@
   <header class="okr-card-header">
     <hgroup class="okr-card-title-row">
       <ProgressRing {progress} size="md" />
-      <section class="okr-card-meta">
+      <okr-card-meta>
         <h3>{objective.title}</h3>
-        <span>{formatQuarter(objective.quarter, objective.year)}</span>
-      </section>
-      <span
-        class="okr-status-badge"
+        <okr-quarter>{formatQuarter(objective.quarter, objective.year)}</okr-quarter>
+      </okr-card-meta>
+      <okr-status-badge
         style="background: {statusColor}20; color: {statusColor}"
         aria-label="Status: {formatStatus(objective.status)}"
-      >{formatStatus(objective.status)}</span>
+      >{formatStatus(objective.status)}</okr-status-badge>
     </hgroup>
 
     {#if objective.description}
@@ -72,7 +71,7 @@
 
   <section class="okr-card-body">
     <header class="okr-kr-header">
-      <span class="okr-kr-count">{keyResults.length} Key Result{keyResults.length !== 1 ? 's' : ''}</span>
+      <okr-kr-count>{keyResults.length} Key Result{keyResults.length !== 1 ? 's' : ''}</okr-kr-count>
       <button
         type="button"
         data-variant="expand"

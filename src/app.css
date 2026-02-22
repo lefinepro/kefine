@@ -37,35 +37,6 @@
   --okr-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --okr-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
   --okr-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
-
-  /* Legacy aliases — keep for backward compatibility */
-  --color-primary: var(--okr-color-primary);
-  --color-primary-hover: var(--okr-color-primary-hover);
-  --color-success: var(--okr-color-success);
-  --color-warning: var(--okr-color-warning);
-  --color-error: var(--okr-color-error);
-  --color-muted: var(--okr-color-muted);
-  --font-family: var(--okr-font-family);
-  --font-size-xs: var(--okr-font-size-xs);
-  --font-size-sm: var(--okr-font-size-sm);
-  --font-size-base: var(--okr-font-size-base);
-  --font-size-lg: var(--okr-font-size-lg);
-  --font-size-xl: var(--okr-font-size-xl);
-  --font-size-2xl: var(--okr-font-size-2xl);
-  --spacing-1: var(--okr-space-1);
-  --spacing-2: var(--okr-space-2);
-  --spacing-3: var(--okr-space-3);
-  --spacing-4: var(--okr-space-4);
-  --spacing-6: var(--okr-space-6);
-  --spacing-8: var(--okr-space-8);
-  --radius-sm: var(--okr-radius-sm);
-  --radius-md: var(--okr-radius-md);
-  --radius-lg: var(--okr-radius-lg);
-  --radius-xl: var(--okr-radius-xl);
-  --radius-full: var(--okr-radius-full);
-  --shadow-sm: var(--okr-shadow-sm);
-  --shadow-md: var(--okr-shadow-md);
-  --shadow-lg: var(--okr-shadow-lg);
 }
 
 /* ─── Reset ──────────────────────────────────────────────── */
@@ -110,7 +81,7 @@ img {
   display: block;
 }
 
-/* Semantic element resets — remove browser defaults for elements used as TAC tags */
+/* Semantic element resets — remove browser defaults */
 dialog {
   border: none;
   background: none;
@@ -132,14 +103,41 @@ figcaption {
   display: block;
 }
 
-
 ul, ol {
   list-style: none;
 }
 
-/* ─── TAC: Tag layer — semantic elements with classes ────── */
+/* Custom element display defaults */
+/* Block-level custom elements */
+okr-summary,
+okr-summary-text,
+okr-summary-label,
+okr-summary-value,
+okr-summary-count,
+okr-card-meta,
+okr-quarter,
+okr-status-badge,
+okr-kr-count,
+skeleton-line,
+kr-type-badge,
+kr-title,
+kr-progress-bar,
+kr-progress-fill {
+  display: block;
+}
 
-/* .okr-dashboard: top-level page container */
+/* Inline custom elements */
+kr-current,
+kr-sep,
+kr-target,
+hint,
+required-mark {
+  display: inline;
+}
+
+/* ─── TAC: Tag layer — page structure ────────────────────── */
+
+/* main.okr-dashboard: top-level page container */
 .okr-dashboard {
   display: block;
   max-width: 1200px;
@@ -147,7 +145,7 @@ ul, ol {
   padding: var(--okr-space-8);
 }
 
-/* .okr-header: page header */
+/* header.okr-header: page header */
 .okr-header {
   display: block;
   margin-bottom: var(--okr-space-8);
@@ -164,14 +162,14 @@ ul, ol {
   margin-top: var(--okr-space-2);
 }
 
-/* .okr-index: main OKR section */
+/* section.okr-index: main OKR section */
 .okr-index {
   display: flex;
   flex-direction: column;
   gap: var(--okr-space-6);
 }
 
-/* .okr-toolbar: filter + action row */
+/* nav.okr-toolbar: filter + action row */
 .okr-toolbar {
   display: flex;
   align-items: center;
@@ -190,7 +188,7 @@ ul, ol {
   }
 }
 
-/* .okr-filters: filter group inside toolbar */
+/* fieldset.okr-filters: filter group inside toolbar */
 .okr-filters {
   display: flex;
   align-items: center;
@@ -200,8 +198,8 @@ ul, ol {
   min-width: 0;
 }
 
-/* .okr-summary: overall progress summary */
-.okr-summary {
+/* okr-summary: overall progress summary (custom element) */
+okr-summary {
   display: flex;
   align-items: center;
   gap: var(--okr-space-4);
@@ -211,32 +209,29 @@ ul, ol {
   box-shadow: var(--okr-shadow-sm);
 }
 
-.okr-summary-text {
+okr-summary-text {
   display: flex;
   flex-direction: column;
   gap: var(--okr-space-1);
 }
 
-.okr-summary-label {
-  display: block;
+okr-summary-label {
   font-size: var(--okr-font-size-sm);
   color: var(--okr-color-muted);
 }
 
-.okr-summary-value {
-  display: block;
+okr-summary-value {
   font-size: var(--okr-font-size-2xl);
   font-weight: 700;
   color: var(--okr-color-text);
 }
 
-.okr-summary-count {
-  display: block;
+okr-summary-count {
   font-size: var(--okr-font-size-xs);
   color: var(--okr-color-muted);
 }
 
-/* .okr-grid: grid of objective cards */
+/* ul.okr-grid: grid of objective cards */
 .okr-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -255,7 +250,7 @@ ul, ol {
   }
 }
 
-/* .okr-empty: empty state */
+/* section.okr-empty: empty state */
 .okr-empty {
   display: block;
   text-align: center;
@@ -277,7 +272,7 @@ ul, ol {
   margin-bottom: var(--okr-space-4);
 }
 
-/* .okr-card: objective card (article) */
+/* article.okr-card: objective card */
 .okr-card {
   display: flex;
   flex-direction: column;
@@ -311,13 +306,14 @@ ul, ol {
   margin-bottom: var(--okr-space-2);
 }
 
-.okr-card-meta {
+/* okr-card-meta: title + quarter (custom element) */
+okr-card-meta {
   display: block;
   flex: 1;
   min-width: 0;
 }
 
-.okr-card-meta h3 {
+okr-card-meta h3 {
   font-size: var(--okr-font-size-base);
   font-weight: 700;
   color: var(--okr-color-text);
@@ -327,12 +323,14 @@ ul, ol {
   margin: 0;
 }
 
-.okr-card-meta span {
+/* okr-quarter: quarter/year label (custom element) */
+okr-quarter {
   font-size: var(--okr-font-size-xs);
   color: var(--okr-color-muted);
 }
 
-.okr-status-badge {
+/* okr-status-badge: status pill (custom element) */
+okr-status-badge {
   display: inline-block;
   font-size: var(--okr-font-size-xs);
   font-weight: 600;
@@ -366,7 +364,8 @@ ul, ol {
   margin-bottom: var(--okr-space-2);
 }
 
-.okr-kr-count {
+/* okr-kr-count: key results count label (custom element) */
+okr-kr-count {
   display: inline-block;
   font-size: var(--okr-font-size-xs);
   font-weight: 600;
@@ -389,7 +388,7 @@ ul, ol {
   background: var(--okr-color-bg);
 }
 
-/* .kr-row: key result list item (li) */
+/* li.kr-row: key result list item */
 .kr-row {
   display: flex;
   flex-direction: column;
@@ -409,7 +408,8 @@ ul, ol {
   gap: var(--okr-space-2);
 }
 
-.kr-type-badge {
+/* kr-type-badge: target type label (custom element) */
+kr-type-badge {
   display: inline-block;
   font-size: var(--okr-font-size-xs);
   font-weight: 600;
@@ -418,7 +418,8 @@ ul, ol {
   flex-shrink: 0;
 }
 
-.kr-title {
+/* kr-title: key result title (custom element) */
+kr-title {
   display: block;
   font-size: var(--okr-font-size-sm);
   font-weight: 600;
@@ -442,7 +443,8 @@ ul, ol {
   gap: var(--okr-space-2);
 }
 
-.kr-progress-bar {
+/* kr-progress-bar: progress track (custom element) */
+kr-progress-bar {
   display: block;
   flex: 1;
   height: 8px;
@@ -451,7 +453,8 @@ ul, ol {
   overflow: hidden;
 }
 
-.kr-progress-fill {
+/* kr-progress-fill: progress fill (custom element) */
+kr-progress-fill {
   display: block;
   height: 100%;
   border-radius: var(--okr-radius-full);
@@ -474,15 +477,22 @@ ul, ol {
   gap: var(--okr-space-1);
 }
 
-.kr-current {
+/* kr-current: current value highlight (custom element) */
+kr-current {
   display: inline;
   font-weight: 700;
   color: var(--okr-color-text);
 }
 
-.kr-sep {
+/* kr-sep: separator (custom element) */
+kr-sep {
   display: inline;
   color: var(--okr-color-border);
+}
+
+/* kr-target: target value (custom element) */
+kr-target {
+  display: inline;
 }
 
 .kr-edit-form {
@@ -499,7 +509,7 @@ ul, ol {
   gap: var(--okr-space-2);
 }
 
-/* .okr-modal: modal overlay */
+/* section.okr-modal: modal overlay */
 .okr-modal {
   display: flex;
   position: fixed;
@@ -551,7 +561,7 @@ ul, ol {
   margin-top: var(--okr-space-2);
 }
 
-/* .form-group: label + input grouping */
+/* p.form-group: label + input grouping */
 .form-group {
   display: flex;
   flex-direction: column;
@@ -564,7 +574,7 @@ ul, ol {
   gap: var(--okr-space-4);
 }
 
-/* .skeleton-card: loading placeholder */
+/* li.skeleton-card: loading placeholder */
 .skeleton-card {
   display: flex;
   flex-direction: column;
@@ -575,7 +585,8 @@ ul, ol {
   box-shadow: var(--okr-shadow-md);
 }
 
-.skeleton-line {
+/* skeleton-line: loading line placeholder (custom element) */
+skeleton-line {
   display: block;
   height: 1rem;
   background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
@@ -586,7 +597,7 @@ ul, ol {
 }
 
 /* TAC attribute variation: skeleton sizes */
-.skeleton-line[data-size="title"] {
+skeleton-line[data-size="title"] {
   height: 1.25rem;
   width: 60%;
 }
@@ -798,18 +809,21 @@ label {
   color: var(--okr-color-text-label);
 }
 
-label .hint {
+/* hint: inline hint text (custom element) */
+hint {
+  display: inline;
   font-weight: 400;
   color: var(--okr-color-muted);
   font-size: var(--okr-font-size-xs);
 }
 
+/* required-mark: required field indicator (custom element) */
+required-mark {
+  display: inline;
+  color: var(--okr-color-error);
+}
+
 small[role="alert"] {
   color: var(--okr-color-error);
   font-size: var(--okr-font-size-xs);
-}
-
-small.hint {
-  font-size: var(--okr-font-size-xs);
-  color: var(--okr-color-muted);
 }

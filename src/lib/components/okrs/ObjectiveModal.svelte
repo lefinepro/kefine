@@ -61,7 +61,7 @@
     <form onsubmit={(e) => { e.preventDefault(); handleSave(); }}>
       <section class="okr-modal-body">
         <p class="form-group">
-          <label for="obj-title">Title <span aria-hidden="true">*</span></label>
+          <label for="obj-title">Title <required-mark aria-hidden="true">*</required-mark></label>
           <input
             id="obj-title"
             type="text"

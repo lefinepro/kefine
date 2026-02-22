@@ -163,14 +163,14 @@
 
   <!-- Summary -->
   {#if filteredObjectives.length > 0}
-    <section class="okr-summary">
+    <okr-summary>
       <ProgressRing progress={overallProgress()} size="lg" />
-      <p class="okr-summary-text">
-        <span class="okr-summary-label">Overall Progress</span>
-        <span class="okr-summary-value">{formatProgress(overallProgress())}</span>
-        <span class="okr-summary-count">{filteredObjectives.length} objective{filteredObjectives.length !== 1 ? 's' : ''}</span>
-      </p>
-    </section>
+      <okr-summary-text>
+        <okr-summary-label>Overall Progress</okr-summary-label>
+        <okr-summary-value>{formatProgress(overallProgress())}</okr-summary-value>
+        <okr-summary-count>{filteredObjectives.length} objective{filteredObjectives.length !== 1 ? 's' : ''}</okr-summary-count>
+      </okr-summary-text>
+    </okr-summary>
   {/if}
 
   <!-- Loading state -->
@@ -178,9 +178,9 @@
     <ul class="okr-grid" aria-busy="true" aria-label="Loading...">
       {#each [1, 2, 3] as n (n)}
         <li class="skeleton-card" aria-hidden="true">
-          <span class="skeleton-line" data-size="title"></span>
-          <span class="skeleton-line"></span>
-          <span class="skeleton-line" style="width: 70%"></span>
+          <skeleton-line data-size="title"></skeleton-line>
+          <skeleton-line></skeleton-line>
+          <skeleton-line style="width: 70%"></skeleton-line>
         </li>
       {/each}
     </ul>

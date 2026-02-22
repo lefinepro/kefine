@@ -30,7 +30,7 @@
   }
 
   function startEdit() {
-    editValue = keyResult.currentValue; // capture current value when edit starts
+    editValue = keyResult.currentValue;
     editError = '';
     editMode = true;
   }
@@ -58,8 +58,8 @@
 
 <li class="kr-row">
   <header class="kr-header">
-    <span class="kr-type-badge" style="color: {typeColor}">{keyResult.targetType}</span>
-    <span class="kr-title">{keyResult.title}</span>
+    <kr-type-badge style="color: {typeColor}">{keyResult.targetType}</kr-type-badge>
+    <kr-title>{keyResult.title}</kr-title>
     {#if !editMode}
       <button type="button" data-variant="icon" aria-label="Edit key result" onclick={startEdit}>
         ✏️
@@ -72,16 +72,16 @@
   {/if}
 
   <figure class="kr-progress" aria-label="Progress bar {Math.round(progress)}%">
-    <span class="kr-progress-bar">
-      <span class="kr-progress-fill" style="width: {progress}%; background: {progressColor}"></span>
-    </span>
+    <kr-progress-bar>
+      <kr-progress-fill style="width: {progress}%; background: {progressColor}"></kr-progress-fill>
+    </kr-progress-bar>
     <figcaption class="kr-progress-pct">{Math.round(progress)}%</figcaption>
   </figure>
 
   <p class="kr-values">
-    <span class="kr-current">{formatValue(keyResult.currentValue, keyResult.unit)}</span>
-    <span class="kr-sep">/</span>
-    <span>{formatValue(keyResult.targetValue, keyResult.unit)}</span>
+    <kr-current>{formatValue(keyResult.currentValue, keyResult.unit)}</kr-current>
+    <kr-sep>/</kr-sep>
+    <kr-target>{formatValue(keyResult.targetValue, keyResult.unit)}</kr-target>
   </p>
 
   {#if !editMode && keyResult.targetType !== 'boolean'}

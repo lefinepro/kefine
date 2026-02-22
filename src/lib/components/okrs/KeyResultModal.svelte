@@ -87,7 +87,7 @@
       <section class="okr-modal-body">
         {#if !isEdit}
           <p class="form-group">
-            <label for="kr-objective">Parent Objective <span aria-hidden="true">*</span></label>
+            <label for="kr-objective">Parent Objective <required-mark aria-hidden="true">*</required-mark></label>
             <select
               id="kr-objective"
               aria-invalid={errors['objectiveId'] ? 'true' : undefined}
@@ -104,7 +104,7 @@
         {/if}
 
         <p class="form-group">
-          <label for="kr-title">Title <span aria-hidden="true">*</span></label>
+          <label for="kr-title">Title <required-mark aria-hidden="true">*</required-mark></label>
           <input
             id="kr-title"
             type="text"
@@ -187,7 +187,7 @@
         <p class="form-group">
           <label for="kr-weight">
             Weight
-            <span class="hint">(relative importance, default 1)</span>
+            <hint>(relative importance, default 1)</hint>
           </label>
           <input
             id="kr-weight"
