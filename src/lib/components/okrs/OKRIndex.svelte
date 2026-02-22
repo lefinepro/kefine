@@ -1,6 +1,6 @@
 <script lang="ts">
   import { okrStore } from '$lib/stores/okrs';
-  import type { OKRState } from '$lib/stores/okrs';
+  import { untrack } from 'svelte';
   import type { Objective, KeyResult, Quarter } from '$lib/types/okr';
   import { getQuartersList, getYearsList, getCurrentQuarter } from '$lib/utils/helpers';
   import { formatProgress } from '$lib/utils/formatters';
@@ -9,9 +9,26 @@
   import KeyResultModal from './KeyResultModal.svelte';
   import ProgressRing from './ProgressRing.svelte';
 
-  const emptyState: OKRState = { objectives: [], keyResults: [], okrLinks: [], filters: { quarter: null, year: null, status: null, search: '' } };
+  /** Pure progress calculation that doesn't mutate store state */
+  function calcKRProgress(kr: KeyResult): number {
+    if (kr.targetValue <= 0) return 0;
+    const raw = (kr.currentValue / kr.targetValue) * 100;
+    return Math.max(0, Math.min(100, raw));
+  }
 
-  let storeData: OKRState = $state(emptyState);
+  function calcObjectiveProgress(objectiveId: string, krs: KeyResult[]): number {
+    const objKRs = krs.filter((kr) => kr.objectiveId === objectiveId);
+    if (objKRs.length === 0) return 0;
+    const totalWeight = objKRs.reduce((s, kr) => s + kr.weight, 0);
+    if (totalWeight === 0) return 0;
+    const weighted = objKRs.reduce((s, kr) => s + (calcKRProgress(kr) * kr.weight) / totalWeight, 0);
+    return Math.max(0, Math.min(100, weighted));
+  }
+
+  // Use Svelte store auto-subscription with $ prefix (reactive, no manual subscribe needed)
+  // storeData is updated reactively via the store subscription below
+  let objectives: Objective[] = $state([]);
+  let keyResults: KeyResult[] = $state([]);
   let isLoading = $state(true);
 
   // Modal state
@@ -30,29 +47,22 @@
   const quarters = getQuartersList();
   const years = getYearsList();
 
-  // Subscribe to store
+  // Load data once on mount
   $effect(() => {
+    okrStore.loadFromLocalStorage();
+    // Subscribe to store changes — use untrack to safely update $state from store subscription
     const unsubscribe = okrStore.subscribe((s) => {
-      storeData = s;
+      untrack(() => {
+        objectives = s.objectives;
+        keyResults = s.keyResults;
+      });
     });
+    isLoading = false;
     return unsubscribe;
   });
 
-  $effect(() => {
-    okrStore.loadFromLocalStorage();
-    isLoading = false;
-  });
-
-  $effect(() => {
-    okrStore.setFilters({
-      quarter: filterQuarter ? filterQuarter : null,
-      year: filterYear ? filterYear : null,
-      search: filterSearch
-    });
-  });
-
   const filteredObjectives = $derived(
-    storeData.objectives.filter((obj) => {
+    objectives.filter((obj) => {
       if (filterQuarter && obj.quarter !== filterQuarter) return false;
       if (filterYear && obj.year !== filterYear) return false;
       if (filterSearch) {
@@ -68,13 +78,13 @@
   const overallProgress = $derived(() => {
     if (filteredObjectives.length === 0) return 0;
     const total = filteredObjectives.reduce((sum, obj) => {
-      return sum + okrStore.calculateObjectiveProgress(obj.id);
+      return sum + calcObjectiveProgress(obj.id, keyResults);
     }, 0);
     return total / filteredObjectives.length;
   });
 
   function getKeyResultsForObjective(objectiveId: string): KeyResult[] {
-    return storeData.keyResults.filter((kr) => kr.objectiveId === objectiveId);
+    return keyResults.filter((kr) => kr.objectiveId === objectiveId);
   }
 
   function openCreateObjective() {
@@ -227,7 +237,7 @@
   <KeyResultModal
     keyResult={editingKeyResult}
     objectiveId={keyResultObjectiveId}
-    objectives={storeData.objectives}
+    objectives={objectives}
     onClose={closeKeyResultModal}
   />
 {/if}

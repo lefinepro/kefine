@@ -17,7 +17,19 @@
 
   let expanded = $state(false);
 
-  const progress = $derived(okrStore.calculateObjectiveProgress(objective.id));
+  /** Pure progress calculation to avoid store update() calls in reactive context */
+  function calcProgress(): number {
+    if (keyResults.length === 0) return 0;
+    const totalWeight = keyResults.reduce((s, kr) => s + kr.weight, 0);
+    if (totalWeight === 0) return 0;
+    const weighted = keyResults.reduce((s, kr) => {
+      const p = kr.targetValue > 0 ? (kr.currentValue / kr.targetValue) * 100 : 0;
+      return s + (p * kr.weight) / totalWeight;
+    }, 0);
+    return Math.max(0, Math.min(100, weighted));
+  }
+
+  const progress = $derived(calcProgress());
   const statusColor = $derived(getStatusColor(objective.status));
 
   function handleDelete() {
