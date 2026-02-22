@@ -126,26 +126,18 @@
   const quarterPlaceholder = `All (current: ${defaultQuarter} ${defaultYear})`;
 </script>
 
-<section class="okr-index" aria-label="OKR Index">
+<okr-index aria-label="OKR Index">
   <!-- Toolbar -->
-  <div class="okr-index__toolbar">
-    <div class="okr-index__filters" role="group" aria-label="Filter objectives">
-      <select
-        class="filter-select"
-        bind:value={filterQuarter}
-        aria-label="Filter by quarter"
-      >
+  <okr-toolbar>
+    <okr-filters role="group" aria-label="Filter objectives">
+      <select bind:value={filterQuarter} aria-label="Filter by quarter">
         <option value="">{quarterPlaceholder}</option>
         {#each quarters as q (q.value)}
           <option value={q.value}>{q.label}</option>
         {/each}
       </select>
 
-      <select
-        class="filter-select"
-        bind:value={filterYear}
-        aria-label="Filter by year"
-      >
+      <select bind:value={filterYear} aria-label="Filter by year">
         <option value="">All Years</option>
         {#each years as y (y)}
           <option value={y}>{y}</option>
@@ -154,64 +146,63 @@
 
       <input
         type="search"
-        class="filter-search"
         bind:value={filterSearch}
         placeholder="Search objectives..."
         aria-label="Search objectives"
       />
 
       {#if hasActiveFilters}
-        <button type="button" class="btn-clear" onclick={clearFilters}>Clear filters</button>
+        <button type="button" data-variant="muted" onclick={clearFilters}>Clear filters</button>
       {/if}
-    </div>
+    </okr-filters>
 
-    <button type="button" class="btn-create" onclick={openCreateObjective}>
+    <button type="button" data-variant="primary" onclick={openCreateObjective}>
       + New Objective
     </button>
-  </div>
+  </okr-toolbar>
 
   <!-- Summary -->
   {#if filteredObjectives.length > 0}
-    <div class="okr-index__summary">
+    <okr-summary>
       <ProgressRing progress={overallProgress()} size="lg" />
-      <div class="okr-summary__text">
-        <span class="okr-summary__label">Overall Progress</span>
-        <span class="okr-summary__value">{formatProgress(overallProgress())}</span>
-        <span class="okr-summary__count">{filteredObjectives.length} objective{filteredObjectives.length !== 1 ? 's' : ''}</span>
-      </div>
-    </div>
+      <okr-summary-text>
+        <okr-summary-label>Overall Progress</okr-summary-label>
+        <okr-summary-value>{formatProgress(overallProgress())}</okr-summary-value>
+        <okr-summary-count>{filteredObjectives.length} objective{filteredObjectives.length !== 1 ? 's' : ''}</okr-summary-count>
+      </okr-summary-text>
+    </okr-summary>
   {/if}
 
   <!-- Loading state -->
   {#if isLoading}
-    <div class="okr-index__grid" aria-busy="true" aria-label="Loading...">
+    <okr-grid aria-busy="true" aria-label="Loading...">
       {#each [1, 2, 3] as n (n)}
-        <div class="skeleton-card" aria-hidden="true">
-          <div class="skeleton-line skeleton-line--title"></div>
-          <div class="skeleton-line skeleton-line--body"></div>
-          <div class="skeleton-line skeleton-line--body" style="width: 70%"></div>
-        </div>
+        <skeleton-card aria-hidden="true">
+          <skeleton-line size="title"></skeleton-line>
+          <skeleton-line></skeleton-line>
+          <skeleton-line style="width: 70%"></skeleton-line>
+        </skeleton-card>
       {/each}
-    </div>
+    </okr-grid>
 
   <!-- Empty state -->
   {:else if filteredObjectives.length === 0}
-    <section class="okr-index__empty" aria-live="polite">
+    <okr-empty aria-live="polite">
       {#if hasActiveFilters}
         <h2>No objectives match your filters</h2>
-        <p>Try adjusting your filters or <button type="button" class="btn-link" onclick={clearFilters}>clear them</button>.</p>
+        <p>Try adjusting your filters or <button type="button" data-variant="link" onclick={clearFilters}>clear them</button>.</p>
       {:else}
         <h2>No objectives yet</h2>
         <p>Create your first objective to start tracking your goals.</p>
-        <button type="button" class="btn-primary" onclick={openCreateObjective}>
+        <button type="button" data-variant="primary" data-size="lg" onclick={openCreateObjective}>
           Create Objective
         </button>
       {/if}
-    </section>
+    </okr-empty>
 
   <!-- Grid -->
   {:else}
-    <div class="okr-index__grid">
+    <okr-grid>
       {#each filteredObjectives as objective (objective.id)}
         <ObjectiveCard
           {objective}
@@ -220,9 +211,9 @@
           onAddKeyResult={openAddKeyResult}
         />
       {/each}
-    </div>
+    </okr-grid>
   {/if}
-</section>
+</okr-index>
 
 <!-- Objective Modal -->
 {#if showObjectiveModal}
@@ -241,211 +232,3 @@
     onClose={closeKeyResultModal}
   />
 {/if}
-
-<style>
-  .okr-index {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-6);
-  }
-
-  .okr-index__toolbar {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-3);
-    flex-wrap: wrap;
-  }
-
-  .okr-index__filters {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-2);
-    flex: 1;
-    flex-wrap: wrap;
-    min-width: 0;
-  }
-
-  .filter-select,
-  .filter-search {
-    padding: var(--spacing-2) var(--spacing-3);
-    border: 1px solid #d1d5db;
-    border-radius: var(--radius-md);
-    font-size: var(--font-size-sm);
-    font-family: inherit;
-    background: white;
-    color: #111827;
-  }
-
-  .filter-search {
-    flex: 1;
-    min-width: 160px;
-  }
-
-  .btn-clear {
-    background: none;
-    border: none;
-    font-size: var(--font-size-xs);
-    color: var(--color-muted);
-    cursor: pointer;
-    font-family: inherit;
-    text-decoration: underline;
-  }
-
-  .btn-create {
-    background: var(--color-primary);
-    color: white;
-    border: none;
-    border-radius: var(--radius-md);
-    padding: var(--spacing-2) var(--spacing-4);
-    font-size: var(--font-size-sm);
-    font-family: inherit;
-    font-weight: 600;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: background 150ms;
-  }
-
-  .btn-create:hover {
-    background: var(--color-primary-hover);
-  }
-
-  .okr-index__summary {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-4);
-    background: white;
-    border-radius: var(--radius-lg);
-    padding: var(--spacing-4) var(--spacing-6);
-    box-shadow: var(--shadow-sm);
-  }
-
-  .okr-summary__text {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-1);
-  }
-
-  .okr-summary__label {
-    font-size: var(--font-size-sm);
-    color: var(--color-muted);
-  }
-
-  .okr-summary__value {
-    font-size: var(--font-size-2xl);
-    font-weight: 700;
-    color: #111827;
-  }
-
-  .okr-summary__count {
-    font-size: var(--font-size-xs);
-    color: var(--color-muted);
-  }
-
-  .okr-index__grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: var(--spacing-4);
-  }
-
-  @media (max-width: 1199px) {
-    .okr-index__grid {
-      grid-template-columns: repeat(2, 1fr);
-    }
-  }
-
-  @media (max-width: 767px) {
-    .okr-index__grid {
-      grid-template-columns: 1fr;
-    }
-
-    .okr-index__toolbar {
-      flex-direction: column;
-      align-items: stretch;
-    }
-
-    .btn-create {
-      text-align: center;
-    }
-  }
-
-  .okr-index__empty {
-    text-align: center;
-    padding: var(--spacing-8) var(--spacing-4);
-    background: white;
-    border-radius: var(--radius-xl);
-    box-shadow: var(--shadow-sm);
-  }
-
-  .okr-index__empty h2 {
-    font-size: var(--font-size-xl);
-    font-weight: 700;
-    color: #111827;
-    margin-bottom: var(--spacing-2);
-  }
-
-  .okr-index__empty p {
-    color: var(--color-muted);
-    margin-bottom: var(--spacing-4);
-  }
-
-  .btn-primary {
-    background: var(--color-primary);
-    color: white;
-    border: none;
-    border-radius: var(--radius-md);
-    padding: var(--spacing-2) var(--spacing-6);
-    font-size: var(--font-size-base);
-    font-family: inherit;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 150ms;
-  }
-
-  .btn-primary:hover {
-    background: var(--color-primary-hover);
-  }
-
-  .btn-link {
-    background: none;
-    border: none;
-    color: var(--color-primary);
-    font-family: inherit;
-    font-size: inherit;
-    cursor: pointer;
-    text-decoration: underline;
-    padding: 0;
-  }
-
-  /* Skeleton loading */
-  .skeleton-card {
-    background: white;
-    border-radius: var(--radius-xl);
-    padding: var(--spacing-6);
-    box-shadow: var(--shadow-md);
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-3);
-  }
-
-  .skeleton-line {
-    height: 1rem;
-    background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
-    background-size: 200% 100%;
-    border-radius: var(--radius-sm);
-    animation: skeleton-pulse 1.5s infinite;
-  }
-
-  .skeleton-line--title {
-    height: 1.25rem;
-    width: 60%;
-  }
-
-  .skeleton-line--body {
-    width: 100%;
-  }
-
-  @keyframes skeleton-pulse {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
-  }
-</style>
