@@ -1,5 +1,6 @@
 import { writable, type Writable } from 'svelte/store';
 import type { Objective, KeyResult, OKRLink, Quarter, ObjectiveStatus } from '$lib/types/okr';
+import { generateId } from '$lib/utils/helpers';
 
 export interface OKRState {
   objectives: Objective[];
@@ -35,7 +36,7 @@ function createOKRStore() {
     addObjective: (objective: Omit<Objective, 'id' | 'createdAt' | 'updatedAt'>) => {
       const newObjective: Objective = {
         ...objective,
-        id: crypto.randomUUID(),
+        id: generateId(),
         createdAt: new Date(),
         updatedAt: new Date()
       };
@@ -88,7 +89,7 @@ function createOKRStore() {
     addKeyResult: (keyResult: Omit<KeyResult, 'id' | 'createdAt' | 'updatedAt'>) => {
       const newKeyResult: KeyResult = {
         ...keyResult,
-        id: crypto.randomUUID(),
+        id: generateId(),
         createdAt: new Date(),
         updatedAt: new Date()
       };

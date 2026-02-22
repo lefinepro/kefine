@@ -6,9 +6,11 @@
 
   interface Props {
     keyResult: KeyResult;
+    onEdit?: (keyResult: KeyResult) => void;
+    onDelete?: (keyResult: KeyResult) => void;
   }
 
-  let { keyResult }: Props = $props();
+  let { keyResult, onEdit, onDelete }: Props = $props();
 
   let editMode = $state(false);
   let editValue: number = $state(0);
@@ -30,9 +32,24 @@
   }
 
   function startEdit() {
+    if (onEdit) {
+      onEdit(keyResult);
+      return;
+    }
     editValue = keyResult.currentValue;
     editError = '';
     editMode = true;
+  }
+
+  function handleDelete() {
+    if (onDelete) {
+      onDelete(keyResult);
+      return;
+    }
+    if (confirm(`Delete key result "${keyResult.title}"?`)) {
+      okrStore.deleteKeyResult(keyResult.id);
+      okrStore.saveToLocalStorage();
+    }
   }
 
   function cancelEdit() {
@@ -63,6 +80,9 @@
     {#if !editMode}
       <button type="button" data-variant="icon" aria-label="Edit key result" onclick={startEdit}>
         ✏️
+      </button>
+      <button type="button" data-variant="icon" aria-label="Delete key result" onclick={handleDelete}>
+        🗑️
       </button>
     {/if}
   </header>
