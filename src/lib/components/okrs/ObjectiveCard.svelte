@@ -52,26 +52,26 @@
 
 <article class="okr-card" data-status={objective.status}>
   <header class="okr-card-header">
-    <div class="okr-card-title-row">
+    <hgroup class="okr-card-title-row">
       <ProgressRing {progress} size="md" />
-      <div class="okr-card-meta">
+      <section class="okr-card-meta">
         <h3>{objective.title}</h3>
         <span>{formatQuarter(objective.quarter, objective.year)}</span>
-      </div>
+      </section>
       <span
         class="okr-status-badge"
         style="background: {statusColor}20; color: {statusColor}"
         aria-label="Status: {formatStatus(objective.status)}"
       >{formatStatus(objective.status)}</span>
-    </div>
+    </hgroup>
 
     {#if objective.description}
       <p class="okr-card-description">{objective.description}</p>
     {/if}
   </header>
 
-  <div class="okr-card-body">
-    <div class="okr-kr-header">
+  <section class="okr-card-body">
+    <header class="okr-kr-header">
       <span class="okr-kr-count">{keyResults.length} Key Result{keyResults.length !== 1 ? 's' : ''}</span>
       <button
         type="button"
@@ -81,7 +81,7 @@
       >
         {expanded ? 'Hide' : 'Show'} Key Results
       </button>
-    </div>
+    </header>
 
     {#if expanded}
       {#if keyResults.length === 0}
@@ -101,7 +101,7 @@
         + Add Key Result
       </button>
     {/if}
-  </div>
+  </section>
 
   <footer class="okr-card-footer">
     <button

@@ -50,17 +50,17 @@
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="okr-modal" role="presentation" onclick={onClose} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') { onClose(); } }}>
+<section class="okr-modal" role="presentation" onclick={onClose} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') { onClose(); } }}>
   <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <div class="okr-modal-dialog" role="dialog" aria-modal="true" aria-label="{isEdit ? 'Edit' : 'Create'} Objective" tabindex="-1" onclick={(e: MouseEvent) => e.stopPropagation()}>
+  <dialog class="okr-modal-dialog" open aria-modal="true" aria-label="{isEdit ? 'Edit' : 'Create'} Objective" onclick={(e: MouseEvent) => e.stopPropagation()}>
     <header class="okr-modal-header">
       <h2>{isEdit ? 'Edit Objective' : 'Create Objective'}</h2>
       <button type="button" data-variant="close" aria-label="Close modal" onclick={onClose}>✕</button>
     </header>
 
     <form onsubmit={(e) => { e.preventDefault(); handleSave(); }}>
-      <div class="okr-modal-body">
-        <div class="form-group">
+      <section class="okr-modal-body">
+        <p class="form-group">
           <label for="obj-title">Title <span aria-hidden="true">*</span></label>
           <input
             id="obj-title"
@@ -74,9 +74,9 @@
           {#if errors['title']}
             <small id="obj-title-err" role="alert">{errors['title']}</small>
           {/if}
-        </div>
+        </p>
 
-        <div class="form-group">
+        <p class="form-group">
           <label for="obj-description">Description</label>
           <textarea
             id="obj-description"
@@ -84,44 +84,44 @@
             rows={3}
             placeholder="Optional: describe this objective..."
           ></textarea>
-        </div>
+        </p>
 
-        <div class="form-row">
-          <div class="form-group">
+        <fieldset class="form-row">
+          <p class="form-group">
             <label for="obj-quarter">Quarter</label>
             <select id="obj-quarter" bind:value={quarter}>
               {#each quarters as q (q.value)}
                 <option value={q.value}>{q.label}</option>
               {/each}
             </select>
-          </div>
+          </p>
 
-          <div class="form-group">
+          <p class="form-group">
             <label for="obj-year">Year</label>
             <select id="obj-year" bind:value={year}>
               {#each years as y (y)}
                 <option value={y}>{y}</option>
               {/each}
             </select>
-          </div>
-        </div>
+          </p>
+        </fieldset>
 
         {#if isEdit}
-          <div class="form-group">
+          <p class="form-group">
             <label for="obj-status">Status</label>
             <select id="obj-status" bind:value={status}>
               <option value="active">Active</option>
               <option value="completed">Completed</option>
               <option value="archived">Archived</option>
             </select>
-          </div>
+          </p>
         {/if}
 
-        <div class="okr-modal-actions">
+        <footer class="okr-modal-actions">
           <button type="submit" data-variant="primary">{isEdit ? 'Save Changes' : 'Create Objective'}</button>
           <button type="button" data-variant="ghost" onclick={onClose}>Cancel</button>
-        </div>
-      </div>
+        </footer>
+      </section>
     </form>
-  </div>
-</div>
+  </dialog>
+</section>

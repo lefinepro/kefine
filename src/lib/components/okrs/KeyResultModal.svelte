@@ -75,18 +75,18 @@
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="okr-modal" role="presentation" onclick={onClose} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') { onClose(); } }}>
+<section class="okr-modal" role="presentation" onclick={onClose} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') { onClose(); } }}>
   <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <div class="okr-modal-dialog" role="dialog" aria-modal="true" aria-label="{isEdit ? 'Edit' : 'Create'} Key Result" tabindex="-1" onclick={(e: MouseEvent) => e.stopPropagation()}>
+  <dialog class="okr-modal-dialog" open aria-modal="true" aria-label="{isEdit ? 'Edit' : 'Create'} Key Result" onclick={(e: MouseEvent) => e.stopPropagation()}>
     <header class="okr-modal-header">
       <h2>{isEdit ? 'Edit Key Result' : 'Add Key Result'}</h2>
       <button type="button" data-variant="close" aria-label="Close modal" onclick={onClose}>✕</button>
     </header>
 
     <form onsubmit={(e) => { e.preventDefault(); handleSave(); }}>
-      <div class="okr-modal-body">
+      <section class="okr-modal-body">
         {#if !isEdit}
-          <div class="form-group">
+          <p class="form-group">
             <label for="kr-objective">Parent Objective <span aria-hidden="true">*</span></label>
             <select
               id="kr-objective"
@@ -100,10 +100,10 @@
             {#if errors['objectiveId']}
               <small role="alert">{errors['objectiveId']}</small>
             {/if}
-          </div>
+          </p>
         {/if}
 
-        <div class="form-group">
+        <p class="form-group">
           <label for="kr-title">Title <span aria-hidden="true">*</span></label>
           <input
             id="kr-title"
@@ -117,9 +117,9 @@
           {#if errors['title']}
             <small id="kr-title-err" role="alert">{errors['title']}</small>
           {/if}
-        </div>
+        </p>
 
-        <div class="form-group">
+        <p class="form-group">
           <label for="kr-description">Description</label>
           <textarea
             id="kr-description"
@@ -127,19 +127,19 @@
             rows={2}
             placeholder="Optional: more details..."
           ></textarea>
-        </div>
+        </p>
 
-        <div class="form-row">
-          <div class="form-group">
+        <fieldset class="form-row">
+          <p class="form-group">
             <label for="kr-type">Type</label>
             <select id="kr-type" bind:value={targetType}>
               <option value="number">Number</option>
               <option value="percentage">Percentage</option>
               <option value="boolean">Boolean</option>
             </select>
-          </div>
+          </p>
 
-          <div class="form-group">
+          <p class="form-group">
             <label for="kr-unit">Unit</label>
             <input
               id="kr-unit"
@@ -147,11 +147,11 @@
               bind:value={unit}
               placeholder="%,  users, $..."
             />
-          </div>
-        </div>
+          </p>
+        </fieldset>
 
-        <div class="form-row">
-          <div class="form-group">
+        <fieldset class="form-row">
+          <p class="form-group">
             <label for="kr-target">Target Value</label>
             <input
               id="kr-target"
@@ -165,9 +165,9 @@
             {#if errors['targetValue']}
               <small id="kr-target-err" role="alert">{errors['targetValue']}</small>
             {/if}
-          </div>
+          </p>
 
-          <div class="form-group">
+          <p class="form-group">
             <label for="kr-current">Current Value</label>
             <input
               id="kr-current"
@@ -181,10 +181,10 @@
             {#if errors['currentValue']}
               <small id="kr-current-err" role="alert">{errors['currentValue']}</small>
             {/if}
-          </div>
-        </div>
+          </p>
+        </fieldset>
 
-        <div class="form-group">
+        <p class="form-group">
           <label for="kr-weight">
             Weight
             <span class="hint">(relative importance, default 1)</span>
@@ -201,13 +201,13 @@
           {#if errors['weight']}
             <small id="kr-weight-err" role="alert">{errors['weight']}</small>
           {/if}
-        </div>
+        </p>
 
-        <div class="okr-modal-actions">
+        <footer class="okr-modal-actions">
           <button type="submit" data-variant="primary">{isEdit ? 'Save Changes' : 'Add Key Result'}</button>
           <button type="button" data-variant="ghost" onclick={onClose}>Cancel</button>
-        </div>
-      </div>
+        </footer>
+      </section>
     </form>
-  </div>
-</div>
+  </dialog>
+</section>

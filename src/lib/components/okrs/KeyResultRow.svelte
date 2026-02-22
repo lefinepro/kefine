@@ -57,7 +57,7 @@
 </script>
 
 <li class="kr-row">
-  <div class="kr-header">
+  <header class="kr-header">
     <span class="kr-type-badge" style="color: {typeColor}">{keyResult.targetType}</span>
     <span class="kr-title">{keyResult.title}</span>
     {#if !editMode}
@@ -65,24 +65,24 @@
         ✏️
       </button>
     {/if}
-  </div>
+  </header>
 
   {#if keyResult.description}
     <p class="kr-description">{keyResult.description}</p>
   {/if}
 
-  <div class="kr-progress" aria-label="Progress bar {Math.round(progress)}%">
-    <div class="kr-progress-bar">
-      <div class="kr-progress-fill" style="width: {progress}%; background: {progressColor}"></div>
-    </div>
-    <span class="kr-progress-pct">{Math.round(progress)}%</span>
-  </div>
+  <figure class="kr-progress" aria-label="Progress bar {Math.round(progress)}%">
+    <span class="kr-progress-bar">
+      <span class="kr-progress-fill" style="width: {progress}%; background: {progressColor}"></span>
+    </span>
+    <figcaption class="kr-progress-pct">{Math.round(progress)}%</figcaption>
+  </figure>
 
-  <div class="kr-values">
+  <p class="kr-values">
     <span class="kr-current">{formatValue(keyResult.currentValue, keyResult.unit)}</span>
     <span class="kr-sep">/</span>
     <span>{formatValue(keyResult.targetValue, keyResult.unit)}</span>
-  </div>
+  </p>
 
   {#if !editMode && keyResult.targetType !== 'boolean'}
     <label for="kr-range-{keyResult.id}">Drag to update progress</label>
@@ -99,7 +99,7 @@
   {/if}
 
   {#if editMode}
-    <div class="kr-edit-form" role="group" aria-label="Edit key result value">
+    <fieldset class="kr-edit-form" aria-label="Edit key result value">
       <label for="kr-edit-{keyResult.id}">New value ({keyResult.unit}):</label>
       <input
         id="kr-edit-{keyResult.id}"
@@ -112,10 +112,10 @@
       {#if editError}
         <small id="kr-edit-err-{keyResult.id}" role="alert">{editError}</small>
       {/if}
-      <div class="kr-edit-actions">
+      <footer class="kr-edit-actions">
         <button type="button" data-variant="primary" onclick={saveEdit}>Save</button>
         <button type="button" data-variant="ghost" onclick={cancelEdit}>Cancel</button>
-      </div>
-    </div>
+      </footer>
+    </fieldset>
   {/if}
 </li>
