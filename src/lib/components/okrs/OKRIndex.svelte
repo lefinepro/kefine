@@ -126,10 +126,10 @@
   const quarterPlaceholder = `All (current: ${defaultQuarter} ${defaultYear})`;
 </script>
 
-<okr-index aria-label="OKR Index">
+<section class="okr-index" aria-label="OKR Index">
   <!-- Toolbar -->
-  <okr-toolbar>
-    <okr-filters role="group" aria-label="Filter objectives">
+  <div class="okr-toolbar">
+    <div class="okr-filters" role="group" aria-label="Filter objectives">
       <select bind:value={filterQuarter} aria-label="Filter by quarter">
         <option value="">{quarterPlaceholder}</option>
         {#each quarters as q (q.value)}
@@ -154,40 +154,40 @@
       {#if hasActiveFilters}
         <button type="button" data-variant="muted" onclick={clearFilters}>Clear filters</button>
       {/if}
-    </okr-filters>
+    </div>
 
     <button type="button" data-variant="primary" onclick={openCreateObjective}>
       + New Objective
     </button>
-  </okr-toolbar>
+  </div>
 
   <!-- Summary -->
   {#if filteredObjectives.length > 0}
-    <okr-summary>
+    <div class="okr-summary">
       <ProgressRing progress={overallProgress()} size="lg" />
-      <okr-summary-text>
-        <okr-summary-label>Overall Progress</okr-summary-label>
-        <okr-summary-value>{formatProgress(overallProgress())}</okr-summary-value>
-        <okr-summary-count>{filteredObjectives.length} objective{filteredObjectives.length !== 1 ? 's' : ''}</okr-summary-count>
-      </okr-summary-text>
-    </okr-summary>
+      <div class="okr-summary-text">
+        <span class="okr-summary-label">Overall Progress</span>
+        <span class="okr-summary-value">{formatProgress(overallProgress())}</span>
+        <span class="okr-summary-count">{filteredObjectives.length} objective{filteredObjectives.length !== 1 ? 's' : ''}</span>
+      </div>
+    </div>
   {/if}
 
   <!-- Loading state -->
   {#if isLoading}
-    <okr-grid aria-busy="true" aria-label="Loading...">
+    <div class="okr-grid" aria-busy="true" aria-label="Loading...">
       {#each [1, 2, 3] as n (n)}
-        <skeleton-card aria-hidden="true">
-          <skeleton-line size="title"></skeleton-line>
-          <skeleton-line></skeleton-line>
-          <skeleton-line style="width: 70%"></skeleton-line>
-        </skeleton-card>
+        <div class="skeleton-card" aria-hidden="true">
+          <div class="skeleton-line" data-size="title"></div>
+          <div class="skeleton-line"></div>
+          <div class="skeleton-line" style="width: 70%"></div>
+        </div>
       {/each}
-    </okr-grid>
+    </div>
 
   <!-- Empty state -->
   {:else if filteredObjectives.length === 0}
-    <okr-empty aria-live="polite">
+    <div class="okr-empty" aria-live="polite">
       {#if hasActiveFilters}
         <h2>No objectives match your filters</h2>
         <p>Try adjusting your filters or <button type="button" data-variant="link" onclick={clearFilters}>clear them</button>.</p>
@@ -198,11 +198,11 @@
           Create Objective
         </button>
       {/if}
-    </okr-empty>
+    </div>
 
   <!-- Grid -->
   {:else}
-    <okr-grid>
+    <div class="okr-grid">
       {#each filteredObjectives as objective (objective.id)}
         <ObjectiveCard
           {objective}
@@ -211,9 +211,9 @@
           onAddKeyResult={openAddKeyResult}
         />
       {/each}
-    </okr-grid>
+    </div>
   {/if}
-</okr-index>
+</section>
 
 <!-- Objective Modal -->
 {#if showObjectiveModal}

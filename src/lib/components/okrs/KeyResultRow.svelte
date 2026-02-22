@@ -56,33 +56,33 @@
   }
 </script>
 
-<kr-row>
-  <kr-header>
-    <kr-type-badge style="color: {typeColor}">{keyResult.targetType}</kr-type-badge>
-    <kr-title>{keyResult.title}</kr-title>
+<li class="kr-row">
+  <div class="kr-header">
+    <span class="kr-type-badge" style="color: {typeColor}">{keyResult.targetType}</span>
+    <span class="kr-title">{keyResult.title}</span>
     {#if !editMode}
       <button type="button" data-variant="icon" aria-label="Edit key result" onclick={startEdit}>
         ✏️
       </button>
     {/if}
-  </kr-header>
+  </div>
 
   {#if keyResult.description}
-    <kr-description>{keyResult.description}</kr-description>
+    <p class="kr-description">{keyResult.description}</p>
   {/if}
 
-  <kr-progress aria-label="Progress bar {Math.round(progress)}%">
-    <kr-progress-bar>
-      <kr-progress-fill style="width: {progress}%; background: {progressColor}"></kr-progress-fill>
-    </kr-progress-bar>
-    <kr-progress-pct>{Math.round(progress)}%</kr-progress-pct>
-  </kr-progress>
+  <div class="kr-progress" aria-label="Progress bar {Math.round(progress)}%">
+    <div class="kr-progress-bar">
+      <div class="kr-progress-fill" style="width: {progress}%; background: {progressColor}"></div>
+    </div>
+    <span class="kr-progress-pct">{Math.round(progress)}%</span>
+  </div>
 
-  <kr-values>
-    <kr-current>{formatValue(keyResult.currentValue, keyResult.unit)}</kr-current>
-    <kr-sep>/</kr-sep>
+  <div class="kr-values">
+    <span class="kr-current">{formatValue(keyResult.currentValue, keyResult.unit)}</span>
+    <span class="kr-sep">/</span>
     <span>{formatValue(keyResult.targetValue, keyResult.unit)}</span>
-  </kr-values>
+  </div>
 
   {#if !editMode && keyResult.targetType !== 'boolean'}
     <label for="kr-range-{keyResult.id}">Drag to update progress</label>
@@ -99,7 +99,7 @@
   {/if}
 
   {#if editMode}
-    <kr-edit-form role="group" aria-label="Edit key result value">
+    <div class="kr-edit-form" role="group" aria-label="Edit key result value">
       <label for="kr-edit-{keyResult.id}">New value ({keyResult.unit}):</label>
       <input
         id="kr-edit-{keyResult.id}"
@@ -112,10 +112,10 @@
       {#if editError}
         <small id="kr-edit-err-{keyResult.id}" role="alert">{editError}</small>
       {/if}
-      <kr-edit-actions>
+      <div class="kr-edit-actions">
         <button type="button" data-variant="primary" onclick={saveEdit}>Save</button>
         <button type="button" data-variant="ghost" onclick={cancelEdit}>Cancel</button>
-      </kr-edit-actions>
-    </kr-edit-form>
+      </div>
+    </div>
   {/if}
-</kr-row>
+</li>

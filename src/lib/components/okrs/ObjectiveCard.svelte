@@ -50,28 +50,29 @@
   }
 </script>
 
-<okr-card status={objective.status}>
-  <okr-card-header>
-    <okr-card-title-row>
+<article class="okr-card" data-status={objective.status}>
+  <header class="okr-card-header">
+    <div class="okr-card-title-row">
       <ProgressRing {progress} size="md" />
-      <okr-card-meta>
+      <div class="okr-card-meta">
         <h3>{objective.title}</h3>
         <span>{formatQuarter(objective.quarter, objective.year)}</span>
-      </okr-card-meta>
-      <okr-status-badge
+      </div>
+      <span
+        class="okr-status-badge"
         style="background: {statusColor}20; color: {statusColor}"
         aria-label="Status: {formatStatus(objective.status)}"
-      >{formatStatus(objective.status)}</okr-status-badge>
-    </okr-card-title-row>
+      >{formatStatus(objective.status)}</span>
+    </div>
 
     {#if objective.description}
-      <okr-card-description>{objective.description}</okr-card-description>
+      <p class="okr-card-description">{objective.description}</p>
     {/if}
-  </okr-card-header>
+  </header>
 
-  <okr-card-body>
-    <okr-kr-header>
-      <okr-kr-count>{keyResults.length} Key Result{keyResults.length !== 1 ? 's' : ''}</okr-kr-count>
+  <div class="okr-card-body">
+    <div class="okr-kr-header">
+      <span class="okr-kr-count">{keyResults.length} Key Result{keyResults.length !== 1 ? 's' : ''}</span>
       <button
         type="button"
         data-variant="expand"
@@ -80,11 +81,11 @@
       >
         {expanded ? 'Hide' : 'Show'} Key Results
       </button>
-    </okr-kr-header>
+    </div>
 
     {#if expanded}
       {#if keyResults.length === 0}
-        <okr-kr-empty>No key results yet.</okr-kr-empty>
+        <p class="okr-kr-empty">No key results yet.</p>
       {:else}
         <ul aria-label="Key results for {objective.title}">
           {#each keyResults as kr (kr.id)}
@@ -100,9 +101,9 @@
         + Add Key Result
       </button>
     {/if}
-  </okr-card-body>
+  </div>
 
-  <okr-card-footer>
+  <footer class="okr-card-footer">
     <button
       type="button"
       data-variant="action"
@@ -128,5 +129,5 @@
     >
       Delete
     </button>
-  </okr-card-footer>
-</okr-card>
+  </footer>
+</article>
