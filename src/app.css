@@ -126,15 +126,6 @@ kr-progress-fill {
   display: block;
 }
 
-/* Flex custom elements */
-kr-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--okr-space-1);
-  margin-left: auto;
-  flex-shrink: 0;
-}
-
 /* Inline custom elements */
 kr-current,
 kr-sep,
