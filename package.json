@@ -25,5 +25,11 @@
     "svelte-check": "^4.1.0",
     "typescript": "^5.8.0",
     "vite": "^6.2.0"
+  },
+  "dependencies": {
+    "@reown/appkit": "^1.8.18",
+    "@reown/appkit-adapter-wagmi": "^1.8.18",
+    "viem": "^2.46.2",
+    "wagmi": "^3.5.0"
   }
 }
