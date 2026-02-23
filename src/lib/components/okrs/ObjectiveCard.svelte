@@ -11,10 +11,11 @@
     keyResults: KeyResult[];
     onEdit: (objective: Objective) => void;
     onAddKeyResult: (objectiveId: string) => void;
-    onEditKeyResult: (keyResult: KeyResult) => void;
+    onEditKeyResult?: (keyResult: KeyResult) => void;
+    onDeleteKeyResult?: (keyResult: KeyResult) => void;
   }
 
-  let { objective, keyResults, onEdit, onAddKeyResult, onEditKeyResult }: Props = $props();
+  let { objective, keyResults, onEdit, onAddKeyResult, onEditKeyResult, onDeleteKeyResult }: Props = $props();
 
   let expanded = $state(false);
 
@@ -89,7 +90,7 @@
       {:else}
         <ul aria-label="Key results for {objective.title}">
           {#each keyResults as kr (kr.id)}
-            <KeyResultRow keyResult={kr} onEdit={onEditKeyResult} />
+            <KeyResultRow keyResult={kr} onEdit={onEditKeyResult} onDelete={onDeleteKeyResult} />
           {/each}
         </ul>
       {/if}
