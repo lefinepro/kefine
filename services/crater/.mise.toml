@@ -1,0 +1,39 @@
+[env]
+APP = "crater"
+SRC = "src/crater.cr"
+
+[tasks.deps]
+description = "Install Crystal dependencies"
+run = "shards install"
+
+[tasks.build]
+description = "Build debug binary"
+depends = ["deps"]
+run = "crystal build $SRC -o $APP"
+
+[tasks.release]
+description = "Build optimized release binary"
+depends = ["deps"]
+run = "crystal build $SRC -o $APP --release"
+
+[tasks.run]
+description = "Run development server"
+depends = ["deps"]
+run = "crystal run $SRC"
+
+[tasks.test]
+description = "Run test suite"
+depends = ["deps"]
+run = "crystal spec"
+
+[tasks.clean]
+description = "Remove build artifacts"
+run = ["rm -f $APP", "rm -rf .crystal/"]
+
+[tasks.fmt]
+description = "Format source files"
+run = "crystal tool format src/"
+
+[tasks.fmt-check]
+description = "Check formatting without modifying"
+run = "crystal tool format --check src/"
