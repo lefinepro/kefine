@@ -33,19 +33,18 @@ export function getPriorityColor(priority: Priority): string {
 }
 
 /**
- * Get color based on progress percentage
+ * Get color based on progress percentage.
+ * Thresholds per OKR-006 spec:
+ * >80%: green (success), 50-80%: orange (warning), <50%: red (danger)
  */
 export function getProgressColor(percentage: number): string {
-  if (percentage >= 75) {
-    return '#22c55e'; // green-500
+  if (percentage > 80) {
+    return '#22c55e'; // green-500 (success)
   }
   if (percentage >= 50) {
-    return '#3b82f6'; // blue-500
+    return '#f97316'; // orange-500 (warning)
   }
-  if (percentage >= 25) {
-    return '#f59e0b'; // amber-500
-  }
-  return '#ef4444'; // red-500
+  return '#ef4444'; // red-500 (danger)
 }
 
 /**

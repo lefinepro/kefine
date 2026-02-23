@@ -34,8 +34,12 @@ export function formatDate(date: Date): string {
 }
 
 /**
- * Format number with unit
+ * Format number with unit, handling decimals and thousand separators
  */
 export function formatValue(value: number, unit: string): string {
-  return `${value}${unit}`;
+  const formatted = new Intl.NumberFormat('en-US', {
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 0
+  }).format(value);
+  return unit ? `${formatted} ${unit}` : formatted;
 }
