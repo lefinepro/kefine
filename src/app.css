@@ -536,7 +536,11 @@ kr-target {
   max-height: 90vh;
   overflow-y: auto;
   outline: none;
-  margin: auto;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
 }
 
 .okr-modal-dialog::backdrop {
