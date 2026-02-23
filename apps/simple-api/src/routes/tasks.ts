@@ -53,7 +53,7 @@ router.get('/', async (req, res, next) => {
       priority,
     });
 
-    const typedReq = req as RequestWithId;
+    const typedReq = req as unknown as RequestWithId;
     result.meta.requestId = typedReq.requestId;
     res.json(result);
   } catch (error) {
@@ -70,7 +70,7 @@ router.get('/:id', async (req, res, next) => {
       throw new ApiError('NOT_FOUND', 404, 'Task not found');
     }
 
-    res.json({ data: task, meta: getRequestMeta(req as RequestWithId) });
+    res.json({ data: task, meta: getRequestMeta(req as unknown as RequestWithId) });
   } catch (error) {
     next(error);
   }
@@ -113,7 +113,7 @@ router.post('/', async (req, res, next) => {
 
     res.status(201).json({
       data: task,
-      meta: getRequestMeta(req as RequestWithId),
+      meta: getRequestMeta(req as unknown as RequestWithId),
     });
   } catch (error) {
     next(error);
@@ -153,7 +153,7 @@ router.put('/:id', async (req, res, next) => {
       throw new ApiError('NOT_FOUND', 404, 'Task not found');
     }
 
-    res.json({ data: task, meta: getRequestMeta(req as RequestWithId) });
+    res.json({ data: task, meta: getRequestMeta(req as unknown as RequestWithId) });
   } catch (error) {
     next(error);
   }
