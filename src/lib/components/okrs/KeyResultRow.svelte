@@ -14,6 +14,7 @@
 
   let editMode = $state(false);
   let editValue: number = $state(0);
+  let editTargetValue: number = $state(0);
   let editError = $state('');
 
   const progress = $derived(
@@ -37,6 +38,7 @@
       return;
     }
     editValue = keyResult.currentValue;
+    editTargetValue = keyResult.targetValue;
     editError = '';
     editMode = true;
   }
@@ -62,14 +64,25 @@
       editError = 'Value must be 0 or greater.';
       return;
     }
-    if (editValue > keyResult.targetValue) {
-      editError = `Value cannot exceed target (${keyResult.targetValue}).`;
+    const effectiveTarget = editTargetValue > 0 ? editTargetValue : keyResult.targetValue;
+    if (editValue > effectiveTarget) {
+      editError = `Value cannot exceed target (${effectiveTarget}).`;
       return;
     }
-    okrStore.updateKeyResult(keyResult.id, { currentValue: editValue });
+    const updates: { currentValue: number; targetValue?: number } = { currentValue: editValue };
+    if (editTargetValue > 0 && editTargetValue !== keyResult.targetValue) {
+      updates.targetValue = editTargetValue;
+    }
+    okrStore.updateKeyResult(keyResult.id, updates);
     okrStore.saveToLocalStorage();
     editMode = false;
     editError = '';
+  }
+
+  function handleBooleanToggle() {
+    const newValue = keyResult.currentValue >= keyResult.targetValue ? 0 : keyResult.targetValue;
+    okrStore.updateKeyResult(keyResult.id, { currentValue: newValue });
+    okrStore.saveToLocalStorage();
   }
 </script>
 
@@ -93,7 +106,7 @@
 
   <figure class="kr-progress" aria-label="Progress bar {Math.round(progress)}%">
     <kr-progress-bar>
-      <kr-progress-fill style="width: {progress}%; background: {progressColor}"></kr-progress-fill>
+      <kr-progress-fill style="width: {progress}%; background: linear-gradient(90deg, {progressColor} 0%, {progressColor}aa 100%)"></kr-progress-fill>
     </kr-progress-bar>
     <figcaption class="kr-progress-pct">{Math.round(progress)}%</figcaption>
   </figure>
@@ -104,7 +117,17 @@
     <kr-target>{formatValue(keyResult.targetValue, keyResult.unit)}</kr-target>
   </p>
 
-  {#if !editMode && keyResult.targetType !== 'boolean'}
+  {#if !editMode && keyResult.targetType === 'boolean'}
+    <label class="kr-boolean-label">
+      <input
+        type="checkbox"
+        checked={keyResult.currentValue >= keyResult.targetValue}
+        onchange={handleBooleanToggle}
+        aria-label="Toggle completion for {keyResult.title}"
+      />
+      Mark as complete
+    </label>
+  {:else if !editMode}
     <label for="kr-range-{keyResult.id}">Drag to update progress</label>
     <input
       id="kr-range-{keyResult.id}"
@@ -120,15 +143,34 @@
 
   {#if editMode}
     <fieldset class="kr-edit-form" aria-label="Edit key result value">
-      <label for="kr-edit-{keyResult.id}">New value ({keyResult.unit}):</label>
-      <input
-        id="kr-edit-{keyResult.id}"
-        type="number"
-        min="0"
-        max={keyResult.targetValue}
-        bind:value={editValue}
-        aria-describedby={editError ? `kr-edit-err-${keyResult.id}` : undefined}
-      />
+      {#if keyResult.targetType !== 'boolean'}
+        <label for="kr-edit-{keyResult.id}">Current value{keyResult.unit ? ` (${keyResult.unit})` : ''}:</label>
+        <input
+          id="kr-edit-{keyResult.id}"
+          type="number"
+          min="0"
+          max={editTargetValue}
+          bind:value={editValue}
+          aria-describedby={editError ? `kr-edit-err-${keyResult.id}` : undefined}
+        />
+        <label for="kr-edit-target-{keyResult.id}">Target value{keyResult.unit ? ` (${keyResult.unit})` : ''}:</label>
+        <input
+          id="kr-edit-target-{keyResult.id}"
+          type="number"
+          min="0.01"
+          step="any"
+          bind:value={editTargetValue}
+        />
+      {:else}
+        <label class="kr-boolean-edit-label">
+          <input
+            type="checkbox"
+            bind:checked={() => editValue >= editTargetValue, (v) => { editValue = v ? editTargetValue : 0; }}
+            aria-label="Mark as complete"
+          />
+          Mark as complete
+        </label>
+      {/if}
       {#if editError}
         <small id="kr-edit-err-{keyResult.id}" role="alert">{editError}</small>
       {/if}
