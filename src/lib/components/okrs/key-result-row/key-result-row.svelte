@@ -119,3 +119,7 @@
     </fieldset>
   {/if}
 </li>
+
+<style>
+  @import './key-result-row.css';
+</style>

@@ -125,3 +125,7 @@
     </form>
   </dialog>
 </section>
+
+<style>
+  @import './objective-modal.css';
+</style>

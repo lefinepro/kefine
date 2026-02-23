@@ -4,10 +4,10 @@
   import type { Objective, KeyResult, Quarter } from '$lib/types/okr';
   import { getQuartersList, getYearsList, getCurrentQuarter } from '$lib/utils/helpers';
   import { formatProgress } from '$lib/utils/formatters';
-  import ObjectiveCard from './ObjectiveCard.svelte';
-  import ObjectiveModal from './ObjectiveModal.svelte';
-  import KeyResultModal from './KeyResultModal.svelte';
-  import ProgressRing from './ProgressRing.svelte';
+  import ObjectiveCard from '../objective-card/objective-card.svelte';
+  import ObjectiveModal from '../objective-modal/objective-modal.svelte';
+  import KeyResultModal from '../key-result-modal/key-result-modal.svelte';
+  import ProgressRing from '../progress-ring/progress-ring.svelte';
 
   /** Pure progress calculation that doesn't mutate store state */
   function calcKRProgress(kr: KeyResult): number {
@@ -234,3 +234,7 @@
     onClose={closeKeyResultModal}
   />
 {/if}
+
+<style>
+  @import './okr-index.css';
+</style>

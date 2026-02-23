@@ -1,0 +1,64 @@
+/* section.okr-modal: modal overlay */
+.okr-modal {
+  display: flex;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: var(--okr-space-4);
+}
+
+.okr-modal-dialog {
+  display: flex;
+  flex-direction: column;
+  background: var(--okr-color-bg-card);
+  border-radius: var(--okr-radius-xl);
+  box-shadow: var(--okr-shadow-lg);
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  outline: none;
+}
+
+.okr-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--okr-space-4) var(--okr-space-6);
+  border-bottom: 1px solid var(--okr-color-border-light);
+}
+
+.okr-modal-header h2 {
+  font-size: var(--okr-font-size-lg);
+  font-weight: 700;
+  margin: 0;
+}
+
+.okr-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--okr-space-4);
+  padding: var(--okr-space-6);
+}
+
+.okr-modal-actions {
+  display: flex;
+  gap: var(--okr-space-2);
+  margin-top: var(--okr-space-2);
+}
+
+/* p.form-group: label + input grouping */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--okr-space-1);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--okr-space-4);
+}

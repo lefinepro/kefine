@@ -1,5 +1,5 @@
 <script lang="ts">
-  import OKRIndex from '$lib/components/okrs/OKRIndex.svelte';
+  import OKRIndex from '$lib/components/okrs/okr-index/okr-index.svelte';
 </script>
 
 <main class="okr-dashboard">

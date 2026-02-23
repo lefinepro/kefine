@@ -3,8 +3,8 @@
   import { okrStore } from '$lib/stores/okrs';
   import { formatQuarter, formatStatus } from '$lib/utils/formatters';
   import { getStatusColor } from '$lib/utils/colors';
-  import ProgressRing from './ProgressRing.svelte';
-  import KeyResultRow from './KeyResultRow.svelte';
+  import ProgressRing from '../progress-ring/progress-ring.svelte';
+  import KeyResultRow from '../key-result-row/key-result-row.svelte';
 
   interface Props {
     objective: Objective;
@@ -130,3 +130,7 @@
     </button>
   </footer>
 </article>
+
+<style>
+  @import './objective-card.css';
+</style>
