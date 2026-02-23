@@ -6,13 +6,10 @@
 
   interface Props {
     keyResult: KeyResult;
+    onEdit: (keyResult: KeyResult) => void;
   }
 
-  let { keyResult }: Props = $props();
-
-  let editMode = $state(false);
-  let editValue: number = $state(0);
-  let editError = $state('');
+  let { keyResult, onEdit }: Props = $props();
 
   const progress = $derived(
     keyResult.targetValue > 0
@@ -29,30 +26,11 @@
     okrStore.saveToLocalStorage();
   }
 
-  function startEdit() {
-    editValue = keyResult.currentValue;
-    editError = '';
-    editMode = true;
-  }
-
-  function cancelEdit() {
-    editMode = false;
-    editError = '';
-  }
-
-  function saveEdit() {
-    if (editValue < 0) {
-      editError = 'Value must be 0 or greater.';
-      return;
+  function handleDelete() {
+    if (confirm(`Delete key result "${keyResult.title}"?`)) {
+      okrStore.deleteKeyResult(keyResult.id);
+      okrStore.saveToLocalStorage();
     }
-    if (editValue > keyResult.targetValue) {
-      editError = `Value cannot exceed target (${keyResult.targetValue}).`;
-      return;
-    }
-    okrStore.updateKeyResult(keyResult.id, { currentValue: editValue });
-    okrStore.saveToLocalStorage();
-    editMode = false;
-    editError = '';
   }
 </script>
 
@@ -60,11 +38,14 @@
   <header class="kr-header">
     <kr-type-badge style="color: {typeColor}">{keyResult.targetType}</kr-type-badge>
     <kr-title>{keyResult.title}</kr-title>
-    {#if !editMode}
-      <button type="button" data-variant="icon" aria-label="Edit key result" onclick={startEdit}>
+    <kr-actions>
+      <button type="button" data-variant="icon" aria-label="Edit key result" onclick={() => onEdit(keyResult)}>
         ✏️
       </button>
-    {/if}
+      <button type="button" data-variant="icon" aria-label="Delete key result" onclick={handleDelete}>
+        🗑️
+      </button>
+    </kr-actions>
   </header>
 
   {#if keyResult.description}
@@ -84,7 +65,7 @@
     <kr-target>{formatValue(keyResult.targetValue, keyResult.unit)}</kr-target>
   </p>
 
-  {#if !editMode && keyResult.targetType !== 'boolean'}
+  {#if keyResult.targetType !== 'boolean'}
     <label for="kr-range-{keyResult.id}">Drag to update progress</label>
     <input
       id="kr-range-{keyResult.id}"
@@ -96,26 +77,5 @@
       oninput={handleRangeInput}
       aria-label="Progress slider for {keyResult.title}"
     />
-  {/if}
-
-  {#if editMode}
-    <fieldset class="kr-edit-form" aria-label="Edit key result value">
-      <label for="kr-edit-{keyResult.id}">New value ({keyResult.unit}):</label>
-      <input
-        id="kr-edit-{keyResult.id}"
-        type="number"
-        min="0"
-        max={keyResult.targetValue}
-        bind:value={editValue}
-        aria-describedby={editError ? `kr-edit-err-${keyResult.id}` : undefined}
-      />
-      {#if editError}
-        <small id="kr-edit-err-{keyResult.id}" role="alert">{editError}</small>
-      {/if}
-      <footer class="kr-edit-actions">
-        <button type="button" data-variant="primary" onclick={saveEdit}>Save</button>
-        <button type="button" data-variant="ghost" onclick={cancelEdit}>Cancel</button>
-      </footer>
-    </fieldset>
   {/if}
 </li>

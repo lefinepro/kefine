@@ -108,6 +108,12 @@
     showKeyResultModal = true;
   }
 
+  function openEditKeyResult(keyResult: KeyResult) {
+    editingKeyResult = keyResult;
+    keyResultObjectiveId = undefined;
+    showKeyResultModal = true;
+  }
+
   function closeKeyResultModal() {
     showKeyResultModal = false;
     keyResultObjectiveId = undefined;
@@ -210,6 +216,7 @@
             keyResults={getKeyResultsForObjective(objective.id)}
             onEdit={openEditObjective}
             onAddKeyResult={openAddKeyResult}
+            onEditKeyResult={openEditKeyResult}
           />
         </li>
       {/each}
