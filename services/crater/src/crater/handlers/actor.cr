@@ -1,65 +1,47 @@
 require "kemal"
-require "../config"
+require "json"
 require "../activitypub/types"
+require "../utils/config"
 
 module Crater
   module Handlers
     module Actor
-      def self.register
-        # Main service actor
+      def self.register(config : Utils::Config)
         get "/actor" do |env|
           env.response.content_type = "application/activity+json"
 
-          base_url    = Config::BASE_URL
-          actor_name  = Config::ACTOR_NAME
-          domain      = Config::DOMAIN
-          actor_url   = Config.actor_url
-          inbox_url   = Config.inbox_url
-          outbox_url  = Config.outbox_url
-
-          response = {
-            "@context" => ActivityPub::FULL_CONTEXT,
-            "type"     => "Application",
-            "id"       => actor_url,
-            "preferredUsername" => actor_name,
-            "name"     => "Crater",
-            "summary"  => "Stateless ActivityPub/ForgeFed proxy for Kefine tasks",
-            "url"      => "https://#{domain}",
-            "inbox"    => inbox_url,
-            "outbox"   => outbox_url,
-            "endpoints" => {
-              "sharedInbox" => "#{base_url}/shared-inbox"
+          {
+            "@context" => [
+              ActivityPub::CONTEXT,
+              ActivityPub::SECURITY_CONTEXT,
+            ],
+            "id"                => config.actor_id,
+            "type"              => "Application",
+            "preferredUsername" => config.actor_username,
+            "name"              => "Crater Proxy",
+            "summary"           => "Kefine ForgeFed/ActivityPub proxy service",
+            "inbox"             => config.actor_inbox,
+            "outbox"            => config.actor_outbox,
+            "endpoints"         => {
+              "sharedInbox" => config.actor_inbox,
             },
             "publicKey" => {
-              "id"           => "#{actor_url}#main-key",
-              "owner"        => actor_url,
-              "publicKeyPem" => Config::PRIVATE_KEY.empty? ? "" : "# Public key not configured"
-            }
-          }
-
-          response.to_json
+              "id"           => "#{config.actor_id}#main-key",
+              "owner"        => config.actor_id,
+              "publicKeyPem" => "",
+            },
+          }.to_json
         end
 
-        # ForgeFed Project actor
-        get "/projects/:id" do |env|
-          env.response.content_type = "application/activity+json"
-
-          project_id  = env.params.url["id"]
-          base_url    = Config::BASE_URL
-
-          response = {
-            "@context" => ActivityPub::FULL_CONTEXT,
-            "type"     => "Project",
-            "id"       => "#{base_url}/projects/#{project_id}",
-            "name"     => "Kefine Project",
-            "summary"  => "OKR Task Management Project",
-            "inbox"    => "#{base_url}/projects/#{project_id}/inbox",
-            "outbox"   => "#{base_url}/projects/#{project_id}/outbox",
-            "issueTracker" => "#{base_url}/projects/#{project_id}/tickets",
-            "administrators" => [Config.actor_url]
-          }
-
-          response.to_json
+        get "/u/:username" do |env|
+          username = env.params.url["username"]
+          if username == config.actor_username
+            env.response.status_code = 302
+            env.response.headers["Location"] = config.actor_id
+          else
+            env.response.status_code = 404
+            {error: "Actor not found"}.to_json
+          end
         end
       end
     end

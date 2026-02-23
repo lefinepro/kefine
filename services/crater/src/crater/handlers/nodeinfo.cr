@@ -1,57 +1,41 @@
 require "kemal"
-require "../config"
+require "json"
+require "../utils/config"
 
 module Crater
   module Handlers
     module NodeInfo
-      VERSION = "0.1.0"
-
-      def self.register
-        # NodeInfo discovery endpoint
+      def self.register(config : Utils::Config)
         get "/.well-known/nodeinfo" do |env|
           env.response.content_type = "application/json"
 
-          response = {
-            "links" => [
+          {
+            links: [
               {
-                "rel"  => "http://nodeinfo.diaspora.software/ns/schema/2.1",
-                "href" => "#{Config::BASE_URL}/nodeinfo/2.1"
-              }
-            ]
-          }
-
-          response.to_json
+                rel:  "http://nodeinfo.diaspora.software/ns/schema/2.0",
+                href: "http://#{config.domain}/nodeinfo/2.0",
+              },
+            ],
+          }.to_json
         end
 
-        # NodeInfo 2.1 endpoint
-        get "/nodeinfo/2.1" do |env|
-          env.response.content_type = "application/json; profile=\"http://nodeinfo.diaspora.software/ns/schema/2.1#\""
+        get "/nodeinfo/2.0" do |env|
+          env.response.content_type = "application/json; profile=\"http://nodeinfo.diaspora.software/ns/schema/2.0#\""
 
-          response = {
-            "version" => "2.1",
-            "software" => {
-              "name"       => "crater",
-              "version"    => VERSION,
-              "repository" => "https://github.com/kogeletey/kefine",
-              "homepage"   => "https://github.com/kogeletey/kefine"
+          {
+            version:  "2.0",
+            software: {
+              name:    "Crater",
+              version: Crater::VERSION,
             },
-            "protocols"  => ["activitypub", "forgefed"],
-            "usage"      => {
-              "users" => {
-                "total"          => 1,
-                "activeHalfyear" => 1,
-                "activeMonth"    => 1
-              },
-              "localPosts" => 0
+            protocols:         ["activitypub", "forgefed"],
+            services:          {inbound: [] of String, outbound: [] of String},
+            usage:             {
+              users:      {total: 0, activeMonth: 0, activeHalfyear: 0},
+              localPosts: 0,
             },
-            "openRegistrations" => false,
-            "metadata" => {
-              "nodeName"        => "Crater",
-              "nodeDescription" => "Stateless ActivityPub/ForgeFed proxy for Kefine"
-            }
-          }
-
-          response.to_json
+            openRegistrations: false,
+          }.to_json
         end
       end
     end

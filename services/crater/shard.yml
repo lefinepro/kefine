@@ -5,23 +5,19 @@ authors:
   - Kefine Team
 
 description: |
-  Crater - a stateless proxy service that converts the simple task API
-  to ActivityPub + ForgeFed format for federated task management.
+  Crater is the ForgeFed/ActivityPub proxy service for Kefine.
+  It acts as Layer 1 (Proxy Service Layer) in the 4-layer architecture,
+  translating between the Kefine frontend and external federation servers.
 
-crystal: >= 1.11.0
-
-license: MIT
+targets:
+  crater:
+    main: src/crater.cr
 
 dependencies:
   kemal:
     github: kemalcr/kemal
-    version: ~> 1.5.0
+    version: "~> 1.6.0"
 
-  http-signature:
-    github: samueleaton/http-signature
-    version: ~> 0.1.0
+crystal: ">= 1.10.0"
 
-development_dependencies:
-  webmock:
-    github: manastech/webmock.cr
-    version: ~> 0.14.0
+license: MIT

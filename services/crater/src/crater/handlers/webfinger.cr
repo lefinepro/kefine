@@ -1,48 +1,35 @@
 require "kemal"
-require "../config"
+require "json"
+require "../utils/config"
 
 module Crater
   module Handlers
     module WebFinger
-      def self.register
+      def self.register(config : Utils::Config)
         get "/.well-known/webfinger" do |env|
-          env.response.content_type = "application/jrd+json"
-
           resource = env.params.query["resource"]?
+
           unless resource
             env.response.status_code = 400
-            next %({"error": "resource parameter is required"})
+            next({error: "resource parameter required"}.to_json)
           end
 
-          actor_url = Config.actor_url
-          domain = Config::DOMAIN
-          actor_name = Config::ACTOR_NAME
+          env.response.content_type = "application/jrd+json"
 
-          # Support acct:name@domain or https://actor-url
-          unless resource == "acct:#{actor_name}@#{domain}" ||
-                 resource == actor_url
-            env.response.status_code = 404
-            next %({"error": "Resource not found"})
-          end
-
-          response = {
-            "subject" => "acct:#{actor_name}@#{domain}",
-            "aliases" => [actor_url],
-            "links"   => [
+          {
+            subject:  resource,
+            aliases:  [
+              "http://#{config.domain}/actor",
+              "http://#{config.domain}/u/#{config.actor_username}",
+            ],
+            links: [
               {
-                "rel"  => "self",
-                "type" => "application/activity+json",
-                "href" => actor_url
+                rel:  "self",
+                type: "application/activity+json",
+                href: config.actor_id,
               },
-              {
-                "rel"  => "http://webfinger.net/rel/profile-page",
-                "type" => "text/html",
-                "href" => actor_url
-              }
-            ]
-          }
-
-          response.to_json
+            ],
+          }.to_json
         end
       end
     end
