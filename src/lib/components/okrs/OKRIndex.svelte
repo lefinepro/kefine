@@ -108,6 +108,19 @@
     showKeyResultModal = true;
   }
 
+  function openEditKeyResult(keyResult: KeyResult) {
+    editingKeyResult = keyResult;
+    keyResultObjectiveId = keyResult.objectiveId;
+    showKeyResultModal = true;
+  }
+
+  function handleDeleteKeyResult(keyResult: KeyResult) {
+    if (confirm(`Delete key result "${keyResult.title}"?`)) {
+      okrStore.deleteKeyResult(keyResult.id);
+      okrStore.saveToLocalStorage();
+    }
+  }
+
   function closeKeyResultModal() {
     showKeyResultModal = false;
     keyResultObjectiveId = undefined;
@@ -210,6 +223,8 @@
             keyResults={getKeyResultsForObjective(objective.id)}
             onEdit={openEditObjective}
             onAddKeyResult={openAddKeyResult}
+            onEditKeyResult={openEditKeyResult}
+            onDeleteKeyResult={handleDeleteKeyResult}
           />
         </li>
       {/each}

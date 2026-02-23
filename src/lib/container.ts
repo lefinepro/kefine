@@ -7,7 +7,7 @@
 
 import type { FederationConfig } from './config';
 import { loadConfig } from './config';
-import { loadSession } from './auth/session';
+import { loadAPSession } from './auth/session';
 import { apObjectCache } from './activitypub/cache';
 
 /** Service identifiers */
@@ -76,7 +76,7 @@ export function initContainer(): void {
 
   // Session initialization (side effect: loads from localStorage)
   container.register('session', () => {
-    loadSession();
+    loadAPSession();
     return null;
   });
 }
