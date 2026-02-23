@@ -213,23 +213,18 @@ describe('OKR-012.2.1: OKRIndex rendering', () => {
 // These test the computed functions used inside components without DOM mounting.
 
 describe('OKR-012.2: Component utility functions', () => {
-  it('getProgressColor returns red for < 25%', () => {
+  it('getProgressColor returns red for < 50%', () => {
     expect(getProgressColor(0)).toBe('#ef4444');
-    expect(getProgressColor(24)).toBe('#ef4444');
+    expect(getProgressColor(49)).toBe('#ef4444');
   });
 
-  it('getProgressColor returns amber for 25–49%', () => {
-    expect(getProgressColor(25)).toBe('#f59e0b');
-    expect(getProgressColor(49)).toBe('#f59e0b');
+  it('getProgressColor returns orange for 50–80%', () => {
+    expect(getProgressColor(50)).toBe('#f97316');
+    expect(getProgressColor(80)).toBe('#f97316');
   });
 
-  it('getProgressColor returns blue for 50–74%', () => {
-    expect(getProgressColor(50)).toBe('#3b82f6');
-    expect(getProgressColor(74)).toBe('#3b82f6');
-  });
-
-  it('getProgressColor returns green for >= 75%', () => {
-    expect(getProgressColor(75)).toBe('#22c55e');
+  it('getProgressColor returns green for > 80%', () => {
+    expect(getProgressColor(81)).toBe('#22c55e');
     expect(getProgressColor(100)).toBe('#22c55e');
   });
 
