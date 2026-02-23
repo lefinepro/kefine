@@ -69,6 +69,7 @@
   class="okr-modal-dialog"
   bind:this={dialogEl}
   aria-label="{isEdit ? 'Edit' : 'Create'} Objective"
+  aria-modal="true"
   oncancel={handleCancel}
 >
   <header class="okr-modal-header">
