@@ -228,3 +228,7 @@
     </section>
   </form>
 </dialog>
+
+<style>
+  @import './key-result-modal.css';
+</style>

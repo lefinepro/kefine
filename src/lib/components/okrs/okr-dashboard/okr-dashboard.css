@@ -1,0 +1,331 @@
+/* section.okr-dashboard-views: top-level dashboard container */
+.okr-dashboard-views {
+  display: flex;
+  flex-direction: column;
+  gap: var(--okr-space-6);
+}
+
+/* nav.dashboard-tabs: view selector tabs */
+.dashboard-tabs {
+  display: flex;
+  gap: var(--okr-space-1);
+  border-bottom: 2px solid var(--okr-color-border-light);
+  overflow-x: auto;
+}
+
+/* button.dashboard-tab: individual view tab */
+.dashboard-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  padding: var(--okr-space-2) var(--okr-space-4);
+  font-size: var(--okr-font-size-sm);
+  font-family: inherit;
+  font-weight: 600;
+  color: var(--okr-color-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 150ms, border-color 150ms;
+}
+
+.dashboard-tab:hover {
+  color: var(--okr-color-text);
+}
+
+.dashboard-tab[aria-current="page"] {
+  color: var(--okr-color-primary);
+  border-bottom-color: var(--okr-color-primary);
+}
+
+/* section.dashboard-view: content area for each tab */
+.dashboard-view {
+  display: flex;
+  flex-direction: column;
+  gap: var(--okr-space-6);
+}
+
+/* dashboard-stats: row of stat cards (custom element) */
+dashboard-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--okr-space-4);
+}
+
+@media (max-width: 767px) {
+  dashboard-stats {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* dashboard-stat: individual stat card (custom element) */
+dashboard-stat {
+  display: flex;
+  align-items: center;
+  gap: var(--okr-space-4);
+  background: var(--okr-color-bg-card);
+  border-radius: var(--okr-radius-lg);
+  padding: var(--okr-space-4) var(--okr-space-6);
+  box-shadow: var(--okr-shadow-sm);
+}
+
+/* dashboard-stat-icon: emoji icon for stat (custom element) */
+dashboard-stat-icon {
+  font-size: 2rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+/* dashboard-stat-body: text content of a stat (custom element) */
+dashboard-stat-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--okr-space-1);
+  min-width: 0;
+}
+
+/* dashboard-stat-label: stat label (custom element) */
+dashboard-stat-label {
+  font-size: var(--okr-font-size-sm);
+  color: var(--okr-color-muted);
+}
+
+/* dashboard-stat-value: stat primary value (custom element) */
+dashboard-stat-value {
+  font-size: var(--okr-font-size-2xl);
+  font-weight: 700;
+  color: var(--okr-color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* dashboard-stat-sub: stat secondary text (custom element) */
+dashboard-stat-sub {
+  font-size: var(--okr-font-size-xs);
+  color: var(--okr-color-muted);
+}
+
+/* section.dashboard-section: named sub-section within a view */
+.dashboard-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--okr-space-3);
+}
+
+/* h2.dashboard-section-title: sub-section heading */
+.dashboard-section-title {
+  font-size: var(--okr-font-size-lg);
+  font-weight: 700;
+  color: var(--okr-color-text);
+}
+
+/* p.dashboard-empty-msg: small empty state message */
+.dashboard-empty-msg {
+  font-size: var(--okr-font-size-sm);
+  color: var(--okr-color-muted);
+  text-align: center;
+  padding: var(--okr-space-4) 0;
+}
+
+/* ─── Overview: Activity feed ────────────────────────────── */
+
+/* ul.activity-list: recent activity list */
+.activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: var(--okr-color-bg-card);
+  border-radius: var(--okr-radius-lg);
+  box-shadow: var(--okr-shadow-sm);
+  overflow: hidden;
+}
+
+/* li.activity-item: single activity row */
+.activity-item {
+  display: flex;
+  align-items: center;
+  gap: var(--okr-space-3);
+  padding: var(--okr-space-3) var(--okr-space-4);
+  border-bottom: 1px solid var(--okr-color-border-light);
+}
+
+.activity-item:last-child {
+  border-bottom: none;
+}
+
+/* activity-dot: colored dot indicator (custom element) */
+activity-dot {
+  display: block;
+  width: 10px;
+  height: 10px;
+  border-radius: var(--okr-radius-full);
+  flex-shrink: 0;
+}
+
+/* activity-body: title + meta for activity row (custom element) */
+activity-body {
+  flex: 1;
+  min-width: 0;
+}
+
+/* activity-title: objective title in activity row (custom element) */
+activity-title {
+  display: block;
+  font-size: var(--okr-font-size-sm);
+  font-weight: 600;
+  color: var(--okr-color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* activity-meta: quarter/status/date line (custom element) */
+activity-meta {
+  display: block;
+  font-size: var(--okr-font-size-xs);
+  color: var(--okr-color-muted);
+}
+
+/* activity-progress: percentage for activity row (custom element) */
+activity-progress {
+  display: block;
+  font-size: var(--okr-font-size-sm);
+  font-weight: 700;
+  color: var(--okr-color-text);
+  flex-shrink: 0;
+  min-width: 3rem;
+  text-align: right;
+}
+
+/* ─── Quarter/Year: filters ──────────────────────────────── */
+
+/* fieldset.dashboard-filters: filter controls bar */
+.dashboard-filters {
+  display: flex;
+  gap: var(--okr-space-3);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* ─── Quarter: trend indicator ───────────────────────────── */
+
+/* span.trend: up/down delta indicator */
+.trend {
+  font-size: var(--okr-font-size-lg);
+  font-weight: 700;
+}
+
+.trend[data-trend="up"] {
+  color: var(--okr-color-success);
+}
+
+.trend[data-trend="down"] {
+  color: var(--okr-color-error);
+}
+
+/* ─── Year View: quarter sections ────────────────────────── */
+
+/* section.year-quarters: grid of 4 quarter sections */
+.year-quarters {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--okr-space-4);
+}
+
+@media (max-width: 767px) {
+  .year-quarters {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* section.year-quarter-section: single quarter block */
+.year-quarter-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--okr-space-3);
+  background: var(--okr-color-bg-card);
+  border-radius: var(--okr-radius-lg);
+  padding: var(--okr-space-4);
+  box-shadow: var(--okr-shadow-sm);
+}
+
+/* header.year-quarter-header */
+.year-quarter-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.year-quarter-header h3 {
+  font-size: var(--okr-font-size-base);
+  font-weight: 700;
+  color: var(--okr-color-text);
+}
+
+/* year-quarter-meta: ring + count (custom element) */
+year-quarter-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--okr-space-2);
+}
+
+/* year-quarter-count: objectives count label (custom element) */
+year-quarter-count {
+  font-size: var(--okr-font-size-xs);
+  color: var(--okr-color-muted);
+}
+
+/* ul.quarter-objective-list: compact list of objectives in year view */
+.quarter-objective-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--okr-space-2);
+}
+
+/* li.quarter-objective-item: single objective row in year view */
+.quarter-objective-item {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: var(--okr-space-2);
+}
+
+/* quarter-obj-bar: progress track for year view (custom element) */
+quarter-obj-bar {
+  display: block;
+  grid-column: 1 / -1;
+  height: 6px;
+  background: #e5e7eb;
+  border-radius: var(--okr-radius-full);
+  overflow: hidden;
+}
+
+/* quarter-obj-fill: progress fill for year view (custom element) */
+quarter-obj-fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--okr-radius-full);
+  transition: width 400ms ease;
+}
+
+/* quarter-obj-title: objective title in year view (custom element) */
+quarter-obj-title {
+  display: block;
+  font-size: var(--okr-font-size-sm);
+  color: var(--okr-color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  grid-column: 1;
+}
+
+/* quarter-obj-pct: percentage in year view (custom element) */
+quarter-obj-pct {
+  display: block;
+  font-size: var(--okr-font-size-xs);
+  font-weight: 700;
+  color: var(--okr-color-muted);
+  grid-column: 2;
+  text-align: right;
+}

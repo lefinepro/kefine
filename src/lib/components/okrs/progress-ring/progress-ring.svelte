@@ -66,7 +66,5 @@
 </svg>
 
 <style>
-  .progress-arc {
-    transition: stroke-dashoffset 500ms ease-out, stroke 300ms ease;
-  }
+  @import './progress-ring.css';
 </style>
