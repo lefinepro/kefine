@@ -122,7 +122,25 @@ skeleton-line,
 kr-type-badge,
 kr-title,
 kr-progress-bar,
-kr-progress-fill {
+kr-progress-fill,
+dashboard-stats,
+dashboard-stat,
+dashboard-stat-body,
+dashboard-stat-label,
+dashboard-stat-value,
+dashboard-stat-sub,
+dashboard-stat-icon,
+activity-body,
+activity-title,
+activity-meta,
+activity-progress,
+activity-dot,
+year-quarter-meta,
+year-quarter-count,
+quarter-obj-bar,
+quarter-obj-fill,
+quarter-obj-title,
+quarter-obj-pct {
   display: block;
 }
 
@@ -160,6 +178,89 @@ required-mark {
 .okr-header p {
   color: var(--okr-color-muted);
   margin-top: var(--okr-space-2);
+}
+
+/* nav.okr-page-nav: top-level page view switcher */
+.okr-page-nav {
+  display: flex;
+  gap: var(--okr-space-2);
+  margin-top: var(--okr-space-4);
+}
+
+/* ─── TAC: Shared grid and empty state ───────────────────── */
+
+/* ul.okr-grid: grid of objective cards — used in okr-index and okr-dashboard */
+.okr-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--okr-space-4);
+}
+
+@media (max-width: 1199px) {
+  .okr-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 767px) {
+  .okr-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* section.okr-empty: empty state — used in okr-index and okr-dashboard */
+.okr-empty {
+  display: block;
+  text-align: center;
+  padding: var(--okr-space-8) var(--okr-space-4);
+  background: var(--okr-color-bg-card);
+  border-radius: var(--okr-radius-xl);
+  box-shadow: var(--okr-shadow-sm);
+}
+
+.okr-empty h2 {
+  font-size: var(--okr-font-size-xl);
+  font-weight: 700;
+  color: var(--okr-color-text);
+  margin-bottom: var(--okr-space-2);
+}
+
+.okr-empty p {
+  color: var(--okr-color-muted);
+  margin-bottom: var(--okr-space-4);
+}
+
+/* li.skeleton-card: loading placeholder — used in okr-index and okr-dashboard */
+.skeleton-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--okr-space-3);
+  background: var(--okr-color-bg-card);
+  border-radius: var(--okr-radius-xl);
+  padding: var(--okr-space-6);
+  box-shadow: var(--okr-shadow-md);
+}
+
+/* skeleton-line: loading line placeholder (custom element) */
+skeleton-line {
+  display: block;
+  height: 1rem;
+  background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+  background-size: 200% 100%;
+  border-radius: var(--okr-radius-sm);
+  animation: skeleton-pulse 1.5s infinite;
+  width: 100%;
+}
+
+/* TAC attribute variation: skeleton sizes */
+skeleton-line[data-size="title"] {
+  height: 1.25rem;
+  width: 60%;
+}
+
+@keyframes skeleton-pulse {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 /* ─── TAC: Attribute layer — button variants ─────────────── */
