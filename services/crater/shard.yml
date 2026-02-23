@@ -1,0 +1,27 @@
+name: crater
+version: 0.1.0
+
+authors:
+  - Kefine Team
+
+description: |
+  Crater - a stateless proxy service that converts the simple task API
+  to ActivityPub + ForgeFed format for federated task management.
+
+crystal: >= 1.11.0
+
+license: MIT
+
+dependencies:
+  kemal:
+    github: kemalcr/kemal
+    version: ~> 1.5.0
+
+  http-signature:
+    github: samueleaton/http-signature
+    version: ~> 0.1.0
+
+development_dependencies:
+  webmock:
+    github: manastech/webmock.cr
+    version: ~> 0.14.0
