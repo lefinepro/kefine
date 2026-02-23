@@ -131,3 +131,10 @@ export async function autoDiscoverConfig(actorUrl: string): Promise<Partial<Fede
 
   return partial;
 }
+
+/**
+ * Get current config (alias for loadConfig, used by some modules)
+ */
+export function getConfig(): FederationConfig {
+  return loadConfig();
+}

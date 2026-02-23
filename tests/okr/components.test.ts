@@ -31,8 +31,8 @@ vi.stubGlobal('localStorage', localStorageStub);
 vi.stubGlobal('window', { localStorage: localStorageStub });
 
 // ── Imports ────────────────────────────────────────────────────────────────
-import ProgressRing from '$lib/components/okrs/ProgressRing.svelte';
-import OKRIndex from '$lib/components/okrs/OKRIndex.svelte';
+import ProgressRing from '$lib/components/okrs/progress-ring/progress-ring.svelte';
+import OKRIndex from '$lib/components/okrs/okr-index/okr-index.svelte';
 import { okrStore } from '$lib/stores/okrs';
 import { getProgressColor } from '$lib/utils/colors';
 import { formatProgress } from '$lib/utils/formatters';

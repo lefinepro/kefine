@@ -5,10 +5,10 @@
   import { getQuartersList, getYearsList, getCurrentQuarter } from '$lib/utils/helpers';
   import { formatProgress, formatQuarter, formatDate } from '$lib/utils/formatters';
   import { getProgressColor } from '$lib/utils/colors';
-  import ProgressRing from './ProgressRing.svelte';
-  import ObjectiveCard from './ObjectiveCard.svelte';
-  import ObjectiveModal from './ObjectiveModal.svelte';
-  import KeyResultModal from './KeyResultModal.svelte';
+  import ProgressRing from '../progress-ring/progress-ring.svelte';
+  import ObjectiveCard from '../objective-card/objective-card.svelte';
+  import ObjectiveModal from '../objective-modal/objective-modal.svelte';
+  import KeyResultModal from '../key-result-modal/key-result-modal.svelte';
 
   type DashboardView = 'overview' | 'quarter' | 'year' | 'my-okrs';
 
@@ -533,3 +533,7 @@
     onClose={closeKeyResultModal}
   />
 {/if}
+
+<style>
+  @import './okr-dashboard.css';
+</style>

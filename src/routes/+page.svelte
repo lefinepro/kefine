@@ -1,6 +1,6 @@
 <script lang="ts">
-  import OKRIndex from '$lib/components/okrs/OKRIndex.svelte';
-  import OKRDashboard from '$lib/components/okrs/OKRDashboard.svelte';
+  import OKRIndex from '$lib/components/okrs/okr-index/okr-index.svelte';
+  import OKRDashboard from '$lib/components/okrs/okr-dashboard/okr-dashboard.svelte';
   import AuthButton from '$lib/components/auth/AuthButton.svelte';
 
   let showDashboard = $state(false);

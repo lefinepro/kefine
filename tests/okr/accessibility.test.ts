@@ -28,9 +28,9 @@ vi.stubGlobal('localStorage', localStorageStub);
 vi.stubGlobal('window', { localStorage: localStorageStub });
 
 // ── Imports ────────────────────────────────────────────────────────────────
-import OKRIndex from '$lib/components/okrs/OKRIndex.svelte';
-import ProgressRing from '$lib/components/okrs/ProgressRing.svelte';
-import ObjectiveModal from '$lib/components/okrs/ObjectiveModal.svelte';
+import OKRIndex from '$lib/components/okrs/okr-index/okr-index.svelte';
+import ProgressRing from '$lib/components/okrs/progress-ring/progress-ring.svelte';
+import ObjectiveModal from '$lib/components/okrs/objective-modal/objective-modal.svelte';
 import { okrStore } from '$lib/stores/okrs';
 
 // ── Helper: reset store ───────────────────────────────────────────────────
