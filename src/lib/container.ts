@@ -1,61 +1,89 @@
-// Dependency injection container for service registration and resolution
+/**
+ * Dependency injection container for federation services
+ * OKR-013.3 Task 1.3.2
+ *
+ * Provides a lightweight service registry for the AP/ForgeFed integration modules.
+ */
 
-type Constructor<T> = new (...args: unknown[]) => T;
-type Factory<T> = () => T;
+import type { FederationConfig } from './config';
+import { loadConfig } from './config';
+import { loadAPSession } from './auth/session';
+import { apObjectCache } from './activitypub/cache';
 
-type Registration<T> = { kind: 'constructor'; ctor: Constructor<T> } | { kind: 'factory'; factory: Factory<T> } | { kind: 'value'; value: T };
+/** Service identifiers */
+export type ServiceId =
+  | 'config'
+  | 'session'
+  | 'apObjectCache'
+  | 'activityPubClient'
+  | 'forgeFedAdapter'
+  | 'orgParser'
+  | 'passkeyAuth'
+  | 'syncManager';
 
-export class Container {
-	private readonly registry = new Map<string, Registration<unknown>>();
-	private readonly singletons = new Map<string, unknown>();
+type ServiceFactory<T> = () => T;
 
-	register<T>(token: string, registration: Registration<T>): void {
-		this.registry.set(token, registration as Registration<unknown>);
-	}
+/** Simple service registry */
+class Container {
+  private readonly factories = new Map<string, ServiceFactory<unknown>>();
+  private readonly singletons = new Map<string, unknown>();
 
-	registerConstructor<T>(token: string, ctor: Constructor<T>): void {
-		this.register(token, { kind: 'constructor', ctor });
-	}
+  /**
+   * Register a service factory (singleton by default)
+   */
+  register<T>(id: ServiceId, factory: ServiceFactory<T>): void {
+    this.factories.set(id, factory as ServiceFactory<unknown>);
+  }
 
-	registerFactory<T>(token: string, factory: Factory<T>): void {
-		this.register(token, { kind: 'factory', factory });
-	}
+  /**
+   * Resolve a registered service (creates singleton on first access)
+   */
+  resolve<T>(id: ServiceId): T {
+    if (this.singletons.has(id)) {
+      return this.singletons.get(id) as T;
+    }
 
-	registerValue<T>(token: string, value: T): void {
-		this.register(token, { kind: 'value', value });
-	}
+    const factory = this.factories.get(id);
+    if (!factory) {
+      throw new Error(`Service not registered: ${id}`);
+    }
 
-	resolve<T>(token: string): T {
-		const registration = this.registry.get(token);
-		if (!registration) {
-			throw new Error(`No registration found for token: ${token}`);
-		}
+    const instance = factory();
+    this.singletons.set(id, instance);
+    return instance as T;
+  }
 
-		if (this.singletons.has(token)) {
-			return this.singletons.get(token) as T;
-		}
-
-		let instance: T;
-		if (registration.kind === 'constructor') {
-			instance = new (registration.ctor as Constructor<T>)();
-		} else if (registration.kind === 'factory') {
-			instance = (registration.factory as Factory<T>)();
-		} else {
-			instance = registration.value as T;
-		}
-
-		this.singletons.set(token, instance);
-		return instance;
-	}
-
-	has(token: string): boolean {
-		return this.registry.has(token);
-	}
-
-	clear(): void {
-		this.registry.clear();
-		this.singletons.clear();
-	}
+  /**
+   * Reset all singleton instances (useful for testing)
+   */
+  reset(): void {
+    this.singletons.clear();
+  }
 }
 
+/** Global container instance */
 export const container = new Container();
+
+/**
+ * Initialize the container with default service registrations
+ */
+export function initContainer(): void {
+  // Config service
+  container.register('config', () => loadConfig());
+
+  // Object cache
+  container.register('apObjectCache', () => apObjectCache);
+
+  // Session initialization (side effect: loads from localStorage)
+  container.register('session', () => {
+    loadAPSession();
+    return null;
+  });
+}
+
+/**
+ * Get the current federation config from the container
+ */
+export function getConfig(): FederationConfig {
+  return container.resolve<FederationConfig>('config');
+}

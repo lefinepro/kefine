@@ -11,7 +11,9 @@ import type {
 	RegistrationResponseJSON,
 	AuthenticationResponseJSON
 } from '@simplewebauthn/types';
-import { getConfig } from '../config.js';
+// WebAuthn Relying Party defaults derived from current origin
+const getRpName = () => (typeof document !== 'undefined' ? document.title || 'Kefine OKR' : 'Kefine OKR');
+const getRpId = () => (typeof window !== 'undefined' ? window.location.hostname : 'localhost');
 
 // In-memory stores (for demo/prototype purposes)
 interface UserRecord {
@@ -41,8 +43,6 @@ function generateId(): string {
 // Registration
 
 export async function startRegistration(username: string): Promise<PublicKeyCredentialCreationOptionsJSON> {
-	const config = getConfig();
-
 	let userId = [...users.values()].find((u) => u.username === username)?.id;
 	if (!userId) {
 		userId = generateId();
@@ -53,8 +53,8 @@ export async function startRegistration(username: string): Promise<PublicKeyCred
 
 	const options: PublicKeyCredentialCreationOptionsJSON = {
 		rp: {
-			name: config.rpName,
-			id: config.rpId
+			name: getRpName(),
+			id: getRpId()
 		},
 		user: {
 			id: userId,
@@ -120,8 +120,6 @@ export async function finishRegistration(
 // Authentication
 
 export async function startAuthentication(username?: string): Promise<PublicKeyCredentialRequestOptionsJSON> {
-	const config = getConfig();
-
 	let allowCredentials: { id: string; type: 'public-key' }[] = [];
 	const sessionKey = username ?? 'anon';
 
@@ -137,7 +135,7 @@ export async function startAuthentication(username?: string): Promise<PublicKeyC
 	}
 
 	const options: PublicKeyCredentialRequestOptionsJSON = {
-		rpId: config.rpId,
+		rpId: getRpId(),
 		challenge: btoa(generateId()),
 		timeout: 60000,
 		userVerification: 'preferred',
