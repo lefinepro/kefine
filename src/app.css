@@ -134,7 +134,25 @@ task-okr-count,
 task-repo-count,
 task-item-actions,
 task-okr-tags,
-task-okr-tag {
+task-okr-tag,
+dashboard-stats,
+dashboard-stat,
+dashboard-stat-body,
+dashboard-stat-label,
+dashboard-stat-value,
+dashboard-stat-sub,
+dashboard-stat-icon,
+activity-body,
+activity-title,
+activity-meta,
+activity-progress,
+activity-dot,
+year-quarter-meta,
+year-quarter-count,
+quarter-obj-bar,
+quarter-obj-fill,
+quarter-obj-title,
+quarter-obj-pct {
   display: block;
 }
 
@@ -174,76 +192,16 @@ required-mark {
   margin-top: var(--okr-space-2);
 }
 
-/* section.okr-index: main OKR section */
-.okr-index {
+/* nav.okr-page-nav: top-level page view switcher */
+.okr-page-nav {
   display: flex;
-  flex-direction: column;
-  gap: var(--okr-space-6);
-}
-
-/* nav.okr-toolbar: filter + action row */
-.okr-toolbar {
-  display: flex;
-  align-items: center;
-  gap: var(--okr-space-3);
-  flex-wrap: wrap;
-}
-
-@media (max-width: 767px) {
-  .okr-toolbar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .okr-toolbar button[data-variant="primary"] {
-    text-align: center;
-  }
-}
-
-/* fieldset.okr-filters: filter group inside toolbar */
-.okr-filters {
-  display: flex;
-  align-items: center;
   gap: var(--okr-space-2);
-  flex: 1;
-  flex-wrap: wrap;
-  min-width: 0;
+  margin-top: var(--okr-space-4);
 }
 
-/* okr-summary: overall progress summary (custom element) */
-okr-summary {
-  display: flex;
-  align-items: center;
-  gap: var(--okr-space-4);
-  background: var(--okr-color-bg-card);
-  border-radius: var(--okr-radius-lg);
-  padding: var(--okr-space-4) var(--okr-space-6);
-  box-shadow: var(--okr-shadow-sm);
-}
+/* ─── TAC: Shared grid and empty state ───────────────────── */
 
-okr-summary-text {
-  display: flex;
-  flex-direction: column;
-  gap: var(--okr-space-1);
-}
-
-okr-summary-label {
-  font-size: var(--okr-font-size-sm);
-  color: var(--okr-color-muted);
-}
-
-okr-summary-value {
-  font-size: var(--okr-font-size-2xl);
-  font-weight: 700;
-  color: var(--okr-color-text);
-}
-
-okr-summary-count {
-  font-size: var(--okr-font-size-xs);
-  color: var(--okr-color-muted);
-}
-
-/* ul.okr-grid: grid of objective cards */
+/* ul.okr-grid: grid of objective cards — used in okr-index and okr-dashboard */
 .okr-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -262,7 +220,7 @@ okr-summary-count {
   }
 }
 
-/* section.okr-empty: empty state */
+/* section.okr-empty: empty state — used in okr-index and okr-dashboard */
 .okr-empty {
   display: block;
   text-align: center;
@@ -284,309 +242,7 @@ okr-summary-count {
   margin-bottom: var(--okr-space-4);
 }
 
-/* article.okr-card: objective card */
-.okr-card {
-  display: flex;
-  flex-direction: column;
-  background: var(--okr-color-bg-card);
-  border-radius: var(--okr-radius-xl);
-  box-shadow: var(--okr-shadow-md);
-  overflow: hidden;
-  transition: box-shadow 250ms ease, transform 250ms ease;
-}
-
-.okr-card:hover {
-  box-shadow: var(--okr-shadow-lg);
-  transform: scale(1.01);
-}
-
-/* TAC attribute variation: status */
-.okr-card[data-status="archived"] {
-  opacity: 0.65;
-}
-
-.okr-card-header {
-  display: block;
-  padding: var(--okr-space-4) var(--okr-space-6) var(--okr-space-3);
-  border-bottom: 1px solid var(--okr-color-border-light);
-}
-
-.okr-card-title-row {
-  display: flex;
-  align-items: center;
-  gap: var(--okr-space-3);
-  margin-bottom: var(--okr-space-2);
-}
-
-/* okr-card-meta: title + quarter (custom element) */
-okr-card-meta {
-  display: block;
-  flex: 1;
-  min-width: 0;
-}
-
-okr-card-meta h3 {
-  font-size: var(--okr-font-size-base);
-  font-weight: 700;
-  color: var(--okr-color-text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  margin: 0;
-}
-
-/* okr-quarter: quarter/year label (custom element) */
-okr-quarter {
-  font-size: var(--okr-font-size-xs);
-  color: var(--okr-color-muted);
-}
-
-/* okr-status-badge: status pill (custom element) */
-okr-status-badge {
-  display: inline-block;
-  font-size: var(--okr-font-size-xs);
-  font-weight: 600;
-  text-transform: capitalize;
-  padding: 0.15rem 0.5rem;
-  border-radius: var(--okr-radius-full);
-  flex-shrink: 0;
-}
-
-.okr-card-description {
-  display: -webkit-box;
-  font-size: var(--okr-font-size-sm);
-  color: var(--okr-color-muted);
-  -webkit-line-clamp: 3;
-  line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  margin: 0;
-}
-
-.okr-card-body {
-  display: block;
-  padding: var(--okr-space-3) var(--okr-space-6);
-  flex: 1;
-}
-
-.okr-kr-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--okr-space-2);
-}
-
-/* okr-kr-count: key results count label (custom element) */
-okr-kr-count {
-  display: inline-block;
-  font-size: var(--okr-font-size-xs);
-  font-weight: 600;
-  color: var(--okr-color-muted);
-}
-
-.okr-kr-empty {
-  display: block;
-  font-size: var(--okr-font-size-sm);
-  color: var(--okr-color-muted);
-  text-align: center;
-  padding: var(--okr-space-3) 0;
-}
-
-.okr-card-footer {
-  display: flex;
-  gap: var(--okr-space-2);
-  padding: var(--okr-space-2) var(--okr-space-6);
-  border-top: 1px solid var(--okr-color-border-light);
-  background: var(--okr-color-bg);
-}
-
-/* li.kr-row: key result list item */
-.kr-row {
-  display: flex;
-  flex-direction: column;
-  gap: var(--okr-space-2);
-  list-style: none;
-  padding: var(--okr-space-3) 0;
-  border-bottom: 1px solid var(--okr-color-border-light);
-}
-
-.kr-row:last-child {
-  border-bottom: none;
-}
-
-.kr-header {
-  display: flex;
-  align-items: center;
-  gap: var(--okr-space-2);
-}
-
-/* kr-type-badge: target type label (custom element) */
-kr-type-badge {
-  display: inline-block;
-  font-size: var(--okr-font-size-xs);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  flex-shrink: 0;
-}
-
-/* kr-title: key result title (custom element) */
-kr-title {
-  display: block;
-  font-size: var(--okr-font-size-sm);
-  font-weight: 600;
-  color: var(--okr-color-text);
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.kr-description {
-  display: block;
-  font-size: var(--okr-font-size-xs);
-  color: var(--okr-color-muted);
-}
-
-.kr-progress {
-  display: flex;
-  align-items: center;
-  gap: var(--okr-space-2);
-}
-
-/* kr-progress-bar: progress track (custom element) */
-kr-progress-bar {
-  display: block;
-  flex: 1;
-  height: 8px;
-  background: #e5e7eb;
-  border-radius: var(--okr-radius-full);
-  overflow: hidden;
-}
-
-/* kr-progress-fill: progress fill (custom element) */
-kr-progress-fill {
-  display: block;
-  height: 100%;
-  border-radius: var(--okr-radius-full);
-  transition: width 400ms ease;
-}
-
-.kr-progress-pct {
-  display: inline-block;
-  font-size: var(--okr-font-size-xs);
-  font-weight: 600;
-  color: var(--okr-color-muted);
-  min-width: 2.5rem;
-  text-align: right;
-}
-
-.kr-values {
-  display: flex;
-  font-size: var(--okr-font-size-sm);
-  color: var(--okr-color-muted);
-  gap: var(--okr-space-1);
-}
-
-/* kr-current: current value highlight (custom element) */
-kr-current {
-  display: inline;
-  font-weight: 700;
-  color: var(--okr-color-text);
-}
-
-/* kr-sep: separator (custom element) */
-kr-sep {
-  display: inline;
-  color: var(--okr-color-border);
-}
-
-/* kr-target: target value (custom element) */
-kr-target {
-  display: inline;
-}
-
-.kr-edit-form {
-  display: flex;
-  flex-direction: column;
-  gap: var(--okr-space-2);
-  padding: var(--okr-space-2);
-  background: var(--okr-color-bg);
-  border-radius: var(--okr-radius-md);
-}
-
-.kr-edit-actions {
-  display: flex;
-  gap: var(--okr-space-2);
-}
-
-/* section.okr-modal: modal overlay */
-.okr-modal {
-  display: flex;
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  align-items: center;
-  justify-content: center;
-  z-index: 100;
-  padding: var(--okr-space-4);
-}
-
-.okr-modal-dialog {
-  display: flex;
-  flex-direction: column;
-  background: var(--okr-color-bg-card);
-  border-radius: var(--okr-radius-xl);
-  box-shadow: var(--okr-shadow-lg);
-  width: 100%;
-  max-width: 480px;
-  max-height: 90vh;
-  overflow-y: auto;
-  outline: none;
-}
-
-.okr-modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--okr-space-4) var(--okr-space-6);
-  border-bottom: 1px solid var(--okr-color-border-light);
-}
-
-.okr-modal-header h2 {
-  font-size: var(--okr-font-size-lg);
-  font-weight: 700;
-  margin: 0;
-}
-
-.okr-modal-body {
-  display: flex;
-  flex-direction: column;
-  gap: var(--okr-space-4);
-  padding: var(--okr-space-6);
-}
-
-.okr-modal-actions {
-  display: flex;
-  gap: var(--okr-space-2);
-  margin-top: var(--okr-space-2);
-}
-
-/* p.form-group: label + input grouping */
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: var(--okr-space-1);
-}
-
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--okr-space-4);
-}
-
-/* li.skeleton-card: loading placeholder */
+/* li.skeleton-card: loading placeholder — used in okr-index and okr-dashboard */
 .skeleton-card {
   display: flex;
   flex-direction: column;

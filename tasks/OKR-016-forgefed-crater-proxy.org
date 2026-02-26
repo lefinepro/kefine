@@ -689,7 +689,7 @@ services/crater/
 ├── shard.yml                  # Crystal dependencies
 ├── shard.lock
 ├── .env.example
-└── Makefile                   # Build commands
+└── .mise.toml                 # Build commands (mise tasks)
 #+END_SRC
 
 ** Kemal Server Example (src/crater.cr) - Pure API

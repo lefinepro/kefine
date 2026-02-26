@@ -1,5 +1,6 @@
-import { writable, type Writable } from 'svelte/store';
+import { writable, get, type Writable } from 'svelte/store';
 import type { Objective, KeyResult, OKRLink, Quarter, ObjectiveStatus } from '$lib/types/okr';
+import { debounce } from '$lib/utils/helpers';
 
 export interface OKRState {
   objectives: Objective[];
@@ -13,6 +14,8 @@ export interface OKRState {
   };
 }
 
+const STORAGE_KEY = 'okr-data';
+
 const initialState: OKRState = {
   objectives: [],
   keyResults: [],
@@ -25,10 +28,39 @@ const initialState: OKRState = {
   }
 };
 
+function serializeState(state: OKRState): string {
+  return JSON.stringify(state, (_key, value) => {
+    if (value instanceof Date) {
+      return { __type: 'Date', value: value.toISOString() };
+    }
+    return value;
+  });
+}
+
+function deserializeState(data: string): OKRState {
+  return JSON.parse(data, (_key, value) => {
+    if (value?.__type === 'Date') {
+      return new Date(value.value);
+    }
+    return value;
+  });
+}
+
 function createOKRStore() {
   const { subscribe, set, update }: Writable<OKRState> = writable(initialState);
 
-  return {
+  // Debounced auto-save: triggers 500ms after last change (Task 2.6.3)
+  const debouncedSave = debounce(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(STORAGE_KEY, serializeState(get(store)));
+    } catch (error) {
+      console.error('Failed to auto-save OKR data to localStorage:', error);
+    }
+  }, 500);
+
+  // Expose the store reference so debouncedSave can access it via get()
+  const store = {
     subscribe,
 
     // Objective CRUD
@@ -43,6 +75,7 @@ function createOKRStore() {
         ...state,
         objectives: [...state.objectives, newObjective]
       }));
+      debouncedSave();
       return newObjective;
     },
 
@@ -53,6 +86,7 @@ function createOKRStore() {
           obj.id === id ? { ...obj, ...updates, updatedAt: new Date() } : obj
         )
       }));
+      debouncedSave();
     },
 
     deleteObjective: (id: string) => {
@@ -64,24 +98,15 @@ function createOKRStore() {
           (link) => link.objectiveId !== id && link.keyResultId !== id
         )
       }));
+      debouncedSave();
     },
 
     getObjective: (id: string): Objective | undefined => {
-      let found: Objective | undefined;
-      update((state) => {
-        found = state.objectives.find((obj) => obj.id === id);
-        return state;
-      });
-      return found;
+      return get(store).objectives.find((obj) => obj.id === id);
     },
 
     getAllObjectives: (): Objective[] => {
-      let objectives: Objective[] = [];
-      update((state) => {
-        objectives = state.objectives;
-        return state;
-      });
-      return objectives;
+      return get(store).objectives;
     },
 
     // Key Result CRUD
@@ -96,6 +121,7 @@ function createOKRStore() {
         ...state,
         keyResults: [...state.keyResults, newKeyResult]
       }));
+      debouncedSave();
       return newKeyResult;
     },
 
@@ -106,6 +132,7 @@ function createOKRStore() {
           kr.id === id ? { ...kr, ...updates, updatedAt: new Date() } : kr
         )
       }));
+      debouncedSave();
     },
 
     deleteKeyResult: (id: string) => {
@@ -114,24 +141,15 @@ function createOKRStore() {
         keyResults: state.keyResults.filter((kr) => kr.id !== id),
         okrLinks: state.okrLinks.filter((link) => link.keyResultId !== id)
       }));
+      debouncedSave();
     },
 
     getKeyResult: (id: string): KeyResult | undefined => {
-      let found: KeyResult | undefined;
-      update((state) => {
-        found = state.keyResults.find((kr) => kr.id === id);
-        return state;
-      });
-      return found;
+      return get(store).keyResults.find((kr) => kr.id === id);
     },
 
     getKeyResultsByObjective: (objectiveId: string): KeyResult[] => {
-      let results: KeyResult[] = [];
-      update((state) => {
-        results = state.keyResults.filter((kr) => kr.objectiveId === objectiveId);
-        return state;
-      });
-      return results;
+      return get(store).keyResults.filter((kr) => kr.objectiveId === objectiveId);
     },
 
     // Progress Calculation
@@ -140,10 +158,10 @@ function createOKRStore() {
       switch (kr.targetType) {
         case 'percentage':
         case 'number':
-          progress = (kr.currentValue / kr.targetValue) * 100;
+          progress = kr.targetValue > 0 ? (kr.currentValue / kr.targetValue) * 100 : 0;
           break;
         case 'boolean':
-          progress = kr.currentValue >= kr.targetValue ? 100 : 0;
+          progress = kr.currentValue > 0 ? 100 : 0;
           break;
         default:
           progress = 0;
@@ -152,52 +170,31 @@ function createOKRStore() {
     },
 
     calculateObjectiveProgress: (objectiveId: string): number => {
-      let progress = 0;
-      update((state) => {
-        const keyResults = state.keyResults.filter((kr) => kr.objectiveId === objectiveId);
-        if (keyResults.length === 0) {
-          progress = 0;
-          return state;
-        }
-        const totalWeight = keyResults.reduce((sum, kr) => sum + kr.weight, 0);
-        const weightedProgress = keyResults.reduce((sum, kr) => {
-          const krProgress = (kr.currentValue / kr.targetValue) * 100;
-          return sum + (krProgress * kr.weight) / totalWeight;
-        }, 0);
-        progress = weightedProgress;
-        return state;
-      });
-      return Math.max(0, Math.min(100, progress));
+      const keyResults = get(store).keyResults.filter((kr) => kr.objectiveId === objectiveId);
+      if (keyResults.length === 0) return 0;
+      const totalWeight = keyResults.reduce((sum, kr) => sum + kr.weight, 0);
+      if (totalWeight === 0) return 0;
+      const weightedProgress = keyResults.reduce((sum, kr) => {
+        const krProgress = store.calculateKeyResultProgress(kr);
+        return sum + (krProgress * kr.weight) / totalWeight;
+      }, 0);
+      return Math.max(0, Math.min(100, weightedProgress));
     },
 
     calculateOverallProgress: (quarter?: Quarter, year?: number): number => {
-      let progress = 0;
-      update((state) => {
-        let objectives = state.objectives;
-        if (quarter) {
-          objectives = objectives.filter((obj) => obj.quarter === quarter);
-        }
-        if (year) {
-          objectives = objectives.filter((obj) => obj.year === year);
-        }
-        if (objectives.length === 0) {
-          progress = 0;
-          return state;
-        }
-        const totalProgress = objectives.reduce((sum, obj) => {
-          const keyResults = state.keyResults.filter((kr) => kr.objectiveId === obj.id);
-          if (keyResults.length === 0) return sum;
-          const totalWeight = keyResults.reduce((wSum, kr) => wSum + kr.weight, 0);
-          const objProgress = keyResults.reduce((pSum, kr) => {
-            const krProgress = (kr.currentValue / kr.targetValue) * 100;
-            return pSum + (krProgress * kr.weight) / totalWeight;
-          }, 0);
-          return sum + objProgress;
-        }, 0);
-        progress = totalProgress / objectives.length;
-        return state;
-      });
-      return Math.max(0, Math.min(100, progress));
+      const state = get(store);
+      let objectives = state.objectives;
+      if (quarter) {
+        objectives = objectives.filter((obj) => obj.quarter === quarter);
+      }
+      if (year) {
+        objectives = objectives.filter((obj) => obj.year === year);
+      }
+      if (objectives.length === 0) return 0;
+      const total = objectives.reduce((sum, obj) => {
+        return sum + store.calculateObjectiveProgress(obj.id);
+      }, 0);
+      return Math.max(0, Math.min(100, total / objectives.length));
     },
 
     // Filtering
@@ -209,62 +206,45 @@ function createOKRStore() {
     },
 
     getFilteredObjectives: (): Objective[] => {
-      let filtered: Objective[] = [];
-      update((state) => {
-        filtered = state.objectives.filter((obj) => {
-          const { quarter, year, status, search } = state.filters;
-          if (quarter && obj.quarter !== quarter) return false;
-          if (year && obj.year !== year) return false;
-          if (status && obj.status !== status) return false;
-          if (search) {
-            const query = search.toLowerCase();
-            const titleMatch = obj.title.toLowerCase().includes(query);
-            const descMatch = obj.description?.toLowerCase().includes(query) ?? false;
-            if (!titleMatch && !descMatch) return false;
-          }
-          return true;
-        });
-        return state;
+      const state = get(store);
+      return state.objectives.filter((obj) => {
+        const { quarter, year, status, search } = state.filters;
+        if (quarter && obj.quarter !== quarter) return false;
+        if (year && obj.year !== year) return false;
+        if (status && obj.status !== status) return false;
+        if (search) {
+          const query = search.toLowerCase();
+          const titleMatch = obj.title.toLowerCase().includes(query);
+          const descMatch = obj.description?.toLowerCase().includes(query) ?? false;
+          if (!titleMatch && !descMatch) return false;
+        }
+        return true;
       });
-      return filtered;
     },
 
     // Persistence
     saveToLocalStorage: () => {
       if (typeof window === 'undefined') return;
-      update((state) => {
-        try {
-          const data = JSON.stringify(state, (_key, value) => {
-            if (value instanceof Date) {
-              return { __type: 'Date', value: value.toISOString() };
-            }
-            return value;
-          });
-          localStorage.setItem('okr-data', data);
-        } catch (error) {
-          console.error('Failed to save OKR data to localStorage:', error);
-        }
-        return state;
-      });
+      try {
+        localStorage.setItem(STORAGE_KEY, serializeState(get(store)));
+      } catch (error) {
+        console.error('Failed to save OKR data to localStorage:', error);
+      }
     },
 
     loadFromLocalStorage: () => {
       if (typeof window === 'undefined') return;
       try {
-        const data = localStorage.getItem('okr-data');
+        const data = localStorage.getItem(STORAGE_KEY);
         if (!data) return;
-        const parsed = JSON.parse(data, (_key, value) => {
-          if (value?.__type === 'Date') {
-            return new Date(value.value);
-          }
-          return value;
-        });
-        set(parsed);
+        set(deserializeState(data));
       } catch (error) {
         console.error('Failed to load OKR data from localStorage:', error);
       }
     }
   };
+
+  return store;
 }
 
 export const okrStore = createOKRStore();
