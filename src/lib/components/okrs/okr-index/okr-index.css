@@ -1,0 +1,142 @@
+/* section.okr-index: main OKR section */
+.okr-index {
+  display: flex;
+  flex-direction: column;
+  gap: var(--okr-space-6);
+}
+
+/* nav.okr-toolbar: filter + action row */
+.okr-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--okr-space-3);
+  flex-wrap: wrap;
+}
+
+@media (max-width: 767px) {
+  .okr-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .okr-toolbar button[data-variant="primary"] {
+    text-align: center;
+  }
+}
+
+/* fieldset.okr-filters: filter group inside toolbar */
+.okr-filters {
+  display: flex;
+  align-items: center;
+  gap: var(--okr-space-2);
+  flex: 1;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+/* okr-summary: overall progress summary (custom element) */
+okr-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--okr-space-4);
+  background: var(--okr-color-bg-card);
+  border-radius: var(--okr-radius-lg);
+  padding: var(--okr-space-4) var(--okr-space-6);
+  box-shadow: var(--okr-shadow-sm);
+}
+
+okr-summary-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--okr-space-1);
+}
+
+okr-summary-label {
+  font-size: var(--okr-font-size-sm);
+  color: var(--okr-color-muted);
+}
+
+okr-summary-value {
+  font-size: var(--okr-font-size-2xl);
+  font-weight: 700;
+  color: var(--okr-color-text);
+}
+
+okr-summary-count {
+  font-size: var(--okr-font-size-xs);
+  color: var(--okr-color-muted);
+}
+
+/* ul.okr-grid: grid of objective cards */
+.okr-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--okr-space-4);
+}
+
+@media (max-width: 1199px) {
+  .okr-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 767px) {
+  .okr-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* section.okr-empty: empty state */
+.okr-empty {
+  display: block;
+  text-align: center;
+  padding: var(--okr-space-8) var(--okr-space-4);
+  background: var(--okr-color-bg-card);
+  border-radius: var(--okr-radius-xl);
+  box-shadow: var(--okr-shadow-sm);
+}
+
+.okr-empty h2 {
+  font-size: var(--okr-font-size-xl);
+  font-weight: 700;
+  color: var(--okr-color-text);
+  margin-bottom: var(--okr-space-2);
+}
+
+.okr-empty p {
+  color: var(--okr-color-muted);
+  margin-bottom: var(--okr-space-4);
+}
+
+/* li.skeleton-card: loading placeholder */
+.skeleton-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--okr-space-3);
+  background: var(--okr-color-bg-card);
+  border-radius: var(--okr-radius-xl);
+  padding: var(--okr-space-6);
+  box-shadow: var(--okr-shadow-md);
+}
+
+/* skeleton-line: loading line placeholder (custom element) */
+skeleton-line {
+  display: block;
+  height: 1rem;
+  background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+  background-size: 200% 100%;
+  border-radius: var(--okr-radius-sm);
+  animation: skeleton-pulse 1.5s infinite;
+  width: 100%;
+}
+
+/* TAC attribute variation: skeleton sizes */
+skeleton-line[data-size="title"] {
+  height: 1.25rem;
+  width: 60%;
+}
+
+@keyframes skeleton-pulse {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
