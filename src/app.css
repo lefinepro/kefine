@@ -483,3 +483,41 @@ small[role="alert"] {
   color: var(--okr-color-error);
   font-size: var(--okr-font-size-xs);
 }
+
+/* ─── Task Section ──────────────────────────────────────── */
+
+/* section.task-section: task panel below OKR index */
+.task-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--okr-space-4);
+  margin-top: var(--okr-space-8);
+}
+
+.task-section-title {
+  font-size: var(--okr-font-size-xl);
+  font-weight: 700;
+  color: var(--okr-color-text);
+  margin: 0;
+}
+
+/* Custom elements used in TaskList / TaskModal */
+task-content,
+task-badges,
+task-actions,
+task-count,
+task-link-info {
+  display: block;
+}
+
+task-title,
+task-desc,
+task-priority,
+task-link-type,
+task-link-label,
+task-link-parent,
+okr-badge-type,
+okr-badge-label,
+okr-badge-quarter {
+  display: inline;
+}

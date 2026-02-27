@@ -2,6 +2,7 @@
   import OKRIndex from '$lib/components/okrs/okr-index/okr-index.svelte';
   import OKRDashboard from '$lib/components/okrs/okr-dashboard/okr-dashboard.svelte';
   import AuthButton from '$lib/components/auth/AuthButton.svelte';
+  import TaskList from '$lib/components/tasks/TaskList.svelte';
 
   let showDashboard = $state(false);
 </script>
@@ -34,4 +35,9 @@
   {:else}
     <OKRIndex />
   {/if}
+
+  <section class="task-section">
+    <h2 class="task-section-title">Tasks</h2>
+    <TaskList />
+  </section>
 </main>
