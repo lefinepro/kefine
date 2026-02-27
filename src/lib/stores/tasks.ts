@@ -1,12 +1,24 @@
 import { writable, type Writable } from 'svelte/store';
-import type { Task, TaskStatus, Priority, OKRLink, RepositoryLink } from '$lib/types/okr';
+import type { Task, TaskStatus, Priority, OKRLink, RepositoryLink, LinkType } from '$lib/types/okr';
 
 export interface TaskState {
   tasks: Task[];
+  filters: {
+    status: TaskStatus | null;
+    priority: Priority | null;
+    okrLinkId: string | null; // objectiveId or keyResultId to filter by
+    search: string;
+  };
 }
 
 const initialState: TaskState = {
-  tasks: []
+  tasks: [],
+  filters: {
+    status: null,
+    priority: null,
+    okrLinkId: null,
+    search: ''
+  }
 };
 
 function createTaskStore() {
@@ -15,10 +27,13 @@ function createTaskStore() {
   return {
     subscribe,
 
-    addTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => {
+    // Task CRUD
+    addTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'okrLinks'> & { okrLinks?: OKRLink[] }) => {
       const newTask: Task = {
         ...task,
         id: crypto.randomUUID(),
+        okrLinks: task.okrLinks ?? [],
+        repositoryLinks: task.repositoryLinks ?? [],
         createdAt: new Date(),
         updatedAt: new Date()
       };
@@ -45,41 +60,85 @@ function createTaskStore() {
       }));
     },
 
-    updateTaskStatus: (id: string, status: TaskStatus) => {
-      update((state) => ({
-        ...state,
-        tasks: state.tasks.map((t) =>
-          t.id === id ? { ...t, status, updatedAt: new Date() } : t
-        )
-      }));
-    },
-
-    linkToOKR: (taskId: string, link: Omit<OKRLink, 'id' | 'taskId' | 'createdAt'>) => {
+    // OKR Linking
+    linkTaskToOKR: (
+      taskId: string,
+      options: {
+        objectiveId?: string;
+        keyResultId?: string;
+        linkType: LinkType;
+      }
+    ) => {
       const newLink: OKRLink = {
-        ...link,
         id: crypto.randomUUID(),
         taskId,
+        objectiveId: options.objectiveId,
+        keyResultId: options.keyResultId,
+        linkType: options.linkType,
         createdAt: new Date()
       };
       update((state) => ({
         ...state,
-        tasks: state.tasks.map((t) =>
-          t.id === taskId ? { ...t, okrLinks: [...t.okrLinks, newLink], updatedAt: new Date() } : t
-        )
+        tasks: state.tasks.map((t) => {
+          if (t.id !== taskId) return t;
+          // Avoid duplicate links to same objective/key result
+          const alreadyLinked = t.okrLinks.some(
+            (l) =>
+              (options.objectiveId && l.objectiveId === options.objectiveId) ||
+              (options.keyResultId && l.keyResultId === options.keyResultId)
+          );
+          if (alreadyLinked) return t;
+          return { ...t, okrLinks: [...t.okrLinks, newLink], updatedAt: new Date() };
+        })
       }));
     },
 
-    unlinkFromOKR: (taskId: string, linkId: string) => {
+    unlinkTaskFromOKR: (taskId: string, linkId: string) => {
       update((state) => ({
         ...state,
-        tasks: state.tasks.map((t) =>
-          t.id === taskId
-            ? { ...t, okrLinks: t.okrLinks.filter((l) => l.id !== linkId), updatedAt: new Date() }
-            : t
-        )
+        tasks: state.tasks.map((t) => {
+          if (t.id !== taskId) return t;
+          return {
+            ...t,
+            okrLinks: t.okrLinks.filter((l) => l.id !== linkId),
+            updatedAt: new Date()
+          };
+        })
       }));
     },
 
+    getLinkedOKRs: (taskId: string): OKRLink[] => {
+      let links: OKRLink[] = [];
+      update((state) => {
+        const task = state.tasks.find((t) => t.id === taskId);
+        links = task?.okrLinks ?? [];
+        return state;
+      });
+      return links;
+    },
+
+    // Remove all links pointing to a deleted objective or key result
+    removeLinksForObjective: (objectiveId: string) => {
+      update((state) => ({
+        ...state,
+        tasks: state.tasks.map((t) => ({
+          ...t,
+          okrLinks: t.okrLinks.filter((l) => l.objectiveId !== objectiveId)
+        }))
+      }));
+    },
+
+    removeLinksForKeyResult: (keyResultId: string) => {
+      update((state) => ({
+        ...state,
+        tasks: state.tasks.map((t) => ({
+          ...t,
+          okrLinks: t.okrLinks.filter((l) => l.keyResultId !== keyResultId)
+        }))
+      }));
+    },
+
+    // Repository link management
     addRepositoryLink: (taskId: string, repoLink: Omit<RepositoryLink, 'id'>) => {
       const newRepoLink: RepositoryLink = {
         ...repoLink,
@@ -89,7 +148,7 @@ function createTaskStore() {
         ...state,
         tasks: state.tasks.map((t) =>
           t.id === taskId
-            ? { ...t, repositoryLinks: [...t.repositoryLinks, newRepoLink], updatedAt: new Date() }
+            ? { ...t, repositoryLinks: [...(t.repositoryLinks ?? []), newRepoLink], updatedAt: new Date() }
             : t
         )
       }));
@@ -102,7 +161,7 @@ function createTaskStore() {
           t.id === taskId
             ? {
                 ...t,
-                repositoryLinks: t.repositoryLinks.filter((l) => l.id !== repoLinkId),
+                repositoryLinks: (t.repositoryLinks ?? []).filter((l) => l.id !== repoLinkId),
                 updatedAt: new Date()
               }
             : t
@@ -110,24 +169,22 @@ function createTaskStore() {
       }));
     },
 
-    getTasksByStatus: (status: TaskStatus): Task[] => {
-      let result: Task[] = [];
-      update((state) => {
-        result = state.tasks.filter((t) => t.status === status);
-        return state;
-      });
-      return result;
+    // Filtering
+    setFilters: (filters: Partial<TaskState['filters']>) => {
+      update((state) => ({
+        ...state,
+        filters: { ...state.filters, ...filters }
+      }));
     },
 
-    getTasksByPriority: (priority: Priority): Task[] => {
-      let result: Task[] = [];
-      update((state) => {
-        result = state.tasks.filter((t) => t.priority === priority);
-        return state;
-      });
-      return result;
+    clearFilters: () => {
+      update((state) => ({
+        ...state,
+        filters: { status: null, priority: null, okrLinkId: null, search: '' }
+      }));
     },
 
+    // Persistence
     saveToLocalStorage: () => {
       if (typeof window === 'undefined') return;
       update((state) => {

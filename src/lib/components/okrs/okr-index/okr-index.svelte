@@ -293,8 +293,8 @@
               {#if task.okrLinks.length > 0}
                 <task-okr-count>{task.okrLinks.length} OKR link{task.okrLinks.length !== 1 ? 's' : ''}</task-okr-count>
               {/if}
-              {#if task.repositoryLinks.length > 0}
-                <task-repo-count>{task.repositoryLinks.length} repo link{task.repositoryLinks.length !== 1 ? 's' : ''}</task-repo-count>
+              {#if (task.repositoryLinks?.length ?? 0) > 0}
+                <task-repo-count>{task.repositoryLinks!.length} repo link{task.repositoryLinks!.length !== 1 ? 's' : ''}</task-repo-count>
               {/if}
             </task-item-content>
             <task-item-actions>

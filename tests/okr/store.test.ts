@@ -28,7 +28,6 @@ import type { Objective, KeyResult } from '$lib/types/okr';
 
 // Reset store to initial state between tests
 function resetStore() {
-  // @ts-expect-error — accessing private `set` via the writable internals
   // We use the exported okrStore's loadFromLocalStorage on cleared storage
   localStorageStub.clear();
   okrStore.loadFromLocalStorage(); // loads null → resets to initial via the store's load path

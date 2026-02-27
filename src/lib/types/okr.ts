@@ -54,7 +54,7 @@ export interface Task {
   priority: Priority;
   dueDate?: string; // ISO date string YYYY-MM-DD
   dueTime?: string; // HH:MM
-  repositoryLinks: RepositoryLink[];
+  repositoryLinks?: RepositoryLink[];
   createdAt: Date;
   updatedAt: Date;
   okrLinks: OKRLink[];
