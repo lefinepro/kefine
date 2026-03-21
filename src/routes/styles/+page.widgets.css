@@ -1,0 +1,306 @@
+
+  oz-box-side {
+    top: 0.88rem;
+    right: 0;
+    width: 0.82rem;
+    height: 2.7rem;
+    background: linear-gradient(180deg, #1f54d7, #0f3ca8);
+  }
+
+  solver-chip {
+    position: absolute;
+    right: 0.7rem;
+    bottom: 0.7rem;
+    display: inline-flex;
+    align-items: center;
+    padding: 0.24rem 0.56rem;
+    border-radius: 999px;
+    border: var(--kef-border-width-soft) solid var(--kef-line-primary);
+    background: color-mix(in oklab, var(--kef-bg-card) 90%, var(--kef-bg-soft));
+    color: var(--kef-text);
+    font-size: 0.82rem;
+    font-weight: 700;
+  }
+
+  .kefine-ozon-card h3 {
+    margin: 0;
+    font-size: clamp(1.55rem, 3.2vw, 2.1rem);
+    line-height: 1.08;
+    text-align: center;
+  }
+
+  .kefine-actor-status {
+    display: grid;
+    gap: 0.35rem;
+    justify-items: center;
+  }
+
+  actor-avatar {
+    width: 2.7rem;
+    height: 2.7rem;
+    border-radius: 999px;
+    overflow: hidden;
+    border: var(--kef-border-width-soft) solid var(--kef-line-primary);
+    display: grid;
+  }
+
+  actor-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .kefine-actor-meta {
+    margin: 0;
+    font-size: 0.93rem;
+    color: var(--kef-text-soft);
+    text-align: center;
+  }
+
+  .kefine-ozon-card--controls {
+    gap: 0.7rem;
+  }
+
+  .kefine-login-buttons {
+    display: grid;
+    gap: 0.55rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .kefine-login-tile {
+    min-height: 4rem;
+    display: grid;
+    justify-items: center;
+    align-content: center;
+    gap: 0.32rem;
+    text-align: center;
+    font-weight: 600;
+  }
+
+  .kefine-login-tile .kefine-carbon-icon {
+    width: 1.05rem;
+    height: 1.05rem;
+    color: var(--kef-text);
+    filter: brightness(0.9) saturate(1.1);
+  }
+
+  passkey-icon,
+  promo-icon {
+    width: 1.15rem;
+    height: 1.15rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+  }
+
+  .kefine-login-tile--social {
+    gap: 0.48rem;
+  }
+
+  social-icons {
+    display: inline-grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.26rem;
+    width: 6.2rem;
+  }
+
+  .kefine-login-tile--social .kefine-carbon-icon {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  login-avatar {
+    width: 1.55rem;
+    height: 1.55rem;
+    border-radius: 999px;
+    overflow: hidden;
+    border: var(--kef-border-width-soft) solid var(--kef-line-primary);
+    display: grid;
+  }
+
+  login-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  promo-inline {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.45rem;
+    align-items: stretch;
+  }
+
+  .promo-submit {
+    min-width: 2.9rem;
+    padding-inline: 0.62rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .kefine-cancel-btn {
+    width: 100%;
+  }
+
+  @media (max-width: 760px) {
+    .kefine-login-buttons {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .kefine-table {
+    width: 100%;
+    border-collapse: collapse;
+    border: var(--kef-border-width-soft) solid var(--kef-line);
+    border-radius: 0.35rem;
+    overflow: hidden;
+    background: color-mix(in oklab, var(--kef-bg-card) 90%, var(--kef-bg-soft));
+  }
+
+  .kefine-table th,
+  .kefine-table td {
+    text-align: left;
+    padding: 0.72rem 0.78rem;
+    border-bottom: var(--kef-border-width) solid var(--kef-line);
+    vertical-align: top;
+    font-size: 0.92rem;
+  }
+
+  .kefine-table th {
+    color: var(--kef-text-soft);
+    font-weight: 600;
+    background: color-mix(in oklab, var(--kef-bg-soft) 70%, transparent);
+  }
+
+  .kefine-table tbody tr {
+    cursor: pointer;
+    transition: background-color 120ms ease;
+  }
+
+  .kefine-table tbody tr:hover {
+    background: color-mix(in oklab, var(--kef-primary) 8%, transparent);
+  }
+
+task-status {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    border: var(--kef-border-width) solid var(--kef-line);
+    text-transform: capitalize;
+    font-size: 0.82rem;
+    color: var(--kef-text-soft);
+    background: var(--kef-bg-soft);
+  }
+
+task-status[data-status='completed'] {
+  color: var(--kef-success);
+  border-color: var(--kef-line-success);
+  background: color-mix(in oklab, var(--kef-success) 20%, var(--kef-bg-card));
+}
+
+task-status[data-status='executing'],
+task-status[data-status='accepted'] {
+  color: var(--kef-primary);
+  border-color: var(--kef-line-primary);
+  background: color-mix(in oklab, var(--kef-primary) 20%, var(--kef-bg-card));
+}
+
+task-status[data-status='queued'] {
+  color: var(--kef-warning);
+  border-color: var(--kef-line-warning);
+  background: color-mix(in oklab, var(--kef-warning) 20%, var(--kef-bg-card));
+}
+
+  .kefine-empty-table {
+    border: var(--kef-border-width) dashed var(--kef-line);
+    border-radius: 1rem;
+    padding: 1.1rem;
+    background: color-mix(in oklab, var(--kef-bg-card) 90%, var(--kef-bg-soft));
+  }
+
+  .kefine-status {
+    color: var(--kef-text-soft);
+    margin: 0;
+  }
+
+  .kefine-status {
+    margin-top: 0.25rem;
+  }
+
+  fieldset {
+    border: var(--kef-border-width-soft) solid var(--kef-line-on-primary);
+    border-radius: 0.35rem;
+    margin: 0;
+    padding: 0.95rem;
+    background: color-mix(in oklab, var(--kef-bg-card) 90%, var(--kef-bg-soft));
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  fieldset p {
+    margin: 0;
+    display: grid;
+    gap: 0.35rem;
+  }
+
+  input,
+  textarea {
+    border-radius: 0.3rem;
+    border: var(--kef-border-width-soft) solid var(--kef-line-on-primary);
+    background: var(--kef-bg-card);
+    color: var(--kef-text);
+    padding: 0.8rem 0.92rem;
+    font-size: 0.96rem;
+    outline: none;
+  }
+
+  input:focus,
+  textarea:focus {
+    box-shadow: var(--kef-ring-focus);
+  }
+
+  textarea {
+    resize: vertical;
+  }
+
+  .kefine-progress {
+    padding: 0;
+    margin: 0;
+    list-style: none;
+    display: flex;
+    gap: 0.4rem;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .kefine-progress li {
+    width: 9px;
+    height: 9px;
+    border-radius: 99px;
+    background: var(--kef-accent);
+    animation: pulse 0.85s ease-in-out infinite;
+  }
+
+  .kefine-progress li:nth-child(2) {
+    animation-delay: 0.15s;
+  }
+
+  .kefine-progress li:nth-child(3) {
+    animation-delay: 0.3s;
+  }
+
+  @keyframes pulse {
+    0%,
+    100% {
+      transform: translateY(0);
+      opacity: 0.3;
+    }
+
+    50% {
+      transform: translateY(-4px);
+      opacity: 1;
+    }
+  }

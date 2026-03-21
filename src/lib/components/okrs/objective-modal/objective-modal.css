@@ -1,0 +1,61 @@
+/* dialog.okr-modal-dialog: modal dialog */
+.okr-modal-dialog {
+  display: flex;
+  flex-direction: column;
+  background: var(--okr-color-bg-card);
+  border-radius: var(--okr-radius-xl);
+  box-shadow: var(--okr-shadow-lg);
+  width: min(480px, calc(100vw - 2 * var(--okr-space-4)));
+  max-height: 90vh;
+  overflow-y: auto;
+  outline: none;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
+}
+
+.okr-modal-dialog::backdrop {
+  background: var(--okr-color-backdrop);
+}
+
+.okr-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--okr-space-4) var(--okr-space-6);
+  border-bottom: var(--okr-border-width) solid var(--okr-color-border-light);
+}
+
+.okr-modal-header h2 {
+  font-size: var(--okr-font-size-lg);
+  font-weight: 700;
+  margin: 0;
+}
+
+.okr-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--okr-space-4);
+  padding: var(--okr-space-6);
+}
+
+.okr-modal-actions {
+  display: flex;
+  gap: var(--okr-space-2);
+  margin-top: var(--okr-space-2);
+}
+
+/* p.form-group: label + input grouping */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--okr-space-1);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--okr-space-4);
+}

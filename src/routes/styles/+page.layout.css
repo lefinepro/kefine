@@ -1,0 +1,870 @@
+  .kefine-card h2 {
+    font-size: clamp(1.35rem, 2vw, 1.75rem);
+  }
+
+  .kefine-kicker {
+    text-transform: uppercase;
+    font-size: 0.73rem;
+    letter-spacing: 0.11em;
+    color: var(--kef-text-soft);
+    margin: 0;
+  }
+
+  .kefine-form {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .kefine-card--create {
+    grid-template-rows: auto auto auto minmax(0, auto);
+    align-content: start;
+  }
+
+  .kefine-form-grid {
+    display: grid;
+    gap: 0.72rem;
+    border-radius: 0.35rem;
+    margin: 0;
+    padding: 0;
+    border: var(--kef-border-width-soft) solid var(--kef-line-on-primary);
+    background: transparent;
+  }
+
+  .kefine-form-grid p {
+    margin: 0;
+    display: grid;
+    gap: 0.45rem;
+  }
+
+  @media (min-width: 760px) {
+    .kefine-form-grid {
+      grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr);
+    }
+  }
+
+  .kefine-exec-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(3.75rem, 6.2rem);
+    gap: clamp(0.45rem, 2vw, 0.75rem);
+    align-items: stretch;
+    border-radius: 0.38rem;
+    padding: 0.28rem;
+    background: color-mix(in oklab, var(--kef-bg-card) 94%, var(--kef-bg));
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--kef-bg) 66%, transparent);
+    transition: border-color 140ms ease, box-shadow 140ms ease;
+  }
+
+  .kefine-exec-row:focus-within {
+    border-color: color-mix(in oklab, var(--kef-primary) 54%, var(--kef-text));
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--kef-bg-card) 78%, transparent), var(--kef-ring-focus);
+  }
+
+  .kefine-task-block {
+    margin: 0;
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .kefine-task-input {
+    min-height: clamp(5rem, 18vw, 6.2rem);
+    height: clamp(5rem, 18vw, 6.2rem);
+    font-size: clamp(1.15rem, 2.7vw, 2.2rem);
+    font-weight: 650;
+    line-height: 1.06;
+    letter-spacing: -0.02em;
+    color: var(--kef-on-primary);
+    background: var(--kef-primary);
+    border: var(--kef-border-width-strong) solid var(--kef-line-strong);
+    border-radius: 0.3rem;
+    resize: none;
+    overflow: hidden;
+    padding-inline: clamp(0.72rem, 2.5vw, 0.92rem);
+    padding-block: max(0.9rem, calc((clamp(5rem, 18vw, 6.2rem) - 1.06em) / 2));
+  }
+
+  .kefine-task-input::placeholder {
+    color: color-mix(in oklab, var(--kef-on-primary) 78%, transparent);
+  }
+
+  .kefine-recent {
+    display: grid;
+    gap: 0.65rem;
+    min-height: 0;
+  }
+
+  .kefine-recent-title {
+    font-size: 0.95rem;
+    font-weight: 650;
+    color: var(--kef-text-soft);
+    margin: 0;
+  }
+
+  .kefine-recent-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .kefine-recent-list--compact {
+    gap: 0.42rem;
+  }
+
+  .kefine-recent-scroll {
+    border: var(--kef-border-width-soft) solid var(--kef-line-soft);
+    border-radius: 0.35rem;
+    height: auto;
+    max-height: min(40vh, 24rem);
+    overflow: auto;
+    padding: clamp(0.45rem, 2vw, 0.75rem);
+    background: color-mix(in oklab, var(--kef-bg-card) 95%, var(--kef-bg-soft));
+  }
+
+  .kefine-recent-scroll .kefine-recent-list {
+    max-height: none;
+  }
+
+  .kefine-recent-item {
+    width: 100%;
+    border: var(--kef-border-width-soft) solid var(--kef-line);
+    border-radius: 0.4rem;
+    background: color-mix(in oklab, var(--kef-bg-card) 92%, var(--kef-bg-soft));
+    padding: clamp(0.58rem, 2vw, 0.78rem);
+    text-align: left;
+    display: grid;
+    gap: 0.3rem;
+  }
+
+  .kefine-recent-item:hover {
+    border-color: var(--kef-line-primary);
+  }
+
+  .kefine-recent-empty {
+    margin: 0;
+    color: var(--kef-text-soft);
+    font-size: 0.92rem;
+  }
+
+  .kefine-recent-task {
+    margin: 0;
+  }
+
+  .kefine-recent-meta {
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--kef-text-soft);
+  }
+
+  .kefine-order-meta {
+    display: grid;
+    gap: 0.18rem;
+    color: var(--kef-text-soft);
+    font-size: 0.84rem;
+  }
+
+  .kefine-exec-btn {
+    width: 100%;
+    height: 100%;
+    min-height: clamp(3.75rem, 18vw, 6.2rem);
+    border-radius: 0.3rem;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0;
+    font-family: inherit;
+    letter-spacing: normal;
+  }
+
+  .kefine-exec-arrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    font-size: clamp(2.35rem, 8vw, 3.6rem);
+    font-weight: 400;
+    line-height: 1;
+    text-align: center;
+  }
+
+  .kefine-grid-span-2 {
+    grid-column: 1 / -1;
+  }
+
+.kefine-task-summary-field {
+  margin: 0;
+  display: grid;
+  gap: 0.18rem;
+  border: var(--kef-border-width-soft) solid var(--kef-line);
+  border-radius: 0.35rem;
+  background: var(--kef-bg-card);
+  padding: 0.62rem 0.78rem;
+    color: var(--kef-text-soft);
+  }
+
+  .kefine-task-summary-field strong {
+    color: var(--kef-text);
+  }
+
+  .kefine-form-footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.65rem;
+  }
+
+  .kefine-paths {
+    display: grid;
+    gap: 0.4rem;
+  }
+
+  .kefine-paths code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+    font-size: 0.86rem;
+    background: color-mix(in oklab, var(--kef-bg-soft) 72%, transparent);
+    border: var(--kef-border-width-soft) solid var(--kef-line-soft);
+    border-radius: 0.3rem;
+    padding: 0.15rem 0.42rem;
+    color: var(--kef-text);
+  }
+.kefine-paths a {
+    color: var(--kef-primary);
+    text-decoration: none;
+  }
+
+.kefine-paths a:hover {
+    color: var(--kef-accent);
+    text-decoration: underline;
+  }
+
+
+  .kefine-auth-methods {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: 1fr;
+  }
+
+  .kefine-steps {
+    margin: 0;
+    padding-left: 1.15rem;
+    color: var(--kef-text-soft);
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .kefine-meta {
+    display: grid;
+    gap: 0.45rem;
+    color: var(--kef-text-soft);
+    background: var(--kef-bg-soft);
+    border-radius: 1rem;
+    padding: 0.85rem;
+  }
+
+  .kefine-meta strong,
+  .kefine-meta p > strong {
+    color: var(--kef-text);
+  }
+
+  .kefine-executing-screen {
+    display: grid;
+    gap: 0.9rem;
+    width: min(680px, 100%);
+  }
+
+  .kefine-ozon-card {
+    display: grid;
+    gap: 0.75rem;
+    border-radius: 1rem;
+    border: var(--kef-border-width-soft) solid var(--kef-line-on-primary);
+    background: color-mix(in oklab, var(--kef-bg-card) 92%, var(--kef-bg-soft));
+    padding: 1rem;
+  }
+
+  .kefine-ozon-header {
+    border-bottom: var(--kef-border-width-soft) solid var(--kef-line-on-primary);
+    padding-bottom: 0.45rem;
+  }
+
+  .kefine-ozon-header h2 {
+    margin: 0;
+    text-align: center;
+    font-size: clamp(1.12rem, 2.2vw, 1.35rem);
+  }
+
+  .kefine-ozon-hero {
+    position: relative;
+    min-height: 10.5rem;
+    border-radius: 0.9rem;
+    background: linear-gradient(180deg, color-mix(in oklab, var(--kef-bg-soft) 62%, #dfe6f2), color-mix(in oklab, var(--kef-bg-card) 82%, #eef3fa));
+    overflow: hidden;
+    display: grid;
+    align-items: center;
+    justify-items: center;
+  }
+
+  oz-shadow {
+    position: absolute;
+    bottom: 1.6rem;
+    width: 62%;
+    height: 1.25rem;
+    border-radius: 999px;
+    background: color-mix(in oklab, var(--kef-text) 14%, transparent);
+    filter: blur(1px);
+  }
+
+  oz-box {
+    position: relative;
+    width: 5.8rem;
+    height: 4.2rem;
+  }
+
+  oz-box-top,
+  oz-box-front,
+  oz-box-side {
+    position: absolute;
+    border-radius: 0.2rem;
+  }
+
+  oz-box-top {
+    top: 0;
+    left: 0.28rem;
+    width: 4.85rem;
+    height: 0.95rem;
+    background: linear-gradient(90deg, #5c95ff, #2f63e5);
+  }
+
+  oz-box-front {
+    top: 0.88rem;
+    left: 0;
+    width: 5.2rem;
+    height: 2.7rem;
+    background: linear-gradient(180deg, #e8edf6, #cfd8e7);
+  }
+
+  .kefine-order-flow {
+    display: grid;
+    gap: 1rem;
+    width: min(760px, 100%);
+  }
+
+  .kefine-flow-panel {
+    display: grid;
+    gap: 0.85rem;
+    padding: 1.1rem;
+    border: var(--kef-border-width-soft) solid var(--kef-line-on-primary);
+    border-radius: 1rem;
+    background:
+      linear-gradient(180deg, color-mix(in oklab, var(--kef-bg-card) 92%, transparent), color-mix(in oklab, var(--kef-bg-soft) 82%, transparent));
+  }
+
+  .kefine-flow-panel--hero {
+    gap: 0.75rem;
+    background:
+      radial-gradient(circle at top right, color-mix(in oklab, var(--kef-warning) 16%, transparent), transparent 40%),
+      linear-gradient(180deg, color-mix(in oklab, var(--kef-bg-card) 94%, transparent), color-mix(in oklab, var(--kef-bg-soft) 88%, transparent));
+  }
+
+  .kefine-flow-topline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .kefine-flow-back {
+    width: 2.2rem;
+    min-width: 2.2rem;
+    min-height: 2.2rem;
+    border-radius: 999px;
+    border: var(--kef-border-width-soft) solid var(--kef-line);
+    background: color-mix(in oklab, var(--kef-bg-card) 90%, transparent);
+    color: var(--kef-text);
+  }
+
+  .kefine-flow-eyebrow {
+    margin: 0;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--kef-text-soft);
+  }
+
+  .kefine-flow-copy,
+  .kefine-flow-note {
+    margin: 0;
+    color: var(--kef-text-soft);
+  }
+
+  .kefine-flow-note {
+    padding: 0.85rem 0.9rem;
+    border-radius: 0.9rem;
+    background: color-mix(in oklab, var(--kef-bg) 50%, transparent);
+  }
+
+  .kefine-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .kefine-section-head p {
+    margin: 0;
+    font-size: 0.86rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--kef-text-soft);
+  }
+
+  .kefine-solver-pill,
+  .kefine-payment-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.32rem 0.65rem;
+    border-radius: 999px;
+    border: var(--kef-border-width-soft) solid var(--kef-line-primary);
+    background: color-mix(in oklab, var(--kef-bg-card) 90%, var(--kef-bg-soft));
+    color: var(--kef-text);
+    font-size: 0.82rem;
+    font-weight: 700;
+  }
+
+  .kefine-stage-list,
+  .kefine-subtask-list {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .kefine-stage-item,
+  .kefine-subtask-item {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.75rem;
+    align-items: start;
+  }
+
+  .kefine-stage-item p,
+  .kefine-subtask-item p {
+    margin: 0.2rem 0 0;
+    color: var(--kef-text-soft);
+  }
+
+  .kefine-stage-bullet,
+  .kefine-subtask-mark {
+    width: 0.95rem;
+    height: 0.95rem;
+    margin-top: 0.18rem;
+    border-radius: 999px;
+    border: var(--kef-border-width-strong) solid var(--kef-line-strong);
+    background: color-mix(in oklab, var(--kef-bg) 55%, transparent);
+  }
+
+  .kefine-stage-item[data-state='active'] .kefine-stage-bullet,
+  .kefine-subtask-item[data-state='active'] .kefine-subtask-mark {
+    border-color: var(--kef-primary);
+    background: var(--kef-primary);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--kef-primary) 12%, transparent);
+  }
+
+  .kefine-stage-item[data-state='completed'] .kefine-stage-bullet,
+  .kefine-subtask-item[data-state='completed'] .kefine-subtask-mark {
+    border-color: var(--kef-line-success);
+    background: var(--kef-success);
+  }
+
+  .kefine-solver-fallback,
+  .kefine-payment-status,
+  .kefine-action-card,
+  .kefine-result-card,
+  .kefine-anonymous-save {
+    display: grid;
+    gap: 0.45rem;
+    padding: 0.95rem;
+    border-radius: 0.95rem;
+    border: var(--kef-border-width-soft) solid var(--kef-line);
+    background: color-mix(in oklab, var(--kef-bg) 54%, transparent);
+  }
+
+  .kefine-solver-fallback p,
+  .kefine-payment-status p,
+  .kefine-action-card p,
+  .kefine-result-card p,
+  .kefine-anonymous-save p {
+    margin: 0;
+    color: var(--kef-text-soft);
+  }
+
+  .kefine-metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .kefine-metric-card {
+    display: grid;
+    gap: 0.4rem;
+    padding: 1rem;
+    border-radius: 1rem;
+    background: linear-gradient(180deg, color-mix(in oklab, var(--kef-bg) 34%, transparent), color-mix(in oklab, var(--kef-bg-soft) 86%, transparent));
+    border: var(--kef-border-width-soft) solid var(--kef-line);
+  }
+
+  .kefine-metric-card p {
+    margin: 0;
+    color: var(--kef-text-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.76rem;
+  }
+
+  .kefine-metric-value {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+  }
+
+  .kefine-metric-value strong {
+    font-size: clamp(2rem, 6vw, 3rem);
+    line-height: 0.95;
+  }
+
+  .kefine-metric-value span {
+    font-size: 0.92rem;
+    color: var(--kef-text-soft);
+  }
+
+  .kefine-auth-grid {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .kefine-auth-tile {
+    display: grid;
+    gap: 0.55rem;
+    align-content: start;
+    justify-items: center;
+    min-height: 10rem;
+    padding: 0.8rem;
+    border-radius: 1rem;
+    border: var(--kef-border-width-soft) solid var(--kef-line);
+    background: color-mix(in oklab, var(--kef-bg-card) 92%, var(--kef-bg-soft));
+    text-align: center;
+    color: var(--kef-text);
+  }
+
+  .kefine-auth-tile--wallet {
+    align-content: stretch;
+    gap: 0.4rem;
+  }
+
+  .kefine-auth-tile--passkey,
+  .kefine-auth-tile--anonymous {
+    align-content: stretch;
+    gap: 0.4rem;
+  }
+
+  .kefine-auth-tile[data-active='true'] {
+    border-color: var(--kef-line-primary);
+    box-shadow: var(--kef-ring-focus);
+  }
+
+  .kefine-auth-tile strong {
+    font-size: 0.82rem;
+    letter-spacing: 0.01em;
+  }
+
+  .kefine-auth-tile small {
+    margin: 0;
+    color: var(--kef-text-soft);
+  }
+
+  .kefine-auth-hero {
+    position: relative;
+    display: grid;
+    place-items: center;
+    min-height: 5.8rem;
+    border-radius: 1.2rem;
+    overflow: hidden;
+    background:
+      radial-gradient(circle at top, color-mix(in oklab, var(--kef-primary) 24%, transparent), transparent 58%),
+      linear-gradient(180deg, color-mix(in oklab, var(--kef-bg) 52%, transparent), color-mix(in oklab, var(--kef-bg-soft) 78%, transparent));
+    border: var(--kef-border-width-soft) solid var(--kef-line);
+  }
+
+  .kefine-auth-hero--wallet {
+    min-height: 7.8rem;
+    border: 0;
+    background: transparent;
+    align-content: center;
+  }
+
+  .kefine-auth-hero--passkey,
+  .kefine-auth-hero--guest {
+    min-height: 7.8rem;
+    border: 0;
+    background: transparent;
+    align-content: center;
+  }
+
+  .kefine-auth-hero::after {
+    content: none;
+  }
+
+  .kefine-auth-orb {
+    position: absolute;
+    width: 4rem;
+    height: 4rem;
+    border-radius: 999px;
+    background:
+      radial-gradient(circle at 30% 30%, color-mix(in oklab, white 84%, var(--kef-primary)), transparent 45%),
+      radial-gradient(circle at 65% 70%, color-mix(in oklab, var(--kef-primary) 85%, var(--kef-bg-card)), color-mix(in oklab, var(--kef-primary) 32%, transparent));
+    box-shadow:
+      0 0 0 1px color-mix(in oklab, var(--kef-primary) 22%, transparent),
+      0 1rem 2rem color-mix(in oklab, var(--kef-primary) 22%, transparent);
+  }
+
+  .kefine-wallet-grid {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: 1fr;
+    gap: 0.5rem 0.55rem;
+    width: 100%;
+    max-width: 100%;
+    align-self: stretch;
+  }
+
+  .kefine-wallet-grid span,
+  .kefine-auth-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.95rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+  }
+
+  .kefine-wallet-grid span {
+    display: grid;
+    justify-items: center;
+    align-content: center;
+    gap: 0.18rem;
+    min-height: 100%;
+    grid-template-rows: minmax(0, 3.3rem) auto;
+    border: 0;
+    background: transparent;
+    padding: 0;
+    color: var(--kef-text);
+  }
+
+  .kefine-wallet-icon {
+    display: grid;
+    place-items: center;
+    width: 3.3rem;
+    height: 3.3rem;
+    max-width: 100%;
+    max-height: 100%;
+  }
+
+  .kefine-wallet-icon :global(svg) {
+    width: 100%;
+    height: 100%;
+  }
+
+  .kefine-wallet-grid span.is-metamask .kefine-wallet-icon :global(svg) {
+    width: 90%;
+    height: 90%;
+  }
+
+  .kefine-wallet-grid span.is-google .kefine-wallet-icon :global(svg) {
+    width: 86%;
+    height: 86%;
+  }
+
+  .kefine-wallet-grid span small {
+    margin: 0;
+    font-size: 0.44rem;
+    line-height: 1.1;
+    color: var(--kef-text-soft);
+  }
+
+  .kefine-auth-icon {
+    width: min(100%, 6.2rem);
+    min-height: min(100%, 6.2rem);
+  }
+
+  .kefine-auth-icon :global(svg) {
+    width: 100%;
+    height: 100%;
+    color: var(--kef-primary);
+  }
+
+  .kefine-auth-tile--passkey .kefine-auth-icon :global(svg) {
+    width: 100%;
+    height: 100%;
+  }
+
+  .kefine-auth-tile--anonymous .kefine-auth-icon :global(svg) {
+    width: 84%;
+    height: 84%;
+  }
+
+  .kefine-promo-block {
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .kefine-payment-choice-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+  }
+
+  .kefine-payment-choice {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    min-height: 3rem;
+    padding: 0.8rem 1rem;
+    border-radius: 0.95rem;
+    border: var(--kef-border-width-soft) solid var(--kef-line);
+    background: color-mix(in oklab, var(--kef-bg-card) 94%, var(--kef-bg));
+    color: var(--kef-text);
+    font-weight: 700;
+  }
+
+  .kefine-payment-choice :global(svg) {
+    flex: 0 0 auto;
+  }
+
+  .kefine-promo-label {
+    font-size: 0.88rem;
+    color: var(--kef-text-soft);
+  }
+
+  .kefine-promo-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.6rem;
+  }
+
+  .kefine-promo-input {
+    min-height: 2.9rem;
+    padding: 0 0.9rem;
+    border-radius: 0.95rem;
+    border: var(--kef-border-width-soft) solid var(--kef-line);
+    background: color-mix(in oklab, var(--kef-bg) 56%, transparent);
+    color: var(--kef-text);
+  }
+
+  .kefine-promo-feedback {
+    margin: 0;
+    font-size: 0.88rem;
+  }
+
+  .kefine-promo-feedback[data-tone='success'] {
+    color: var(--kef-success);
+  }
+
+  .kefine-promo-feedback[data-tone='error'] {
+    color: var(--kef-error);
+  }
+
+  .kefine-promo-toggle {
+    width: 100%;
+    min-height: 2.9rem;
+    border-radius: 0.95rem;
+    border: 1px dashed var(--kef-line-warning);
+    background: color-mix(in oklab, var(--kef-warning) 10%, transparent);
+    color: var(--kef-text);
+    font-weight: 700;
+  }
+
+  .kefine-payment-summary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
+  .kefine-payment-summary div {
+    display: grid;
+    gap: 0.2rem;
+    padding: 0.85rem 0.9rem;
+    border-radius: 0.9rem;
+    background: color-mix(in oklab, var(--kef-bg) 50%, transparent);
+  }
+
+  .kefine-payment-summary small,
+  .kefine-payment-meta p {
+    color: var(--kef-text-soft);
+  }
+
+  .kefine-payment-summary strong,
+  .kefine-payment-meta strong {
+    color: var(--kef-text);
+  }
+
+  .kefine-payment-meta {
+    display: grid;
+    gap: 0.35rem;
+  }
+
+  .kefine-payment-meta p {
+    margin: 0;
+  }
+
+  .kefine-deposit-dialog {
+    border-style: solid;
+    box-shadow: 0 20px 50px color-mix(in oklab, var(--kef-text) 14%, transparent);
+  }
+
+  .kefine-deposit-options {
+    display: grid;
+    gap: 0.65rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .kefine-deposit-option {
+    min-height: 3.6rem;
+    padding: 0.85rem;
+    border-radius: 0.95rem;
+    border: var(--kef-border-width-soft) solid var(--kef-line);
+    background: color-mix(in oklab, var(--kef-bg-card) 94%, var(--kef-bg));
+    color: var(--kef-text);
+  }
+
+  .kefine-result-card iframe {
+    width: 100%;
+    min-height: 260px;
+    border: 0;
+    border-radius: 0.85rem;
+    background: #fff;
+  }
+
+  .kefine-payment-footer {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  @media (max-width: 760px) {
+    .kefine-metrics-grid,
+    .kefine-auth-grid,
+    .kefine-payment-summary,
+    .kefine-deposit-options,
+    .kefine-payment-choice-row,
+    .kefine-promo-row,
+    .kefine-payment-footer {
+      grid-template-columns: 1fr;
+    }
+
+    .kefine-auth-tile {
+      min-height: 0;
+    }
+  }

@@ -1,0 +1,411 @@
+  :root {
+    --kef-bg: #f5f0e7;
+    --kef-bg-card: #fbf7f1;
+    --kef-bg-soft: #efe7dc;
+    --kef-border: #c8bbab;
+    --kef-border-soft: #ddd2c3;
+    --kef-text: #30281f;
+    --kef-text-soft: #5d5144;
+    --kef-primary: #6f5540;
+    --kef-primary-700: #5b4432;
+    --kef-accent: #5f7962;
+    --kef-success: #5f7962;
+    --kef-warning: #9a7242;
+    --kef-error: #8f5b52;
+    --kef-on-primary: #f7f3ec;
+    --kef-space-1: 0.75rem;
+    --kef-space-2: 1rem;
+    --kef-space-3: 1.35rem;
+    --kef-space-4: 1.5rem;
+    --kef-space-5: 1.85rem;
+    --kef-radius-ui: 0.72rem;
+    --kef-radius-lg: 1rem;
+    --kef-radius-md: 0.45rem;
+    --kef-radius-sm: 0.35rem;
+    --kef-border-width: 1px;
+    --kef-border-width-soft: 1px;
+    --kef-border-width-strong: 1px;
+    --kef-line: color-mix(in oklab, var(--kef-border) 52%, transparent);
+    --kef-line-soft: color-mix(in oklab, var(--kef-border-soft) 38%, transparent);
+    --kef-line-strong: color-mix(in oklab, var(--kef-border) 68%, transparent);
+    --kef-line-on-primary: color-mix(in oklab, var(--kef-on-primary) 20%, transparent);
+    --kef-line-primary: color-mix(in oklab, var(--kef-primary) 30%, var(--kef-line));
+    --kef-line-success: color-mix(in oklab, var(--kef-success) 26%, var(--kef-line));
+    --kef-line-warning: color-mix(in oklab, var(--kef-warning) 26%, var(--kef-line));
+    --kef-line-error: color-mix(in oklab, var(--kef-error) 26%, var(--kef-line));
+    --kef-ring-focus: 0 0 0 2px color-mix(in oklab, var(--kef-primary) 14%, transparent);
+    --kef-shadow: 0 20px 48px color-mix(in oklab, #2f241a 10%, transparent);
+    color-scheme: light dark;
+  }
+
+  :root[data-kefine-theme='light'] {
+    --kef-bg: var(--okr-color-bg, #f5f0e7);
+    --kef-bg-card: var(--okr-color-bg-card, #fbf7f1);
+    --kef-bg-soft: var(--okr-color-bg-soft, #efe7dc);
+    --kef-border: var(--okr-color-border, #c8bbab);
+    --kef-border-soft: var(--okr-color-border-light, #ddd2c3);
+    --kef-text: var(--okr-color-text, #30281f);
+    --kef-text-soft: var(--okr-color-text-label, #5d5144);
+    --kef-primary: var(--okr-color-primary, #6f5540);
+    --kef-primary-700: var(--okr-color-primary-hover, #5b4432);
+    --kef-accent: var(--okr-color-success, #5f7962);
+    --kef-success: var(--okr-color-success, #5f7962);
+    --kef-warning: var(--okr-color-warning, #9a7242);
+    --kef-error: var(--okr-color-error, #8f5b52);
+    --kef-on-primary: var(--okr-color-on-primary, #f7f3ec);
+    --kef-space-1: 0.75rem;
+    --kef-space-2: 1rem;
+    --kef-space-3: 1.35rem;
+    --kef-space-4: 1.5rem;
+    --kef-space-5: 1.85rem;
+    --kef-radius-ui: 0.72rem;
+    --kef-radius-lg: 1rem;
+    --kef-radius-md: 0.45rem;
+    --kef-radius-sm: 0.35rem;
+    --kef-border-width: var(--okr-border-width, 1px);
+    --kef-border-width-soft: var(--okr-border-width-dashed, 1px);
+    --kef-border-width-strong: 1px;
+    --kef-line: color-mix(in oklab, var(--kef-border) 52%, transparent);
+    --kef-line-soft: color-mix(in oklab, var(--kef-border-soft) 38%, transparent);
+    --kef-line-strong: color-mix(in oklab, var(--kef-border) 68%, transparent);
+    --kef-line-on-primary: color-mix(in oklab, var(--kef-on-primary) 20%, transparent);
+    --kef-line-primary: color-mix(in oklab, var(--kef-primary) 30%, var(--kef-line));
+    --kef-line-success: color-mix(in oklab, var(--kef-success) 26%, var(--kef-line));
+    --kef-line-warning: color-mix(in oklab, var(--kef-warning) 26%, var(--kef-line));
+    --kef-line-error: color-mix(in oklab, var(--kef-error) 26%, var(--kef-line));
+    --kef-ring-focus: 0 0 0 2px color-mix(in oklab, var(--kef-primary) 14%, transparent);
+    --kef-shadow: 0 20px 48px color-mix(in oklab, #2f241a 10%, transparent);
+  }
+
+  :root[data-kefine-theme='dark'] {
+    --kef-bg: var(--okr-color-bg, #17110d);
+    --kef-bg-card: var(--okr-color-bg-card, #1d1510);
+    --kef-bg-soft: var(--okr-color-bg-soft, #221912);
+    --kef-border: var(--okr-color-border, color-mix(in oklab, var(--okr-color-text, #e7d6b7) 18%, transparent));
+    --kef-border-soft: var(--okr-color-border-light, color-mix(in oklab, var(--okr-color-text, #e7d6b7) 10%, transparent));
+    --kef-text: var(--okr-color-text, #e7d6b7);
+    --kef-text-soft: var(--okr-color-text-label, #c9b89a);
+    --kef-primary: var(--okr-color-primary, #c89a5a);
+    --kef-primary-700: var(--okr-color-primary-hover, #b78647);
+    --kef-accent: var(--okr-color-success, #6f9a72);
+    --kef-success: var(--okr-color-success, #6f9a72);
+    --kef-warning: var(--okr-color-warning, #c49a57);
+    --kef-error: var(--okr-color-error, #c97a67);
+    --kef-on-primary: var(--okr-color-on-primary, #1a130e);
+    --kef-space-1: 0.75rem;
+    --kef-space-2: 1rem;
+    --kef-space-3: 1.35rem;
+    --kef-space-4: 1.5rem;
+    --kef-space-5: 1.85rem;
+    --kef-radius-ui: 0.72rem;
+    --kef-radius-lg: 1rem;
+    --kef-radius-md: 0.45rem;
+    --kef-radius-sm: 0.35rem;
+    --kef-border-width: var(--okr-border-width, 1px);
+    --kef-border-width-soft: var(--okr-border-width-dashed, 1px);
+    --kef-border-width-strong: 1px;
+    --kef-line: color-mix(in oklab, var(--kef-border) 52%, transparent);
+    --kef-line-soft: color-mix(in oklab, var(--kef-border-soft) 38%, transparent);
+    --kef-line-strong: color-mix(in oklab, var(--kef-border) 68%, transparent);
+    --kef-line-on-primary: color-mix(in oklab, var(--kef-on-primary) 18%, transparent);
+    --kef-line-primary: color-mix(in oklab, var(--kef-primary) 34%, var(--kef-line));
+    --kef-line-success: color-mix(in oklab, var(--kef-success) 28%, var(--kef-line));
+    --kef-line-warning: color-mix(in oklab, var(--kef-warning) 28%, var(--kef-line));
+    --kef-line-error: color-mix(in oklab, var(--kef-error) 28%, var(--kef-line));
+    --kef-ring-focus: 0 0 0 2px color-mix(in oklab, var(--kef-primary) 16%, transparent);
+    --kef-shadow: 0 20px 52px color-mix(in oklab, #000000 38%, transparent);
+  }
+  .kefine-shell {
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    padding: clamp(0.75rem, 2vw, 1.4rem);
+  }
+
+  .kefine-sidebar {
+    position: fixed;
+    top: clamp(0.75rem, 2vw, 1.4rem);
+    left: clamp(0.75rem, 2vw, 1.4rem);
+    z-index: 3;
+    display: grid;
+    align-content: start;
+    gap: 0.9rem;
+    width: 4.5rem;
+    min-width: 4.5rem;
+    min-height: calc(100dvh - clamp(1.5rem, 4vw, 2.8rem));
+  }
+
+  .kefine-sidebar--expanded {
+    width: fit-content;
+    min-width: 0;
+    max-width: calc(100vw - 5rem);
+  }
+
+  .kefine-sidebar-brand,
+  .kefine-sidebar-link,
+  .kefine-sidebar-chip,
+  .kefine-sidebar-icon {
+    border: var(--kef-border-width-soft) solid var(--kef-line);
+    text-decoration: none;
+    color: var(--kef-text);
+  }
+
+  .kefine-sidebar-brand {
+    width: 100%;
+    min-height: 2.9rem;
+    border: 0;
+    border-radius: var(--kef-radius-ui);
+    background: transparent;
+    box-shadow: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 0;
+  }
+
+  .kefine-sidebar-brand-mark {
+    width: auto;
+    min-height: 0;
+    flex: 0 0 auto;
+    border-radius: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    background: transparent;
+    color: var(--kef-text);
+    font-family: Papyrus, "Copperplate", "Apple Chancery", fantasy;
+    font-size: 1.72rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    padding: 0;
+    transition:
+      color 140ms ease;
+  }
+
+  .kefine-sidebar-brand:hover .kefine-sidebar-brand-mark,
+  .kefine-sidebar--expanded .kefine-sidebar-brand-mark {
+    color: var(--kef-primary);
+  }
+
+  .kefine-sidebar-float {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 0.7rem;
+    width: fit-content;
+    min-width: 0;
+    min-height: 100%;
+  }
+
+  .kefine-sidebar-stack {
+    margin-bottom: auto;
+    display: grid;
+    gap: 0.45rem;
+    padding: 0.4rem;
+    width: fit-content;
+    border-radius: var(--kef-radius-ui);
+    border: var(--kef-border-width-soft) solid var(--kef-line);
+    background: color-mix(in oklab, var(--kef-bg-card) 78%, transparent);
+    box-shadow: 0 14px 28px color-mix(in oklab, var(--kef-text) 8%, transparent);
+  }
+
+  .kefine-sidebar-nav {
+    display: grid;
+    gap: 0.42rem;
+  }
+
+  .kefine-sidebar-link {
+    min-height: 2.85rem;
+    border-radius: calc(var(--kef-radius-ui) - 0.06rem);
+    background: transparent;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.82rem;
+    padding: 0.72rem 0.88rem;
+    transition:
+      border-color 140ms ease,
+      color 140ms ease,
+      background-color 140ms ease;
+  }
+
+  .kefine-sidebar-link--active,
+  .kefine-sidebar-link:hover {
+    background: color-mix(in oklab, var(--kef-primary) 9%, var(--kef-bg-card));
+    border-color: var(--kef-line-primary);
+    color: var(--kef-primary);
+  }
+
+  .kefine-sidebar-link-label {
+    font-size: 0.96rem;
+    font-weight: 620;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .kefine-sidebar-toolbar {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0.4rem;
+    width: fit-content;
+    padding: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .kefine-sidebar-toolbar--social {
+    justify-content: flex-start;
+  }
+
+  .kefine-sidebar-toolbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .kefine-sidebar-icon {
+    width: 2.55rem;
+    min-width: 2.55rem;
+    height: 2.55rem;
+    border-radius: calc(var(--kef-radius-ui) - 0.06rem);
+    background: transparent;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition:
+      border-color 140ms ease,
+      color 140ms ease,
+      background-color 140ms ease,
+      transform 140ms ease;
+  }
+
+  .kefine-sidebar-icon:hover {
+    border-color: var(--kef-line-primary);
+    background: color-mix(in oklab, var(--kef-primary) 9%, var(--kef-bg-card));
+    color: var(--kef-primary);
+    transform: translateY(-1px);
+  }
+
+  .kefine-sidebar-auth {
+    position: fixed;
+    top: clamp(0.75rem, 2vw, 1.4rem);
+    right: clamp(0.75rem, 2vw, 1.4rem);
+    z-index: 3;
+    width: auto;
+    min-width: 0;
+    padding-inline: 0.9rem;
+  }
+
+  .kefine-layout {
+    min-height: calc(100vh - clamp(1.5rem, 4vw, 2.8rem));
+    height: auto;
+    display: grid;
+    gap: 1rem;
+    align-items: center;
+    align-content: center;
+    justify-items: center;
+    justify-self: center;
+    width: min(980px, 100%);
+    margin-inline: auto;
+  }
+
+  @media (max-width: 760px) {
+    .kefine-shell {
+      grid-template-columns: 1fr;
+      padding: 0.75rem;
+    }
+
+    .kefine-sidebar,
+    .kefine-sidebar--expanded {
+      position: fixed;
+      left: 0.75rem;
+      top: 0.75rem;
+      width: fit-content;
+      min-width: 0;
+      max-width: calc(100vw - 5.75rem);
+    }
+
+    .kefine-sidebar:not(.kefine-sidebar--expanded) {
+      width: 4.5rem;
+      min-width: 4.5rem;
+    }
+
+    .kefine-sidebar:not(.kefine-sidebar--expanded) .kefine-sidebar-toolbar {
+      display: grid;
+      justify-items: center;
+      overflow: visible;
+    }
+
+    .kefine-sidebar:not(.kefine-sidebar--expanded) .kefine-sidebar-stack {
+      justify-items: center;
+    }
+
+    .kefine-layout {
+      min-height: auto;
+      width: min(980px, 100%);
+      padding-top: 4.75rem;
+    }
+
+    .kefine-sidebar-auth {
+      top: 0.75rem;
+      right: 0.75rem;
+    }
+  }
+
+  .kefine-card {
+    background: color-mix(in oklab, var(--kef-bg-card) 94%, transparent);
+    border-radius: 0.45rem;
+    border: var(--kef-border-width-strong) solid var(--kef-line-on-primary);
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--kef-primary-700) 45%, transparent);
+    padding: 1.2rem 1.35rem;
+    box-shadow: var(--kef-shadow);
+    display: grid;
+    gap: 0.95rem;
+    position: relative;
+    min-height: 0;
+  }
+
+  .kefine-card--wide {
+    grid-column: 1 / -1;
+    justify-self: center;
+    width: min(980px, 100%);
+  }
+
+  .kefine-card--side {
+    border-style: dashed;
+  }
+
+  @media (min-width: 1040px) {
+    .kefine-layout {
+      grid-template-columns: minmax(0, 1.45fr) minmax(300px, 0.68fr);
+    }
+
+    .kefine-card--wide {
+      grid-column: 1 / -1;
+    }
+
+    .kefine-card--side {
+      grid-column: 2 / 3;
+      align-self: stretch;
+    }
+  }
+
+  .kefine-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 0.45rem;
+    pointer-events: none;
+    border: var(--kef-border-width-soft) solid var(--kef-line-on-primary);
+    opacity: 0;
+  }
+
+  .kefine-card > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .kefine-card h2,
+  .kefine-card h3 {
+    margin: 0;
+  }

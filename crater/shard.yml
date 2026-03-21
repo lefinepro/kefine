@@ -1,0 +1,23 @@
+name: crater
+version: 0.1.0
+
+authors:
+  - Kefine Team
+
+description: |
+  Crater is the ForgeFed/ActivityPub proxy service for Kefine.
+  It acts as Layer 1 (Proxy Service Layer) in the 4-layer architecture,
+  translating between the Kefine frontend and external federation servers.
+
+targets:
+  crater:
+    main: src/crater.cr
+
+dependencies:
+  kemal:
+    github: kemalcr/kemal
+    version: "~> 1.5.0"
+
+crystal: ">= 1.10.0"
+
+license: MIT
