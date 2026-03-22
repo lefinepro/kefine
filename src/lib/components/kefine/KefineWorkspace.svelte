@@ -476,7 +476,7 @@
         resetTransactionState();
         step = 'executing';
 
-        if (local.status !== 'completed') {
+        if (!local.id.startsWith('local-') && local.status !== 'completed') {
           const updated = await requestOrderFromStatus(orderId, {
             title: local.title,
             description: local.description,
@@ -571,6 +571,10 @@
       createdAt: string;
     }
   ): Promise<OrderView | null> {
+    if (orderId.startsWith('local-')) {
+      return null;
+    }
+
     try {
       const response = await fetch(`${craterBaseUrl()}/status/${encodeURIComponent(orderId)}`, {
         headers: {
@@ -696,7 +700,38 @@
       resetTransactionState();
       step = 'executing';
     } catch (error) {
-      void error;
+      const isNetworkError =
+        error instanceof TypeError ||
+        (error instanceof Error && /network|fetch|failed to fetch|load failed/i.test(error.message));
+
+      if (isNetworkError) {
+        const offlineOrder: OrderView = {
+          id:
+            typeof globalThis.crypto !== 'undefined' && typeof globalThis.crypto.randomUUID === 'function'
+              ? `local-${globalThis.crypto.randomUUID()}`
+              : `local-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+          solver: localeText.defaults.solverNetwork,
+          status: 'queued',
+          title: payload.title || localeText.defaults.taskTitle,
+          description: payload.description || '',
+          createdAt: new Date().toISOString(),
+          estimatedCost: toNumber(payload.estimatedCost) || undefined,
+          currency: payload.currency || localeText.defaults.defaultCurrency,
+          executionEstimate: resolveExecutionEstimate(payload.executionEstimate, payload.title, localeText),
+          paymentUrl: undefined
+        };
+
+        upsertOrder(offlineOrder);
+
+        if (!isBackground) {
+          currentOrder = offlineOrder;
+          resetTransactionState();
+          step = 'executing';
+        }
+
+        return;
+      }
+
       if (!isBackground) {
         step = 'create';
       }
@@ -727,8 +762,7 @@
     await createOrder(queued);
   }
 
-  function handleSubmit(event: Event) {
-    event.preventDefault();
+  function handleSubmit() {
     void submitDraft(draft);
   }
 

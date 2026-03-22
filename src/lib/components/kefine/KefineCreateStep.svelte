@@ -46,7 +46,7 @@
     matchedTasksLabel: string;
     timeLeftLabel: string;
     stopTaskLabel: string;
-    onSubmit: (event: Event) => void;
+    onSubmit: () => void;
     onQueueTask: (title: string) => Promise<void> | void;
     onStopOrder: (order: OrderView, event: Event) => void;
     onOpenOrder: (order: OrderView) => void;
@@ -126,8 +126,7 @@
       return;
     }
 
-    const form = (event.currentTarget as HTMLTextAreaElement).form;
-    form?.requestSubmit();
+    onSubmit();
   }
 
   function handleRecentOrdersScroll(event: Event) {
@@ -188,12 +187,27 @@
     onStopOrder(order, event);
   }
 
+  function handleOpenOrderKeydown(order: OrderView, event: KeyboardEvent) {
+    if (event.key !== 'Enter' && event.key !== ' ') {
+      return;
+    }
+
+    event.preventDefault();
+    onOpenOrder(order);
+  }
+
 </script>
 
 <article class="kefine-card kefine-card--wide kefine-card--create">
   <h2 class="kefine-create-title">{title}</h2>
 
-  <form class="kefine-form" onsubmit={onSubmit}>
+  <form
+    class="kefine-form"
+    onsubmit={(event) => {
+      event.preventDefault();
+      onSubmit();
+    }}
+  >
     <fieldset class="kefine-exec-row" data-testid="kefine-create-form">
       <p class="kefine-task-block">
         <textarea
@@ -224,18 +238,17 @@
       <ul class="kefine-recent-list kefine-recent-list--compact" data-testid="kefine-search-results">
         {#each matchedOrders as order (order.id)}
           <li>
-            <article
+            <kefine-order-card
               class="kefine-recent-item kefine-queued-task kefine-order-item"
               data-testid={`kefine-search-order-${order.id}`}
               data-order-id={order.id}
               data-status={order.status}
+              role="button"
+              tabindex="0"
+              onclick={() => onOpenOrder(order)}
+              onkeydown={(event: KeyboardEvent) => handleOpenOrderKeydown(order, event)}
             >
-              <button
-                type="button"
-                class="kefine-order-open"
-                data-testid={`kefine-open-search-order-${order.id}`}
-                onclick={() => onOpenOrder(order)}
-              >
+              <section class="kefine-order-open" data-testid={`kefine-open-search-order-${order.id}`}>
                 <kefine-order-summary class="kefine-order-summary">
                   <kr-title>{order.title}</kr-title>
                   <kefine-order-meta class="kefine-order-meta">
@@ -247,8 +260,8 @@
                     {/if}
                   </kefine-order-meta>
                 </kefine-order-summary>
-              </button>
-            </article>
+              </section>
+            </kefine-order-card>
           </li>
         {/each}
       </ul>
@@ -257,11 +270,15 @@
         <ul class="kefine-recent-list" data-testid="kefine-recent-list">
           {#each recentOrders as order (order.id)}
             <li>
-              <article
+              <kefine-order-card
                 class="kefine-recent-item kefine-queued-task kefine-order-item"
                 data-testid={`kefine-order-item-${order.id}`}
                 data-order-id={order.id}
                 data-status={order.status}
+                role="button"
+                tabindex="0"
+                onclick={() => onOpenOrder(order)}
+                onkeydown={(event: KeyboardEvent) => handleOpenOrderKeydown(order, event)}
               >
                 <button
                   type="button"
@@ -278,12 +295,7 @@
                   <status-mark aria-hidden="true" data-status={order.status}><task-dot></task-dot></status-mark>
                   <span class="kefine-status-stop">×</span>
                 </button>
-                <button
-                  type="button"
-                  class="kefine-order-open"
-                  data-testid={`kefine-open-order-${order.id}`}
-                  onclick={() => onOpenOrder(order)}
-                >
+                <section class="kefine-order-open" data-testid={`kefine-open-order-${order.id}`}>
                   <kefine-order-summary class="kefine-order-summary">
                     <kr-title>{order.title}</kr-title>
                     {#if order.executionEstimate}
@@ -292,8 +304,8 @@
                       </kefine-order-estimate>
                     {/if}
                   </kefine-order-summary>
-                </button>
-              </article>
+                </section>
+              </kefine-order-card>
             </li>
           {/each}
         </ul>
