@@ -54,7 +54,7 @@ const KEFINE_TEXT_EN = {
   create: {
     title: 'Solve problems in hours, not months.',
     placeholder: 'Describe what should be solved...',
-    placeholderVariants: ['Need access to Telegram', 'Deploy my production app', 'Optimize an algorithm'],
+    placeholderVariants: ['Need access to Telegram', 'Deploy private VPN for the team', 'Deploy my production app', 'Optimize an algorithm'],
     executeAria: 'Execute task',
     pathsTitle: 'Task routes',
     pathCreateLabel: 'Create task:',
@@ -107,7 +107,11 @@ const KEFINE_TEXT_EN = {
     selectedMethod: 'Selected method',
     remainingBalance: 'Remaining balance',
     promoApplied: 'Promo applied',
-    resultTitle: 'Result'
+    resultTitle: 'Result',
+    loadingTask: 'Loading task...',
+    elapsed: 'Elapsed',
+    selectedSolver: 'Solver',
+    blurredWidget: 'Widget preview'
   },
   placeholders: {
     promoCode: 'WELCOME10',
@@ -157,8 +161,8 @@ const KEFINE_TEXT_EN = {
     walletDetail: 'Use MetaMask, WalletConnect, Email, or Google to claim the paying account.',
     passkeyTitle: 'Passkey',
     passkeyDetail: 'Use your platform account, or continue with email if no passkey profile exists.',
-    anonymousTitle: 'Guest',
-    anonymousDetail: 'Continue without a profile and pay through a deposit flow.',
+    anonymousTitle: '10 min test',
+    anonymousDetail: 'Test now',
     walletAccount: 'Connected account',
     walletNetworkEthereum: 'Ethereum',
     walletNetworkGnosis: 'Gnosis',
@@ -247,6 +251,18 @@ const KEFINE_TEXT_EN = {
     externalSummary: 'This order completes on an external resource.',
     anonymousSaveHint: 'Authenticate to save and revisit this result later.'
   },
+  vpnFlow: {
+    discoveryTitle: 'We determine the best VPN service',
+    discoveryDetail: 'We compare providers, regions, and protocol constraints before committing to an option.',
+    pricingTitle: 'We determine the price',
+    pricingDetail: 'The selected solver estimates setup cost and the expected execution window.',
+    deployingTitle: 'Server selected, starting service deployment',
+    deployingDetail: 'Provisioning is in progress and the VPN service is being configured on the selected server.',
+    readyTitle: 'Service is ready',
+    readyDetail: 'The delivery widget is prepared from the ActivityPub result and stays blurred for now.',
+    widgetTitle: 'VPN service widget',
+    widgetSummary: 'The service result is prepared and will be connected to the ActivityPub payload later.'
+  },
   errors: {
     orderRequired: 'Task text is required',
     loadGeneric: 'Could not create task',
@@ -327,7 +343,7 @@ const KEFINE_TEXT_RU = {
   create: {
     title: 'Решайте задачи за часы, а не за месяцы',
     placeholder: 'Опишите, что нужно решить...',
-    placeholderVariants: ['Нужен доступ к Telegram', 'Деплой production-приложения', 'Оптимизация алгоритма'],
+    placeholderVariants: ['Нужен доступ к Telegram', 'Развернуть приватный VPN для команды', 'Деплой production-приложения', 'Оптимизация алгоритма'],
     executeAria: 'Выполнить задачу',
     pathsTitle: 'Пути задачи',
     pathCreateLabel: 'Создание:',
@@ -381,7 +397,11 @@ const KEFINE_TEXT_RU = {
     selectedMethod: 'Выбранный способ',
     remainingBalance: 'Остаток к оплате',
     promoApplied: 'Промокод',
-    resultTitle: 'Результат'
+    resultTitle: 'Результат',
+    loadingTask: 'Загрузка задачи...',
+    elapsed: 'Прошло',
+    selectedSolver: 'Решатель',
+    blurredWidget: 'Превью виджета'
   },
   placeholders: {
     promoCode: 'WELCOME10',
@@ -520,6 +540,18 @@ const KEFINE_TEXT_RU = {
     externalTitle: 'Внешняя ссылка на результат',
     externalSummary: 'Этот заказ завершается на внешнем ресурсе.',
     anonymousSaveHint: 'Авторизуйтесь, чтобы сохранить результат и вернуться к нему позже.'
+  },
+  vpnFlow: {
+    discoveryTitle: 'Выясняем, какой VPN сервис лучше',
+    discoveryDetail: 'Сравниваем провайдеров, регионы и ограничения по протоколам, прежде чем выбрать вариант.',
+    pricingTitle: 'Узнаём цену',
+    pricingDetail: 'Выбранный решатель оценивает стоимость настройки и ожидаемое время выполнения.',
+    deployingTitle: 'Сервер подобран, начинаем разворачивать сервис',
+    deployingDetail: 'Идёт подготовка окружения и настройка VPN-сервиса на выбранном сервере.',
+    readyTitle: 'Сервис готов',
+    readyDetail: 'Виджет результата подготовлен из ActivityPub-результата и пока остаётся заблюренным.',
+    widgetTitle: 'Виджет VPN-сервиса',
+    widgetSummary: 'Результат сервиса подготовлен и позже будет подключён к ActivityPub payload.'
   },
   errors: {
     orderRequired: 'Текст задачи обязателен',

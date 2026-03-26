@@ -22,6 +22,7 @@
   import KefineSubmittingStep from '$lib/components/kefine/KefineSubmittingStep.svelte';
   import KefineExecutingStep from '$lib/components/kefine/KefineExecutingStep.svelte';
   import KefinePaymentStep from '$lib/components/kefine/KefinePaymentStep.svelte';
+  import mockOrderStatus from '$lib/components/kefine/order-status.mock.json';
   import {
     ORDER_STORAGE_KEY,
     POLL_INTERVAL_MS,
@@ -154,6 +155,41 @@
   const resultSurface = $derived(
     deriveResultSurface(currentOrder, localeText, `${craterBaseUrl()}/pay/${currentOrder?.id ?? ''}`)
   );
+  const demoOrders = $derived.by(() => {
+    const vpnDemo = mockOrderStatus['vpn-demo-1'];
+    if (!vpnDemo) {
+      return [] satisfies OrderView[];
+    }
+
+    const parsed = extractStatusPayload(
+      vpnDemo,
+      {
+        title: localeText.defaults.taskTitle,
+        description: localeText.defaults.defaultDescription || '',
+        currency: localeText.defaults.defaultCurrency,
+        createdAt: new Date('2026-03-24T10:00:00.000Z').toISOString()
+      },
+      localeText
+    );
+
+    return parsed ? [parsed] satisfies OrderView[] : ([] satisfies OrderView[]);
+  });
+  const browserTitle = $derived.by(() => {
+    const title = currentOrder?.title?.trim();
+    const isTaskRoute =
+      getNormalizedInitialOrderId() !== null ||
+      (browser && window.location.pathname.replace(/\/+$/, '').startsWith('/task/'));
+
+    if (isTaskRoute) {
+      return title ? `${title} | Lefine` : 'Loading task | Lefine';
+    }
+
+    if ((step === 'executing' || step === 'payment') && title) {
+      return `${title} | Lefine`;
+    }
+
+    return 'Kefine Solver Exchange';
+  });
   const authDisplay = $derived({
     appIconUrl: '/favicon.png',
     socialAvatarUrl: null as string | null,
@@ -385,6 +421,12 @@
       createdOrders = [];
     }
 
+    for (const demoOrder of demoOrders) {
+      if (!createdOrders.some((order) => order.id === demoOrder.id)) {
+        createdOrders = [demoOrder, ...createdOrders];
+      }
+    }
+
     visibleOrdersLimit = Math.min(ORDER_PAGE_SIZE, createdOrders.length);
   }
 
@@ -494,7 +536,7 @@
       }
 
       const remote = await requestOrderFromStatus(orderId, {
-        title: localeText.defaults.taskTitle,
+        title: '',
         description: localeText.defaults.defaultDescription || '',
         currency: localeText.defaults.defaultCurrency,
         createdAt: new Date().toISOString()
@@ -528,10 +570,14 @@
     visibleOrdersLimit = Math.min(visibleOrdersLimit + ORDER_PAGE_SIZE, createdOrders.length);
   }
 
+  function orderApiBaseUrl(): string {
+    return '/api/kefine/orders';
+  }
+
   function craterBaseUrl(): string {
     if (!browser) return 'http://localhost:3001';
 
-    const configured = import.meta.env.VITE_CRATER_BASE_URL;
+    const configured = import.meta.env.VITE_KEFINE_EXCHANGE_BASE_URL || import.meta.env.VITE_CRATER_BASE_URL;
     if (typeof configured === 'string' && configured.trim()) {
       try {
         const configuredUrl = new URL(configured);
@@ -575,8 +621,22 @@
       return null;
     }
 
+    const mockPayload = mockOrderStatus[orderId as keyof typeof mockOrderStatus];
+    if (mockPayload) {
+      return extractStatusPayload(
+        mockPayload,
+        {
+          title: fallbackOrder.title,
+          description: fallbackOrder.description,
+          currency: fallbackOrder.currency,
+          createdAt: fallbackOrder.createdAt
+        },
+        localeText
+      );
+    }
+
     try {
-      const response = await fetch(`${craterBaseUrl()}/status/${encodeURIComponent(orderId)}`, {
+      const response = await fetch(`${orderApiBaseUrl()}/status/${encodeURIComponent(orderId)}`, {
         headers: {
           Accept: 'application/json'
         }
@@ -660,7 +720,7 @@
     }
 
     try {
-      const response = await fetch(`${craterBaseUrl()}/create`, {
+      const response = await fetch(`${orderApiBaseUrl()}/create`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -685,7 +745,8 @@
         estimatedCost: toNumber(payload.estimatedCost) || undefined,
         currency: payload.currency || localeText.defaults.defaultCurrency,
         executionEstimate: resolveExecutionEstimate(payload.executionEstimate, payload.title, localeText),
-        paymentUrl: undefined
+        paymentUrl: undefined,
+        uiScenario: parsed.uiScenario
       };
 
       upsertOrder(createdOrder);
@@ -878,6 +939,10 @@
   }
 </script>
 
+<svelte:head>
+  <title>{browserTitle}</title>
+</svelte:head>
+
 <main class="kefine-shell">
   <KefineTopbar
     brandLabel={localeText.brand.name}
@@ -943,6 +1008,7 @@
       <KefineExecutingStep
         currentOrder={currentOrder}
         execution={executionPresentation}
+        isHydratingTitle={isHydratingRoute && !currentOrder?.title.trim()}
         onWalletLogin={chooseWalletMethod}
         onPasskeyLogin={choosePasskeyMethod}
         onAnonymous={chooseAnonymousMethod}
@@ -961,6 +1027,7 @@
           walletTitle: localeText.auth.walletTitle,
           passkeyTitle: localeText.auth.passkeyTitle,
           anonymousTitle: localeText.auth.anonymousTitle,
+          anonymousDetail: localeText.auth.anonymousDetail,
           walletAccount: localeText.auth.walletAccount
         }}
       />

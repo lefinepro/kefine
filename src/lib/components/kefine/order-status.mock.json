@@ -1,0 +1,97 @@
+{
+  "vpn-demo-1": {
+    "@context": [
+      "https://www.w3.org/ns/activitystreams",
+      "https://forgefed.org/ns",
+      "https://kefine.app/ns/payment"
+    ],
+    "id": "https://mock.kefine.local/outbox/activities/vpn-demo-1-status",
+    "type": "Update",
+    "actor": "https://mock.kefine.local/actors/kefine",
+    "published": "2026-03-24T10:25:00.000Z",
+    "object": {
+      "@context": [
+        "https://www.w3.org/ns/activitystreams",
+        "https://forgefed.org/ns",
+        "https://kefine.app/ns/payment"
+      ],
+      "id": "vpn-demo-1",
+      "type": "Offer",
+      "name": "Deploy private VPN for the team",
+      "content": "Provision a managed VPN endpoint and prepare secure access for the team.",
+      "status": "executing",
+      "solver": "NordLayer Solver",
+      "executionEstimate": "about 25 minutes",
+      "uiScenario": "vpn-service",
+      "object": {
+        "@context": [
+          "https://www.w3.org/ns/activitystreams",
+          "https://forgefed.org/ns",
+          "https://kefine.app/ns/payment"
+        ],
+        "id": "vpn-demo-1/ticket",
+        "type": "Ticket",
+        "name": "Deploy private VPN for the team",
+        "content": "Provision a managed VPN endpoint and prepare secure access for the team.",
+        "status": "executing",
+        "attributedTo": "https://mock.kefine.local/actors/kefine",
+        "executionEstimate": "about 25 minutes",
+        "attachment": [
+          {
+            "id": "https://solver.market/payment-links/vpn-demo-1-price",
+            "type": "PaymentLink",
+            "name": "Solver price quote",
+            "summary": "Price is published by the solver as a payable quote.",
+            "attributedTo": {
+              "id": "https://solver.market/@nordlayer-solver",
+              "type": "Service",
+              "name": "NordLayer Solver",
+              "preferredUsername": "nordlayer-solver",
+              "inbox": "https://solver.market/@nordlayer-solver/inbox",
+              "outbox": "https://solver.market/@nordlayer-solver/outbox"
+            },
+            "price": 49,
+            "amount": 49,
+            "currency": "USDC",
+            "href": "https://solver.market/pay/vpn-demo-1",
+            "url": "https://solver.market/pay/vpn-demo-1",
+            "rel": [
+              "payment",
+              "price"
+            ],
+            "mediaType": "application/payment-link+json"
+          }
+        ]
+      },
+      "attachment": [
+        {
+          "id": "https://solver.market/payment-links/vpn-demo-1-price",
+          "type": "PaymentLink",
+          "name": "Solver price quote",
+          "summary": "Price is published by the solver as a payable quote.",
+          "attributedTo": {
+            "id": "https://solver.market/@nordlayer-solver",
+            "type": "Service",
+            "name": "NordLayer Solver",
+            "preferredUsername": "nordlayer-solver",
+            "inbox": "https://solver.market/@nordlayer-solver/inbox",
+            "outbox": "https://solver.market/@nordlayer-solver/outbox"
+          },
+          "price": 49,
+          "amount": 49,
+          "currency": "USDC",
+          "href": "https://solver.market/pay/vpn-demo-1",
+          "url": "https://solver.market/pay/vpn-demo-1",
+          "rel": [
+            "payment",
+            "price"
+          ],
+          "mediaType": "application/payment-link+json"
+        }
+      ]
+    },
+    "to": [
+      "https://www.w3.org/ns/activitystreams#Public"
+    ]
+  }
+}

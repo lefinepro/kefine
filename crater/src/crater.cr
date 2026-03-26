@@ -42,4 +42,4 @@ module Crater
   end
 end
 
-crater.run
+Crater.run

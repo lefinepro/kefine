@@ -166,6 +166,7 @@
     border-bottom: var(--kef-border-width) solid var(--kef-line);
     vertical-align: top;
     font-size: 0.92rem;
+    overflow-wrap: anywhere;
   }
 
   .kefine-table th {
@@ -228,6 +229,19 @@ task-status[data-status='queued'] {
 
   .kefine-status {
     margin-top: 0.25rem;
+  }
+
+  @media (max-width: 760px) {
+    .kefine-table {
+      display: block;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .kefine-table thead,
+    .kefine-table tbody {
+      white-space: normal;
+    }
   }
 
   fieldset {

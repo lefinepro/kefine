@@ -101,6 +101,7 @@
     width: 100%;
     max-width: 44rem;
     line-height: 1.15;
+    overflow-wrap: anywhere;
   }
 
 
@@ -132,6 +133,7 @@
     text-align: left;
     color: inherit;
     display: block;
+    overflow-wrap: anywhere;
   }
 
   .kefine-queued-task[data-status='done'] {
@@ -233,6 +235,12 @@
     color: var(--kef-text-soft);
     white-space: normal;
     overflow-wrap: anywhere;
+  }
+
+  .kefine-payment-chip,
+  .kefine-solver-pill {
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
 
   .kefine-status-toggle task-dot {

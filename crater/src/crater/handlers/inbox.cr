@@ -47,6 +47,7 @@ module Crater
             orderId: order.id,
             status: order.status,
             solver: order.solver,
+            uiScenario: order.ui_scenario,
             paymentUrl: order.payment_url
           }.to_json
         end

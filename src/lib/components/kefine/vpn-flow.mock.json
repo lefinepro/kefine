@@ -1,0 +1,97 @@
+{
+  "stepDelaysMs": [0, 2200, 4800, 7800],
+  "labels": {
+    "scenario": "VPN setup scenario",
+    "current": "Now",
+    "next": "Next",
+    "step": "Step",
+    "of": "of",
+    "timer": "Elapsed",
+    "profile": "Profile",
+    "copy": "Copy",
+    "executionEstimate": "Execution estimate",
+    "price": "Price",
+    "widget": "Result"
+  },
+  "steps": [
+    {
+      "id": "vpn-discovery",
+      "badge": "Discovery",
+      "solver": {
+        "name": "Route Scout",
+        "handle": "@route-scout@solver.market",
+        "profileUrl": "https://solver.market/@route-scout"
+      },
+      "title": "We determine the best VPN service",
+      "detail": "We compare providers, regions, and protocol constraints before committing to an option.",
+      "revealSolver": false,
+      "revealExecutionEstimate": false,
+      "revealPrice": false,
+      "revealWidget": false
+    },
+    {
+      "id": "vpn-pricing",
+      "badge": "Pricing",
+      "solver": {
+        "name": "Pricing Oracle",
+        "handle": "@pricing-oracle@solver.market",
+        "profileUrl": "https://solver.market/@pricing-oracle"
+      },
+      "title": "We determine the price",
+      "detail": "The selected solver estimates setup cost and the expected execution window.",
+      "revealSolver": true,
+      "revealExecutionEstimate": true,
+      "revealPrice": true,
+      "revealWidget": false
+    },
+    {
+      "id": "vpn-deploying",
+      "badge": "Deploy",
+      "solver": {
+        "name": "Infra Forge",
+        "handle": "@infra-forge@solver.market",
+        "profileUrl": "https://solver.market/@infra-forge"
+      },
+      "title": "Server selected, starting service deployment",
+      "detail": "Provisioning is in progress and the VPN service is being configured on the selected server.",
+      "revealSolver": true,
+      "revealExecutionEstimate": true,
+      "revealPrice": false,
+      "revealWidget": false
+    },
+    {
+      "id": "vpn-ready",
+      "badge": "Delivery Ready",
+      "solver": {
+        "name": "Delivery Relay",
+        "handle": "@delivery-relay@solver.market",
+        "profileUrl": "https://solver.market/@delivery-relay"
+      },
+      "title": "Delivery bundle prepared",
+      "detail": "The result package is assembled and waiting behind the protected result screen.",
+      "instructions": [
+        {
+          "title": "Open the protected result",
+          "detail": "Unlock the ActivityPub result screen to reveal the connection package for your access mode."
+        },
+        {
+          "title": "Download the bundle",
+          "detail": "Save the WireGuard or OpenVPN archive together with the QR image and backup credentials."
+        },
+        {
+          "title": "Import and connect",
+          "detail": "Import the profile into your VPN client or scan the QR code on mobile, then verify connectivity."
+        }
+      ],
+      "revealSolver": false,
+      "revealExecutionEstimate": false,
+      "revealPrice": false,
+      "revealWidget": true
+    }
+  ],
+  "widget": {
+    "title": "VPN service result",
+    "summary": "The service result is prepared and remains blurred until you choose how to continue.",
+    "badge": "ActivityPub"
+  }
+}
