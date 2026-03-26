@@ -1,8 +1,10 @@
 import { type KefineLocaleText } from '$lib/constants/kefine-locale';
+import vpnFlowMock from './vpn-flow.mock.json';
 
 export type FlowStep = 'create' | 'auth' | 'submitting' | 'executing' | 'payment' | 'error';
 export type AuthMethod = 'wallet' | 'passkey' | 'anonymous' | null;
 export type PaymentMethod = 'wallet' | 'linked-wallet' | 'promo' | 'reown' | 'other' | 'deposit' | null;
+export type UiScenario = 'default' | 'vpn-service';
 export type ExecutionStage =
   | 'batching'
   | 'competition'
@@ -32,6 +34,7 @@ export type OrderView = {
   currency: string;
   executionEstimate?: string;
   paymentUrl?: string;
+  uiScenario?: Exclude<UiScenario, 'default'>;
 };
 
 export type OrderSubtask = {
@@ -46,6 +49,49 @@ export type StageItem = {
   title: string;
   detail: string;
   state: ProgressState;
+};
+
+export type VpnExecutionStep = {
+  solver: {
+    name: string;
+    handle: string;
+    profileUrl: string;
+  };
+  instructions?: Array<{
+    title: string;
+    detail: string;
+  }>;
+  id: 'vpn-discovery' | 'vpn-pricing' | 'vpn-deploying' | 'vpn-ready';
+  badge: string;
+  title: string;
+  detail: string;
+  revealSolver: boolean;
+  revealExecutionEstimate: boolean;
+  revealPrice: boolean;
+  revealWidget: boolean;
+};
+
+export type VpnFlowPresentation = {
+  stepDelaysMs: number[];
+  labels: {
+    scenario: string;
+    current: string;
+    next: string;
+    step: string;
+    of: string;
+    timer: string;
+    profile: string;
+    copy: string;
+    executionEstimate: string;
+    price: string;
+    widget: string;
+  };
+  steps: VpnExecutionStep[];
+  widget: {
+    title: string;
+    summary: string;
+    badge: string;
+  };
 };
 
 export type ResultSurface =
@@ -70,12 +116,14 @@ export type ResultSurface =
     };
 
 export type ExecutionPresentation = {
+  scenario: UiScenario;
   stage: ExecutionStage;
   eyebrow: string;
   headline: string;
   supportingText: string;
   stageItems: StageItem[];
   subtasks: OrderSubtask[];
+  vpnFlow: VpnFlowPresentation | null;
   primaryMetric: {
     label: string;
     value: string;
@@ -107,6 +155,14 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
 
 export function toStringValue(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
+}
+
+export function toUiScenario(value: unknown): Exclude<UiScenario, 'default'> | undefined {
+  return value === 'vpn-service' ? value : undefined;
+}
+
+function toRecord(value: unknown): Record<string, unknown> | null {
+  return isRecord(value) ? value : null;
 }
 
 export function toNumber(value: unknown): number | undefined {
@@ -307,14 +363,26 @@ export function deriveExecutionPresentation(
   const stage = deriveExecutionStage(order, authMethod, paymentReady);
   const stageConfig = localeText.executionFlow[stage === 'winner-selected' ? 'winnerSelected' : stage];
   const estimate = splitEstimate(order?.executionEstimate, localeText);
+  const isVpnScenario = order?.uiScenario === 'vpn-service';
+
+  const vpnFlow = isVpnScenario
+    ? {
+        stepDelaysMs: vpnFlowMock.stepDelaysMs,
+        labels: vpnFlowMock.labels,
+        steps: vpnFlowMock.steps as VpnExecutionStep[],
+        widget: vpnFlowMock.widget
+      }
+    : null;
 
   return {
+    scenario: isVpnScenario ? 'vpn-service' : 'default',
     stage,
     eyebrow: localeText.labels.taskStatus,
     headline: stageConfig.title,
     supportingText: stageConfig.detail,
     stageItems: buildStageItems(stage, localeText),
     subtasks: buildOrderSubtasks(order, localeText),
+    vpnFlow,
     primaryMetric: {
       label: localeText.labels.price,
       value: formatAmountValue(order?.estimatedCost),
@@ -333,6 +401,15 @@ export function deriveResultSurface(
   localeText: KefineLocaleText,
   fallbackHref: string
 ): ResultSurface {
+  if (order?.uiScenario === 'vpn-service') {
+    return {
+      type: 'widget',
+      title: localeText.result.widgetTitle,
+      summary: localeText.result.widgetSummary,
+      ctaLabel: localeText.buttons.openResult
+    };
+  }
+
   const normalizedTitle = order?.title.trim().toLowerCase() ?? '';
 
   if (normalizedTitle.includes('deploy') || normalizedTitle.includes('production')) {
@@ -383,7 +460,8 @@ export function parseStoredOrders(raw: string | null, localeText: KefineLocaleTe
         estimatedCost: toNumber(order['estimatedCost']) || undefined,
         currency: toStringValue(order['currency']) || localeText.defaults.defaultCurrency,
         executionEstimate: resolveExecutionEstimate(toStringValue(order['executionEstimate']) || undefined, title, localeText),
-        paymentUrl: toStringValue(order['paymentUrl']) || undefined
+        paymentUrl: toStringValue(order['paymentUrl']) || undefined,
+        uiScenario: toUiScenario(order['uiScenario'])
       };
     })
     .filter((order) => order.id.length > 0 && !order.id.startsWith('temp-'));
@@ -401,7 +479,94 @@ export function buildCreatePayload(payload: DraftOrder) {
   };
 }
 
-export function readCreateResponse(body: unknown): { orderId: string; solver?: string; status?: string } | null {
+function unwrapActivityObject(payload: unknown): Record<string, unknown> | null {
+  const record = toRecord(payload);
+  if (!record) {
+    return null;
+  }
+
+  const type = toStringValue(record['type']);
+  if ((type === 'Create' || type === 'Update') && isRecord(record['object'])) {
+    return toRecord(record['object']);
+  }
+
+  return record;
+}
+
+function unwrapTicketPayload(payload: Record<string, unknown>): Record<string, unknown> {
+  if (toStringValue(payload['type']) === 'Offer' && isRecord(payload['object'])) {
+    const nested = toRecord(payload['object']);
+    if (nested && toStringValue(nested['type']) === 'Ticket') {
+      return nested;
+    }
+  }
+
+  return payload;
+}
+
+function toRecordList(value: unknown): Record<string, unknown>[] {
+  return Array.isArray(value) ? value.map((item) => toRecord(item)).filter((item): item is Record<string, unknown> => item !== null) : [];
+}
+
+function extractHref(payload: Record<string, unknown>): string | undefined {
+  return toStringValue(payload['href']) || toStringValue(payload['url']);
+}
+
+function extractActorLabel(actor: unknown): string | undefined {
+  if (typeof actor === 'string') {
+    return actor;
+  }
+
+  const record = toRecord(actor);
+  if (!record) {
+    return undefined;
+  }
+
+  return (
+    toStringValue(record['name']) ||
+    toStringValue(record['preferredUsername']) ||
+    toStringValue(record['id']) ||
+    undefined
+  );
+}
+
+function findPaymentLink(payload: Record<string, unknown>): Record<string, unknown> | null {
+  const attachments = toRecordList(payload['attachment']);
+  const directPaymentLink = toRecord(payload['paymentLink']);
+  const priceObject = toRecord(payload['price']);
+  const candidates = [directPaymentLink, priceObject, ...attachments].filter(
+    (item): item is Record<string, unknown> => item !== null
+  );
+
+  for (const candidate of candidates) {
+    const type = toStringValue(candidate['type']);
+    const rel = candidate['rel'];
+    const relValues =
+      typeof rel === 'string'
+        ? [rel]
+        : Array.isArray(rel)
+          ? rel.filter((value): value is string => typeof value === 'string')
+          : [];
+
+    if (
+      type === 'PaymentLink' ||
+      relValues.some((value) => /payment|price/i.test(value)) ||
+      toNumber(candidate['price']) !== undefined ||
+      toNumber(candidate['amount']) !== undefined
+    ) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
+export function readCreateResponse(body: unknown): {
+  orderId: string;
+  solver?: string;
+  status?: string;
+  uiScenario?: Exclude<UiScenario, 'default'>;
+} | null {
   if (!isRecord(body) || body['accepted'] !== true) {
     return null;
   }
@@ -414,7 +579,8 @@ export function readCreateResponse(body: unknown): { orderId: string; solver?: s
   return {
     orderId,
     solver: toStringValue(body['solver']) || undefined,
-    status: toStringValue(body['status']) || 'queued'
+    status: toStringValue(body['status']) || 'queued',
+    uiScenario: toUiScenario(body['uiScenario'])
   };
 }
 
@@ -428,28 +594,77 @@ export function extractStatusPayload(
   },
   localeText: KefineLocaleText
 ): OrderView | null {
-  if (!isRecord(payload)) return null;
+  const activityOrObject = unwrapActivityObject(payload);
+  if (!activityOrObject) return null;
 
-  const orderId = toStringValue(payload['orderId']);
+  const source = activityOrObject;
+  const ticket = unwrapTicketPayload(source);
+  const paymentLink = findPaymentLink(source) || findPaymentLink(ticket);
+  const orderId =
+    toStringValue(source['orderId']) ||
+    toStringValue(source['id']) ||
+    toStringValue(ticket['orderId']) ||
+    toStringValue(ticket['id']);
   if (!orderId) return null;
 
-  const title = toStringValue(payload['title']) || fallback.title;
-  const createdAt = toStringValue(payload['createdAt']) || fallback.createdAt;
+  const title =
+    toStringValue(source['title']) ||
+    toStringValue(source['name']) ||
+    toStringValue(ticket['title']) ||
+    toStringValue(ticket['name']) ||
+    fallback.title;
+  const createdAt =
+    toStringValue(source['createdAt']) ||
+    toStringValue(source['published']) ||
+    toStringValue(ticket['createdAt']) ||
+    toStringValue(ticket['published']) ||
+    fallback.createdAt;
+  const linkedPrice = toNumber(paymentLink?.['price']) ?? toNumber(paymentLink?.['amount']);
+  const linkedCurrency =
+    toStringValue(paymentLink?.['currency']) ||
+    undefined;
+  const linkedSolver =
+    extractActorLabel(paymentLink?.['attributedTo']) ||
+    extractActorLabel(source['attributedTo']) ||
+    extractActorLabel(ticket['attributedTo']) ||
+    undefined;
 
   return {
     id: orderId,
-    solver: toStringValue(payload['solver']) || localeText.defaults.solverNetwork,
-    status: toStringValue(payload['status']) || 'queued',
+    solver: toStringValue(source['solver']) || linkedSolver || localeText.defaults.solverNetwork,
+    status: toStringValue(source['status']) || toStringValue(ticket['status']) || 'queued',
     title,
-    description: toStringValue(payload['description']) || fallback.description,
+    description:
+      toStringValue(source['description']) ||
+      toStringValue(source['content']) ||
+      toStringValue(ticket['description']) ||
+      toStringValue(ticket['content']) ||
+      fallback.description,
     createdAt,
-    estimatedCost: toNumber(payload['estimatedCost']) || undefined,
-    currency: toStringValue(payload['currency']) || fallback.currency,
+    estimatedCost:
+      linkedPrice ??
+      toNumber(source['estimatedCost']) ??
+      toNumber(source['price']) ??
+      toNumber(ticket['estimatedCost']) ??
+      toNumber(ticket['price']) ??
+      undefined,
+    currency:
+      linkedCurrency ||
+      toStringValue(source['currency']) ||
+      toStringValue(ticket['currency']) ||
+      fallback.currency,
     executionEstimate: resolveExecutionEstimate(
-      toStringValue(payload['executionEstimate']) || undefined,
+      toStringValue(source['executionEstimate']) ||
+        toStringValue(ticket['executionEstimate']) ||
+        toStringValue(ticket['dueDate']) ||
+        undefined,
       title,
       localeText
     ),
-    paymentUrl: toStringValue(payload['paymentUrl']) || undefined
+    paymentUrl:
+      extractHref(paymentLink ?? {}) ||
+      toStringValue(source['paymentUrl']) ||
+      undefined,
+    uiScenario: toUiScenario(source['uiScenario']) || toUiScenario(ticket['uiScenario'])
   };
 }

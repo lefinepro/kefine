@@ -37,6 +37,7 @@ module Crater
             estimatedCost: record.estimated_cost,
             currency: record.currency,
             executionEstimate: record.execution_estimate,
+            uiScenario: record.ui_scenario,
             paymentUrl: record.payment_url,
             createdAt: record.created_at,
             updatedAt: record.updated_at
@@ -67,6 +68,7 @@ module Crater
             estimatedCost: record.estimated_cost,
             currency: record.currency,
             executionEstimate: record.execution_estimate,
+            uiScenario: record.ui_scenario,
             paymentUrl: record.payment_url,
             createdAt: record.created_at,
             updatedAt: record.updated_at
@@ -107,6 +109,7 @@ module Crater
           orderId: record.id,
           status: record.status,
           solver: record.solver,
+          uiScenario: record.ui_scenario,
           paymentUrl: record.payment_url
         }.to_json
       end
