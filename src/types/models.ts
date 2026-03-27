@@ -1,52 +1,50 @@
-/**
- * Internal model types — bridge between OKR data model and AP/ForgeFed
- * OKR-013.2 Task 1.2.4
- */
-
 import type { Objective, KeyResult, Task, OKRLink } from '$lib/types/okr';
-import type { OKRQuarter, OKRStatus, TicketStatus, TicketPriority } from './forgefed';
+type OKRQuarter = 'Q1' | 'Q2' | 'Q3' | 'Q4';
+type OKRStatus = 'active' | 'completed' | 'archived';
+type TicketStatus = 'open' | 'closed' | 'merged' | 'rejected';
+type TicketPriority = 'low' | 'medium' | 'high' | 'critical';
 
-/** Extended Objective with ActivityPub/ForgeFed federation fields */
+/** Extended Objective with remote-tracking fields */
 export interface ObjectiveModel extends Objective {
-  /** ActivityPub/ForgeFed ID (URL) of the federated ticket */
+  /** Remote ticket ID (URL) */
   apId?: string;
-  /** URL of the ForgeFed ticket tracker */
+  /** Remote ticket tracker URL */
   ticketTrackerUrl?: string;
-  /** ActivityPub ID of the federated project */
+  /** Remote project ID */
   projectId?: string;
-  /** ForgeFed ticket status (maps to ObjectiveStatus) */
+  /** Remote ticket status */
   ffStatus?: TicketStatus;
-  /** Last time this was synced to federation */
+  /** Last time this was synced remotely */
   lastFederatedAt?: Date;
-  /** Whether there are pending outgoing federation activities */
+  /** Whether there are pending remote sync activities */
   hasPendingSync?: boolean;
 }
 
-/** Extended KeyResult with ActivityPub/ForgeFed federation fields */
+/** Extended KeyResult with remote-tracking fields */
 export interface KeyResultModel extends KeyResult {
-  /** ActivityPub/ForgeFed ID (URL) of the federated sub-ticket */
+  /** Remote sub-ticket ID (URL) */
   apId?: string;
-  /** ActivityPub ID of the parent objective ticket */
+  /** Parent remote ticket ID */
   parentTicketId?: string;
-  /** ForgeFed ticket priority */
+  /** Remote ticket priority */
   ffPriority?: TicketPriority;
-  /** Last time this was synced to federation */
+  /** Last time this was synced remotely */
   lastFederatedAt?: Date;
-  /** Whether there are pending outgoing federation activities */
+  /** Whether there are pending remote sync activities */
   hasPendingSync?: boolean;
 }
 
-/** Extended Task with ActivityPub/ForgeFed federation fields */
+/** Extended Task with remote-tracking fields */
 export interface TaskModel extends Task {
-  /** ActivityPub/ForgeFed ID (URL) of the federated ticket */
+  /** Remote ticket ID (URL) */
   apId?: string;
-  /** ForgeFed ticket status */
+  /** Remote ticket status */
   ffStatus?: TicketStatus;
-  /** ForgeFed ticket priority */
+  /** Remote ticket priority */
   ffPriority?: TicketPriority;
-  /** Last time this was synced to federation */
+  /** Last time this was synced remotely */
   lastFederatedAt?: Date;
-  /** Whether there are pending outgoing federation activities */
+  /** Whether there are pending remote sync activities */
   hasPendingSync?: boolean;
 }
 
@@ -66,11 +64,11 @@ export interface OKRModel {
   };
 }
 
-/** Pending ActivityPub activity waiting to be delivered */
+/** Pending remote activity waiting to be delivered */
 export interface PendingActivity {
   /** Local ID for the pending activity */
   id: string;
-  /** Serialized ActivityPub activity JSON */
+  /** Serialized remote activity JSON */
   activityJson: string;
   /** Target inbox URL(s) */
   targetInboxes: string[];
@@ -92,7 +90,7 @@ export interface Conflict {
   type: 'objective' | 'keyResult' | 'task';
   /** Local version */
   local: ObjectiveModel | KeyResultModel | TaskModel;
-  /** Remote version (from federation) */
+  /** Remote version */
   remote: ObjectiveModel | KeyResultModel | TaskModel;
   /** Fields that conflict */
   conflictingFields: string[];
@@ -100,7 +98,7 @@ export interface Conflict {
   detectedAt: Date;
 }
 
-/** Sync state for ActivityPub federation */
+/** Sync state for remote delivery */
 export interface SyncState {
   /** Whether currently syncing */
   isSyncing: boolean;
@@ -126,7 +124,7 @@ export interface SyncError {
   resolved: boolean;
 }
 
-/** Notification from inbox activity processing */
+/** Notification from remote activity processing */
 export interface APNotification {
   id: string;
   type: 'create' | 'update' | 'delete' | 'follow' | 'mention' | 'grant';

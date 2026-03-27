@@ -150,7 +150,7 @@ module Crater
         estimated_cost: is_vpn_order ? 49.0 : estimated_cost,
         currency: is_vpn_order ? "USDC" : currency,
         execution_estimate: is_vpn_order ? "about 25 minutes" : execution_estimate,
-        payment_url: is_vpn_order ? "https://solver.market/pay/#{URI.encode_path(id)}" : payment_url,
+        payment_url: is_vpn_order ? "#{config.exchange_url}/pay/#{URI.encode_path(id)}" : payment_url,
         ui_scenario: is_vpn_order ? "vpn-service" : ui_scenario
       )
     end
@@ -206,7 +206,7 @@ module Crater
     end
 
     private def self.payment_links(order : OrderRecord, status : String, config : Utils::Config)
-      payment = order.payment_url || "#{config.actor_outbox}/pay/#{order.id}"
+      payment = order.payment_url || "#{config.exchange_url}/pay/#{order.id}"
       payment_record = {
         "@context" => [ActivityPub::CONTEXT, ForgeFed::CONTEXT, "https://kefine.app/ns/payment"],
         "id" => "#{config.actor_outbox}/payment-links/#{order.id}",
@@ -300,7 +300,7 @@ module Crater
 
         record.status = status
         record.updated_at = current_time
-        record.payment_url = "#{config.actor_outbox}/pay/#{record.id}" if status == "completed"
+        record.payment_url = "#{config.exchange_url}/pay/#{record.id}" if status == "completed"
 
         @@activities.unshift(activity_for(record, record.status, config))
       end

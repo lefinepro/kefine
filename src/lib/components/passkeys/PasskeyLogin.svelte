@@ -34,8 +34,8 @@
     errorMessage = '';
 
     try {
-      const authnResp = await performAuthentication();
-      const result = await finishAuthentication(authnResp);
+      const { transactionId, response } = await performAuthentication();
+      const result = await finishAuthentication(transactionId, response);
       status = 'success';
       onSuccess?.(result);
     } catch (err) {
@@ -55,8 +55,8 @@
         throw new Error('Username is required to create a passkey.');
       }
 
-      const attResp = await performRegistration(normalizedUsername);
-      const result = await finishRegistration(normalizedUsername, attResp);
+      const { transactionId, response } = await performRegistration(normalizedUsername);
+      const result = await finishRegistration(normalizedUsername, transactionId, response);
       status = 'success';
       onSuccess?.(result);
     } catch (err) {

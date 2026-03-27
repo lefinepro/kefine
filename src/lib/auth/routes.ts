@@ -17,6 +17,11 @@ export interface PasskeyAuthSuccess {
 	expiresAt: string;
 }
 
+interface PasskeyStartResponse<T> {
+	options: T;
+	transactionId: string;
+}
+
 async function postJson<T>(input: RequestInfo | URL, body: unknown): Promise<T> {
 	const response = await fetch(input, {
 		method: 'POST',
@@ -34,35 +39,47 @@ async function postJson<T>(input: RequestInfo | URL, body: unknown): Promise<T> 
 	return payload;
 }
 
-export async function performRegistration(username: string): Promise<RegistrationResponseJSON> {
-	const options = await postJson<PublicKeyCredentialCreationOptionsJSON>(
-		'/api/passkeys/register/start',
+export async function performRegistration(
+	username: string
+): Promise<{ transactionId: string; response: RegistrationResponseJSON }> {
+	const payload = await postJson<PasskeyStartResponse<PublicKeyCredentialCreationOptionsJSON>>(
+		'/passkeys/register/start',
 		{ username }
 	);
 
-	return startWebAuthnRegistration({ optionsJSON: options });
+	const response = await startWebAuthnRegistration({ optionsJSON: payload.options });
+	return {
+		transactionId: payload.transactionId,
+		response
+	};
 }
 
 export async function finishRegistration(
 	username: string,
+	transactionId: string,
 	response: RegistrationResponseJSON
 ): Promise<PasskeyAuthSuccess> {
-	return postJson<PasskeyAuthSuccess>('/api/passkeys/register/finish', { username, response });
+	return postJson<PasskeyAuthSuccess>('/passkeys/register/finish', { username, transactionId, response });
 }
 
 export async function performAuthentication(
 	username?: string
-): Promise<AuthenticationResponseJSON> {
-	const options = await postJson<PublicKeyCredentialRequestOptionsJSON>(
-		'/api/passkeys/authenticate/start',
+): Promise<{ transactionId: string; response: AuthenticationResponseJSON }> {
+	const payload = await postJson<PasskeyStartResponse<PublicKeyCredentialRequestOptionsJSON>>(
+		'/passkeys/authenticate/start',
 		{ username }
 	);
 
-	return startWebAuthnAuthentication({ optionsJSON: options });
+	const response = await startWebAuthnAuthentication({ optionsJSON: payload.options });
+	return {
+		transactionId: payload.transactionId,
+		response
+	};
 }
 
 export async function finishAuthentication(
+	transactionId: string,
 	response: AuthenticationResponseJSON
 ): Promise<PasskeyAuthSuccess> {
-	return postJson<PasskeyAuthSuccess>('/api/passkeys/authenticate/finish', { response });
+	return postJson<PasskeyAuthSuccess>('/passkeys/authenticate/finish', { transactionId, response });
 }

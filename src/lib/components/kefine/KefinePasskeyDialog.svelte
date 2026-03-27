@@ -1,5 +1,5 @@
 <script lang="ts">
-  import PasskeyLogin from '$lib/components/federation/PasskeyLogin.svelte';
+  import PasskeyLogin from '$lib/components/passkeys/PasskeyLogin.svelte';
   import type { PasskeyAuthSuccess } from '$lib/auth/routes';
 
   let dialogEl: HTMLDialogElement | undefined = $state();

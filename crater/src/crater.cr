@@ -7,6 +7,7 @@ require "./crater/handlers/actor"
 require "./crater/handlers/inbox"
 require "./crater/handlers/outbox"
 require "./crater/handlers/orders"
+require "./crater/handlers/passkeys"
 require "./crater/handlers/projects"
 require "./crater/middleware/cors"
 require "./crater/middleware/logger"
@@ -31,6 +32,7 @@ module Crater
     Handlers::Inbox.register(config)
     Handlers::Outbox.register(config)
     Handlers::Orders.register(config)
+    Handlers::Passkeys.register(config)
 
     # ForgeFed project endpoints
     Handlers::Projects.register(config)

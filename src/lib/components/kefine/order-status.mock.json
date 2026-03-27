@@ -1,8 +1,8 @@
 {
   "vpn-demo-1": {
     "@context": [
-      "https://www.w3.org/ns/activitystreams",
-      "https://forgefed.org/ns",
+      "https://kefine.app/ns/crater",
+      "https://kefine.app/ns/exchange",
       "https://kefine.app/ns/payment"
     ],
     "id": "https://mock.kefine.local/outbox/activities/vpn-demo-1-status",
@@ -11,8 +11,8 @@
     "published": "2026-03-24T10:25:00.000Z",
     "object": {
       "@context": [
-        "https://www.w3.org/ns/activitystreams",
-        "https://forgefed.org/ns",
+        "https://kefine.app/ns/crater",
+        "https://kefine.app/ns/exchange",
         "https://kefine.app/ns/payment"
       ],
       "id": "vpn-demo-1",
@@ -25,8 +25,8 @@
       "uiScenario": "vpn-service",
       "object": {
         "@context": [
-          "https://www.w3.org/ns/activitystreams",
-          "https://forgefed.org/ns",
+          "https://kefine.app/ns/crater",
+          "https://kefine.app/ns/exchange",
           "https://kefine.app/ns/payment"
         ],
         "id": "vpn-demo-1/ticket",
@@ -91,7 +91,7 @@
       ]
     },
     "to": [
-      "https://www.w3.org/ns/activitystreams#Public"
+      "https://kefine.app/ns/public"
     ]
   }
 }

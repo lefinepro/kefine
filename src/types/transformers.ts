@@ -1,6 +1,6 @@
 /**
  * Transformation type definitions — generic interfaces for converting
- * between different data formats (OKR ↔ Org ↔ ActivityPub ↔ ForgeFed)
+ * between different data formats (OKR ↔ Org ↔ remote exchange payloads)
  * OKR-013.2 Task 1.2.5
  */
 

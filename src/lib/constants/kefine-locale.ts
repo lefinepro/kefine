@@ -259,9 +259,9 @@ const KEFINE_TEXT_EN = {
     deployingTitle: 'Server selected, starting service deployment',
     deployingDetail: 'Provisioning is in progress and the VPN service is being configured on the selected server.',
     readyTitle: 'Service is ready',
-    readyDetail: 'The delivery widget is prepared from the ActivityPub result and stays blurred for now.',
+    readyDetail: 'The delivery widget is prepared from the solver result and stays blurred for now.',
     widgetTitle: 'VPN service widget',
-    widgetSummary: 'The service result is prepared and will be connected to the ActivityPub payload later.'
+    widgetSummary: 'The service result is prepared and will be connected to the crater payload later.'
   },
   errors: {
     orderRequired: 'Task text is required',
@@ -549,9 +549,9 @@ const KEFINE_TEXT_RU = {
     deployingTitle: 'Сервер подобран, начинаем разворачивать сервис',
     deployingDetail: 'Идёт подготовка окружения и настройка VPN-сервиса на выбранном сервере.',
     readyTitle: 'Сервис готов',
-    readyDetail: 'Виджет результата подготовлен из ActivityPub-результата и пока остаётся заблюренным.',
+    readyDetail: 'Виджет результата подготовлен из результата solver и пока остаётся заблюренным.',
     widgetTitle: 'Виджет VPN-сервиса',
-    widgetSummary: 'Результат сервиса подготовлен и позже будет подключён к ActivityPub payload.'
+    widgetSummary: 'Результат сервиса подготовлен и позже будет подключён к payload crater.'
   },
   errors: {
     orderRequired: 'Текст задачи обязателен',

@@ -3,7 +3,11 @@
   import { buildOrderProxyUrl, resolveOrderProxyBasePath } from '$lib/order-proxy-path';
   import { onMount } from 'svelte';
   import { authState } from '$lib/auth/auth-store.svelte.js';
-  import { apSessionStore, loadAPSession, setAPSession } from '$lib/auth/session';
+  import {
+    loadPasskeySession,
+    passkeySessionStore,
+    setPasskeySession
+  } from '$lib/auth/passkey-session';
   import { syncAppKitTheme } from '$lib/auth/appkit';
   import {
     performAuthentication,
@@ -94,7 +98,7 @@
   let isHydratingRoute = $state(Boolean(getNormalizedInitialOrderId()));
   const activePollTokens = new Map<string, symbol>();
 
-  const passkeySession = $derived($apSessionStore);
+  const passkeySession = $derived($passkeySessionStore);
   const isPasskeyActive = $derived(passkeySession ? passkeySession.expiresAt.getTime() > Date.now() : false);
   const isAuthenticated = $derived(authState.isConnected || isPasskeyActive);
   const walletNetworkLabel = $derived(
@@ -212,7 +216,7 @@
 
   onMount(() => {
     if (!browser) return;
-    loadAPSession();
+    loadPasskeySession();
     loadCreatedOrders();
 
     const routeOrderId = readOrderIdFromPath() || getNormalizedInitialOrderId();
@@ -339,8 +343,8 @@
     if (!browser) return;
 
     try {
-      const authnResp = await performAuthentication();
-      const result = await finishAuthentication(authnResp);
+      const { transactionId, response } = await performAuthentication();
+      const result = await finishAuthentication(transactionId, response);
       loginWithPasskey(result);
     } catch {
       handlePasskeyError('');
@@ -572,41 +576,12 @@
   }
 
   function orderApiBaseUrl(): string {
-    return resolveOrderProxyBasePath(import.meta.env.VITE_KEFINE_ORDER_PROXY_BASE_PATH);
+    return resolveOrderProxyBasePath('');
   }
 
   function craterBaseUrl(): string {
-    if (!browser) return 'http://localhost:3001';
-
-    const configured = import.meta.env.VITE_KEFINE_EXCHANGE_BASE_URL || import.meta.env.VITE_CRATER_BASE_URL;
-    if (typeof configured === 'string' && configured.trim()) {
-      try {
-        const configuredUrl = new URL(configured);
-        const pageHostname = window.location.hostname;
-        const isLocalConfiguredHost =
-          configuredUrl.hostname === 'localhost' ||
-          configuredUrl.hostname === '127.0.0.1' ||
-          configuredUrl.hostname === '0.0.0.0';
-        const isLocalPageHost =
-          pageHostname === 'localhost' ||
-          pageHostname === '127.0.0.1' ||
-          pageHostname === '0.0.0.0';
-
-        if (isLocalConfiguredHost && !isLocalPageHost) {
-          configuredUrl.hostname = pageHostname;
-          configuredUrl.protocol = window.location.protocol;
-        }
-
-        configuredUrl.pathname = configuredUrl.pathname.replace(/\/$/, '');
-        configuredUrl.search = '';
-        configuredUrl.hash = '';
-        return configuredUrl.toString().replace(/\/$/, '');
-      } catch {
-        return configured.replace(/\/$/, '');
-      }
-    }
-
-    return `${window.location.protocol}//${window.location.hostname}:3001`;
+    if (!browser) return '';
+    return window.location.origin;
   }
 
   async function requestOrderFromStatus(
@@ -865,10 +840,10 @@
     closeAuthDialog();
     closePasskeyDialog();
 
-    setAPSession({
+    setPasskeySession({
       token: session.token,
       username: session.username,
-      actorId: `${craterBaseUrl()}/actor/${encodeURIComponent(session.username)}`,
+      userId: session.userId,
       expiresAt: new Date(session.expiresAt)
     });
 
