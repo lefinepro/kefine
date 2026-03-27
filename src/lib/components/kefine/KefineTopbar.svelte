@@ -1,11 +1,18 @@
 <script lang="ts">
   import Icon from '@iconify/svelte';
+  import { scheduleAfter } from '$lib/utils/helpers';
 
   type SocialLink = {
     id: 'mastodon' | 'discord' | 'linkedin' | 'telegram';
     label: string;
     href: string;
     icon: string;
+  };
+
+  type LegalLink = {
+    id: 'privacy' | 'terms' | 'refund';
+    label: string;
+    href: string;
   };
 
   let {
@@ -15,12 +22,14 @@
     collapseSidebarLabel,
     dockLabel,
     socialLabel,
+    legalLabel,
     mailLabel,
     githubLabel,
     githubUrl,
     themeLabel,
     signInLabel,
     signedInLabel,
+    authenticatedLabel,
     isAuthenticated,
     isDarkTheme,
     isExpanded,
@@ -28,8 +37,9 @@
     languageEnglishLabel,
     languageRussianLabel,
     socialLinks,
+    legalLinks,
     onToggleExpand,
-    onOpenCreate,
+    onBrandClick,
     onOpenEmailDraft,
     onOpenEmailDialog,
     onTheme,
@@ -42,12 +52,14 @@
     collapseSidebarLabel: string;
     dockLabel: string;
     socialLabel: string;
+    legalLabel: string;
     mailLabel: string;
     githubLabel: string;
     githubUrl: string;
     themeLabel: string;
     signInLabel: string;
     signedInLabel: string;
+    authenticatedLabel: string | null;
     isAuthenticated: boolean;
     isDarkTheme: boolean;
     isExpanded: boolean;
@@ -55,8 +67,9 @@
     languageEnglishLabel: string;
     languageRussianLabel: string;
     socialLinks: SocialLink[];
+    legalLinks: LegalLink[];
     onToggleExpand: () => void;
-    onOpenCreate: () => void;
+    onBrandClick: () => void;
     onOpenEmailDraft: () => void;
     onOpenEmailDialog: () => void;
     onTheme: () => void;
@@ -67,24 +80,34 @@
   const themeIcon = $derived(isDarkTheme ? 'mdi:white-balance-sunny' : 'mdi:weather-night');
   const nextLocale = $derived(locale === 'en' ? 'ru' : 'en');
   const localeLabel = $derived(locale === 'en' ? languageRussianLabel : languageEnglishLabel);
-  let emailClickTimer: ReturnType<typeof setTimeout> | null = null;
+  let cancelBrandClick: (() => void) | null = null;
+  let cancelEmailClick: (() => void) | null = null;
+
+  function handleBrandClick() {
+    cancelBrandClick?.();
+    cancelBrandClick = scheduleAfter(220, () => {
+      onToggleExpand();
+      cancelBrandClick = null;
+    });
+  }
+
+  function handleBrandDoubleClick() {
+    cancelBrandClick?.();
+    cancelBrandClick = null;
+    onBrandClick();
+  }
 
   function handleEmailClick() {
-    if (emailClickTimer) {
-      clearTimeout(emailClickTimer);
-    }
-
-    emailClickTimer = setTimeout(() => {
+    cancelEmailClick?.();
+    cancelEmailClick = scheduleAfter(220, () => {
       onOpenEmailDraft();
-      emailClickTimer = null;
-    }, 220);
+      cancelEmailClick = null;
+    });
   }
 
   function handleEmailDoubleClick() {
-    if (emailClickTimer) {
-      clearTimeout(emailClickTimer);
-      emailClickTimer = null;
-    }
+    cancelEmailClick?.();
+    cancelEmailClick = null;
 
     onOpenEmailDialog();
   }
@@ -96,10 +119,8 @@
     class="kefine-sidebar-brand"
     aria-label={isExpanded ? collapseSidebarLabel : openSidebarLabel}
     title={brandLabel}
-    onclick={() => {
-      onOpenCreate();
-      onToggleExpand();
-    }}
+    onclick={handleBrandClick}
+    ondblclick={handleBrandDoubleClick}
   >
     <kefine-sidebar-brand-mark class="kefine-sidebar-brand-mark">{brandLabel}</kefine-sidebar-brand-mark>
   </button>
@@ -121,6 +142,14 @@
           </a>
         {/each}
       </section>
+
+      <nav class="kefine-sidebar-nav" aria-label={legalLabel}>
+        {#each legalLinks as link (link.id)}
+          <a class="kefine-sidebar-link" href={link.href}>
+            <span class="kefine-sidebar-link-label">{link.label}</span>
+          </a>
+        {/each}
+      </nav>
 
       <section class="kefine-sidebar-toolbar" aria-label={dockLabel}>
       <button type="button" class="kefine-sidebar-icon" aria-label={themeLabel} title={themeLabel} onclick={onTheme}>
@@ -168,5 +197,5 @@
   onclick={onAuth}
   disabled={isAuthenticated}
 >
-  {isAuthenticated ? signedInLabel : signInLabel}
+  {isAuthenticated ? authenticatedLabel ?? signedInLabel : signInLabel}
 </button>

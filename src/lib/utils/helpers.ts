@@ -64,6 +64,92 @@ export function generateId(): string {
   });
 }
 
+function createAbortError(): Error {
+  try {
+    return new DOMException('Operation aborted.', 'AbortError');
+  } catch {
+    return new Error('Operation aborted.');
+  }
+}
+
+export function scheduleAfter(delayMs: number, callback: () => void): () => void {
+  if (typeof requestAnimationFrame !== 'function') {
+    callback();
+    return () => {};
+  }
+
+  let frameId = 0;
+  let startTs: number | null = null;
+  let cancelled = false;
+
+  const tick = (timestamp: number) => {
+    if (cancelled) return;
+
+    if (startTs === null) {
+      startTs = timestamp;
+    }
+
+    if (timestamp - startTs >= delayMs) {
+      callback();
+      return;
+    }
+
+    frameId = requestAnimationFrame(tick);
+  };
+
+  frameId = requestAnimationFrame(tick);
+
+  return () => {
+    cancelled = true;
+    cancelAnimationFrame(frameId);
+  };
+}
+
+export function waitForDelay(delayMs: number, signal?: AbortSignal): Promise<void> {
+  if (signal?.aborted) {
+    return Promise.reject(createAbortError());
+  }
+
+  return new Promise<void>((resolve, reject) => {
+    let cancel = () => {};
+
+    const handleAbort = () => {
+      cancel();
+      reject(createAbortError());
+    };
+
+    cancel = scheduleAfter(delayMs, () => {
+      signal?.removeEventListener('abort', handleAbort);
+      resolve();
+    });
+
+    signal?.addEventListener('abort', handleAbort, { once: true });
+  });
+}
+
+export function raceWithDeadline<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  message: string
+): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const cancel = scheduleAfter(timeoutMs, () => {
+      reject(new Error(message));
+    });
+
+    promise.then(
+      (value) => {
+        cancel();
+        resolve(value);
+      },
+      (error) => {
+        cancel();
+        reject(error);
+      }
+    );
+  });
+}
+
 /**
  * Debounce function
  */
@@ -71,9 +157,12 @@ export function debounce<T extends (...args: unknown[]) => unknown>(
   func: T,
   wait: number
 ): (...args: Parameters<T>) => void {
-  let timeout: ReturnType<typeof setTimeout> | null = null;
+  let cancelScheduled: (() => void) | null = null;
   return (...args: Parameters<T>) => {
-    if (timeout) clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), wait);
+    cancelScheduled?.();
+    cancelScheduled = scheduleAfter(wait, () => {
+      cancelScheduled = null;
+      func(...args);
+    });
   };
 }

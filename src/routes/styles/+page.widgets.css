@@ -216,10 +216,10 @@ task-status[data-status='queued'] {
 }
 
   .kefine-empty-table {
-    border: var(--kef-border-width) dashed var(--kef-line);
+    border: var(--kef-border-width) solid color-mix(in oklab, var(--kef-line) 88%, white);
     border-radius: 1rem;
     padding: 1.1rem;
-    background: color-mix(in oklab, var(--kef-bg-card) 90%, var(--kef-bg-soft));
+    background: color-mix(in oklab, var(--kef-bg-card) 94%, var(--kef-bg-soft));
   }
 
   .kefine-status {

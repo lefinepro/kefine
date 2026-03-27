@@ -26,6 +26,7 @@ const KEFINE_TEXT_EN = {
     },
     dockLabel: 'Sidebar controls',
     socialLabel: 'Community links',
+    legalLabel: 'Legal links',
     mailLabel: 'Write to us',
     githubLabel: 'Open GitHub',
     signIn: 'Sign in',
@@ -47,6 +48,14 @@ const KEFINE_TEXT_EN = {
         label: 'Open Telegram',
         href: 'https://t.me/lefine'
       }
+    },
+    legalLinks: {
+      privacy: 'Privacy Policy',
+      terms: 'Terms',
+      refund: 'Refund',
+      related: 'Related legal pages',
+      updated: 'Last updated',
+      backToApp: 'Back to app'
     },
     githubUrl: 'https://github.com/lefine',
     contactEmail: 'order@lefine.pro'
@@ -157,9 +166,10 @@ const KEFINE_TEXT_EN = {
     signedIn: 'You are signed in. You can submit your task.',
     reown: 'Reown',
     passkey: 'Passkey',
-    walletTitle: 'Wallet / Scial',
+    walletTitle: 'Wallet / Social',
     walletDetail: 'Use MetaMask, WalletConnect, Email, or Google to claim the paying account.',
     passkeyTitle: 'Passkey',
+    localhostTitle: 'Localhost',
     passkeyDetail: 'Use your platform account, or continue with email if no passkey profile exists.',
     anonymousTitle: '10 min test',
     anonymousDetail: 'Test now',
@@ -315,6 +325,7 @@ const KEFINE_TEXT_RU = {
     },
     dockLabel: 'Управление сайдбаром',
     socialLabel: 'Ссылки сообщества',
+    legalLabel: 'Юридические ссылки',
     mailLabel: 'Написать нам',
     githubLabel: 'Открыть GitHub',
     signIn: 'Войти',
@@ -336,6 +347,14 @@ const KEFINE_TEXT_RU = {
         label: 'Открыть Telegram',
         href: 'https://t.me/lefine'
       }
+    },
+    legalLinks: {
+      privacy: 'Политика конфиденциальности',
+      terms: 'Условия',
+      refund: 'Возврат',
+      related: 'Связанные юридические страницы',
+      updated: 'Обновлено',
+      backToApp: 'Вернуться в приложение'
     },
     githubUrl: 'https://github.com/lefine',
     contactEmail: 'order@lefine.pro'
@@ -447,9 +466,10 @@ const KEFINE_TEXT_RU = {
     signedIn: 'Вы вошли в систему. Можете отправить задачу.',
     reown: 'Reown',
     passkey: 'Passkey',
-    walletTitle: 'Wallet / Scial',
+    walletTitle: 'Wallet / Social',
     walletDetail: 'Используйте MetaMask, WalletConnect, Email или Google, чтобы выбрать аккаунт плательщика.',
     passkeyTitle: 'Passkey',
+    localhostTitle: 'Localhost',
     passkeyDetail: 'Используйте аккаунт платформы или продолжите через email, если профиля ещё нет.',
     anonymousTitle: 'Гость',
     anonymousDetail: 'Продолжить без профиля и оплатить через депозит.',

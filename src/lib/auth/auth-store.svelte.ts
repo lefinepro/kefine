@@ -1,12 +1,12 @@
 import { browser } from '$app/environment';
-import { saveSession, clearSession } from './session.js';
+import { saveSession, clearSession, loadSession } from './session.js';
 
 export interface AuthState {
 	isConnected: boolean;
 	address: string | null;
 	chainId: number | null;
 	email: string | null;
-	authType: 'wallet' | 'email' | null;
+	authType: 'wallet' | 'email' | 'localhost' | null;
 	status: 'connected' | 'disconnected' | 'connecting' | 'reconnecting' | null;
 }
 
@@ -39,24 +39,22 @@ export function clearAuthState(): void {
 	clearSession();
 }
 
+export function hydrateAuthStateFromSession(): void {
+	if (!browser) return;
+
+	const session = loadSession();
+	if (!session) return;
+
+	Object.assign(authState, {
+		isConnected: true,
+		address: session.address,
+		chainId: session.chainId,
+		email: session.email,
+		authType: session.authType,
+		status: 'reconnecting'
+	} satisfies AuthState);
+}
+
 if (browser) {
-	// Lazily import appkit to avoid circular deps and ensure browser-only init
-	import('./appkit.js').then(({ appkit }) => {
-		if (!appkit) return;
-
-		appkit.subscribeAccount((account) => {
-			const email = account.embeddedWalletInfo?.user?.email ?? null;
-			const authProvider = account.embeddedWalletInfo?.authProvider ?? null;
-			const authType: 'wallet' | 'email' | null =
-				authProvider === 'email' ? 'email' : account.isConnected ? 'wallet' : null;
-
-			updateAuthState({
-				isConnected: account.isConnected,
-				address: account.address ?? null,
-				email,
-				authType,
-				status: account.status ?? null
-			});
-		});
-	});
+	hydrateAuthStateFromSession();
 }

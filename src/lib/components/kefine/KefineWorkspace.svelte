@@ -2,7 +2,9 @@
   import { browser } from '$app/environment';
   import { buildOrderProxyUrl, resolveOrderProxyBasePath } from '$lib/order-proxy-path';
   import { onMount } from 'svelte';
-  import { authState } from '$lib/auth/auth-store.svelte.js';
+  import { cubicOut } from 'svelte/easing';
+  import { fade } from 'svelte/transition';
+  import { authState, hydrateAuthStateFromSession, updateAuthState } from '$lib/auth/auth-store.svelte.js';
   import {
     loadPasskeySession,
     passkeySessionStore,
@@ -27,7 +29,7 @@
   import KefineSubmittingStep from '$lib/components/kefine/KefineSubmittingStep.svelte';
   import KefineExecutingStep from '$lib/components/kefine/KefineExecutingStep.svelte';
   import KefinePaymentStep from '$lib/components/kefine/KefinePaymentStep.svelte';
-  import mockOrderStatus from '$lib/components/kefine/order-status.mock.json';
+  import mockOrderStatus from '../../../../.meta/data/mocks/order-status.mock.json';
   import {
     ORDER_STORAGE_KEY,
     POLL_INTERVAL_MS,
@@ -40,13 +42,13 @@
     type PaymentStage,
     buildCreatePayload,
     deriveExecutionPresentation,
-    deriveResultSurface,
     extractStatusPayload,
     parseStoredOrders,
     readCreateResponse,
     resolveExecutionEstimate,
     toNumber
   } from '$lib/components/kefine/kefine-workflow';
+  import { waitForDelay } from '$lib/utils/helpers';
 
   let {
     initialOrderId
@@ -83,6 +85,7 @@
   );
   let createdOrders = $state<OrderView[]>([]);
   let leftNavExpanded = $state(false);
+  let isLocalhostRuntime = $state(false);
 
   let isDarkTheme = $state(false);
   let selectedAuthMethod = $state<AuthMethod>(null);
@@ -92,11 +95,13 @@
   let authDialogOpen = $state(false);
   let contactDialogOpen = $state(false);
   let passkeyDialogOpen = $state(false);
+  let stagePreviewOpen = $state(false);
   let contactName = $state('');
   let contactEmail = $state('');
   let contactMessage = $state('');
   let isHydratingRoute = $state(Boolean(getNormalizedInitialOrderId()));
   const activePollTokens = new Map<string, symbol>();
+  let pollAbortController = $state<AbortController | null>(null);
 
   const passkeySession = $derived($passkeySessionStore);
   const isPasskeyActive = $derived(passkeySession ? passkeySession.expiresAt.getTime() > Date.now() : false);
@@ -104,6 +109,38 @@
   const walletNetworkLabel = $derived(
     authState.chainId === 100 ? localeText.auth.walletNetworkGnosis : localeText.auth.walletNetworkEthereum
   );
+  const normalizedWalletLabel = $derived.by(() => {
+    const email = authState.email?.trim();
+    if (email) {
+      return email;
+    }
+
+    const address = authState.address?.trim();
+    if (!address) {
+      return null;
+    }
+
+    if (address.length <= 14) {
+      return address;
+    }
+
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  });
+  const normalizedPasskeyLabel = $derived.by(() => {
+    const username = passkeySession?.username?.trim();
+    return username ? `@${username.replace(/^@+/, '')}` : null;
+  });
+  const authenticatedLabel = $derived.by(() => {
+    if (selectedAuthMethod === 'passkey' && normalizedPasskeyLabel) {
+      return normalizedPasskeyLabel;
+    }
+
+    if (selectedAuthMethod === 'wallet' && normalizedWalletLabel) {
+      return normalizedWalletLabel;
+    }
+
+    return normalizedPasskeyLabel ?? normalizedWalletLabel;
+  });
   const ORDER_PAGE_SIZE = 12;
   let visibleOrdersLimit = $state(ORDER_PAGE_SIZE);
   const visibleOrders = $derived(createdOrders.slice(0, visibleOrdersLimit));
@@ -153,12 +190,26 @@
       icon: 'mdi:telegram'
     }
   ]);
+  const sidebarLegalLinks = $derived([
+    {
+      id: 'privacy' as const,
+      label: localeText.topbar.legalLinks.privacy,
+      href: '/privacy'
+    },
+    {
+      id: 'terms' as const,
+      label: localeText.topbar.legalLinks.terms,
+      href: '/terms'
+    },
+    {
+      id: 'refund' as const,
+      label: localeText.topbar.legalLinks.refund,
+      href: '/refund-policy'
+    }
+  ]);
   const remainingAmount = $derived(currentOrder?.estimatedCost ?? 0);
   const executionPresentation = $derived(
     deriveExecutionPresentation(currentOrder, localeText, selectedAuthMethod, step === 'payment')
-  );
-  const resultSurface = $derived(
-    deriveResultSurface(currentOrder, localeText, `${craterBaseUrl()}/pay/${currentOrder?.id ?? ''}`)
   );
   const demoOrders = $derived.by(() => {
     const vpnDemo = mockOrderStatus['vpn-demo-1'];
@@ -200,13 +251,19 @@
     socialAvatarUrl: null as string | null,
     passkeyAvatarUrl: null as string | null,
     actorAvatarUrl: null as string | null,
-    activeMethod: selectedAuthMethod
+    activeMethod: selectedAuthMethod,
+    walletLabel: normalizedWalletLabel,
+    passkeyLabel: normalizedPasskeyLabel
   });
 
   const TITLE_FONT_MAX = 2.2;
   const TITLE_FONT_MIN = 1.1;
   const TITLE_FONT_SHRINK_AT = 34;
   const TITLE_FONT_SHRINK_STEP = 18;
+  const screenDissolveTransition = {
+    duration: 240,
+    easing: cubicOut
+  } as const;
   const titleFontSize = $derived(
     Math.max(
       TITLE_FONT_MIN,
@@ -216,25 +273,33 @@
 
   onMount(() => {
     if (!browser) return;
+    hydrateAuthStateFromSession();
     loadPasskeySession();
     loadCreatedOrders();
+    isLocalhostRuntime = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
 
-    const routeOrderId = readOrderIdFromPath() || getNormalizedInitialOrderId();
+    const routeState = readTaskRouteState();
+    const routeOrderId = routeState?.orderId || getNormalizedInitialOrderId();
     if (routeOrderId) {
       isHydratingRoute = true;
-      void openOrderById(routeOrderId);
+      void openOrderById(routeOrderId, routeState?.view ?? null);
     }
 
     isDarkTheme = window.matchMedia('(prefers-color-scheme: dark)').matches;
     document.documentElement.setAttribute('data-kefine-theme', isDarkTheme ? 'dark' : 'light');
     document.documentElement.setAttribute('lang', $kefineLocale);
+
+    return () => {
+      pollAbortController?.abort();
+      activePollTokens.clear();
+    };
   });
   $effect(() => {
     if (browser) {
       const theme = isDarkTheme ? 'dark' : 'light';
       document.documentElement.setAttribute('data-kefine-theme', theme);
       document.documentElement.setAttribute('lang', $kefineLocale);
-      syncAppKitTheme(theme);
+      void syncAppKitTheme(theme);
     }
   });
 
@@ -257,7 +322,7 @@
   $effect(() => {
     const walletReady = selectedAuthMethod === 'wallet' && authState.isConnected;
     const passkeyReady = selectedAuthMethod === 'passkey' && isPasskeyActive;
-    if (step === 'executing' && (walletReady || passkeyReady || selectedAuthMethod === 'anonymous')) {
+    if (step === 'executing' && !stagePreviewOpen && (walletReady || passkeyReady || selectedAuthMethod === 'anonymous')) {
       step = 'payment';
     }
   });
@@ -291,7 +356,15 @@
 
     nextUrl.pathname = '/';
     nextUrl.search = '';
-    nextUrl.hash = orderId ? `#/task/${encodeURIComponent(orderId)}` : '';
+    if (!orderId) {
+      nextUrl.hash = '';
+    } else if (step === 'payment' && paymentStage === 'result-ready') {
+      nextUrl.hash = `#/task/${encodeURIComponent(orderId)}/result`;
+    } else if (step === 'executing' && stagePreviewOpen) {
+      nextUrl.hash = `#/task/${encodeURIComponent(orderId)}/stages`;
+    } else {
+      nextUrl.hash = `#/task/${encodeURIComponent(orderId)}`;
+    }
 
     if (window.location.href !== nextUrl.toString()) {
       window.history.replaceState({}, '', nextUrl);
@@ -307,6 +380,7 @@
     paymentMethod = null;
     paymentStage = 'payment-method-select';
     depositDialogOpen = false;
+    stagePreviewOpen = false;
   }
 
   function openAuthDialog() {
@@ -327,27 +401,31 @@
     }
 
     try {
-      const { appkit } = await import('$lib/auth/appkit.js');
-      if (!appkit) {
-        openAuthDialog();
-        return;
-      }
-      appkit.open();
+      const { openAppKit } = await import('$lib/auth/appkit.js');
+      await openAppKit();
     } catch {
       openAuthDialog();
     }
   }
 
 
-  async function loginWithDefaultPasskey() {
-    if (!browser) return;
+  async function loginWithDefaultPasskey(): Promise<boolean> {
+    if (!browser) return false;
 
     try {
+      console.info('[passkey] loginWithDefaultPasskey:start');
       const { transactionId, response } = await performAuthentication();
       const result = await finishAuthentication(transactionId, response);
+      console.info('[passkey] loginWithDefaultPasskey:success', {
+        username: result.username,
+        userId: result.userId
+      });
       loginWithPasskey(result);
+      return true;
     } catch {
+      console.error('[passkey] loginWithDefaultPasskey:error');
       handlePasskeyError('');
+      return false;
     }
   }
 
@@ -355,7 +433,8 @@
     leftNavExpanded = !leftNavExpanded;
   }
 
-  function selectTopbarCreate() {
+  function handleTopbarBrandClick() {
+    leftNavExpanded = false;
     newOrder();
   }
 
@@ -427,10 +506,23 @@
     }
 
     for (const demoOrder of demoOrders) {
-      if (!createdOrders.some((order) => order.id === demoOrder.id)) {
+      const existingIndex = createdOrders.findIndex((order) => order.id === demoOrder.id);
+      if (existingIndex === -1) {
         createdOrders = [demoOrder, ...createdOrders];
+        continue;
       }
+
+      const existingOrder = createdOrders[existingIndex];
+      if (!existingOrder) continue;
+
+      createdOrders = [
+        ...createdOrders.slice(0, existingIndex),
+        { ...existingOrder, ...demoOrder, id: existingOrder.id },
+        ...createdOrders.slice(existingIndex + 1)
+      ];
     }
+
+    persistOrders();
 
     visibleOrdersLimit = Math.min(ORDER_PAGE_SIZE, createdOrders.length);
   }
@@ -477,7 +569,7 @@
     }
   }
 
-  function readOrderIdFromPath() {
+  function readTaskRouteState() {
     if (!browser) return null;
     const hash = window.location.hash.replace(/^#/, '').replace(/\/+$/, '');
     const hashTaskPrefix = '/task/';
@@ -485,13 +577,20 @@
 
     if (hash.startsWith(hashTaskPrefix) || hash.startsWith(hashLegacyPrefix)) {
       const prefix = hash.startsWith(hashTaskPrefix) ? hashTaskPrefix : hashLegacyPrefix;
-      const encodedId = hash.slice(prefix.length);
+      const remainder = hash.slice(prefix.length);
+      const [encodedId, view] = remainder.split('/');
       if (!encodedId) return null;
 
       try {
-        return decodeURIComponent(encodedId);
+        return {
+          orderId: decodeURIComponent(encodedId),
+          view: view === 'result' || view === 'stages' ? view : null
+        } as const;
       } catch {
-        return encodedId;
+        return {
+          orderId: encodedId,
+          view: view === 'result' || view === 'stages' ? view : null
+        } as const;
       }
     }
 
@@ -504,24 +603,41 @@
     }
 
     const prefix = rawPath.startsWith(taskPrefix) ? taskPrefix : legacyPrefix;
-    const encodedId = rawPath.slice(prefix.length);
+    const remainder = rawPath.slice(prefix.length);
+    const [encodedId, view] = remainder.split('/');
     if (!encodedId) return null;
 
     try {
-      return decodeURIComponent(encodedId);
+      return {
+        orderId: decodeURIComponent(encodedId),
+        view: view === 'result' || view === 'stages' ? view : null
+      } as const;
     } catch {
-      return encodedId;
+      return {
+        orderId: encodedId,
+        view: view === 'result' || view === 'stages' ? view : null
+      } as const;
     }
   }
 
-  async function openOrderById(orderId: string) {
+  async function openOrderById(orderId: string, preferredView: 'result' | 'stages' | null = null) {
     if (!orderId) return;
     try {
       const local = createdOrders.find((item) => item.id === orderId);
       if (local) {
         currentOrder = local;
         resetTransactionState();
-        step = 'executing';
+        if (local.status === 'completed') {
+          if (preferredView === 'stages') {
+            stagePreviewOpen = true;
+            step = 'executing';
+          } else {
+            paymentStage = 'result-ready';
+            step = 'payment';
+          }
+        } else {
+          step = 'executing';
+        }
 
         if (!local.id.startsWith('local-') && local.status !== 'completed') {
           const updated = await requestOrderFromStatus(orderId, {
@@ -551,7 +667,17 @@
         currentOrder = remote;
         upsertOrder(remote);
         resetTransactionState();
-        step = 'executing';
+        if (remote.status === 'completed') {
+          if (preferredView === 'stages') {
+            stagePreviewOpen = true;
+            step = 'executing';
+          } else {
+            paymentStage = 'result-ready';
+            step = 'payment';
+          }
+        } else {
+          step = 'executing';
+        }
         return;
       }
 
@@ -564,6 +690,12 @@
   function openOrder(order: OrderView) {
     currentOrder = order;
     resetTransactionState();
+    if (order.status === 'completed') {
+      paymentStage = 'result-ready';
+      step = 'payment';
+      return;
+    }
+
     step = 'executing';
   }
 
@@ -639,16 +771,25 @@
     }
   }
   function startOrderPolling(order: OrderView) {
+    if (!pollAbortController || pollAbortController.signal.aborted) {
+      pollAbortController = new AbortController();
+    }
+
     const token = Symbol(order.id);
     activePollTokens.set(order.id, token);
-    void pollOrderInBackground(order, token);
+    void pollOrderInBackground(order, token, pollAbortController.signal);
   }
 
-  async function pollOrderInBackground(order: OrderView, token: symbol): Promise<void> {
+  async function pollOrderInBackground(order: OrderView, token: symbol, signal: AbortSignal): Promise<void> {
     let tries = 0;
     let latestOrder = order;
 
     while (tries < POLL_LIMIT) {
+      if (signal.aborted) {
+        activePollTokens.delete(order.id);
+        return;
+      }
+
       if (activePollTokens.get(order.id) !== token) {
         return;
       }
@@ -679,9 +820,13 @@
       }
 
       tries += 1;
-      await new Promise((resolve) => {
-        setTimeout(resolve, POLL_INTERVAL_MS);
-      });
+
+      try {
+        await waitForDelay(POLL_INTERVAL_MS, signal);
+      } catch {
+        activePollTokens.delete(order.id);
+        return;
+      }
     }
 
     if (activePollTokens.get(order.id) === token) {
@@ -837,6 +982,11 @@
   }
 
   function loginWithPasskey(session: PasskeyAuthSuccess) {
+    console.info('[passkey] loginWithPasskey', {
+      username: session.username,
+      userId: session.userId,
+      expiresAt: session.expiresAt
+    });
     closeAuthDialog();
     closePasskeyDialog();
 
@@ -853,23 +1003,54 @@
     }
 
     if (currentOrder && step === 'executing') {
+      stagePreviewOpen = false;
       step = 'payment';
     }
   }
 
   function handlePasskeyError(error: Error | string) {
-    void error;
+    console.error('[passkey] handlePasskeyError', error);
+    passkeyDialogOpen = true;
   }
 
   function chooseWalletMethod() {
     closeAuthDialog();
+    stagePreviewOpen = false;
     selectedAuthMethod = 'wallet';
     paymentMethod = 'wallet';
     void openSocialAuth();
   }
 
-  async function choosePasskeyMethod() {
+  function chooseLocalhostMethod() {
     closeAuthDialog();
+    stagePreviewOpen = false;
+    selectedAuthMethod = 'wallet';
+    paymentMethod = 'wallet';
+    updateAuthState({
+      isConnected: true,
+      address: null,
+      chainId: null,
+      email: 'localhost',
+      authType: 'localhost',
+      status: 'connected'
+    });
+
+    if (draftQueued) {
+      void continueAfterAuth();
+      return;
+    }
+
+    if (currentOrder && step === 'executing') {
+      step = 'payment';
+    }
+  }
+
+  function choosePasskeyMethod() {
+    console.info('[passkey] choosePasskeyMethod', {
+      isPasskeyActive
+    });
+    closeAuthDialog();
+    stagePreviewOpen = false;
     selectedAuthMethod = 'passkey';
     paymentMethod = 'linked-wallet';
     if (isPasskeyActive) {
@@ -877,12 +1058,14 @@
       return;
     }
 
-    await loginWithDefaultPasskey();
+    passkeyDialogOpen = true;
   }
 
   function chooseAnonymousMethod() {
+    stagePreviewOpen = false;
     selectedAuthMethod = 'anonymous';
     paymentMethod = 'promo';
+    paymentStage = 'result-ready';
     step = 'payment';
   }
 
@@ -891,16 +1074,19 @@
   }
 
   function selectDepositMethod(method: Exclude<PaymentMethod, null>) {
+    stagePreviewOpen = false;
     paymentMethod = method;
     paymentStage = 'deposit-pending';
     depositDialogOpen = false;
   }
 
   function confirmPayment() {
+    stagePreviewOpen = false;
     paymentStage = 'paid';
   }
 
   function revealResult() {
+    stagePreviewOpen = false;
     paymentStage = 'result-ready';
   }
 
@@ -927,12 +1113,14 @@
     collapseSidebarLabel={localeText.topbar.closeActionsMenu}
     dockLabel={localeText.topbar.dockLabel}
     socialLabel={localeText.topbar.socialLabel}
+    legalLabel={localeText.topbar.legalLabel}
     mailLabel={localeText.topbar.mailLabel}
     githubLabel={localeText.topbar.githubLabel}
     githubUrl={localeText.topbar.githubUrl}
     themeLabel={topbarThemeActionLabel}
     signInLabel={localeText.topbar.signIn}
     signedInLabel={localeText.topbar.signedIn}
+    authenticatedLabel={authenticatedLabel}
     isAuthenticated={isAuthenticated}
     isDarkTheme={isDarkTheme}
     isExpanded={leftNavExpanded}
@@ -940,8 +1128,9 @@
     languageEnglishLabel={localeText.topbar.languageEnglish}
     languageRussianLabel={localeText.topbar.languageRussian}
     socialLinks={sidebarSocialLinks}
+    legalLinks={sidebarLegalLinks}
     onToggleExpand={toggleLeftNav}
-    onOpenCreate={selectTopbarCreate}
+    onBrandClick={handleTopbarBrandClick}
     onOpenEmailDraft={openContactEmailDraft}
     onOpenEmailDialog={openContactDialog}
     onTheme={selectTopbarTheme}
@@ -949,130 +1138,172 @@
     onLocale={selectTopbarLocale}
   />
 
-  <section class="kefine-layout">
+  <section
+    class="kefine-layout"
+    class:kefine-layout--create={step === 'create'}
+    class:kefine-layout--flow={step === 'executing' || step === 'payment' || step === 'submitting'}
+  >
     {#if step === 'create'}
-      <KefineCreateStep
-        draft={draft}
-        title={localeText.create.title}
-        titleFontSize={titleFontSize}
-        placeholder={localeText.create.placeholder}
-        placeholderVariants={localeText.create.placeholderVariants}
-        executeAria={localeText.create.executeAria}
-        solverLabel={localeText.labels.solver}
-        recentOrders={visibleOrders}
-        matchedOrders={matchedOrders}
-        isSearching={draft.title.trim().length > 0}
-        totalOrders={createdOrders.length}
-        hasMoreOrders={hasMoreOrders}
-        onLoadMoreOrders={loadMoreOrders}
-        matchedTasksLabel={localeText.create.matchedTasks}
-        timeLeftLabel={localeText.labels.timeLeft}
-        stopTaskLabel={localeText.buttons.stopTask}
-        onSubmit={handleSubmit}
-        onQueueTask={queueTaskBelow}
-        onStopOrder={handleStopOrder}
-        onOpenOrder={openOrder}
-        loadMoreHint={localeText.labels.loadMoreHint}
-      />
+      <kefine-screen class="kefine-screen" in:fade={screenDissolveTransition} out:fade={screenDissolveTransition}>
+        <KefineCreateStep
+          draft={draft}
+          title={localeText.create.title}
+          titleFontSize={titleFontSize}
+          placeholder={localeText.create.placeholder}
+          placeholderVariants={localeText.create.placeholderVariants}
+          executeAria={localeText.create.executeAria}
+          solverLabel={localeText.labels.solver}
+          recentOrders={visibleOrders}
+          matchedOrders={matchedOrders}
+          isSearching={draft.title.trim().length > 0}
+          totalOrders={createdOrders.length}
+          hasMoreOrders={hasMoreOrders}
+          onLoadMoreOrders={loadMoreOrders}
+          matchedTasksLabel={localeText.create.matchedTasks}
+          timeLeftLabel={localeText.labels.timeLeft}
+          priceLabel={localeText.labels.price}
+          statusLabel={localeText.labels.taskStatus}
+          stopTaskLabel={localeText.buttons.stopTask}
+          onSubmit={handleSubmit}
+          onQueueTask={queueTaskBelow}
+          onStopOrder={handleStopOrder}
+          onOpenOrder={openOrder}
+        />
+      </kefine-screen>
     {/if}
 
     {#if step === 'submitting'}
-      <KefineSubmittingStep />
+      <kefine-screen class="kefine-screen" in:fade={screenDissolveTransition} out:fade={screenDissolveTransition}>
+        <KefineSubmittingStep />
+      </kefine-screen>
     {/if}
 
     {#if step === 'executing'}
-      <KefineExecutingStep
-        currentOrder={currentOrder}
-        execution={executionPresentation}
-        isHydratingTitle={isHydratingRoute && !currentOrder?.title.trim()}
-        onWalletLogin={chooseWalletMethod}
-        onPasskeyLogin={choosePasskeyMethod}
-        onAnonymous={chooseAnonymousMethod}
-        onCancel={cancelExecutingActions}
-        authDisplay={authDisplay}
-        walletNetworkLabel={walletNetworkLabel}
-        labels={{
-          solver: localeText.labels.solver,
-          subtasks: localeText.labels.subtasks,
-          chooseMethod: localeText.labels.chooseMethod,
-          cancel: localeText.buttons.cancel,
-          timeLeft: localeText.labels.timeLeft,
-          price: localeText.labels.price
-        }}
-        authLabels={{
-          walletTitle: localeText.auth.walletTitle,
-          passkeyTitle: localeText.auth.passkeyTitle,
-          anonymousTitle: localeText.auth.anonymousTitle,
-          anonymousDetail: localeText.auth.anonymousDetail,
-          walletAccount: localeText.auth.walletAccount
-        }}
-      />
+      <kefine-screen class="kefine-screen" in:fade={screenDissolveTransition} out:fade={screenDissolveTransition}>
+        <KefineExecutingStep
+          currentOrder={currentOrder}
+          execution={executionPresentation}
+          isHydratingTitle={isHydratingRoute && !currentOrder?.title.trim()}
+          onWalletLogin={chooseWalletMethod}
+          onPasskeyLogin={choosePasskeyMethod}
+          onAnonymous={chooseAnonymousMethod}
+          onCancel={() => {
+            if (stagePreviewOpen && currentOrder?.status === 'completed') {
+              stagePreviewOpen = false;
+              paymentStage = 'result-ready';
+              step = 'payment';
+              return;
+            }
+
+            cancelExecutingActions();
+          }}
+          forceFinalVpnStep={stagePreviewOpen}
+          authDisplay={authDisplay}
+          walletNetworkLabel={walletNetworkLabel}
+          labels={{
+            solver: localeText.labels.solver,
+            subtasks: localeText.labels.subtasks,
+            chooseMethod: localeText.labels.chooseMethod,
+            cancel: localeText.buttons.cancel,
+            timeLeft: localeText.labels.timeLeft,
+            price: localeText.labels.price
+          }}
+          authLabels={{
+            walletTitle: localeText.auth.walletTitle,
+            passkeyTitle: localeText.auth.passkeyTitle,
+            anonymousTitle: localeText.auth.anonymousTitle,
+            anonymousDetail: localeText.auth.anonymousDetail,
+            walletAccount: localeText.auth.walletAccount
+          }}
+        />
+      </kefine-screen>
     {/if}
 
     {#if step === 'payment'}
-      <KefinePaymentStep
-        currentOrder={currentOrder}
-        remainingAmount={remainingAmount}
-        paymentInvoiceFallback={`${craterBaseUrl()}/pay/${currentOrder?.id ?? ''}`}
-        selectedAuthMethod={selectedAuthMethod}
-        paymentMethod={paymentMethod}
-        paymentStage={paymentStage}
-        depositDialogOpen={depositDialogOpen}
-        resultSurface={resultSurface}
-        onCreateNew={newOrder}
-        onOpenDepositDialog={() => {
-          depositDialogOpen = true;
-        }}
-        onCloseDepositDialog={closeDepositDialog}
-        onSelectDepositMethod={selectDepositMethod}
-        onConfirmPayment={confirmPayment}
-        onRevealResult={revealResult}
-        onSaveAnonymousResult={saveAnonymousResult}
-        labels={{
-          taskId: localeText.labels.taskId,
-          amount: localeText.labels.amount,
-          executionEstimate: localeText.labels.executionEstimate,
-          paymentInvoice: localeText.labels.paymentInvoice,
-          createNewTask: localeText.buttons.createNewTask,
-          selectedMethod: localeText.labels.selectedMethod,
-          remainingBalance: localeText.labels.remainingBalance,
-          resultTitle: localeText.labels.resultTitle
-        }}
-        paymentLabels={{
-          summaryTitle: localeText.payment.summaryTitle,
-          methodSelectTitle: localeText.payment.methodSelectTitle,
-          walletReadyTitle: localeText.payment.walletReadyTitle,
-          passkeyReadyTitle: localeText.payment.passkeyReadyTitle,
-          anonymousReadyTitle: localeText.payment.anonymousReadyTitle,
-          promoHint: localeText.payment.promoHint,
-          promoCodeLabel: localeText.labels.promoCode,
-          promoCodePlaceholder: localeText.placeholders.promoCode,
-          promoEmpty: localeText.errors.promoEmpty,
-          promoOk: localeText.errors.promoOk,
-          promoWrong: localeText.errors.promoWrong,
-          depositDialogTitle: localeText.payment.depositDialogTitle,
-          depositDialogDetail: localeText.payment.depositDialogDetail,
-          depositPendingTitle: localeText.payment.depositPendingTitle,
-          depositPendingDetail: localeText.payment.depositPendingDetail,
-          paidTitle: localeText.payment.paidTitle,
-          paidDetail: localeText.payment.paidDetail,
-          linkedWalletHint: localeText.payment.linkedWalletHint,
-          payCtaHint: localeText.payment.payCtaHint
-        }}
-        resultLabels={{
-          anonymousSaveHint: localeText.result.anonymousSaveHint
-        }}
-        buttons={{
-          apply: localeText.buttons.apply,
-          payNow: localeText.buttons.payNow,
-          confirmLinkedWallet: localeText.buttons.confirmLinkedWallet,
-          depositNow: localeText.buttons.depositNow,
-          payWithPromo: localeText.buttons.payWithPromo,
-          openResult: localeText.buttons.openResult,
-          saveResult: localeText.buttons.saveResult,
-          closeDialog: localeText.buttons.closeDialog
-        }}
-      />
+      <kefine-screen class="kefine-screen" in:fade={screenDissolveTransition} out:fade={screenDissolveTransition}>
+        <KefinePaymentStep
+          currentOrder={currentOrder}
+          remainingAmount={remainingAmount}
+          paymentInvoiceFallback={`${craterBaseUrl()}/pay/${currentOrder?.id ?? ''}`}
+          selectedAuthMethod={selectedAuthMethod}
+          paymentMethod={paymentMethod}
+          paymentStage={paymentStage}
+          depositDialogOpen={depositDialogOpen}
+          isAuthenticated={isAuthenticated}
+          onBack={() => {
+            resetTransactionState();
+            step = 'create';
+          }}
+          onOpenStages={() => {
+            stagePreviewOpen = true;
+            step = 'executing';
+          }}
+          onOpenDepositDialog={() => {
+            depositDialogOpen = true;
+          }}
+          onCloseDepositDialog={closeDepositDialog}
+          onSelectDepositMethod={selectDepositMethod}
+          onConfirmPayment={confirmPayment}
+          onRevealResult={revealResult}
+          onSaveAnonymousResult={saveAnonymousResult}
+          onWalletLogin={chooseWalletMethod}
+          onPasskeyLogin={choosePasskeyMethod}
+          onAnonymousLogin={chooseAnonymousMethod}
+          labels={{
+            taskId: localeText.labels.taskId,
+            amount: localeText.labels.amount,
+            executionEstimate: localeText.labels.executionEstimate,
+            paymentInvoice: localeText.labels.paymentInvoice,
+            createNewTask: localeText.buttons.createNewTask,
+            selectedMethod: localeText.labels.selectedMethod,
+            remainingBalance: localeText.labels.remainingBalance,
+            resultTitle: localeText.labels.resultTitle
+          }}
+          paymentLabels={{
+            summaryTitle: localeText.payment.summaryTitle,
+            methodSelectTitle: localeText.payment.methodSelectTitle,
+            walletReadyTitle: localeText.payment.walletReadyTitle,
+            passkeyReadyTitle: localeText.payment.passkeyReadyTitle,
+            anonymousReadyTitle: localeText.payment.anonymousReadyTitle,
+            promoHint: localeText.payment.promoHint,
+            promoCodeLabel: localeText.labels.promoCode,
+            promoCodePlaceholder: localeText.placeholders.promoCode,
+            promoEmpty: localeText.errors.promoEmpty,
+            promoOk: localeText.errors.promoOk,
+            promoWrong: localeText.errors.promoWrong,
+            depositDialogTitle: localeText.payment.depositDialogTitle,
+            depositDialogDetail: localeText.payment.depositDialogDetail,
+            depositPendingTitle: localeText.payment.depositPendingTitle,
+            depositPendingDetail: localeText.payment.depositPendingDetail,
+            paidTitle: localeText.payment.paidTitle,
+            paidDetail: localeText.payment.paidDetail,
+            linkedWalletHint: localeText.payment.linkedWalletHint,
+            payCtaHint: localeText.payment.payCtaHint
+          }}
+          resultLabels={{
+            anonymousSaveHint: localeText.result.anonymousSaveHint
+          }}
+          authLabels={{
+            walletTitle: localeText.auth.walletTitle,
+            walletAccount: localeText.auth.walletAccount,
+            passkeyTitle: localeText.auth.passkeyTitle,
+            anonymousTitle: localeText.auth.anonymousTitle,
+            anonymousDetail: localeText.auth.anonymousDetail
+          }}
+          authDisplay={authDisplay}
+          buttons={{
+            apply: localeText.buttons.apply,
+            payNow: localeText.buttons.payNow,
+            confirmLinkedWallet: localeText.buttons.confirmLinkedWallet,
+            depositNow: localeText.buttons.depositNow,
+            payWithPromo: localeText.buttons.payWithPromo,
+            openResult: localeText.buttons.openResult,
+            openAllTasks: localeText.buttons.openAllTasks,
+            saveResult: localeText.buttons.saveResult,
+            closeDialog: localeText.buttons.closeDialog
+          }}
+        />
+      </kefine-screen>
     {/if}
 
   </section>
@@ -1082,19 +1313,19 @@
     title={localeText.executionFlow['awaiting-auth'].title}
     description={localeText.executionFlow['awaiting-auth'].detail}
     walletTitle={localeText.auth.walletTitle}
-    walletDetail={localeText.auth.walletDetail}
     passkeyTitle={localeText.auth.passkeyTitle}
-    passkeyDetail={localeText.auth.passkeyDetail}
+    localhostTitle={localeText.auth.localhostTitle}
+    showLocalhost={isLocalhostRuntime}
     closeLabel={localeText.buttons.closeDialog}
     onClose={closeAuthDialog}
     onWallet={chooseWalletMethod}
     onPasskey={choosePasskeyMethod}
+    onLocalhost={chooseLocalhostMethod}
   />
 
   <KefinePasskeyDialog
     open={passkeyDialogOpen}
     title={localeText.auth.passkeyTitle}
-    closeLabel={localeText.buttons.closeDialog}
     onClose={closePasskeyDialog}
     onSuccess={loginWithPasskey}
     onError={handlePasskeyError}

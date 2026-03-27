@@ -11,6 +11,8 @@ require "./utils/config"
 module Crater
   module OrderQueue
     EVENT_PAGE_SIZE = 20
+    MAX_RETAINED_ORDERS = 2_000
+    MAX_RETAINED_ACTIVITIES = 6_000
 
     class OrderRecord
       property id : String
@@ -25,6 +27,7 @@ module Crater
       property updated_at : String
       property payment_url : String?
       property ui_scenario : String?
+      property labels : Array(String)
 
       def initialize(
         @id : String,
@@ -38,7 +41,8 @@ module Crater
         @created_at : String = Time.utc.to_rfc3339,
         @updated_at : String = Time.utc.to_rfc3339,
         @payment_url : String? = nil,
-        @ui_scenario : String? = nil
+        @ui_scenario : String? = nil,
+        @labels : Array(String) = [] of String
       )
       end
     end
@@ -63,6 +67,30 @@ module Crater
     @@lock = Mutex.new
     @@orders = [] of OrderRecord
     @@activities = [] of JSON::Any
+
+    private def self.trim_orders!
+      overflow = @@orders.size - MAX_RETAINED_ORDERS
+      return unless overflow > 0
+
+      @@orders.shift(overflow)
+    end
+
+    private def self.trim_activities!
+      overflow = @@activities.size - MAX_RETAINED_ACTIVITIES
+      return unless overflow > 0
+
+      @@activities.pop(overflow)
+    end
+
+    private def self.append_activity!(activity : JSON::Any)
+      @@activities.unshift(activity)
+      trim_activities!
+    end
+
+    private def self.store_order!(record : OrderRecord)
+      @@orders << record
+      trim_orders!
+    end
 
     private def self.current_time
       Time.utc.to_rfc3339
@@ -128,6 +156,7 @@ module Crater
       source = ticket || payload
       payment_link = payment_link_payload(payload) || payment_link_payload(source)
       ui_scenario = to_string(payload["uiScenario"]?) || to_string(source["uiScenario"]?)
+      labels = parse_labels(payload, source)
 
       raw_status = to_string(payload["status"]?) || to_string(source["status"]?)
       status = raw_status && !raw_status.empty? ? raw_status : "queued"
@@ -139,7 +168,8 @@ module Crater
       execution_estimate = to_string(payload["executionEstimate"]?) || to_string(payload["dueDate"]?) || to_string(source["executionEstimate"]?) || to_string(source["dueDate"]?)
       currency = to_string(payment_link.try(&.["currency"]?)) || to_string(payload["currency"]?) || to_string(source["currency"]?) || "USDC"
       payment_url = to_string(payment_link.try(&.["href"]?)) || to_string(payment_link.try(&.["url"]?))
-      is_vpn_order = vpn_service_payload?(title, description, ui_scenario)
+      is_vpn_order = vpn_service_payload?(title, description, ui_scenario, labels)
+      labels = ensure_vpn_label(labels) if is_vpn_order
 
       OrderRecord.new(
         id: id,
@@ -151,15 +181,45 @@ module Crater
         currency: is_vpn_order ? "USDC" : currency,
         execution_estimate: is_vpn_order ? "about 25 minutes" : execution_estimate,
         payment_url: is_vpn_order ? "#{config.exchange_url}/pay/#{URI.encode_path(id)}" : payment_url,
-        ui_scenario: is_vpn_order ? "vpn-service" : ui_scenario
+        ui_scenario: is_vpn_order ? "vpn-service" : ui_scenario,
+        labels: labels
       )
     end
 
-    private def self.vpn_service_payload?(title : String, description : String, ui_scenario : String?) : Bool
+    private def self.vpn_service_payload?(title : String, description : String, ui_scenario : String?, labels : Array(String)) : Bool
       return true if ui_scenario == "vpn-service"
+      return true if labels.any? { |label| label.downcase.includes?("vpn") }
 
       normalized = "#{title} #{description}".downcase
       normalized.includes?("vpn")
+    end
+
+    private def self.parse_labels(payload : Hash(String, JSON::Any), source : Hash(String, JSON::Any)) : Array(String)
+      values = [] of String
+
+      [payload["labels"]?, source["labels"]?].each do |candidate|
+        next unless candidate
+
+        if array = candidate.as_a?
+          array.each do |item|
+            if label = item.as_s?
+              normalized = label.strip
+              values << normalized unless normalized.empty?
+            end
+          end
+        elsif label = candidate.as_s?
+          normalized = label.strip
+          values << normalized unless normalized.empty?
+        end
+      end
+
+      values.uniq
+    end
+
+    private def self.ensure_vpn_label(labels : Array(String)) : Array(String)
+      return labels if labels.any? { |label| label.downcase == "vpn" }
+
+      labels + ["vpn"]
     end
 
     def self.activity_object(
@@ -175,7 +235,7 @@ module Crater
         "content" => order.description,
         "status" => status,
         "reporter" => config.actor_id,
-        "labels" => [] of String,
+        "labels" => order.labels,
         "estimatedCost" => order.estimated_cost,
         "currency" => order.currency,
         "executionEstimate" => order.execution_estimate
@@ -198,6 +258,7 @@ module Crater
         "currency" => order.currency,
         "executionEstimate" => order.execution_estimate,
         "uiScenario" => order.ui_scenario,
+        "labels" => order.labels,
         "published" => order.updated_at,
         "attachment" => payment_links(order, status, config)
       }
@@ -259,8 +320,8 @@ module Crater
       record = parse_order_payload(activity, config)
 
       @@lock.synchronize do
-        @@orders << record
-        @@activities.unshift(activity_for(record, record.status, config))
+        store_order!(record)
+        append_activity!(activity_for(record, record.status, config))
       end
 
       spawn do
@@ -279,8 +340,8 @@ module Crater
       record = parse_order_payload(payload, config)
 
       @@lock.synchronize do
-        @@orders << record
-        @@activities.unshift(activity_for(record, record.status, config))
+        store_order!(record)
+        append_activity!(activity_for(record, record.status, config))
       end
 
       spawn do
@@ -302,7 +363,7 @@ module Crater
         record.updated_at = current_time
         record.payment_url = "#{config.exchange_url}/pay/#{record.id}" if status == "completed"
 
-        @@activities.unshift(activity_for(record, record.status, config))
+        append_activity!(activity_for(record, record.status, config))
       end
     end
 

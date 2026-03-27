@@ -1,27 +1,44 @@
 <script lang="ts">
+  import { browser } from '$app/environment';
   import Icon from '@iconify/svelte';
-  import type { AuthMethod, PaymentMethod, PaymentStage, ResultSurface, OrderView } from './kefine-workflow';
+  import { readPaymentQuote, type AuthMethod, type PaymentMethod, type PaymentQuote, type PaymentStage, type OrderView } from './kefine-workflow';
+
+  const walletProviders = [
+    { icon: 'logos:metamask-icon', label: 'MetaMask', className: 'is-metamask' },
+    { icon: 'simple-icons:walletconnect', label: 'WalletConnect', className: 'is-walletconnect' },
+    { icon: 'material-symbols:alternate-email-rounded', label: 'Email', className: 'is-email' },
+    { icon: 'logos:google-icon', label: 'Google', className: 'is-google' }
+  ];
+
+  const authIcons = {
+    passkey: 'mdi:fingerprint'
+  } as const;
+  const FALLBACK_PAYMENT_EVM_ADDRESS = (import.meta.env.VITE_KEFINE_PAYMENT_EVM_ADDRESS as string | undefined)?.trim() ?? '';
+  const FALLBACK_PAYMENT_CHAIN_ID = 43114;
+  const FALLBACK_PAYMENT_TOKEN_ADDRESS = '0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E';
+  const FALLBACK_PAYMENT_TOKEN_SYMBOL = 'USDC';
+  const FALLBACK_PAYMENT_TOKEN_DECIMALS = 6;
 
   let {
     currentOrder,
-    remainingAmount,
     paymentInvoiceFallback,
     selectedAuthMethod,
-    paymentMethod,
     paymentStage,
-    depositDialogOpen,
-    resultSurface,
+    isAuthenticated,
     labels,
     paymentLabels,
     resultLabels,
+    authLabels,
+    authDisplay,
     buttons,
-    onCreateNew,
-    onOpenDepositDialog,
-    onCloseDepositDialog,
-    onSelectDepositMethod,
+    onBack,
+    onOpenStages,
     onConfirmPayment,
     onRevealResult,
-    onSaveAnonymousResult
+    onSaveAnonymousResult,
+    onWalletLogin,
+    onPasskeyLogin,
+    onAnonymousLogin
   }: {
     currentOrder: OrderView | null;
     remainingAmount: number;
@@ -30,7 +47,7 @@
     paymentMethod: PaymentMethod;
     paymentStage: PaymentStage;
     depositDialogOpen: boolean;
-    resultSurface: ResultSurface;
+    isAuthenticated: boolean;
     labels: {
       taskId: string;
       amount: string;
@@ -65,6 +82,17 @@
     resultLabels: {
       anonymousSaveHint: string;
     };
+    authLabels: {
+      walletTitle: string;
+      walletAccount: string;
+      passkeyTitle: string;
+      anonymousTitle: string;
+      anonymousDetail: string;
+    };
+    authDisplay: {
+      walletLabel: string | null;
+      passkeyLabel: string | null;
+    };
     buttons: {
       payNow: string;
       confirmLinkedWallet: string;
@@ -74,245 +102,534 @@
       openResult: string;
       saveResult: string;
       closeDialog: string;
+      openAllTasks: string;
     };
-    onCreateNew: () => void;
+    onBack: () => void;
+    onOpenStages: () => void;
     onOpenDepositDialog: () => void;
     onCloseDepositDialog: () => void;
     onSelectDepositMethod: (method: Exclude<PaymentMethod, null>) => void;
     onConfirmPayment: () => void;
     onRevealResult: () => void;
     onSaveAnonymousResult: () => void;
+    onWalletLogin: () => void;
+    onPasskeyLogin: () => void;
+    onAnonymousLogin: () => void;
   } = $props();
 
   let promoCode = $state('');
   let promoFeedback = $state('');
   let promoFeedbackTone = $state<'neutral' | 'success' | 'error'>('neutral');
-  let promoEditorOpen = $state(false);
+  let paymentQuote = $state<PaymentQuote | null>(null);
+  let paymentLoading = $state(false);
+  let paymentError = $state('');
+  let promoApplying = $state(false);
+  let guestAccessStartedAt = $state<number | null>(null);
+  let nowTs = $state(Date.now());
 
-  function methodLabel(method: AuthMethod | PaymentMethod) {
-    switch (method) {
-      case 'wallet':
-        return 'Wallet';
-      case 'passkey':
-        return 'Passkey';
-      case 'linked-wallet':
-        return 'Passkey + linked wallet';
-      case 'promo':
-        return 'Promo';
-      case 'reown':
-        return 'Reown / WalletConnect';
-      case 'deposit':
-        return 'Deposit';
-      case 'other':
-        return 'Other';
-      case 'anonymous':
-        return 'Anonymous';
-      default:
-        return 'Pending';
+  const VPN_GUEST_ACCESS_MS = 10 * 60 * 1000;
+  const vpnGuideAvailable = $derived(
+    currentOrder?.uiScenario === 'vpn-service' && paymentStage === 'result-ready' && Boolean(currentOrder?.vpnGuide)
+  );
+  const guestResultAccess = $derived(vpnGuideAvailable && (isAuthenticated || selectedAuthMethod === 'anonymous'));
+  const effectivePaymentAmount = $derived(paymentQuote?.effectiveAmount ?? currentOrder?.estimatedCost ?? 0);
+  const effectivePaymentCurrency = $derived(paymentQuote?.currency ?? currentOrder?.currency ?? 'USDC');
+  const payButtonLabel = $derived.by(() => {
+    const amount = effectivePaymentAmount;
+    const currency = effectivePaymentCurrency;
+    const formattedAmount = Number.isInteger(amount) ? String(amount) : amount.toFixed(2).replace(/\.?0+$/, '');
+    return `Pay ${formattedAmount} ${currency}`.trim();
+  });
+  const guestAccessRemainingMs = $derived.by(() => {
+    if (!guestResultAccess || !guestAccessStartedAt) {
+      return VPN_GUEST_ACCESS_MS;
+    }
+
+    return Math.max(0, guestAccessStartedAt + VPN_GUEST_ACCESS_MS - nowTs);
+  });
+  const guestAccessExpired = $derived(guestResultAccess && guestAccessRemainingMs <= 0);
+  const guestAccessTimerLabel = $derived.by(() => {
+    const totalSeconds = Math.ceil(guestAccessRemainingMs / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${String(Math.max(0, minutes)).padStart(2, '0')}:${String(Math.max(0, seconds)).padStart(2, '0')}`;
+  });
+  const quoteReady = $derived(paymentQuote !== null && !paymentLoading);
+  const paymentRequestLabel = $derived(paymentQuote?.paymentTokenSymbol ? `EVM ${paymentQuote.paymentTokenSymbol}` : 'EVM payment');
+  const qrPayload = $derived(paymentQuote?.paymentRequest ?? paymentQuote?.paymentAddress ?? null);
+  const qrImageUrl = $derived.by(() => {
+    if (!qrPayload) {
+      return null;
+    }
+
+    const params = new URLSearchParams({
+      size: '320x320',
+      format: 'svg',
+      data: qrPayload
+    });
+
+    return `https://api.qrserver.com/v1/create-qr-code/?${params.toString()}`;
+  });
+  const compactPaymentAddress = $derived(paymentQuote?.paymentAddress || 'Waiting for crater payment address');
+
+  function formatAmount(amount: number | undefined) {
+    if (amount === undefined) return '0';
+    return Number.isInteger(amount) ? String(amount) : amount.toFixed(2).replace(/\.?0+$/, '');
+  }
+
+  function guestAccessStorageKey(orderId: string) {
+    return `kefine-vpn-guest-access:${orderId}`;
+  }
+
+  function buildPaymentRequest(address: string, amount: number) {
+    if (!address || amount <= 0) {
+      return undefined;
+    }
+
+    const atomicAmount = Math.round(amount * 10 ** FALLBACK_PAYMENT_TOKEN_DECIMALS);
+    return `ethereum:${FALLBACK_PAYMENT_TOKEN_ADDRESS}@${FALLBACK_PAYMENT_CHAIN_ID}/transfer?address=${address}&uint256=${atomicAmount}`;
+  }
+
+  function buildFallbackQuote(code?: string): PaymentQuote | null {
+    if (!currentOrder) {
+      return null;
+    }
+
+    const normalizedCode = code?.trim().toUpperCase();
+    const labels = currentOrder.labels ?? [];
+    const vpnEligible = labels.some((label) => label.toLowerCase().includes('vpn'));
+    const originalAmount = currentOrder.estimatedCost ?? 0;
+    const promoApplied = normalizedCode === 'SHARDSTATEVPN' && vpnEligible;
+    const effectiveAmount = promoApplied ? 0 : originalAmount;
+
+    return {
+      orderId: currentOrder.id,
+      title: currentOrder.title,
+      status: currentOrder.status,
+      currency: currentOrder.currency,
+      originalAmount,
+      effectiveAmount,
+      promoCode: normalizedCode,
+      promoApplied,
+      promoMessage: normalizedCode ? (promoApplied ? 'Promo applied. VPN delivery is now unlocked.' : 'Promo code not recognized.') : undefined,
+      strikeOriginalPrice: promoApplied && originalAmount > 0,
+      freeUnlock: promoApplied,
+      paymentAddress: FALLBACK_PAYMENT_EVM_ADDRESS,
+      paymentRequest: buildPaymentRequest(FALLBACK_PAYMENT_EVM_ADDRESS, effectiveAmount),
+      paymentChainId: FALLBACK_PAYMENT_CHAIN_ID,
+      paymentTokenAddress: FALLBACK_PAYMENT_TOKEN_ADDRESS,
+      paymentTokenSymbol: FALLBACK_PAYMENT_TOKEN_SYMBOL,
+      paymentUrl: currentOrder.paymentUrl ?? paymentInvoiceFallback,
+      labels
+    };
+  }
+
+  function resetGuestAccess() {
+    if (!browser || !currentOrder?.id) return;
+
+    const startedAt = Date.now();
+    window.localStorage.setItem(guestAccessStorageKey(currentOrder.id), String(startedAt));
+    guestAccessStartedAt = startedAt;
+    nowTs = startedAt;
+  }
+
+  function resolveExpiredActionLabel() {
+    return 'Request again';
+  }
+
+  function handleExpiredAction() {
+    resetGuestAccess();
+  }
+
+  async function readJsonOrThrow(response: Response) {
+    const body = await response.json().catch(() => null);
+    if (!response.ok) {
+      throw new Error((body && typeof body === 'object' && 'error' in body && typeof body.error === 'string' ? body.error : null) ?? 'Request failed');
+    }
+
+    return body;
+  }
+
+  async function loadPaymentQuote() {
+    if (!browser || !currentOrder?.id || paymentStage === 'result-ready') return;
+
+    paymentLoading = true;
+    paymentError = '';
+
+    try {
+      const response = await fetch(`/payment/${encodeURIComponent(currentOrder.id)}`, {
+        headers: { Accept: 'application/json' }
+      });
+      const body = await readJsonOrThrow(response);
+      const parsed = readPaymentQuote(body);
+
+      if (!parsed) {
+        throw new Error('Payment quote is invalid.');
+      }
+
+      paymentQuote = parsed;
+      promoFeedback = parsed.promoMessage ?? '';
+      promoFeedbackTone = parsed.promoApplied ? 'success' : 'neutral';
+      if (parsed.promoCode) {
+        promoCode = parsed.promoCode;
+      }
+    } catch (error) {
+      const fallback = buildFallbackQuote();
+      if (fallback) {
+        paymentQuote = fallback;
+        paymentError = fallback.paymentAddress ? '' : (error instanceof Error ? error.message : 'Failed to load payment quote.');
+      } else {
+        paymentError = error instanceof Error ? error.message : 'Failed to load payment quote.';
+      }
+    } finally {
+      paymentLoading = false;
     }
   }
 
-  function applyPromoCode() {
-    const normalized = promoCode.trim().toUpperCase();
-
-    if (!normalized) {
+  async function applyPromoCode() {
+    const normalized = promoCode.trim();
+    if (!normalized || !currentOrder?.id) {
       promoFeedback = paymentLabels.promoEmpty;
       promoFeedbackTone = 'error';
       return;
     }
 
-    if (normalized === 'WELCOME10') {
-      promoFeedback = paymentLabels.promoOk;
-      promoFeedbackTone = 'success';
-      onSelectDepositMethod('promo');
+    promoApplying = true;
+    paymentError = '';
+
+    try {
+      const response = await fetch(`/payment/${encodeURIComponent(currentOrder.id)}/promo`, {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          code: normalized,
+          subject: authDisplay.passkeyLabel ?? authDisplay.walletLabel ?? selectedAuthMethod ?? 'anonymous'
+        })
+      });
+      const body = await readJsonOrThrow(response);
+      const parsed = readPaymentQuote(body);
+
+      if (!parsed) {
+        throw new Error('Payment quote is invalid.');
+      }
+
+      paymentQuote = parsed;
+      promoFeedback = parsed.promoMessage ?? (parsed.promoApplied ? paymentLabels.promoOk : paymentLabels.promoWrong);
+      promoFeedbackTone = parsed.promoApplied ? 'success' : 'error';
+
+      if (parsed.freeUnlock) {
+        onRevealResult();
+      }
+    } catch (error) {
+      const fallback = buildFallbackQuote(normalized);
+      if (fallback) {
+        paymentQuote = fallback;
+        promoFeedback = fallback.promoMessage ?? paymentLabels.promoWrong;
+        promoFeedbackTone = fallback.promoApplied ? 'success' : 'error';
+        if (fallback.freeUnlock) {
+          onRevealResult();
+        }
+      } else {
+        promoFeedback = error instanceof Error ? error.message : paymentLabels.promoWrong;
+        promoFeedbackTone = 'error';
+      }
+    } finally {
+      promoApplying = false;
+    }
+  }
+
+  function handlePrimaryPaymentAction() {
+    if (paymentQuote?.freeUnlock) {
+      onRevealResult();
       return;
     }
 
-    promoFeedback = paymentLabels.promoWrong;
-    promoFeedbackTone = 'error';
+    onConfirmPayment();
   }
 
-  function openPromoEditor() {
-    promoEditorOpen = true;
-    promoFeedback = '';
-    promoFeedbackTone = 'neutral';
+  function handlePayAction() {
+    handlePrimaryPaymentAction();
   }
 
   $effect(() => {
-    if (paymentMethod === 'promo') {
-      promoEditorOpen = true;
+    if (!browser || paymentStage === 'result-ready') {
+      return;
     }
+
+    void loadPaymentQuote();
+  });
+
+  $effect(() => {
+    if (!browser || !guestResultAccess || !currentOrder?.id) {
+      guestAccessStartedAt = null;
+      return;
+    }
+
+    const storageKey = guestAccessStorageKey(currentOrder.id);
+    const raw = window.localStorage.getItem(storageKey);
+    const parsed = raw ? Number(raw) : Number.NaN;
+    const startedAt = Number.isFinite(parsed) ? parsed : Date.now();
+
+    if (!Number.isFinite(parsed)) {
+      window.localStorage.setItem(storageKey, String(startedAt));
+    }
+
+    guestAccessStartedAt = startedAt;
+  });
+
+  $effect(() => {
+    if (!browser || !guestResultAccess) {
+      return;
+    }
+
+    nowTs = Date.now();
+    let frameId = 0;
+    let cancelled = false;
+
+    const tick = () => {
+      if (cancelled) {
+        return;
+      }
+
+      nowTs = Date.now();
+      frameId = window.requestAnimationFrame(tick);
+    };
+
+    frameId = window.requestAnimationFrame(tick);
+
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(frameId);
+    };
   });
 </script>
 
-<article class="kefine-card kefine-card--wide kefine-order-flow">
-  <section class="kefine-flow-panel">
-    <div class="kefine-section-head">
-      <p>{paymentLabels.summaryTitle}</p>
-      <span class="kefine-payment-chip">{labels.selectedMethod}: {methodLabel(selectedAuthMethod ?? paymentMethod)}</span>
-    </div>
+<article class="kefine-card kefine-card--wide kefine-order-flow" class:kefine-result-mode={paymentStage === 'result-ready'}>
+  <div class="kefine-result-background" aria-hidden={paymentStage === 'result-ready'}>
+    <section class="kefine-payment-layout kefine-payment-layout--fadein" data-testid="kefine-payment-redesign">
+      <div class="kefine-payment-layout__left">
+        <div class="kefine-payment-panel">
+          <div class="kefine-section-head">
+            <p>{paymentRequestLabel}</p>
+            {#if paymentQuote?.paymentTokenSymbol}
+              <span class="kefine-payment-chip">{paymentQuote.paymentTokenSymbol} on chain {paymentQuote.paymentChainId}</span>
+            {/if}
+          </div>
 
-    <div class="kefine-payment-summary">
-      <div>
-        <small>{labels.taskId}</small>
-        <strong>{currentOrder?.id}</strong>
-      </div>
-      <div>
-        <small>{labels.amount}</small>
-        <strong>{currentOrder?.estimatedCost} {currentOrder?.currency}</strong>
-      </div>
-      <div>
-        <small>{labels.remainingBalance}</small>
-        <strong data-testid="kefine-remaining-balance">{remainingAmount.toFixed(2).replace(/\.?0+$/, '')} {currentOrder?.currency}</strong>
-      </div>
-      <div>
-        <small>{labels.executionEstimate}</small>
-        <strong>{currentOrder?.executionEstimate}</strong>
-      </div>
-    </div>
+          <div class="kefine-payment-qr-surface">
+            {#if qrImageUrl}
+              <img class="kefine-payment-qr-image" src={qrImageUrl} alt="Payment QR code" loading="eager" />
+            {:else}
+              <div class="kefine-payment-qr-placeholder">
+                <Icon icon="mdi:qrcode" width="72" height="72" aria-hidden="true" />
+                <small>QR will appear when payment details are ready.</small>
+              </div>
+            {/if}
+          </div>
 
-    <div class="kefine-payment-meta">
-      <p>{paymentLabels.promoHint}</p>
-    </div>
-  </section>
-
-  <section class="kefine-flow-panel">
-    <div class="kefine-section-head">
-      <p>{paymentLabels.methodSelectTitle}</p>
-    </div>
-
-    {#if selectedAuthMethod === 'wallet'}
-      <div class="kefine-action-card" data-testid="kefine-wallet-payment">
-        <h3>{paymentLabels.walletReadyTitle}</h3>
-        <p>{paymentLabels.payCtaHint}</p>
-        <button type="button" data-variant="primary" data-testid="kefine-pay-now" onclick={onConfirmPayment}>{buttons.payNow}</button>
-      </div>
-    {:else if selectedAuthMethod === 'passkey'}
-      <div class="kefine-action-card" data-testid="kefine-passkey-payment">
-        <h3>{paymentLabels.passkeyReadyTitle}</h3>
-        <p>{paymentLabels.linkedWalletHint}</p>
-        <button type="button" data-variant="primary" data-testid="kefine-confirm-linked-wallet" onclick={onConfirmPayment}>
-          {buttons.confirmLinkedWallet}
-        </button>
-      </div>
-    {:else}
-      <div class="kefine-action-card" data-testid="kefine-anonymous-payment">
-        <h3>{paymentLabels.anonymousReadyTitle}</h3>
-        <p>{paymentLabels.promoHint}</p>
-        <div class="kefine-payment-choice-row">
-          <button type="button" class="kefine-payment-choice" data-testid="kefine-open-deposit-dialog" onclick={onOpenDepositDialog}>
-            <Icon icon="solar:card-send-linear" width="24" height="24" aria-hidden="true" />
-            <span>{buttons.depositNow}</span>
-          </button>
-          <button type="button" class="kefine-payment-choice" data-testid="kefine-open-promo-editor" onclick={openPromoEditor}>
-            <Icon icon="material-symbols:local-offer-outline-rounded" width="24" height="24" aria-hidden="true" />
-            <span>{buttons.payWithPromo}</span>
-          </button>
+          <div class="kefine-payment-address-block">
+            <span class="kefine-payment-address-label">EVM address</span>
+            <code>{compactPaymentAddress}</code>
+          </div>
         </div>
-        {#if promoEditorOpen}
-          <div class="kefine-promo-block">
-            <label class="kefine-promo-label" for="anonymous-promo-code">{paymentLabels.promoCodeLabel}</label>
+      </div>
+
+      <div class="kefine-payment-layout__right">
+        <div class="kefine-payment-panel kefine-payment-panel--pricing">
+          <div class="kefine-section-head">
+            <p>{paymentLabels.summaryTitle}</p>
+            {#if currentOrder?.id}
+              <span class="kefine-payment-chip">{labels.taskId} {currentOrder.id}</span>
+            {/if}
+          </div>
+
+          <div class="kefine-payment-hero">
+            <strong>{currentOrder?.title ?? labels.resultTitle}</strong>
+            <p>{currentOrder?.executionEstimate ? `${labels.executionEstimate} ${currentOrder.executionEstimate}` : paymentLabels.payCtaHint}</p>
+          </div>
+
+          <div class="kefine-payment-price-stack">
+            {#if paymentQuote?.strikeOriginalPrice}
+              <span class="kefine-payment-price--struck">
+                {formatAmount(paymentQuote.originalAmount)} {paymentQuote.currency}
+              </span>
+            {/if}
+            <strong class="kefine-payment-price-current">
+              {formatAmount(paymentQuote?.effectiveAmount ?? currentOrder?.estimatedCost)} {paymentQuote?.currency ?? currentOrder?.currency}
+            </strong>
+          </div>
+
+          <div class="kefine-promo-block kefine-promo-block--payment">
+            <label class="kefine-promo-label" for="payment-promo-code">{paymentLabels.promoCodeLabel}</label>
             <div class="kefine-promo-row">
               <input
-                id="anonymous-promo-code"
+                id="payment-promo-code"
                 class="kefine-promo-input"
                 type="text"
                 bind:value={promoCode}
                 placeholder={paymentLabels.promoCodePlaceholder}
                 autocomplete="off"
-                data-testid="kefine-anonymous-promo-input"
+                data-testid="kefine-payment-promo-input"
               />
-              <button type="button" data-variant="primary" data-testid="kefine-select-promo-payment" onclick={applyPromoCode}>
-                {buttons.apply}
+              <button type="button" data-variant="primary" onclick={applyPromoCode} disabled={promoApplying}>
+                {promoApplying ? 'Applying...' : buttons.apply}
               </button>
             </div>
             {#if promoFeedback}
               <p class="kefine-promo-feedback" data-tone={promoFeedbackTone}>{promoFeedback}</p>
             {/if}
           </div>
-        {/if}
-      </div>
-    {/if}
 
-    {#if paymentStage === 'deposit-pending'}
-      <div class="kefine-payment-status" data-testid="kefine-deposit-pending">
-        <strong>{paymentLabels.depositPendingTitle}</strong>
-        <p>{paymentLabels.depositPendingDetail}</p>
-        <button type="button" data-variant="ghost" onclick={onRevealResult}>Continue to result</button>
-      </div>
-    {/if}
+          {#if paymentError}
+            <p class="kefine-promo-feedback" data-tone="error">{paymentError}</p>
+          {/if}
 
-    {#if paymentStage === 'paid'}
-      <div class="kefine-payment-status" data-testid="kefine-paid-state">
-        <strong>{paymentLabels.paidTitle}</strong>
-        <p>{paymentLabels.paidDetail}</p>
-        <button type="button" data-variant="primary" data-testid="kefine-open-result" onclick={onRevealResult}>{buttons.openResult}</button>
-      </div>
-    {/if}
-  </section>
+          <div class="kefine-payment-action-row">
+            <button type="button" data-variant="primary" onclick={handlePrimaryPaymentAction} disabled={!quoteReady && !paymentError}>
+              {paymentQuote?.freeUnlock ? buttons.openResult : payButtonLabel}
+            </button>
+          </div>
 
-  {#if depositDialogOpen}
-    <section class="kefine-flow-panel kefine-deposit-dialog" data-testid="kefine-deposit-dialog">
-      <div class="kefine-section-head">
-        <p>{paymentLabels.depositDialogTitle}</p>
-        <button type="button" data-variant="ghost" onclick={onCloseDepositDialog}>{buttons.closeDialog}</button>
-      </div>
-      <p class="kefine-flow-copy">{paymentLabels.depositDialogDetail}</p>
-      <div class="kefine-deposit-options">
-        <button type="button" class="kefine-deposit-option" data-testid="kefine-deposit-reown" onclick={() => onSelectDepositMethod('reown')}>
-          Reown / WalletConnect
-        </button>
-        <button type="button" class="kefine-deposit-option" data-testid="kefine-deposit-promo" onclick={() => onSelectDepositMethod('promo')}>
-          Promo + balance
-        </button>
-        <button type="button" class="kefine-deposit-option" data-testid="kefine-deposit-other" onclick={() => onSelectDepositMethod('other')}>
-          Other methods
-        </button>
+        </div>
       </div>
     </section>
-  {/if}
+  </div>
 
   {#if paymentStage === 'result-ready'}
-    <section class="kefine-flow-panel" data-testid="kefine-result-panel">
-      <div class="kefine-section-head">
-        <p>{labels.resultTitle}</p>
+    <section class="kefine-result-overlay" data-testid="kefine-result-panel">
+      <div class="kefine-result-shell">
+        <div class="kefine-result-header">
+          <button type="button" class="kefine-flow-back" aria-label="Back" onclick={onBack}>←</button>
+          <div class="kefine-result-title-block">
+            <p>Completed your task: {currentOrder?.title ?? '-'}</p>
+          </div>
+          <div class="kefine-result-actions">
+            <span class="kefine-flow-badge kefine-flow-badge--timer">{guestAccessTimerLabel}</span>
+            <button type="button" data-variant="ghost" onclick={handlePayAction}>{payButtonLabel}</button>
+            <button type="button" data-variant="ghost" onclick={onOpenStages}>View stages</button>
+          </div>
+        </div>
+
+        <div class="kefine-result-summary">
+          <span class="kefine-payment-chip">{labels.executionEstimate} {currentOrder?.executionEstimate ?? '-'}</span>
+        </div>
+
+        {#if guestResultAccess && currentOrder?.vpnGuide}
+          <div class="kefine-vpn-guide" class:kefine-vpn-guide--blurred={guestAccessExpired}>
+            <header class="kefine-vpn-guide__header">
+              <strong>{currentOrder.vpnGuide.title}</strong>
+              <p>{currentOrder.vpnGuide.summary}</p>
+            </header>
+
+            <div class="kefine-vpn-guide__steps">
+              {#each currentOrder.vpnGuide.steps as step}
+                <article class="kefine-vpn-guide__card" data-step={step.id}>
+                  <h3>{step.title}</h3>
+                  <p>{step.summary}</p>
+
+                  {#if step.apps}
+                    <div class="kefine-vpn-guide__apps">
+                      {#each step.apps as app}
+                        <a class="kefine-vpn-guide__pill kefine-vpn-guide__pill--link" href={app.href} target="_blank" rel="noreferrer">
+                          {app.label}
+                        </a>
+                      {/each}
+                    </div>
+                  {/if}
+
+                  {#if step.exampleVlessLink}
+                    <pre class="kefine-vpn-guide__code"><code>{step.exampleVlessLink}</code></pre>
+                  {/if}
+
+                  {#if step.linuxClient}
+                    <ol class="kefine-vpn-guide__list">
+                      {#each step.linuxClient as item}
+                        <li>{item}</li>
+                      {/each}
+                    </ol>
+                  {/if}
+
+                  {#if step.otherClientsNote}
+                    <small class="kefine-vpn-guide__note">{step.otherClientsNote}</small>
+                  {/if}
+                </article>
+              {/each}
+            </div>
+          </div>
+
+          {#if guestAccessExpired}
+            <div class="kefine-vpn-guide__expired-gate">
+              <span class="kefine-flow-badge kefine-flow-badge--timer">Guest access expired</span>
+              <strong>Continue when you need the package again</strong>
+              <p>The 10 minute preview has ended.</p>
+              <div class="kefine-vpn-guide__expired-actions">
+                <button type="button" data-variant="primary" onclick={handleExpiredAction}>
+                  {resolveExpiredActionLabel()}
+                </button>
+                <button type="button" data-variant="ghost" onclick={handlePayAction}>
+                  {payButtonLabel}
+                </button>
+              </div>
+            </div>
+          {/if}
+        {:else if !isAuthenticated}
+          <div class="kefine-auth-grid">
+            <button type="button" class="kefine-auth-tile kefine-auth-tile--wallet" data-testid="kefine-result-wallet-tile" onclick={onWalletLogin}>
+              <div class="kefine-auth-hero kefine-auth-hero--wallet" aria-hidden="true">
+                <div class="kefine-wallet-grid">
+                  {#each walletProviders as provider}
+                    <span class={provider.className} aria-label={provider.label}>
+                      <span class="kefine-wallet-icon">
+                        <Icon icon={provider.icon} width="100%" height="100%" aria-hidden="true" />
+                      </span>
+                      <small>{provider.label}</small>
+                    </span>
+                  {/each}
+                </div>
+              </div>
+              <strong>{authDisplay.walletLabel ?? authLabels.walletTitle}</strong>
+              <small>{authLabels.walletAccount}</small>
+            </button>
+
+            <button type="button" class="kefine-auth-tile kefine-auth-tile--passkey" data-testid="kefine-result-passkey-tile" onclick={onPasskeyLogin}>
+              <div class="kefine-auth-hero kefine-auth-hero--passkey" aria-hidden="true">
+                <span class="kefine-auth-icon">
+                  <Icon icon={authIcons.passkey} width="100%" height="100%" aria-hidden="true" />
+                </span>
+              </div>
+              <strong>{authLabels.passkeyTitle}</strong>
+              {#if authDisplay.passkeyLabel}
+                <small>{authDisplay.passkeyLabel}</small>
+              {/if}
+            </button>
+
+            <button type="button" class="kefine-auth-tile kefine-auth-tile--anonymous" data-testid="kefine-result-anonymous-tile" onclick={onAnonymousLogin}>
+              <div class="kefine-auth-hero kefine-auth-hero--guest" aria-hidden="true">
+                <span class="kefine-test-badge">10</span>
+              </div>
+              <strong>{authLabels.anonymousTitle}</strong>
+              <small>{authLabels.anonymousDetail}</small>
+            </button>
+          </div>
+        {:else}
+          <div class="kefine-vpn-guide__fallback">
+            <strong>{labels.resultTitle}</strong>
+            <p>The delivery package is ready for this order.</p>
+          </div>
+        {/if}
+
       </div>
 
-      {#if resultSurface.type === 'widget'}
-        <div class="kefine-result-card">
-          <h3>{resultSurface.title}</h3>
-          <p>{resultSurface.summary}</p>
-          <button type="button" data-variant="primary">{resultSurface.ctaLabel}</button>
-        </div>
-      {:else if resultSurface.type === 'iframe'}
-        <div class="kefine-result-card">
-          <h3>{resultSurface.title}</h3>
-          <p>{resultSurface.summary}</p>
-          <iframe title={resultSurface.title} srcdoc={resultSurface.srcdoc}></iframe>
-        </div>
-      {:else}
-        <div class="kefine-result-card">
-          <h3>{resultSurface.title}</h3>
-          <p>{resultSurface.summary}</p>
-          <a href={resultSurface.href} target="_blank" rel="noreferrer">{resultSurface.ctaLabel}</a>
-        </div>
-      {/if}
-
-      {#if selectedAuthMethod === 'anonymous'}
-        <div class="kefine-anonymous-save">
-          <p>{resultLabels.anonymousSaveHint}</p>
-          <button type="button" data-variant="ghost" data-testid="kefine-save-result" onclick={onSaveAnonymousResult}>{buttons.saveResult}</button>
-        </div>
-      {/if}
     </section>
   {/if}
 
-  <section class="kefine-flow-panel kefine-payment-footer">
-    {#if selectedAuthMethod !== 'anonymous'}
-      <a href={currentOrder?.paymentUrl ?? paymentInvoiceFallback} target="_blank" rel="noreferrer">
-        {labels.paymentInvoice}
-      </a>
-    {/if}
-    <button type="button" data-variant="ghost" onclick={onCreateNew}>{labels.createNewTask}</button>
-  </section>
+  {#if paymentStage === 'result-ready' && selectedAuthMethod === 'anonymous'}
+    <section class="kefine-anonymous-save kefine-anonymous-save--result">
+      <p>{resultLabels.anonymousSaveHint}</p>
+      <button type="button" data-variant="ghost" data-testid="kefine-save-result" onclick={onSaveAnonymousResult}>{buttons.saveResult}</button>
+    </section>
+  {/if}
 </article>

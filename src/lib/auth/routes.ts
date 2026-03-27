@@ -31,9 +31,23 @@ async function postJson<T>(input: RequestInfo | URL, body: unknown): Promise<T> 
 		body: JSON.stringify(body)
 	});
 
-	const payload = (await response.json()) as T & { error?: string };
+	const raw = await response.text();
+	let payload: (T & { error?: string }) | null = null;
+
+	try {
+		payload = raw ? ((JSON.parse(raw) as T & { error?: string })) : null;
+	} catch {
+		throw new Error(
+			`Passkey endpoint returned non-JSON response (${response.status} ${response.statusText}).`
+		);
+	}
+
 	if (!response.ok) {
-		throw new Error(payload.error ?? 'Passkey request failed.');
+		throw new Error(payload?.error ?? 'Passkey request failed.');
+	}
+
+	if (!payload) {
+		throw new Error('Passkey endpoint returned empty response.');
 	}
 
 	return payload;

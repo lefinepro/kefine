@@ -1,5 +1,5 @@
 <script lang="ts">
-  let dialogEl: HTMLDialogElement | undefined = $state();
+  import KefineModal from '$lib/components/kefine/KefineModal.svelte';
 
   let {
     open,
@@ -43,27 +43,14 @@
     onSubmit: () => void;
   } = $props();
 
-  $effect(() => {
-    if (!dialogEl) return;
-
-    if (open && !dialogEl.open) {
-      dialogEl.showModal();
-      return;
-    }
-
-    if (!open && dialogEl.open) {
-      dialogEl.close();
-    }
-  });
 </script>
 
-<dialog class="kefine-contact-dialog" bind:this={dialogEl} onclose={onClose}>
+<KefineModal open={open} onClose={onClose} closeLabel={closeLabel} width="min(30rem, calc(100vw - 2rem))">
   <header class="kefine-contact-dialog__header">
     <div>
       <h2>{title}</h2>
       <p>{description}</p>
     </div>
-    <button type="button" data-variant="close" aria-label={closeLabel} onclick={onClose}>✕</button>
   </header>
 
   <form
@@ -107,25 +94,9 @@
       <button type="submit" data-variant="primary">{submitLabel}</button>
     </footer>
   </form>
-</dialog>
+</KefineModal>
 
 <style>
-  .kefine-contact-dialog {
-    width: min(30rem, calc(100vw - 2rem));
-    border: none;
-    border-radius: 0.72rem;
-    padding: 0;
-    margin: auto;
-    background: color-mix(in oklab, var(--kef-bg-card, #f4ead8) 96%, white);
-    color: var(--kef-text, #2e2317);
-    box-shadow: 0 1rem 2.5rem rgba(17, 24, 39, 0.18);
-  }
-
-  .kefine-contact-dialog::backdrop {
-    background: rgba(15, 23, 42, 0.24);
-    backdrop-filter: blur(2px);
-  }
-
   .kefine-contact-dialog__header {
     display: flex;
     align-items: flex-start;

@@ -3,6 +3,7 @@
   import Icon from '@iconify/svelte';
   import { fade } from 'svelte/transition';
   import type { AuthMethod, ExecutionPresentation, OrderView } from './kefine-workflow';
+  import { scheduleAfter } from '$lib/utils/helpers';
 
   const walletProviders = [
     { icon: 'logos:metamask-icon', label: 'MetaMask', className: 'is-metamask' },
@@ -20,6 +21,7 @@
     currentOrder,
     execution,
     isHydratingTitle = false,
+    forceFinalVpnStep = false,
     labels,
     authLabels,
     authDisplay,
@@ -32,6 +34,7 @@
     currentOrder: OrderView | null;
     execution: ExecutionPresentation;
     isHydratingTitle?: boolean;
+    forceFinalVpnStep?: boolean;
     labels: {
       solver: string;
       subtasks: string;
@@ -53,6 +56,8 @@
       passkeyAvatarUrl: string | null;
       actorAvatarUrl: string | null;
       activeMethod: AuthMethod;
+      walletLabel: string | null;
+      passkeyLabel: string | null;
     };
     walletNetworkLabel: string;
     onWalletLogin: () => void;
@@ -66,6 +71,7 @@
   let prefersReducedMotion = $state(false);
   let copiedSolverHandle = $state<string | null>(null);
   let vpnResultMode = $state<'entry' | 'guest-offer'>('entry');
+  let cancelCopyFeedback: (() => void) | null = null;
 
   const isVpnScenario = $derived(execution.scenario === 'vpn-service' && execution.vpnFlow !== null);
   const vpnFlow = $derived(execution.vpnFlow);
@@ -95,6 +101,7 @@
   const activeGenericStep = $derived(genericSteps[activeGenericStepIndex] ?? null);
   const showVpnEstimate = $derived(Boolean(isVpnScenario && activeVpnStep?.revealExecutionEstimate));
   const showVpnWidget = $derived(Boolean(isVpnScenario && activeVpnStep?.revealWidget));
+  const showResolvedVpnWidget = $derived(Boolean(showVpnWidget && forceFinalVpnStep));
   const vpnFlowKey = $derived(isVpnScenario && currentOrder ? `${currentOrder.id}:${execution.scenario}` : null);
   const genericFlowKey = $derived(
     !isVpnScenario && currentOrder
@@ -118,6 +125,7 @@
       ? `Step ${activeGenericStepIndex + 1} of ${Math.max(genericSteps.length, 1)} - ${activeGenericStep.title}`
       : execution.headline
   );
+  const orderCompleted = $derived(currentOrder?.status === 'completed' || currentOrder?.status === 'done');
 
   function formatElapsed(totalSeconds: number) {
     const minutes = Math.floor(totalSeconds / 60);
@@ -130,11 +138,13 @@
     try {
       await navigator.clipboard.writeText(handle);
       copiedSolverHandle = handle;
-      window.setTimeout(() => {
+      cancelCopyFeedback?.();
+      cancelCopyFeedback = scheduleAfter(1400, () => {
         if (copiedSolverHandle === handle) {
           copiedSolverHandle = null;
         }
-      }, 1400);
+        cancelCopyFeedback = null;
+      });
     } catch {
       copiedSolverHandle = null;
     }
@@ -177,39 +187,65 @@
     }
 
     prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    visibleVpnSteps = 1;
+    visibleVpnSteps = currentVpnFlow && forceFinalVpnStep ? currentVpnFlow.steps.length : 1;
     elapsedSeconds = 0;
     vpnResultMode = 'entry';
+    let frameId = 0;
+    let effectCancelled = false;
+    let elapsedStart: number | null = null;
+    const cancelStepTransitions: Array<() => void> = [];
 
-    const intervalId = window.setInterval(() => {
-      elapsedSeconds += 1;
-    }, 1000);
+    const tickElapsed = (timestamp: number) => {
+      if (effectCancelled) {
+        return;
+      }
+
+      if (elapsedStart === null) {
+        elapsedStart = timestamp;
+      }
+
+      elapsedSeconds = Math.floor((timestamp - elapsedStart) / 1000);
+      frameId = window.requestAnimationFrame(tickElapsed);
+    };
+
+    frameId = window.requestAnimationFrame(tickElapsed);
 
     if (!isVpnScenario || !currentVpnFlow) {
       return () => {
-        window.clearInterval(intervalId);
+        effectCancelled = true;
+        window.cancelAnimationFrame(frameId);
+      };
+    }
+
+    if (forceFinalVpnStep) {
+      visibleVpnSteps = currentVpnFlow.steps.length;
+      return () => {
+        effectCancelled = true;
+        window.cancelAnimationFrame(frameId);
       };
     }
 
     if (prefersReducedMotion) {
       visibleVpnSteps = currentVpnFlow.steps.length;
       return () => {
-        window.clearInterval(intervalId);
+        effectCancelled = true;
+        window.cancelAnimationFrame(frameId);
       };
     }
 
-    const timeoutIds = currentVpnFlow.stepDelaysMs
-      .slice(1)
-      .map((delay, index) =>
-        window.setTimeout(() => {
+    currentVpnFlow.stepDelaysMs.slice(1).forEach((delay, index) => {
+      cancelStepTransitions.push(
+        scheduleAfter(delay, () => {
           visibleVpnSteps = Math.min(index + 2, currentVpnFlow.steps.length);
-        }, delay)
+        })
       );
+    });
 
     return () => {
-      window.clearInterval(intervalId);
-      for (const timeoutId of timeoutIds) {
-        window.clearTimeout(timeoutId);
+      effectCancelled = true;
+      window.cancelAnimationFrame(frameId);
+      for (const cancelTransition of cancelStepTransitions) {
+        cancelTransition();
       }
     };
   });
@@ -332,91 +368,106 @@
     {#if showVpnWidget}
       <section class="kefine-flow-panel" in:fade={{ duration: motionDuration }} data-testid="kefine-vpn-widget-panel">
         <div class="kefine-vpn-widget-surface">
-          <div class="kefine-vpn-widget-body">
-            <strong>{vpnFlow.widget.title}</strong>
-            <p>{vpnFlow.widget.summary}</p>
-            {#if activeVpnStep?.instructions && activeVpnStep.instructions.length > 0}
+          {#if showResolvedVpnWidget && currentOrder?.vpnGuide}
+            <div class="kefine-vpn-widget-body">
+              <strong>{currentOrder.vpnGuide.title}</strong>
+              <p>{currentOrder.vpnGuide.summary}</p>
               <div class="kefine-vpn-instruction-list">
-                {#each activeVpnStep.instructions as instruction}
+                {#each currentOrder.vpnGuide.steps as step}
                   <article class="kefine-vpn-instruction-card">
-                    <strong>{instruction.title}</strong>
-                    <p>{instruction.detail}</p>
+                    <strong>{step.title}</strong>
+                    <p>{step.summary}</p>
                   </article>
                 {/each}
               </div>
-            {/if}
-            <div class="kefine-vpn-widget-lines" aria-hidden="true">
-              <span></span>
-              <span></span>
-              <span></span>
             </div>
-          </div>
-          <div class="kefine-vpn-widget-overlay"></div>
-          <div class="kefine-vpn-widget-gate">
-            {#if vpnResultMode === 'entry'}
-              <span class="kefine-flow-badge kefine-flow-badge--timer">
-                {vpnFlow.labels.price}: {execution.primaryMetric.value} {execution.primaryMetric.unit}
-              </span>
-              <strong>Open result</strong>
-              <p>Choose how to continue to the solver result.</p>
-              <div class="kefine-vpn-widget-actions kefine-auth-grid">
-                <button type="button" class="kefine-auth-tile kefine-auth-tile--wallet" onclick={onWalletLogin}>
-                  <div class="kefine-auth-hero kefine-auth-hero--wallet" aria-hidden="true">
-                    <div class="kefine-wallet-grid">
-                      {#each walletProviders as provider}
-                        <span class={provider.className} aria-label={provider.label}>
-                          <span class="kefine-wallet-icon">
-                            <Icon icon={provider.icon} width="100%" height="100%" aria-hidden="true" />
+          {:else}
+            <div class="kefine-vpn-widget-body">
+              <strong>{vpnFlow.widget.title}</strong>
+              <p>{vpnFlow.widget.summary}</p>
+              {#if activeVpnStep?.instructions && activeVpnStep.instructions.length > 0}
+                <div class="kefine-vpn-instruction-list">
+                  {#each activeVpnStep.instructions as instruction}
+                    <article class="kefine-vpn-instruction-card">
+                      <strong>{instruction.title}</strong>
+                      <p>{instruction.detail}</p>
+                    </article>
+                  {/each}
+                </div>
+              {/if}
+              <div class="kefine-vpn-widget-lines" aria-hidden="true">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </div>
+            <div class="kefine-vpn-widget-overlay"></div>
+            <div class="kefine-vpn-widget-gate">
+              {#if vpnResultMode === 'entry'}
+                <span class="kefine-flow-badge kefine-flow-badge--timer">
+                  {vpnFlow.labels.price}: {execution.primaryMetric.value} {execution.primaryMetric.unit}
+                </span>
+                <strong>Open result</strong>
+                <p>Choose how to continue to the solver result.</p>
+                <div class="kefine-vpn-widget-actions kefine-auth-grid">
+                  <button type="button" class="kefine-auth-tile kefine-auth-tile--wallet" onclick={onWalletLogin}>
+                    <div class="kefine-auth-hero kefine-auth-hero--wallet" aria-hidden="true">
+                      <div class="kefine-wallet-grid">
+                        {#each walletProviders as provider}
+                          <span class={provider.className} aria-label={provider.label}>
+                            <span class="kefine-wallet-icon">
+                              <Icon icon={provider.icon} width="100%" height="100%" aria-hidden="true" />
+                            </span>
+                            <small>{provider.label}</small>
                           </span>
-                          <small>{provider.label}</small>
-                        </span>
-                      {/each}
+                        {/each}
+                      </div>
                     </div>
-                  </div>
-                  <strong>Login</strong>
-                </button>
-
-                <button type="button" class="kefine-auth-tile kefine-auth-tile--anonymous" onclick={openVpnGuestOffer}>
-                  <div class="kefine-auth-hero kefine-auth-hero--guest" aria-hidden="true">
-                    <span class="kefine-test-badge">10 min</span>
-                  </div>
-                  <strong>Test Now</strong>
-                </button>
-
-                <button type="button" class="kefine-auth-tile kefine-auth-tile--passkey" onclick={onPasskeyLogin}>
-                  <div class="kefine-auth-hero kefine-auth-hero--passkey" aria-hidden="true">
-                    <span class="kefine-auth-icon">
-                      <Icon icon={authIcons.passkey} width="100%" height="100%" aria-hidden="true" />
-                    </span>
-                  </div>
-                  <strong>Passkey</strong>
-                </button>
-              </div>
-            {:else}
-              <span class="kefine-flow-badge kefine-flow-badge--timer">
-                {vpnFlow.labels.price}: {execution.primaryMetric.value} {execution.primaryMetric.unit}
-              </span>
-              <strong>Guest access ready</strong>
-              <p>The background changed to guest mode. Test the VPN for 10 minutes or pay for permanent access.</p>
-              <div class="kefine-vpn-download-card">
-                <div class="kefine-vpn-download-actions">
-                  <button type="button" class="kefine-flow-badge kefine-flow-badge--button" onclick={onAnonymous}>
-                    Test for 10 minutes
+                    <strong>Login</strong>
                   </button>
-                  <button type="button" class="kefine-flow-badge kefine-flow-badge--button" onclick={onWalletLogin}>
-                    Pay for permanent access
+
+                  <button type="button" class="kefine-auth-tile kefine-auth-tile--anonymous" onclick={openVpnGuestOffer}>
+                    <div class="kefine-auth-hero kefine-auth-hero--guest" aria-hidden="true">
+                      <span class="kefine-test-badge">10 min</span>
+                    </div>
+                    <strong>Test Now</strong>
+                  </button>
+
+                  <button type="button" class="kefine-auth-tile kefine-auth-tile--passkey" onclick={onPasskeyLogin}>
+                    <div class="kefine-auth-hero kefine-auth-hero--passkey" aria-hidden="true">
+                      <span class="kefine-auth-icon">
+                        <Icon icon={authIcons.passkey} width="100%" height="100%" aria-hidden="true" />
+                      </span>
+                    </div>
+                    <strong>Passkey</strong>
                   </button>
                 </div>
-                <div class="kefine-vpn-download-copy">
-                  <strong>Download info</strong>
-                  <p>1. Download the VPN profile bundle from the solver result page.</p>
-                  <p>2. Import the `.conf` file into WireGuard or your selected VPN client.</p>
-                  <p>3. Keep the QR code nearby for mobile import and save the fallback credentials file.</p>
-                  <p>4. The guest test stays available for 10 minutes, then the profile expires automatically.</p>
+              {:else}
+                <span class="kefine-flow-badge kefine-flow-badge--timer">
+                  {vpnFlow.labels.price}: {execution.primaryMetric.value} {execution.primaryMetric.unit}
+                </span>
+                <strong>Guest access ready</strong>
+                <p>The background changed to guest mode. Test the VPN for 10 minutes or pay for permanent access.</p>
+                <div class="kefine-vpn-download-card">
+                  <div class="kefine-vpn-download-actions">
+                    <button type="button" class="kefine-flow-badge kefine-flow-badge--button" onclick={onAnonymous}>
+                      Test for 10 minutes
+                    </button>
+                    <button type="button" class="kefine-flow-badge kefine-flow-badge--button" onclick={onWalletLogin}>
+                      Pay for permanent access
+                    </button>
+                  </div>
+                  <div class="kefine-vpn-download-copy">
+                    <strong>Download info</strong>
+                    <p>1. Download the VPN profile bundle from the solver result page.</p>
+                    <p>2. Import the `.conf` file into WireGuard or your selected VPN client.</p>
+                    <p>3. Keep the QR code nearby for mobile import and save the fallback credentials file.</p>
+                    <p>4. The guest test stays available for 10 minutes, then the profile expires automatically.</p>
+                  </div>
                 </div>
-              </div>
-            {/if}
-          </div>
+              {/if}
+            </div>
+          {/if}
         </div>
       </section>
     {/if}
@@ -480,7 +531,7 @@
     </section>
   {/if}
 
-  {#if !isVpnScenario}
+  {#if !isVpnScenario && orderCompleted}
     <section class="kefine-flow-panel">
       <div class="kefine-section-head">
         <p>{labels.chooseMethod}</p>
@@ -506,8 +557,11 @@
               {/each}
             </div>
           </div>
+          {#if authDisplay.walletLabel}
+            <strong>{authDisplay.walletLabel}</strong>
+          {/if}
           {#if authDisplay.activeMethod === 'wallet'}
-            <small>{authLabels.walletAccount}: {walletNetworkLabel}</small>
+            <small>{authDisplay.walletLabel ? walletNetworkLabel : `${authLabels.walletAccount}: ${walletNetworkLabel}`}</small>
           {/if}
         </button>
 
@@ -524,6 +578,9 @@
             </span>
           </div>
           <strong>{authLabels.passkeyTitle}</strong>
+          {#if authDisplay.passkeyLabel}
+            <small>{authDisplay.passkeyLabel}</small>
+          {/if}
         </button>
 
         <button
