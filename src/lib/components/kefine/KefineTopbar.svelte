@@ -195,7 +195,6 @@
   class="kefine-sidebar-auth"
   data-variant={isAuthenticated ? 'ghost' : 'primary'}
   onclick={onAuth}
-  disabled={isAuthenticated}
 >
   {isAuthenticated ? authenticatedLabel ?? signedInLabel : signInLabel}
 </button>

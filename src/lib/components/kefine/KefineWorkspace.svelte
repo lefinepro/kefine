@@ -4,7 +4,7 @@
   import { onMount } from 'svelte';
   import { cubicOut } from 'svelte/easing';
   import { fade } from 'svelte/transition';
-  import { authState, hydrateAuthStateFromSession, updateAuthState } from '$lib/auth/auth-store.svelte.js';
+  import { authState, clearAuthState, hydrateAuthStateFromSession, updateAuthState } from '$lib/auth/auth-store.svelte.js';
   import {
     loadPasskeySession,
     passkeySessionStore,
@@ -49,6 +49,7 @@
     toNumber
   } from '$lib/components/kefine/kefine-workflow';
   import { waitForDelay } from '$lib/utils/helpers';
+  import { disconnectAppKit } from '$lib/auth/appkit';
 
   let {
     initialOrderId
@@ -456,8 +457,23 @@
     window.location.href = `mailto:${localeText.topbar.contactEmail}`;
   }
 
-  function selectTopbarAuth() {
-    openAuthDialog();
+  async function selectTopbarAuth() {
+    if (!isAuthenticated) {
+      openAuthDialog();
+      return;
+    }
+
+    try {
+      await disconnectAppKit();
+    } catch {
+      // AppKit might not be initialized for passkey-only sessions.
+    }
+
+    clearAuthState();
+    selectedAuthMethod = null;
+    paymentMethod = null;
+    authDialogOpen = false;
+    passkeyDialogOpen = false;
   }
 
   function selectTopbarLocale(locale: 'en' | 'ru') {
