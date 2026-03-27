@@ -8,15 +8,15 @@
 
 	function handleConnect(): void {
 		if (!browser) return;
-		import('$lib/auth/appkit.js').then(({ appkit }) => {
-			appkit?.open();
+		import('$lib/auth/appkit.js').then(({ openAppKit }) => {
+			void openAppKit();
 		});
 	}
 
 	function handleDisconnect(): void {
 		if (!browser) return;
-		import('$lib/auth/appkit.js').then(({ appkit }) => {
-			appkit?.disconnect();
+		import('$lib/auth/appkit.js').then(({ disconnectAppKit }) => {
+			void disconnectAppKit();
 		});
 	}
 

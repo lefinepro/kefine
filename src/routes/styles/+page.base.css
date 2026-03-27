@@ -34,7 +34,12 @@
     --kef-line-warning: color-mix(in oklab, var(--kef-warning) 26%, var(--kef-line));
     --kef-line-error: color-mix(in oklab, var(--kef-error) 26%, var(--kef-line));
     --kef-ring-focus: 0 0 0 2px color-mix(in oklab, var(--kef-primary) 14%, transparent);
-    --kef-shadow: 0 20px 48px color-mix(in oklab, #2f241a 10%, transparent);
+    --kef-shadow: 0 8px 22px color-mix(in oklab, #2f241a 6%, transparent);
+    --kef-motion-fast: 160ms;
+    --kef-motion-base: 240ms;
+    --kef-motion-slow: 380ms;
+    --kef-ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
+    --kef-ease-soft: cubic-bezier(0.2, 0.8, 0.2, 1);
     color-scheme: light dark;
   }
 
@@ -63,7 +68,7 @@
     --kef-radius-md: 0.45rem;
     --kef-radius-sm: 0.35rem;
     --kef-border-width: var(--okr-border-width, 1px);
-    --kef-border-width-soft: var(--okr-border-width-dashed, 1px);
+    --kef-border-width-soft: var(--okr-border-width, 1px);
     --kef-border-width-strong: 1px;
     --kef-line: color-mix(in oklab, var(--kef-border) 52%, transparent);
     --kef-line-soft: color-mix(in oklab, var(--kef-border-soft) 38%, transparent);
@@ -74,7 +79,7 @@
     --kef-line-warning: color-mix(in oklab, var(--kef-warning) 26%, var(--kef-line));
     --kef-line-error: color-mix(in oklab, var(--kef-error) 26%, var(--kef-line));
     --kef-ring-focus: 0 0 0 2px color-mix(in oklab, var(--kef-primary) 14%, transparent);
-    --kef-shadow: 0 20px 48px color-mix(in oklab, #2f241a 10%, transparent);
+    --kef-shadow: 0 8px 22px color-mix(in oklab, #2f241a 6%, transparent);
   }
 
   :root[data-kefine-theme='dark'] {
@@ -102,7 +107,7 @@
     --kef-radius-md: 0.45rem;
     --kef-radius-sm: 0.35rem;
     --kef-border-width: var(--okr-border-width, 1px);
-    --kef-border-width-soft: var(--okr-border-width-dashed, 1px);
+    --kef-border-width-soft: var(--okr-border-width, 1px);
     --kef-border-width-strong: 1px;
     --kef-line: color-mix(in oklab, var(--kef-border) 52%, transparent);
     --kef-line-soft: color-mix(in oklab, var(--kef-border-soft) 38%, transparent);
@@ -180,7 +185,8 @@
     letter-spacing: 0.01em;
     padding: 0;
     transition:
-      color 140ms ease;
+      color var(--kef-motion-fast) var(--kef-ease-soft),
+      transform var(--kef-motion-fast) var(--kef-ease-soft);
   }
 
   .kefine-sidebar-brand:hover .kefine-sidebar-brand-mark,
@@ -206,8 +212,8 @@
     width: fit-content;
     border-radius: var(--kef-radius-ui);
     border: var(--kef-border-width-soft) solid var(--kef-line);
-    background: color-mix(in oklab, var(--kef-bg-card) 78%, transparent);
-    box-shadow: 0 14px 28px color-mix(in oklab, var(--kef-text) 8%, transparent);
+    background: color-mix(in oklab, var(--kef-bg-card) 94%, var(--kef-bg));
+    box-shadow: 0 6px 18px color-mix(in oklab, var(--kef-text) 5%, transparent);
   }
 
   .kefine-sidebar-nav {
@@ -225,9 +231,11 @@
     gap: 0.82rem;
     padding: 0.72rem 0.88rem;
     transition:
-      border-color 140ms ease,
-      color 140ms ease,
-      background-color 140ms ease;
+      border-color var(--kef-motion-fast) var(--kef-ease-soft),
+      color var(--kef-motion-fast) var(--kef-ease-soft),
+      background-color var(--kef-motion-fast) var(--kef-ease-soft),
+      transform var(--kef-motion-fast) var(--kef-ease-soft),
+      box-shadow var(--kef-motion-fast) var(--kef-ease-soft);
   }
 
   .kefine-sidebar-link--active,
@@ -235,6 +243,7 @@
     background: color-mix(in oklab, var(--kef-primary) 9%, var(--kef-bg-card));
     border-color: var(--kef-line-primary);
     color: var(--kef-primary);
+    transform: translateY(-1px);
   }
 
   .kefine-sidebar-link-label {
@@ -273,17 +282,19 @@
     align-items: center;
     justify-content: center;
     transition:
-      border-color 140ms ease,
-      color 140ms ease,
-      background-color 140ms ease,
-      transform 140ms ease;
+      border-color var(--kef-motion-fast) var(--kef-ease-soft),
+      color var(--kef-motion-fast) var(--kef-ease-soft),
+      background-color var(--kef-motion-fast) var(--kef-ease-soft),
+      transform var(--kef-motion-fast) var(--kef-ease-soft),
+      box-shadow var(--kef-motion-fast) var(--kef-ease-soft);
   }
 
   .kefine-sidebar-icon:hover {
     border-color: var(--kef-line-primary);
-    background: color-mix(in oklab, var(--kef-primary) 9%, var(--kef-bg-card));
+    background: color-mix(in oklab, var(--kef-primary) 6%, var(--kef-bg-card));
     color: var(--kef-primary);
     transform: translateY(-1px);
+    box-shadow: 0 10px 20px color-mix(in oklab, var(--kef-text) 6%, transparent);
   }
 
   .kefine-sidebar-auth {
@@ -309,8 +320,25 @@
     margin-inline: auto;
   }
 
+  .kefine-layout--create {
+    min-height: calc(100vh - clamp(1.5rem, 4vw, 2.8rem));
+  }
+
+  .kefine-layout--flow {
+    align-items: start;
+    align-content: start;
+    width: min(1100px, 100%);
+    padding-top: clamp(3.5rem, 8vh, 5.5rem);
+  }
+
   .kefine-layout > * {
     min-width: 0;
+    width: 100%;
+  }
+
+  kefine-screen {
+    display: grid;
+    width: 100%;
   }
 
   @media (max-width: 760px) {
@@ -361,42 +389,33 @@
   }
 
   .kefine-card {
-    background: color-mix(in oklab, var(--kef-bg-card) 94%, transparent);
+    background: color-mix(in oklab, var(--kef-bg-card) 98%, var(--kef-bg));
     border-radius: 0.45rem;
-    border: var(--kef-border-width-strong) solid var(--kef-line-on-primary);
-    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--kef-primary-700) 45%, transparent);
+    border: var(--kef-border-width-strong) solid color-mix(in oklab, var(--kef-line) 82%, white);
     padding: 1.2rem 1.35rem;
-    box-shadow: var(--kef-shadow);
+    box-shadow:
+      0 18px 40px color-mix(in oklab, var(--kef-text) 7%, transparent),
+      0 4px 12px color-mix(in oklab, var(--kef-text) 3%, transparent);
     display: grid;
     gap: 0.95rem;
     position: relative;
     min-height: 0;
     min-width: 0;
+    transition:
+      transform var(--kef-motion-base) var(--kef-ease-standard),
+      box-shadow var(--kef-motion-base) var(--kef-ease-standard),
+      border-color var(--kef-motion-fast) var(--kef-ease-soft),
+      background-color var(--kef-motion-fast) var(--kef-ease-soft);
   }
 
   .kefine-card--wide {
     grid-column: 1 / -1;
     justify-self: center;
-    width: min(980px, 100%);
   }
 
   .kefine-card--side {
-    border-style: dashed;
-  }
-
-  @media (min-width: 1040px) {
-    .kefine-layout {
-      grid-template-columns: minmax(0, 1.45fr) minmax(300px, 0.68fr);
-    }
-
-    .kefine-card--wide {
-      grid-column: 1 / -1;
-    }
-
-    .kefine-card--side {
-      grid-column: 2 / 3;
-      align-self: stretch;
-    }
+    border-color: color-mix(in oklab, var(--kef-line) 76%, white);
+    background: color-mix(in oklab, var(--kef-bg-card) 99%, var(--kef-bg-soft));
   }
 
   .kefine-card::after {
@@ -412,6 +431,17 @@
   .kefine-card > * {
     position: relative;
     z-index: 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .kefine-card,
+    .kefine-sidebar-link,
+    .kefine-sidebar-icon,
+    .kefine-sidebar-brand-mark {
+      animation: none !important;
+      transition-duration: 1ms !important;
+      transform: none !important;
+    }
   }
 
   .kefine-card h2,

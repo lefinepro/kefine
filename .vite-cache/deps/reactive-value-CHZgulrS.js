@@ -1,0 +1,26 @@
+import { Kt as createSubscriber } from "./events-DKPWC95Q.js";
+//#region node_modules/svelte/src/reactivity/reactive-value.js
+/**
+* @template T
+*/
+var ReactiveValue = class {
+	#fn;
+	#subscribe;
+	/**
+	*
+	* @param {() => T} fn
+	* @param {(update: () => void) => void} onsubscribe
+	*/
+	constructor(fn, onsubscribe) {
+		this.#fn = fn;
+		this.#subscribe = createSubscriber(onsubscribe);
+	}
+	get current() {
+		this.#subscribe();
+		return this.#fn();
+	}
+};
+//#endregion
+export { ReactiveValue as t };
+
+//# sourceMappingURL=reactive-value-CHZgulrS.js.map

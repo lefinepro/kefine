@@ -8,11 +8,7 @@
 
 	const { children }: Props = $props();
 
-	// Initialize AppKit in browser only — must be imported at layout level
-	// so it's available before any component tries to use it.
-	if (browser) {
-		import('$lib/auth/appkit.js');
-	}
+	void browser;
 </script>
 
 {@render children()}

@@ -17,3 +17,17 @@ export async function proxyOrderStatus(
     context: orderId ? { orderId } : undefined
   });
 }
+
+export async function proxyPaymentQuote(request: Request, orderId: string, fetchFn: typeof fetch): Promise<Response> {
+  return proxyCraterRequest(request, fetchFn, `/payment/${encodeURIComponent(orderId)}`, {
+    errorMessage: 'Failed to load payment quote.',
+    context: { orderId }
+  });
+}
+
+export async function proxyPaymentPromo(request: Request, orderId: string, fetchFn: typeof fetch): Promise<Response> {
+  return proxyCraterRequest(request, fetchFn, `/payment/${encodeURIComponent(orderId)}/promo`, {
+    errorMessage: 'Failed to apply promo code.',
+    context: { orderId }
+  });
+}

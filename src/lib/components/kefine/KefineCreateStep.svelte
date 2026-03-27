@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import type { DraftOrder, OrderView } from './kefine-workflow';
+  import { scheduleAfter } from '$lib/utils/helpers';
 
   const PLACEHOLDER_TYPE_DELAY_MS = 58;
   const PLACEHOLDER_DELETE_DELAY_MS = 34;
@@ -20,9 +21,10 @@
     isSearching,
     totalOrders,
     hasMoreOrders,
-    loadMoreHint,
     matchedTasksLabel,
     timeLeftLabel,
+    priceLabel,
+    statusLabel,
     stopTaskLabel,
     onSubmit,
     onQueueTask,
@@ -42,9 +44,10 @@
     isSearching: boolean;
     totalOrders: number;
     hasMoreOrders: boolean;
-    loadMoreHint: string;
     matchedTasksLabel: string;
     timeLeftLabel: string;
+    priceLabel: string;
+    statusLabel: string;
     stopTaskLabel: string;
     onSubmit: () => void;
     onQueueTask: (title: string) => Promise<void> | void;
@@ -56,12 +59,12 @@
   let animatedPlaceholder = $state('');
   let currentPlaceholderPhrase = $state('');
   let isLoadingMore = $state(false);
-  let touchStopTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  let touchStopTimers = new Map<string, () => void>();
   let touchStopTriggered = new Set<string>();
 
   onMount(() => {
     const variants = placeholderVariants.length > 0 ? [...placeholderVariants] : [placeholder];
-    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    let cancelTick: (() => void) | null = null;
     let variantIndex = 0;
     let charIndex = 0;
     let deleting = false;
@@ -74,33 +77,38 @@
         if (charIndex < active.length) {
           charIndex += 1;
           animatedPlaceholder = active.slice(0, charIndex);
-          timeoutId = setTimeout(tick, PLACEHOLDER_TYPE_DELAY_MS);
+          cancelTick = scheduleAfter(PLACEHOLDER_TYPE_DELAY_MS, tick);
           return;
         }
 
         deleting = true;
-        timeoutId = setTimeout(tick, PLACEHOLDER_PAUSE_MS);
+        cancelTick = scheduleAfter(PLACEHOLDER_PAUSE_MS, tick);
         return;
       }
 
       if (charIndex > 0) {
         charIndex -= 1;
         animatedPlaceholder = active.slice(0, charIndex);
-        timeoutId = setTimeout(tick, PLACEHOLDER_DELETE_DELAY_MS);
+        cancelTick = scheduleAfter(PLACEHOLDER_DELETE_DELAY_MS, tick);
         return;
       }
 
       deleting = false;
       variantIndex = (variantIndex + 1) % variants.length;
-      timeoutId = setTimeout(tick, PLACEHOLDER_NEXT_DELAY_MS);
+      cancelTick = scheduleAfter(PLACEHOLDER_NEXT_DELAY_MS, tick);
     };
 
     tick();
 
     return () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
+      cancelTick?.();
+
+      for (const cancelTimer of touchStopTimers.values()) {
+        cancelTimer();
       }
+
+      touchStopTimers = new Map();
+      touchStopTriggered = new Set();
     };
   });
 
@@ -154,19 +162,19 @@
     event.preventDefault();
     event.stopPropagation();
 
-    const timer = setTimeout(() => {
+    const cancelTimer = scheduleAfter(550, () => {
       touchStopTriggered = new Set([...touchStopTriggered, order.id]);
       onStopOrder(order, event);
       clearStopPress(order.id);
-    }, 550);
+    });
 
-    touchStopTimers = new Map(touchStopTimers).set(order.id, timer);
+    touchStopTimers = new Map(touchStopTimers).set(order.id, cancelTimer);
   }
 
   function clearStopPress(orderId: string) {
-    const timer = touchStopTimers.get(orderId);
-    if (timer) {
-      clearTimeout(timer);
+    const cancelTimer = touchStopTimers.get(orderId);
+    if (cancelTimer) {
+      cancelTimer();
       const nextTimers = new Map(touchStopTimers);
       nextTimers.delete(orderId);
       touchStopTimers = nextTimers;
@@ -194,6 +202,32 @@
 
     event.preventDefault();
     onOpenOrder(order);
+  }
+
+  function formatStatusLabel(status: string) {
+    const normalized = status.trim().toLowerCase();
+    if (normalized === 'done' || normalized === 'completed') return 'Completed';
+    if (normalized === 'stopped' || normalized === 'cancelled' || normalized === 'canceled') return 'Stopped';
+    if (normalized === 'executing' || normalized === 'accepted') return 'Executing';
+    if (normalized === 'queued') return 'Queued';
+    if (!normalized) return 'Queued';
+    return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+  }
+
+  function formatOrderPrice(order: OrderView) {
+    if (order.estimatedCost === undefined) {
+      return `${priceLabel} -`;
+    }
+
+    const amount = Number.isInteger(order.estimatedCost)
+      ? String(order.estimatedCost)
+      : order.estimatedCost.toFixed(2).replace(/\.?0+$/, '');
+
+    return `${priceLabel} ${amount} ${order.currency}`;
+  }
+
+  function formatOrderTime(order: OrderView) {
+    return order.executionEstimate ? `${timeLeftLabel} ${order.executionEstimate}` : `${timeLeftLabel} -`;
   }
 
 </script>
@@ -248,17 +282,17 @@
               onclick={() => onOpenOrder(order)}
               onkeydown={(event: KeyboardEvent) => handleOpenOrderKeydown(order, event)}
             >
-              <section class="kefine-order-open" data-testid={`kefine-open-search-order-${order.id}`}>
-                <kefine-order-summary class="kefine-order-summary">
-                  <kr-title>{order.title}</kr-title>
-                  <kefine-order-meta class="kefine-order-meta">
-                    <kefine-order-solver>{order.solver}</kefine-order-solver>
-                    {#if order.executionEstimate}
+                <section class="kefine-order-open" data-testid={`kefine-open-search-order-${order.id}`}>
+                  <kefine-order-summary class="kefine-order-summary">
+                    <kr-title>{order.title}</kr-title>
+                    <kefine-order-meta class="kefine-order-meta">
+                      <kefine-order-solver>{order.solver}</kefine-order-solver>
                       <kefine-order-estimate class="kefine-order-estimate" data-testid={`kefine-order-eta-${order.id}`}>
-                        {timeLeftLabel} {order.executionEstimate}
+                        <span>{statusLabel} {formatStatusLabel(order.status)}</span>
+                        <span>{formatOrderTime(order)}</span>
+                        <span>{formatOrderPrice(order)}</span>
                       </kefine-order-estimate>
-                    {/if}
-                  </kefine-order-meta>
+                    </kefine-order-meta>
                 </kefine-order-summary>
               </section>
             </kefine-order-card>
@@ -293,16 +327,18 @@
                   onclick={(event) => handleStopClick(order, event)}
                 >
                   <status-mark aria-hidden="true" data-status={order.status}><task-dot></task-dot></status-mark>
-                  <span class="kefine-status-stop">×</span>
                 </button>
                 <section class="kefine-order-open" data-testid={`kefine-open-order-${order.id}`}>
                   <kefine-order-summary class="kefine-order-summary">
                     <kr-title>{order.title}</kr-title>
-                    {#if order.executionEstimate}
+                    <kefine-order-meta class="kefine-order-meta">
+                      <kefine-order-solver>{order.solver}</kefine-order-solver>
                       <kefine-order-estimate class="kefine-order-estimate" data-testid={`kefine-order-eta-${order.id}`}>
-                        {timeLeftLabel} {order.executionEstimate}
+                        <span>{statusLabel} {formatStatusLabel(order.status)}</span>
+                        <span>{formatOrderTime(order)}</span>
+                        <span>{formatOrderPrice(order)}</span>
                       </kefine-order-estimate>
-                    {/if}
+                    </kefine-order-meta>
                   </kefine-order-summary>
                 </section>
               </kefine-order-card>
@@ -310,9 +346,6 @@
           {/each}
         </ul>
       </section>
-      {#if hasMoreOrders}
-        <p>{loadMoreHint}</p>
-      {/if}
     {/if}
   </section>
 </article>

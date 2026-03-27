@@ -38,6 +38,7 @@ module Crater
             currency: record.currency,
             executionEstimate: record.execution_estimate,
             uiScenario: record.ui_scenario,
+            labels: record.labels,
             paymentUrl: record.payment_url,
             createdAt: record.created_at,
             updatedAt: record.updated_at
@@ -69,6 +70,7 @@ module Crater
             currency: record.currency,
             executionEstimate: record.execution_estimate,
             uiScenario: record.ui_scenario,
+            labels: record.labels,
             paymentUrl: record.payment_url,
             createdAt: record.created_at,
             updatedAt: record.updated_at

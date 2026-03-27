@@ -28,7 +28,7 @@
   }
 
   button[data-variant='primary']:hover {
-    filter: brightness(1.04);
+    background: color-mix(in oklab, var(--kef-primary) 92%, white);
   }
 
   button[data-variant='ghost']:hover {
@@ -77,15 +77,15 @@
   }
 
   :root[data-kefine-theme='light'] .kefine-sidebar-stack {
-    background: color-mix(in oklab, var(--kef-bg-card) 98%, white);
-    border-color: color-mix(in oklab, var(--kef-border) 78%, white);
-    box-shadow: 0 16px 28px color-mix(in oklab, #544536 9%, transparent);
+    background: color-mix(in oklab, var(--kef-bg-card) 99%, white);
+    border-color: color-mix(in oklab, var(--kef-border) 72%, white);
+    box-shadow: 0 8px 18px color-mix(in oklab, #544536 6%, transparent);
   }
 
   :root[data-kefine-theme='light'] .kefine-sidebar-link--active,
   :root[data-kefine-theme='light'] .kefine-sidebar-link:hover,
   :root[data-kefine-theme='light'] .kefine-sidebar-icon:hover {
-    background: color-mix(in oklab, var(--kef-primary) 10%, white);
+    background: color-mix(in oklab, var(--kef-primary) 6%, white);
     color: color-mix(in oklab, var(--kef-primary) 92%, #4f3d30);
   }
 
@@ -108,8 +108,9 @@
   .kefine-queued-task {
     margin: 0;
     cursor: default;
-    background: color-mix(in oklab, var(--kef-bg-soft) 78%, var(--kef-bg-card));
-    border-style: dashed;
+    background: color-mix(in oklab, var(--kef-bg-soft) 42%, var(--kef-bg-card));
+    border: 0;
+    border-radius: 0.9rem;
     color: var(--kef-text);
     display: grid;
     grid-template-columns: auto 1fr;
@@ -137,11 +138,11 @@
   }
 
   .kefine-queued-task[data-status='done'] {
-    background: color-mix(in oklab, var(--kef-success) 16%, var(--kef-bg-card));
+    background: color-mix(in oklab, var(--kef-success) 10%, var(--kef-bg-card));
   }
 
   .kefine-queued-task[data-status='stopped'] {
-    background: color-mix(in oklab, var(--kef-error) 10%, var(--kef-bg-card));
+    background: color-mix(in oklab, var(--kef-error) 6%, var(--kef-bg-card));
   }
 
   .kefine-status-toggle {
@@ -149,8 +150,8 @@
     min-width: clamp(1.7rem, 7vw, 2rem);
     height: clamp(1.7rem, 7vw, 2rem);
     border-radius: 999px;
-    border: var(--kef-border-width-soft) solid var(--kef-line);
-    background: transparent;
+    border: 0;
+    background: color-mix(in oklab, var(--kef-bg-card) 96%, var(--kef-bg-soft));
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -166,54 +167,21 @@
     -webkit-user-select: none;
   }
 
-  .kefine-status-toggle--order status-mark {
-    transition: opacity 120ms ease;
-  }
-
-  .kefine-status-stop {
-    position: absolute;
-    inset: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1rem;
-    font-weight: 700;
-    line-height: 1;
-    opacity: 0;
-    transition: opacity 120ms ease;
-  }
-
-  @media (hover: none), (pointer: coarse) {
-    .kefine-status-stop {
-      opacity: 0.72;
-      font-size: 0.9rem;
-    }
-
-    .kefine-status-toggle--order:hover status-mark,
-    .kefine-status-toggle--order:focus-visible status-mark {
-      opacity: 1;
-    }
-
-    .kefine-status-toggle--order:hover .kefine-status-stop,
-    .kefine-status-toggle--order:focus-visible .kefine-status-stop {
-      opacity: 0.72;
-    }
-  }
-
-  .kefine-status-toggle--order:hover status-mark,
-  .kefine-status-toggle--order:focus-visible status-mark {
-    opacity: 0;
-  }
-
-  .kefine-status-toggle--order:hover .kefine-status-stop,
-  .kefine-status-toggle--order:focus-visible .kefine-status-stop {
-    opacity: 1;
-  }
-
   .kefine-status-toggle[data-status='done'] {
-    border-color: var(--kef-line-success);
-    background: color-mix(in oklab, var(--kef-success) 22%, var(--kef-bg-card));
+    background: color-mix(in oklab, var(--kef-success) 14%, var(--kef-bg-card));
     color: var(--kef-success);
+  }
+
+  .kefine-status-toggle[data-status='completed'],
+  .kefine-status-toggle[data-status='executing'],
+  .kefine-status-toggle[data-status='accepted'] {
+    background: color-mix(in oklab, var(--kef-success) 10%, var(--kef-bg-card));
+    color: var(--kef-success);
+  }
+
+  .kefine-status-toggle[data-status='stopped'] {
+    background: color-mix(in oklab, var(--kef-error) 10%, var(--kef-bg-card));
+    color: var(--kef-error);
   }
 
 
@@ -235,6 +203,9 @@
     color: var(--kef-text-soft);
     white-space: normal;
     overflow-wrap: anywhere;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.7rem;
   }
 
   .kefine-payment-chip,
@@ -261,22 +232,22 @@ status-mark {
   width: clamp(1.05rem, 4.8vw, 1.2rem);
   height: clamp(1.05rem, 4.8vw, 1.2rem);
   border-radius: 999px;
-  border: var(--kef-border-width-soft) solid var(--kef-line-warning);
+  border: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: color-mix(in oklab, var(--kef-warning) 16%, transparent);
+  background: color-mix(in oklab, var(--kef-warning) 14%, transparent);
 }
 
 status-mark[data-status='done'],
-status-mark[data-status='completed'] {
-  border-color: var(--kef-line-success);
-  background: color-mix(in oklab, var(--kef-success) 22%, transparent);
+status-mark[data-status='completed'],
+status-mark[data-status='executing'],
+status-mark[data-status='accepted'] {
+  background: color-mix(in oklab, var(--kef-success) 18%, transparent);
 }
 
 status-mark[data-status='stopped'] {
-  border-color: var(--kef-line-error);
-  background: color-mix(in oklab, var(--kef-error) 18%, transparent);
+  background: color-mix(in oklab, var(--kef-error) 16%, transparent);
 }
 
 status-mark task-dot {

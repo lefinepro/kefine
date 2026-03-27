@@ -1,7 +1,4 @@
 import { browser } from '$app/environment';
-import { createAppKit } from '@reown/appkit';
-import { WagmiAdapter } from '@reown/appkit-adapter-wagmi';
-import { networks, defaultNetwork } from './networks.js';
 
 const projectId = import.meta.env.VITE_REOWN_PROJECT_ID as string;
 
@@ -44,6 +41,14 @@ const KEFINE_THEME_DARK = {
 
 type KefineTheme = 'light' | 'dark';
 
+type AppKitLike = {
+	open: () => void;
+	disconnect: () => Promise<void> | void;
+	setThemeMode: (theme: KefineTheme) => void;
+	setThemeVariables: (vars: Record<string, string | number>) => void;
+	subscribeAccount: (callback: (account: any) => void) => void;
+};
+
 function detectThemeMode(): KefineTheme {
 	if (typeof document !== 'undefined') {
 		const htmlTheme = document.documentElement.getAttribute('data-kefine-theme');
@@ -63,33 +68,65 @@ function getThemeVariables(theme: KefineTheme) {
 	return theme === 'dark' ? KEFINE_THEME_DARK : KEFINE_THEME_LIGHT;
 }
 
-export let wagmiAdapter: WagmiAdapter | undefined = undefined;
-export let appkit: ReturnType<typeof createAppKit> | undefined = undefined;
+export let wagmiAdapter: any = undefined;
+export let appkit: AppKitLike | undefined = undefined;
 
-if (browser) {
-	const initialTheme = detectThemeMode();
-	wagmiAdapter = new WagmiAdapter({
-		networks,
-		projectId
-	});
+let initPromise: Promise<AppKitLike | undefined> | null = null;
 
-	appkit = createAppKit({
-		adapters: [wagmiAdapter],
-		networks,
-		defaultNetwork,
-		projectId,
-		metadata,
-		features: {
-			analytics: true,
-			email: true,
-			socials: ['google', 'github']
-		},
-		themeMode: initialTheme,
-		themeVariables: getThemeVariables(initialTheme)
-	});
+export async function ensureAppKit(): Promise<AppKitLike | undefined> {
+	if (!browser) return undefined;
+	if (appkit) return appkit;
+
+	initPromise ??= (async () => {
+		const [{ createAppKit }, { WagmiAdapter }, { networks, defaultNetwork }] = await Promise.all([
+			import('@reown/appkit'),
+			import('@reown/appkit-adapter-wagmi'),
+			import('./networks.js')
+		]);
+
+		const initialTheme = detectThemeMode();
+		wagmiAdapter = new WagmiAdapter({
+			networks,
+			projectId
+		});
+
+		appkit = createAppKit({
+			adapters: [wagmiAdapter],
+			networks,
+			defaultNetwork,
+			projectId,
+			metadata,
+			features: {
+				analytics: true,
+				email: true,
+				socials: ['google', 'github']
+			},
+			themeMode: initialTheme,
+			themeVariables: getThemeVariables(initialTheme)
+		}) as AppKitLike;
+
+		return appkit;
+	})();
+
+	return initPromise;
 }
 
-export function syncAppKitTheme(theme: KefineTheme): void {
+export async function openAppKit(): Promise<void> {
+	const instance = await ensureAppKit();
+	instance?.open();
+}
+
+export async function disconnectAppKit(): Promise<void> {
+	const instance = await ensureAppKit();
+	await instance?.disconnect?.();
+}
+
+export async function subscribeToAppKitAccount(callback: (account: any) => void): Promise<void> {
+	const instance = await ensureAppKit();
+	instance?.subscribeAccount(callback);
+}
+
+export async function syncAppKitTheme(theme: KefineTheme): Promise<void> {
 	if (!appkit) return;
 	appkit.setThemeMode(theme);
 	appkit.setThemeVariables(getThemeVariables(theme));

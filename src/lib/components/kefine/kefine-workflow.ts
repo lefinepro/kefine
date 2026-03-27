@@ -1,5 +1,5 @@
 import { type KefineLocaleText } from '$lib/constants/kefine-locale';
-import vpnFlowMock from './vpn-flow.mock.json';
+import vpnFlowMock from '../../../../.meta/data/mocks/vpn-flow.mock.json';
 
 export type FlowStep = 'create' | 'auth' | 'submitting' | 'executing' | 'payment' | 'error';
 export type AuthMethod = 'wallet' | 'passkey' | 'anonymous' | null;
@@ -35,6 +35,48 @@ export type OrderView = {
   executionEstimate?: string;
   paymentUrl?: string;
   uiScenario?: Exclude<UiScenario, 'default'>;
+  labels?: string[];
+  vpnGuide?: VpnDeliveryGuide;
+};
+
+export type PaymentQuote = {
+  orderId: string;
+  title: string;
+  status: string;
+  currency: string;
+  originalAmount: number;
+  effectiveAmount: number;
+  promoCode?: string;
+  promoApplied: boolean;
+  promoMessage?: string;
+  strikeOriginalPrice: boolean;
+  freeUnlock: boolean;
+  paymentAddress: string;
+  paymentRequest?: string;
+  paymentChainId: number;
+  paymentTokenAddress: string;
+  paymentTokenSymbol: string;
+  paymentUrl?: string;
+  labels: string[];
+};
+
+export type VpnDeliveryGuideStep = {
+  id: string;
+  title: string;
+  summary: string;
+  apps?: Array<{
+    label: string;
+    href: string;
+  }>;
+  exampleVlessLink?: string;
+  linuxClient?: string[];
+  otherClientsNote?: string;
+};
+
+export type VpnDeliveryGuide = {
+  title: string;
+  summary: string;
+  steps: VpnDeliveryGuideStep[];
 };
 
 export type OrderSubtask = {
@@ -461,7 +503,9 @@ export function parseStoredOrders(raw: string | null, localeText: KefineLocaleTe
         currency: toStringValue(order['currency']) || localeText.defaults.defaultCurrency,
         executionEstimate: resolveExecutionEstimate(toStringValue(order['executionEstimate']) || undefined, title, localeText),
         paymentUrl: toStringValue(order['paymentUrl']) || undefined,
-        uiScenario: toUiScenario(order['uiScenario'])
+        uiScenario: toUiScenario(order['uiScenario']),
+        labels: toStringList(order['labels']),
+        vpnGuide: extractVpnGuide(order)
       };
     })
     .filter((order) => order.id.length > 0 && !order.id.startsWith('temp-'));
@@ -506,6 +550,16 @@ function unwrapTicketPayload(payload: Record<string, unknown>): Record<string, u
 
 function toRecordList(value: unknown): Record<string, unknown>[] {
   return Array.isArray(value) ? value.map((item) => toRecord(item)).filter((item): item is Record<string, unknown> => item !== null) : [];
+}
+
+function toStringList(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+
+  const items = value
+    .map((item) => (typeof item === 'string' && item.trim() ? item.trim() : null))
+    .filter((item): item is string => item !== null);
+
+  return items.length > 0 ? items : undefined;
 }
 
 function extractHref(payload: Record<string, unknown>): string | undefined {
@@ -561,6 +615,96 @@ function findPaymentLink(payload: Record<string, unknown>): Record<string, unkno
   return null;
 }
 
+function findVpnGuideAttachment(payload: Record<string, unknown>): Record<string, unknown> | null {
+  const attachments = toRecordList(payload['attachment']);
+
+  for (const candidate of attachments) {
+    const mediaType = toStringValue(candidate['mediaType']);
+    const type = toStringValue(candidate['type']);
+
+    if (
+      mediaType === 'application/vnd.kefine.vpn-guide+json' ||
+      (type === 'Document' && toStringValue(candidate['name'])?.toLowerCase().includes('vpn'))
+    ) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
+function toStringArray(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+
+  const items = value
+    .map((item) => (typeof item === 'string' && item.trim() ? item.trim() : null))
+    .filter((item): item is string => item !== null);
+
+  return items.length > 0 ? items : undefined;
+}
+
+function toLinkArray(value: unknown): Array<{ label: string; href: string }> | undefined {
+  if (!Array.isArray(value)) return undefined;
+
+  const items = value
+    .map((item) => toRecord(item))
+    .filter((item): item is Record<string, unknown> => item !== null)
+    .map((item) => {
+      const label = toStringValue(item['label']);
+      const href = toStringValue(item['href']);
+      if (!label || !href) {
+        return null;
+      }
+
+      return { label, href };
+    })
+    .filter((item): item is { label: string; href: string } => item !== null);
+
+  return items.length > 0 ? items : undefined;
+}
+
+function extractVpnGuide(payload: Record<string, unknown>): VpnDeliveryGuide | undefined {
+  const attachment = findVpnGuideAttachment(payload);
+  const content = toRecord(attachment?.['content']);
+  if (!attachment || !content) {
+    return undefined;
+  }
+
+  const rawSteps = Array.isArray(content['steps']) ? content['steps'] : [];
+  const steps = rawSteps
+    .map((item) => toRecord(item))
+    .filter((item): item is Record<string, unknown> => item !== null)
+    .map((step) => {
+      const id = toStringValue(step['id']);
+      const title = toStringValue(step['title']);
+      const summary = toStringValue(step['summary']);
+      if (!id || !title || !summary) {
+        return null;
+      }
+
+      return {
+        id,
+        title,
+        summary,
+        apps: toLinkArray(step['apps']),
+        exampleVlessLink: toStringValue(step['exampleVlessLink']),
+        linuxClient: toStringArray(step['linuxClient']),
+        otherClientsNote: toStringValue(step['otherClientsNote'])
+      };
+    })
+    .filter((step): step is NonNullable<typeof step> => step !== null);
+
+  if (steps.length === 0) {
+    return undefined;
+  }
+
+  return {
+    title: toStringValue(attachment['name']) || 'VPN delivery guide',
+    summary: toStringValue(attachment['summary']) || 'VPN setup instructions',
+    steps
+  };
+}
+
 export function readCreateResponse(body: unknown): {
   orderId: string;
   solver?: string;
@@ -600,6 +744,7 @@ export function extractStatusPayload(
   const source = activityOrObject;
   const ticket = unwrapTicketPayload(source);
   const paymentLink = findPaymentLink(source) || findPaymentLink(ticket);
+  const vpnGuide = extractVpnGuide(source) || extractVpnGuide(ticket);
   const orderId =
     toStringValue(source['orderId']) ||
     toStringValue(source['id']) ||
@@ -665,6 +810,59 @@ export function extractStatusPayload(
       extractHref(paymentLink ?? {}) ||
       toStringValue(source['paymentUrl']) ||
       undefined,
-    uiScenario: toUiScenario(source['uiScenario']) || toUiScenario(ticket['uiScenario'])
+    uiScenario: toUiScenario(source['uiScenario']) || toUiScenario(ticket['uiScenario']),
+    labels: toStringList(source['labels']) || toStringList(ticket['labels']),
+    vpnGuide
+  };
+}
+
+export function readPaymentQuote(body: unknown): PaymentQuote | null {
+  if (!isRecord(body)) return null;
+
+  const orderId = toStringValue(body['orderId']);
+  const title = toStringValue(body['title']);
+  const status = toStringValue(body['status']);
+  const currency = toStringValue(body['currency']);
+  const originalAmount = toNumber(body['originalAmount']);
+  const effectiveAmount = toNumber(body['effectiveAmount']);
+  const paymentAddress = toStringValue(body['paymentAddress']);
+  const paymentTokenAddress = toStringValue(body['paymentTokenAddress']);
+  const paymentTokenSymbol = toStringValue(body['paymentTokenSymbol']);
+  const paymentChainId = toNumber(body['paymentChainId']);
+
+  if (
+    !orderId ||
+    !title ||
+    !status ||
+    !currency ||
+    originalAmount === undefined ||
+    effectiveAmount === undefined ||
+    !paymentAddress ||
+    !paymentTokenAddress ||
+    !paymentTokenSymbol ||
+    paymentChainId === undefined
+  ) {
+    return null;
+  }
+
+  return {
+    orderId,
+    title,
+    status,
+    currency,
+    originalAmount,
+    effectiveAmount,
+    promoCode: toStringValue(body['promoCode']) || undefined,
+    promoApplied: body['promoApplied'] === true,
+    promoMessage: toStringValue(body['promoMessage']) || undefined,
+    strikeOriginalPrice: body['strikeOriginalPrice'] === true,
+    freeUnlock: body['freeUnlock'] === true,
+    paymentAddress,
+    paymentRequest: toStringValue(body['paymentRequest']) || undefined,
+    paymentChainId,
+    paymentTokenAddress,
+    paymentTokenSymbol,
+    paymentUrl: toStringValue(body['paymentUrl']) || undefined,
+    labels: toStringList(body['labels']) || []
   };
 }

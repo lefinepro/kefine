@@ -1,7 +1,23 @@
 services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: kefine
+      POSTGRES_USER: kefine
+      POSTGRES_PASSWORD: kefine
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
   crater:
     build:
       context: ./crater
+    depends_on:
+      - postgres
+    environment:
+      KEFINE_DATABASE_URL: postgresql://kefine:kefine@postgres:5432/kefine
+      KEFINE_PAYMENT_EVM_ADDRESS: ${KEFINE_PAYMENT_EVM_ADDRESS:-0x0000000000000000000000000000000000000000}
     ports:
       - "3001:3001"
 
@@ -12,3 +28,6 @@ services:
       - crater
     ports:
       - "5173:5173"
+
+volumes:
+  postgres-data:

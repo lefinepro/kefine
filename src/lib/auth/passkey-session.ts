@@ -11,6 +11,10 @@ export interface PasskeySession {
 
 export const passkeySessionStore = writable<PasskeySession | null>(null);
 
+export function readPasskeySession(): PasskeySession | null {
+	return get(passkeySessionStore);
+}
+
 export function loadPasskeySession(): void {
 	if (typeof window === 'undefined') return;
 
