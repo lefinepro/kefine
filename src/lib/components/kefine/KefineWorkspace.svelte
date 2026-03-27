@@ -1,5 +1,6 @@
 <script lang="ts">
   import { browser } from '$app/environment';
+  import { buildOrderProxyUrl, resolveOrderProxyBasePath } from '$lib/order-proxy-path';
   import { onMount } from 'svelte';
   import { authState } from '$lib/auth/auth-store.svelte.js';
   import { apSessionStore, loadAPSession, setAPSession } from '$lib/auth/session';
@@ -571,7 +572,7 @@
   }
 
   function orderApiBaseUrl(): string {
-    return '/api/kefine/orders';
+    return resolveOrderProxyBasePath(import.meta.env.VITE_KEFINE_ORDER_PROXY_BASE_PATH);
   }
 
   function craterBaseUrl(): string {
@@ -636,7 +637,7 @@
     }
 
     try {
-      const response = await fetch(`${orderApiBaseUrl()}/status/${encodeURIComponent(orderId)}`, {
+      const response = await fetch(buildOrderProxyUrl(`/status/${encodeURIComponent(orderId)}`, orderApiBaseUrl()), {
         headers: {
           Accept: 'application/json'
         }
@@ -720,7 +721,7 @@
     }
 
     try {
-      const response = await fetch(`${orderApiBaseUrl()}/create`, {
+      const response = await fetch(buildOrderProxyUrl('/create', orderApiBaseUrl()), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
