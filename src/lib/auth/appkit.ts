@@ -1,6 +1,6 @@
 import { browser } from '$app/environment';
 
-const projectId = import.meta.env.VITE_REOWN_PROJECT_ID as string;
+const projectId = (import.meta.env.VITE_REOWN_PROJECT_ID as string | undefined)?.trim() || '909acf523be03f300ad21cca95d966c8';
 
 const metadata = {
 	name: 'Kefine Solver Exchange',
