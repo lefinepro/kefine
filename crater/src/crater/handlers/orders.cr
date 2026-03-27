@@ -74,6 +74,23 @@ module Crater
             updatedAt: record.updated_at
           }.to_json
         end
+
+        get "/pay/:id" do |env|
+          order_id = env.params.url["id"]?
+          if order_id.nil? || order_id.empty?
+            env.response.status_code = 400
+            next({error: "Missing order id"}.to_json)
+          end
+
+          record = OrderQueue.find_order(order_id)
+          if record.nil?
+            env.response.status_code = 404
+            next({error: "Order not found", orderId: order_id}.to_json)
+          end
+
+          target = record.payment_url || "#{config.exchange_url}/pay/#{URI.encode_path(order_id)}"
+          env.redirect(target)
+        end
       end
 
       private def self.create_order(env, config : Utils::Config)

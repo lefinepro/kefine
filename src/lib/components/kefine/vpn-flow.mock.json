@@ -72,7 +72,7 @@
       "instructions": [
         {
           "title": "Open the protected result",
-          "detail": "Unlock the ActivityPub result screen to reveal the connection package for your access mode."
+          "detail": "Unlock the solver result screen to reveal the connection package for your access mode."
         },
         {
           "title": "Download the bundle",
@@ -92,6 +92,6 @@
   "widget": {
     "title": "VPN service result",
     "summary": "The service result is prepared and remains blurred until you choose how to continue.",
-    "badge": "ActivityPub"
+    "badge": "Solver"
   }
 }

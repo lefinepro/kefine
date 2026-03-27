@@ -59,38 +59,32 @@ Create a `.env` file in the project root.
 Example:
 
 ```env
-KEFINE_ORDER_API_BASE_URL=http://localhost:3001
-VITE_KEFINE_ORDER_PROXY_BASE_PATH=
-VITE_KEFINE_EXCHANGE_BASE_URL=http://localhost:3001
-VITE_CRATER_BASE_URL=http://localhost:3001
+KEFINE_CRATER=http://localhost:3001
+KEFINE_EXCHANGE=http://localhost:3001
 VITE_REOWN_PROJECT_ID=your_reown_project_id
-PASSKEY_STORE_PATH=.data/passkeys.json
 ```
 
 Notes:
 
-- `KEFINE_ORDER_API_BASE_URL` is the server-side upstream for order creation and status polling. This can point either to the local `crater` service or to a remote exchange such as `https://lefine.pro/exchange`.
-- `VITE_KEFINE_ORDER_PROXY_BASE_PATH` is the public prefix used by the frontend when calling the local SvelteKit proxy routes. Leave it empty to use `/create` and `/status/*`, or set it to `/api/kefine/orders` to keep the old endpoints.
-- `VITE_KEFINE_EXCHANGE_BASE_URL` is the public base URL used by the UI for actor/payment links. In most cases, set it to the same value as `KEFINE_ORDER_API_BASE_URL`.
-- `VITE_CRATER_BASE_URL` tells the frontend where to find the local backend. For local development, `http://localhost:3001` is the expected value.
+- `KEFINE_CRATER` is the crater base URL used by the SvelteKit proxy for all order, payment, and passkey operations.
+- `KEFINE_EXCHANGE` is the exchange base URL crater uses for user IDs, payment links, and persisted exchange state.
 - `VITE_REOWN_PROJECT_ID` is needed if you want wallet login/connect flows to work correctly.
-- `PASSKEY_STORE_PATH` controls where passkey registrations and sessions are stored. If omitted, the app already defaults to `.data/passkeys.json`.
 
 ### Remote exchange mode
 
 To test against the hosted Lefine exchange instead of the local `crater`, use:
 
 ```env
-KEFINE_ORDER_API_BASE_URL=https://lefine.pro/exchange
-VITE_KEFINE_EXCHANGE_BASE_URL=https://lefine.pro/exchange
+KEFINE_CRATER=http://localhost:3001
+KEFINE_EXCHANGE=https://lefine.pro/exchange
 ```
 
 With this setup:
 
-- the frontend sends task creation requests through the app's own `/create` and `/status/*` proxy routes,
-- the SvelteKit server forwards them to `https://lefine.pro/exchange`,
-- the exchange can rank the task and pass it further through its own pipeline,
-- the UI keeps polling status updates from the same remote exchange.
+- the frontend sends task, payment, and passkey requests only to the app's own crater-facing routes,
+- the SvelteKit server forwards those requests to crater,
+- crater can persist exchange users/passkeys locally and use `KEFINE_EXCHANGE` for exchange-facing URLs,
+- the UI keeps polling status updates through crater instead of talking to the exchange directly.
 
 ### 3. Start the backend
 
@@ -167,8 +161,8 @@ The task detail flow supports several auth paths before payment:
 
 #### Passkey
 
-- Uses the built-in SvelteKit API routes under `/api/passkeys/*`
-- Stores local passkey state in `.data/passkeys.json` by default
+- Uses crater-backed routes under `/passkeys/*`
+- Crater stores passkeys, sessions, and exchange user accounts in `.data/exchange-state.json` by default
 - Useful for testing passwordless authentication locally
 
 Important:
@@ -223,9 +217,9 @@ bun run test:e2e
 
 ## Useful development notes
 
-- The frontend assumes the backend is reachable on port `3001` unless `KEFINE_ORDER_API_BASE_URL`, `VITE_KEFINE_EXCHANGE_BASE_URL`, or `VITE_CRATER_BASE_URL` override it.
-- If you open the frontend from another hostname, set `VITE_CRATER_BASE_URL` explicitly to avoid cross-host confusion.
-- Passkey data is stored locally in `.data/passkeys.json`; deleting that file resets local passkey state.
+- The frontend assumes crater is reachable on port `3001` unless `KEFINE_CRATER` overrides it.
+- Exchange-facing IDs and payment links are derived from `KEFINE_EXCHANGE`.
+- Passkey and exchange account data are stored by crater in `.data/exchange-state.json`; deleting that file resets local state.
 - The backend default configuration is development-friendly and should work locally without additional setup.
 
 ## Production preview build
@@ -249,7 +243,7 @@ bun run preview
 Check that:
 
 - `crater` is running on `localhost:3001`
-- `KEFINE_ORDER_API_BASE_URL` or `VITE_CRATER_BASE_URL` points to the correct backend URL
+- `KEFINE_CRATER` points to the correct crater URL
 - your browser can access both the frontend and backend ports
 
 ### Wallet connect does not work
@@ -265,7 +259,7 @@ Check that:
 
 - your browser supports WebAuthn/passkeys
 - you are testing on a valid local origin
-- `.data/passkeys.json` is writable
+- `.data/exchange-state.json` is writable by crater
 
 ## Repository structure
 

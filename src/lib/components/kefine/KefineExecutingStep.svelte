@@ -358,7 +358,7 @@
                 {vpnFlow.labels.price}: {execution.primaryMetric.value} {execution.primaryMetric.unit}
               </span>
               <strong>Open result</strong>
-              <p>Choose how to continue to the ActivityPub result.</p>
+              <p>Choose how to continue to the solver result.</p>
               <div class="kefine-vpn-widget-actions kefine-auth-grid">
                 <button type="button" class="kefine-auth-tile kefine-auth-tile--wallet" onclick={onWalletLogin}>
                   <div class="kefine-auth-hero kefine-auth-hero--wallet" aria-hidden="true">
@@ -409,7 +409,7 @@
                 </div>
                 <div class="kefine-vpn-download-copy">
                   <strong>Download info</strong>
-                  <p>1. Download the VPN profile bundle from the ActivityPub result page.</p>
+                  <p>1. Download the VPN profile bundle from the solver result page.</p>
                   <p>2. Import the `.conf` file into WireGuard or your selected VPN client.</p>
                   <p>3. Keep the QR code nearby for mobile import and save the fallback credentials file.</p>
                   <p>4. The guest test stays available for 10 minutes, then the profile expires automatically.</p>
