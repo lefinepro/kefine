@@ -60,6 +60,7 @@ Example:
 
 ```env
 KEFINE_ORDER_API_BASE_URL=http://localhost:3001
+VITE_KEFINE_ORDER_PROXY_BASE_PATH=
 VITE_KEFINE_EXCHANGE_BASE_URL=http://localhost:3001
 VITE_CRATER_BASE_URL=http://localhost:3001
 VITE_REOWN_PROJECT_ID=your_reown_project_id
@@ -69,6 +70,7 @@ PASSKEY_STORE_PATH=.data/passkeys.json
 Notes:
 
 - `KEFINE_ORDER_API_BASE_URL` is the server-side upstream for order creation and status polling. This can point either to the local `crater` service or to a remote exchange such as `https://lefine.pro/exchange`.
+- `VITE_KEFINE_ORDER_PROXY_BASE_PATH` is the public prefix used by the frontend when calling the local SvelteKit proxy routes. Leave it empty to use `/create` and `/status/*`, or set it to `/api/kefine/orders` to keep the old endpoints.
 - `VITE_KEFINE_EXCHANGE_BASE_URL` is the public base URL used by the UI for actor/payment links. In most cases, set it to the same value as `KEFINE_ORDER_API_BASE_URL`.
 - `VITE_CRATER_BASE_URL` tells the frontend where to find the local backend. For local development, `http://localhost:3001` is the expected value.
 - `VITE_REOWN_PROJECT_ID` is needed if you want wallet login/connect flows to work correctly.
@@ -85,7 +87,7 @@ VITE_KEFINE_EXCHANGE_BASE_URL=https://lefine.pro/exchange
 
 With this setup:
 
-- the frontend sends task creation requests through the app's own `/api/kefine/orders/*` proxy,
+- the frontend sends task creation requests through the app's own `/create` and `/status/*` proxy routes,
 - the SvelteKit server forwards them to `https://lefine.pro/exchange`,
 - the exchange can rank the task and pass it further through its own pipeline,
 - the UI keeps polling status updates from the same remote exchange.
