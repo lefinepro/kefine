@@ -502,11 +502,11 @@ module Crater
         "SELECT activity_json FROM order_activities ORDER BY seq DESC LIMIT $1 OFFSET $2",
         EVENT_PAGE_SIZE,
         start,
-        as: {String}
+        as: String
       )
 
       rows.compact_map do |row|
-        JSON.parse(row[0])
+        JSON.parse(row)
       rescue
         nil
       end
@@ -517,11 +517,11 @@ module Crater
       row = database(config).query_one?(
         "SELECT activity_json FROM order_activities WHERE order_id = $1 ORDER BY seq DESC LIMIT 1",
         order_id,
-        as: {String}
+        as: String
       )
       return nil unless row
 
-      JSON.parse(row[0])
+      JSON.parse(row)
     rescue
       nil
     end
