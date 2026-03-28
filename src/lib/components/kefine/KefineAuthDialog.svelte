@@ -176,17 +176,17 @@
     height: 3.2rem;
   }
 
-  .kefine-wallet-icon :global(svg) {
+  :global(.kefine-wallet-icon svg) {
     width: 100%;
     height: 100%;
   }
 
-  .kefine-wallet-grid span.is-metamask .kefine-wallet-icon :global(svg) {
+  :global(.kefine-wallet-grid span.is-metamask .kefine-wallet-icon svg) {
     width: 90%;
     height: 90%;
   }
 
-  .kefine-wallet-grid span.is-google .kefine-wallet-icon :global(svg) {
+  :global(.kefine-wallet-grid span.is-google .kefine-wallet-icon svg) {
     width: 86%;
     height: 86%;
   }
@@ -197,7 +197,7 @@
     color: var(--kef-primary, #6f5540);
   }
 
-  .kefine-auth-icon :global(svg) {
+  :global(.kefine-auth-icon svg) {
     width: 100%;
     height: 100%;
   }

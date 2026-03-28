@@ -1,5 +1,6 @@
 import { writable, type Writable } from 'svelte/store';
 import type { Task, TaskStatus, Priority, OKRLink, RepositoryLink, LinkType } from '$lib/types/okr';
+import { deserializeWithDates, serializeWithDates } from '$lib/stores/store-serialization';
 
 export interface TaskState {
   tasks: Task[];
@@ -21,54 +22,90 @@ const initialState: TaskState = {
   }
 };
 
-function createTaskStore() {
-  const { subscribe, set, update }: Writable<TaskState> = writable(initialState);
+type TaskInput = Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'okrLinks'> & { okrLinks?: OKRLink[] };
 
+function withUpdatedTask(task: Task, updates: Partial<Omit<Task, 'id' | 'createdAt'>>): Task {
+  return { ...task, ...updates, updatedAt: new Date() };
+}
+
+function createTask(task: TaskInput): Task {
   return {
-    subscribe,
+    ...task,
+    id: crypto.randomUUID(),
+    okrLinks: task.okrLinks ?? [],
+    repositoryLinks: task.repositoryLinks ?? [],
+    createdAt: new Date(),
+    updatedAt: new Date()
+  };
+}
 
-    // Task CRUD
-    addTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'okrLinks'> & { okrLinks?: OKRLink[] }) => {
-      const newTask: Task = {
-        ...task,
-        id: crypto.randomUUID(),
-        okrLinks: task.okrLinks ?? [],
-        repositoryLinks: task.repositoryLinks ?? [],
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
+function withMappedTask(
+  state: TaskState,
+  taskId: string,
+  mapper: (task: Task) => Task
+): TaskState {
+  return {
+    ...state,
+    tasks: state.tasks.map((task) => (task.id === taskId ? mapper(task) : task))
+  };
+}
+
+function saveTaskState(state: TaskState): void {
+  if (typeof window === 'undefined') return;
+
+  try {
+    localStorage.setItem('task-data', serializeWithDates(state));
+  } catch (error) {
+    console.error('Failed to save task data to localStorage:', error);
+  }
+}
+
+function loadTaskState(): TaskState | null {
+  if (typeof window === 'undefined') return null;
+
+  try {
+    const data = localStorage.getItem('task-data');
+    return data ? deserializeWithDates<TaskState>(data) : null;
+  } catch (error) {
+    console.error('Failed to load task data from localStorage:', error);
+    return null;
+  }
+}
+
+type TaskStoreInternals = Pick<Writable<TaskState>, 'subscribe' | 'set' | 'update'>;
+
+function createTaskCrudActions({ update }: Pick<TaskStoreInternals, 'update'>) {
+  return {
+    addTask(task: TaskInput) {
+      const newTask = createTask(task);
       update((state) => ({
         ...state,
         tasks: [...state.tasks, newTask]
       }));
       return newTask;
     },
-
-    updateTask: (id: string, updates: Partial<Omit<Task, 'id' | 'createdAt'>>) => {
+    updateTask(id: string, updates: Partial<Omit<Task, 'id' | 'createdAt'>>) {
+      update((state) => withMappedTask(state, id, (task) => withUpdatedTask(task, updates)));
+    },
+    deleteTask(id: string) {
       update((state) => ({
         ...state,
-        tasks: state.tasks.map((t) =>
-          t.id === id ? { ...t, ...updates, updatedAt: new Date() } : t
-        )
+        tasks: state.tasks.filter((task) => task.id !== id)
       }));
-    },
+    }
+  };
+}
 
-    deleteTask: (id: string) => {
-      update((state) => ({
-        ...state,
-        tasks: state.tasks.filter((t) => t.id !== id)
-      }));
-    },
-
-    // OKR Linking
-    linkTaskToOKR: (
+function createTaskLinkActions({ update }: Pick<TaskStoreInternals, 'update'>) {
+  return {
+    linkTaskToOKR(
       taskId: string,
       options: {
         objectiveId?: string;
         keyResultId?: string;
         linkType: LinkType;
       }
-    ) => {
+    ) {
       const newLink: OKRLink = {
         id: crypto.randomUUID(),
         taskId,
@@ -79,147 +116,127 @@ function createTaskStore() {
       };
       update((state) => ({
         ...state,
-        tasks: state.tasks.map((t) => {
-          if (t.id !== taskId) return t;
-          // Avoid duplicate links to same objective/key result
-          const alreadyLinked = t.okrLinks.some(
-            (l) =>
-              (options.objectiveId && l.objectiveId === options.objectiveId) ||
-              (options.keyResultId && l.keyResultId === options.keyResultId)
+        tasks: state.tasks.map((task) => {
+          if (task.id !== taskId) return task;
+          const alreadyLinked = task.okrLinks.some(
+            (link) =>
+              (options.objectiveId && link.objectiveId === options.objectiveId) ||
+              (options.keyResultId && link.keyResultId === options.keyResultId)
           );
-          if (alreadyLinked) return t;
-          return { ...t, okrLinks: [...t.okrLinks, newLink], updatedAt: new Date() };
+          return alreadyLinked ? task : withUpdatedTask(task, { okrLinks: [...task.okrLinks, newLink] });
         })
       }));
     },
-
-    unlinkTaskFromOKR: (taskId: string, linkId: string) => {
-      update((state) => ({
-        ...state,
-        tasks: state.tasks.map((t) => {
-          if (t.id !== taskId) return t;
-          return {
-            ...t,
-            okrLinks: t.okrLinks.filter((l) => l.id !== linkId),
-            updatedAt: new Date()
-          };
-        })
-      }));
+    unlinkTaskFromOKR(taskId: string, linkId: string) {
+      update((state) =>
+        withMappedTask(state, taskId, (task) =>
+          withUpdatedTask(task, { okrLinks: task.okrLinks.filter((link) => link.id !== linkId) })
+        )
+      );
     },
-
-    getLinkedOKRs: (taskId: string): OKRLink[] => {
+    getLinkedOKRs(taskId: string): OKRLink[] {
       let links: OKRLink[] = [];
       update((state) => {
-        const task = state.tasks.find((t) => t.id === taskId);
-        links = task?.okrLinks ?? [];
+        links = state.tasks.find((task) => task.id === taskId)?.okrLinks ?? [];
         return state;
       });
       return links;
     },
-
-    // Remove all links pointing to a deleted objective or key result
-    removeLinksForObjective: (objectiveId: string) => {
+    removeLinksForObjective(objectiveId: string) {
       update((state) => ({
         ...state,
-        tasks: state.tasks.map((t) => ({
-          ...t,
-          okrLinks: t.okrLinks.filter((l) => l.objectiveId !== objectiveId)
+        tasks: state.tasks.map((task) => ({
+          ...task,
+          okrLinks: task.okrLinks.filter((link) => link.objectiveId !== objectiveId)
         }))
       }));
     },
-
-    removeLinksForKeyResult: (keyResultId: string) => {
+    removeLinksForKeyResult(keyResultId: string) {
       update((state) => ({
         ...state,
-        tasks: state.tasks.map((t) => ({
-          ...t,
-          okrLinks: t.okrLinks.filter((l) => l.keyResultId !== keyResultId)
+        tasks: state.tasks.map((task) => ({
+          ...task,
+          okrLinks: task.okrLinks.filter((link) => link.keyResultId !== keyResultId)
         }))
       }));
-    },
+    }
+  };
+}
 
-    // Repository link management
-    addRepositoryLink: (taskId: string, repoLink: Omit<RepositoryLink, 'id'>) => {
+function createTaskRepositoryActions({ update }: Pick<TaskStoreInternals, 'update'>) {
+  return {
+    addRepositoryLink(taskId: string, repoLink: Omit<RepositoryLink, 'id'>) {
       const newRepoLink: RepositoryLink = {
         ...repoLink,
         id: crypto.randomUUID()
       };
-      update((state) => ({
-        ...state,
-        tasks: state.tasks.map((t) =>
-          t.id === taskId
-            ? { ...t, repositoryLinks: [...(t.repositoryLinks ?? []), newRepoLink], updatedAt: new Date() }
-            : t
+      update((state) =>
+        withMappedTask(state, taskId, (task) =>
+          withUpdatedTask(task, { repositoryLinks: [...(task.repositoryLinks ?? []), newRepoLink] })
         )
-      }));
+      );
     },
-
-    removeRepositoryLink: (taskId: string, repoLinkId: string) => {
-      update((state) => ({
-        ...state,
-        tasks: state.tasks.map((t) =>
-          t.id === taskId
-            ? {
-                ...t,
-                repositoryLinks: (t.repositoryLinks ?? []).filter((l) => l.id !== repoLinkId),
-                updatedAt: new Date()
-              }
-            : t
+    removeRepositoryLink(taskId: string, repoLinkId: string) {
+      update((state) =>
+        withMappedTask(state, taskId, (task) =>
+          withUpdatedTask(task, {
+            repositoryLinks: (task.repositoryLinks ?? []).filter((link) => link.id !== repoLinkId)
+          })
         )
-      }));
-    },
+      );
+    }
+  };
+}
 
-    // Filtering
-    setFilters: (filters: Partial<TaskState['filters']>) => {
+function createTaskFilterActions({ update }: Pick<TaskStoreInternals, 'update'>) {
+  return {
+    setFilters(filters: Partial<TaskState['filters']>) {
       update((state) => ({
         ...state,
         filters: { ...state.filters, ...filters }
       }));
     },
-
-    clearFilters: () => {
+    clearFilters() {
       update((state) => ({
         ...state,
         filters: { status: null, priority: null, okrLinkId: null, search: '' }
       }));
-    },
+    }
+  };
+}
 
-    // Persistence
-    saveToLocalStorage: () => {
-      if (typeof window === 'undefined') return;
+function createTaskPersistenceActions({ set, update }: Pick<TaskStoreInternals, 'set' | 'update'>) {
+  return {
+    saveToLocalStorage() {
       update((state) => {
-        try {
-          const data = JSON.stringify(state, (_key, value) => {
-            if (value instanceof Date) {
-              return { __type: 'Date', value: value.toISOString() };
-            }
-            return value;
-          });
-          localStorage.setItem('task-data', data);
-        } catch (error) {
-          console.error('Failed to save task data to localStorage:', error);
-        }
+        saveTaskState(state);
         return state;
       });
     },
-
-    loadFromLocalStorage: () => {
-      if (typeof window === 'undefined') return;
-      try {
-        const data = localStorage.getItem('task-data');
-        if (!data) return;
-        const parsed = JSON.parse(data, (_key, value) => {
-          if (value?.__type === 'Date') {
-            return new Date(value.value);
-          }
-          return value;
-        });
-        set(parsed);
-      } catch (error) {
-        console.error('Failed to load task data from localStorage:', error);
+    loadFromLocalStorage() {
+      const loadedState = loadTaskState();
+      if (loadedState) {
+        set(loadedState);
       }
     }
   };
+}
+
+function createTaskActions(internals: TaskStoreInternals) {
+  const { subscribe } = internals;
+  return {
+    subscribe,
+    ...createTaskCrudActions(internals),
+    ...createTaskLinkActions(internals),
+    ...createTaskRepositoryActions(internals),
+    ...createTaskFilterActions(internals),
+    ...createTaskPersistenceActions(internals)
+  };
+}
+
+function createTaskStore() {
+  const store = writable(initialState);
+  return createTaskActions(store);
 }
 
 export const taskStore = createTaskStore();

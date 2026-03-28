@@ -24,8 +24,14 @@ services:
   frontend:
     build:
       context: .
+      dockerfile: Containerfile
     depends_on:
       - crater
+    environment:
+      KEFINE_CRATER: http://crater:3001
+      KEFINE_EXCHANGE: http://crater:3001
+      PORT: 5173
+      ORIGIN: http://localhost:5173
     ports:
       - "5173:5173"
 

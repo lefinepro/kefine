@@ -78,10 +78,8 @@ export function parseOrgFile(content: string): OrgFile {
       while (i < lines.length) {
         const nextLine = lines[i] ?? '';
         const nextHl = nextLine.match(/^(\*+)\s/);
-        if (nextHl) {
-          const nextStars = nextHl[1] ?? '';
-          if (nextStars.length <= level) break;
-        }
+        const nextStars = nextHl?.[1] ?? '';
+        if (nextStars.length > 0 && nextStars.length <= level) break;
         sectionLines.push(nextLine);
         i++;
       }
@@ -287,15 +285,10 @@ function parseNamedDrawer(
 }
 
 function collectHeadlines(headline: OrgHeadline, accumulator: OrgHeadline[]): void {
-  for (const child of headline.children) {
-    if (child.type === 'section') {
-      const section = child as OrgSection;
-      for (const sectionChild of section.children) {
-        if (sectionChild.type === 'headline') {
-          accumulator.push(sectionChild as OrgHeadline);
-          collectHeadlines(sectionChild as OrgHeadline, accumulator);
-        }
-      }
+  for (const section of headline.children.filter((child): child is OrgSection => child.type === 'section')) {
+    for (const nestedHeadline of section.children.filter((child): child is OrgHeadline => child.type === 'headline')) {
+      accumulator.push(nestedHeadline);
+      collectHeadlines(nestedHeadline, accumulator);
     }
   }
 }

@@ -1209,17 +1209,17 @@
     max-height: 100%;
   }
 
-  .kefine-wallet-icon :global(svg) {
+  .kefine-wallet-icon svg {
     width: 100%;
     height: 100%;
   }
 
-  .kefine-wallet-grid span.is-metamask .kefine-wallet-icon :global(svg) {
+  .kefine-wallet-grid span.is-metamask .kefine-wallet-icon svg {
     width: 90%;
     height: 90%;
   }
 
-  .kefine-wallet-grid span.is-google .kefine-wallet-icon :global(svg) {
+  .kefine-wallet-grid span.is-google .kefine-wallet-icon svg {
     width: 86%;
     height: 86%;
   }
@@ -1236,18 +1236,18 @@
     min-height: min(100%, 6.2rem);
   }
 
-  .kefine-auth-icon :global(svg) {
+  .kefine-auth-icon svg {
     width: 100%;
     height: 100%;
     color: var(--kef-primary);
   }
 
-  .kefine-auth-tile--passkey .kefine-auth-icon :global(svg) {
+  .kefine-auth-tile--passkey .kefine-auth-icon svg {
     width: 100%;
     height: 100%;
   }
 
-  .kefine-auth-tile--anonymous .kefine-auth-icon :global(svg) {
+  .kefine-auth-tile--anonymous .kefine-auth-icon svg {
     width: 84%;
     height: 84%;
   }
@@ -1277,7 +1277,7 @@
     font-weight: 700;
   }
 
-  .kefine-payment-choice :global(svg) {
+  .kefine-payment-choice svg {
     flex: 0 0 auto;
   }
 
