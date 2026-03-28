@@ -1,7 +1,8 @@
 require "base64"
-require "file_utils"
+require "db"
 require "json"
 require "mutex"
+require "pg"
 require "random/secure"
 require "time"
 require "uri"
@@ -90,27 +91,74 @@ module Crater
       end
     end
 
-    class State
-      include JSON::Serializable
+    record SessionResult, token : String, user_id : String, username : String, expires_at : String
 
-      property users : Array(UserRecord)
-      property challenges : Array(ChallengeRecord)
-      property sessions : Array(SessionRecord)
+    @@db : DB::Database? = nil
+    @@db_lock = Mutex.new
+    @@lock = Mutex.new
+    @@ready = false
 
-      def initialize(
-        @users : Array(UserRecord) = [] of UserRecord,
-        @challenges : Array(ChallengeRecord) = [] of ChallengeRecord,
-        @sessions : Array(SessionRecord) = [] of SessionRecord
-      )
+    private def self.setup(config : Utils::Config) : Nil
+      db = database(config)
+      return if @@ready
+
+      @@db_lock.synchronize do
+        unless @@ready
+          db.exec <<-SQL
+            CREATE TABLE IF NOT EXISTS exchange_users (
+              id TEXT PRIMARY KEY,
+              username TEXT NOT NULL UNIQUE,
+              created_at TEXT NOT NULL
+            )
+          SQL
+
+          db.exec <<-SQL
+            CREATE TABLE IF NOT EXISTS exchange_credentials (
+              id TEXT PRIMARY KEY,
+              user_id TEXT NOT NULL,
+              public_key TEXT,
+              counter INTEGER NOT NULL DEFAULT 0,
+              created_at TEXT NOT NULL
+            )
+          SQL
+
+          db.exec "CREATE INDEX IF NOT EXISTS idx_exchange_credentials_user_id ON exchange_credentials(user_id)"
+
+          db.exec <<-SQL
+            CREATE TABLE IF NOT EXISTS exchange_challenges (
+              transaction_id TEXT PRIMARY KEY,
+              kind TEXT NOT NULL,
+              username TEXT,
+              challenge TEXT NOT NULL,
+              rp_id TEXT NOT NULL,
+              created_at TEXT NOT NULL,
+              expires_at TEXT NOT NULL
+            )
+          SQL
+
+          db.exec "CREATE INDEX IF NOT EXISTS idx_exchange_challenges_username_kind ON exchange_challenges(username, kind)"
+
+          db.exec <<-SQL
+            CREATE TABLE IF NOT EXISTS exchange_sessions (
+              token TEXT PRIMARY KEY,
+              user_id TEXT NOT NULL,
+              username TEXT NOT NULL,
+              created_at TEXT NOT NULL,
+              expires_at TEXT NOT NULL
+            )
+          SQL
+
+          db.exec "CREATE INDEX IF NOT EXISTS idx_exchange_sessions_username ON exchange_sessions(username)"
+
+          @@ready = true
+        end
       end
     end
 
-    record SessionResult, token : String, user_id : String, username : String, expires_at : String
-
-    @@lock = Mutex.new
-
-    private def self.store_path(config : Utils::Config) : String
-      config.exchange_store_path
+    private def self.database(config : Utils::Config) : DB::Database
+      @@db_lock.synchronize do
+        @@db ||= DB.open(config.database_url)
+      end
     end
 
     private def self.parse_time(value : String) : Time?
@@ -119,46 +167,100 @@ module Crater
       nil
     end
 
-    private def self.ensure_store_exists(config : Utils::Config) : Nil
-      path = store_path(config)
-      FileUtils.mkdir_p(File.dirname(path))
-      return if File.exists?(path)
-
-      File.write(path, State.new.to_json)
-    end
-
-    private def self.read_state(config : Utils::Config) : State
-      ensure_store_exists(config)
-      State.from_json(File.read(store_path(config)))
-    rescue
-      State.new
-    end
-
-    private def self.write_state(config : Utils::Config, state : State) : Nil
-      ensure_store_exists(config)
-      File.write(store_path(config), state.to_json)
-    end
-
-    private def self.prune!(state : State) : Nil
+    private def self.prune!(config : Utils::Config) : Nil
+      setup(config)
       now = Time.utc
-      state.challenges.select! do |challenge|
-        expires_at = parse_time(challenge.expires_at)
-        expires_at && expires_at > now
+
+      database(config).query_all("SELECT transaction_id, expires_at FROM exchange_challenges", as: {String, String}).each do |row|
+        expires_at = parse_time(row[1])
+        next if expires_at && expires_at > now
+
+        database(config).exec("DELETE FROM exchange_challenges WHERE transaction_id = $1", row[0])
       end
-      state.sessions.select! do |session|
-        expires_at = parse_time(session.expires_at)
-        expires_at && expires_at > now
+
+      database(config).query_all("SELECT token, expires_at FROM exchange_sessions", as: {String, String}).each do |row|
+        expires_at = parse_time(row[1])
+        next if expires_at && expires_at > now
+
+        database(config).exec("DELETE FROM exchange_sessions WHERE token = $1", row[0])
       end
     end
 
-    private def self.find_user(state : State, username : String) : UserRecord?
-      state.users.find { |user| user.username == username }
+    private def self.load_credentials(config : Utils::Config, user_id : String) : Array(CredentialRecord)
+      setup(config)
+      database(config).query_all(
+        "SELECT id, public_key, counter, created_at FROM exchange_credentials WHERE user_id = $1 ORDER BY created_at ASC",
+        user_id,
+        as: {String, String?, Int32, String}
+      ).map do |row|
+        CredentialRecord.new(
+          id: row[0],
+          public_key: row[1],
+          counter: row[2],
+          created_at: row[3]
+        )
+      end
     end
 
-    private def self.find_user_by_credential(state : State, credential_id : String) : UserRecord?
-      state.users.find do |user|
-        user.credentials.any? { |credential| credential.id == credential_id }
-      end
+    private def self.find_user(config : Utils::Config, username : String) : UserRecord?
+      setup(config)
+      row = database(config).query_one?(
+        "SELECT id, username, created_at FROM exchange_users WHERE username = $1",
+        username,
+        as: {String, String, String}
+      )
+      return nil unless row
+
+      UserRecord.new(
+        id: row[0],
+        username: row[1],
+        created_at: row[2],
+        credentials: load_credentials(config, row[0])
+      )
+    end
+
+    private def self.find_user_by_credential(config : Utils::Config, credential_id : String) : UserRecord?
+      setup(config)
+      row = database(config).query_one?(
+        <<-SQL,
+          SELECT u.id, u.username, u.created_at
+          FROM exchange_users u
+          INNER JOIN exchange_credentials c ON c.user_id = u.id
+          WHERE c.id = $1
+          LIMIT 1
+        SQL
+        credential_id,
+        as: {String, String, String}
+      )
+      return nil unless row
+
+      UserRecord.new(
+        id: row[0],
+        username: row[1],
+        created_at: row[2],
+        credentials: load_credentials(config, row[0])
+      )
+    end
+
+    private def self.find_challenge(config : Utils::Config, transaction_id : String, kind : String) : ChallengeRecord?
+      setup(config)
+      row = database(config).query_one?(
+        "SELECT transaction_id, kind, username, challenge, rp_id, created_at, expires_at FROM exchange_challenges WHERE transaction_id = $1 AND kind = $2",
+        transaction_id,
+        kind,
+        as: {String, String, String?, String, String, String, String}
+      )
+      return nil unless row
+
+      ChallengeRecord.new(
+        transaction_id: row[0],
+        kind: row[1],
+        username: row[2],
+        challenge: row[3],
+        rp_id: row[4],
+        created_at: row[5],
+        expires_at: row[6]
+      )
     end
 
     private def self.user_handle(config : Utils::Config, username : String) : String
@@ -169,15 +271,78 @@ module Crater
       Base64.urlsafe_encode(Random::Secure.random_bytes(32), padding: false)
     end
 
-    private def self.create_session(state : State, config : Utils::Config, user : UserRecord) : SessionResult
+    private def self.upsert_user(config : Utils::Config, user : UserRecord) : Nil
+      setup(config)
+      database(config).exec(
+        <<-SQL,
+          INSERT INTO exchange_users (id, username, created_at)
+          VALUES ($1, $2, $3)
+          ON CONFLICT (id) DO UPDATE SET
+            username = EXCLUDED.username,
+            created_at = EXCLUDED.created_at
+        SQL
+        user.id,
+        user.username,
+        user.created_at
+      )
+    end
+
+    private def self.insert_credential(config : Utils::Config, user_id : String, credential : CredentialRecord) : Nil
+      setup(config)
+      database(config).exec(
+        <<-SQL,
+          INSERT INTO exchange_credentials (id, user_id, public_key, counter, created_at)
+          VALUES ($1, $2, $3, $4, $5)
+          ON CONFLICT (id) DO UPDATE SET
+            user_id = EXCLUDED.user_id,
+            public_key = EXCLUDED.public_key,
+            counter = EXCLUDED.counter,
+            created_at = EXCLUDED.created_at
+        SQL
+        credential.id,
+        user_id,
+        credential.public_key,
+        credential.counter,
+        credential.created_at
+      )
+    end
+
+    private def self.insert_challenge(config : Utils::Config, challenge : ChallengeRecord) : Nil
+      setup(config)
+      database(config).exec(
+        <<-SQL,
+          INSERT INTO exchange_challenges (transaction_id, kind, username, challenge, rp_id, created_at, expires_at)
+          VALUES ($1, $2, $3, $4, $5, $6, $7)
+        SQL
+        challenge.transaction_id,
+        challenge.kind,
+        challenge.username,
+        challenge.challenge,
+        challenge.rp_id,
+        challenge.created_at,
+        challenge.expires_at
+      )
+    end
+
+    private def self.create_session(config : Utils::Config, user : UserRecord) : SessionResult
+      setup(config)
       user_id = user.id.empty? ? user_handle(config, user.username) : user.id
       session = SessionRecord.new(
         token: UUID.random.to_s,
         user_id: user_id,
         username: user.username
       )
-      state.sessions.reject! { |existing| existing.username == user.username }
-      state.sessions << session
+
+      database(config).exec("DELETE FROM exchange_sessions WHERE username = $1", user.username)
+      database(config).exec(
+        "INSERT INTO exchange_sessions (token, user_id, username, created_at, expires_at) VALUES ($1, $2, $3, $4, $5)",
+        session.token,
+        session.user_id,
+        session.username,
+        session.created_at,
+        session.expires_at
+      )
+
       SessionResult.new(session.token, session.user_id, session.username, session.expires_at)
     end
 
@@ -185,10 +350,9 @@ module Crater
       raise ArgumentError.new("Username is required.") if username.strip.empty?
 
       @@lock.synchronize do
-        state = read_state(config)
-        prune!(state)
+        prune!(config)
 
-        user = find_user(state, username)
+        user = find_user(config, username)
         challenge = ChallengeRecord.new(
           transaction_id: UUID.random.to_s,
           kind: "register",
@@ -196,9 +360,9 @@ module Crater
           rp_id: rp_id,
           username: username
         )
-        state.challenges.reject! { |existing| existing.username == username && existing.kind == "register" }
-        state.challenges << challenge
-        write_state(config, state)
+
+        database(config).exec("DELETE FROM exchange_challenges WHERE username = $1 AND kind = 'register'", username)
+        insert_challenge(config, challenge)
 
         credentials = user.try(&.credentials) || [] of CredentialRecord
         {
@@ -242,46 +406,42 @@ module Crater
       raise ArgumentError.new("Passkey response is missing credential id.") if credential_id.nil? || credential_id.empty?
 
       @@lock.synchronize do
-        state = read_state(config)
-        prune!(state)
+        prune!(config)
 
-        challenge = state.challenges.find do |entry|
-          entry.transaction_id == transaction_id && entry.kind == "register"
-        end
+        challenge = find_challenge(config, transaction_id, "register")
         raise ArgumentError.new("Registration challenge has expired.") unless challenge
         raise ArgumentError.new("Registration username mismatch.") if challenge.username != username
 
-        user = find_user(state, username)
+        user = find_user(config, username)
         unless user
           user = UserRecord.new(
             id: user_handle(config, username),
             username: username
           )
-          state.users << user
+          upsert_user(config, user)
         end
 
         unless user.credentials.any? { |credential| credential.id == credential_id }
           response_map = payload["response"]?.try(&.as_h?)
           public_key = response_map.try(&.["publicKey"]?).try(&.as_s?)
-          user.credentials << CredentialRecord.new(
+          credential = CredentialRecord.new(
             id: credential_id,
             public_key: public_key
           )
+          insert_credential(config, user.id, credential)
+          user.credentials << credential
         end
 
-        state.challenges.reject! { |entry| entry.transaction_id == transaction_id }
-        session = create_session(state, config, user)
-        write_state(config, state)
-        session
+        database(config).exec("DELETE FROM exchange_challenges WHERE transaction_id = $1", transaction_id)
+        create_session(config, user)
       end
     end
 
     def self.begin_authentication(config : Utils::Config, username : String?, rp_id : String)
       @@lock.synchronize do
-        state = read_state(config)
-        prune!(state)
+        prune!(config)
 
-        user = username.try { |value| find_user(state, value) }
+        user = username.try { |value| find_user(config, value) }
         if username && user.nil?
           raise ArgumentError.new("No passkey profile exists for this username.")
         end
@@ -290,7 +450,18 @@ module Crater
           if user
             user.credentials
           else
-            state.users.flat_map(&.credentials)
+            setup(config)
+            database(config).query_all(
+              "SELECT id, public_key, counter, created_at FROM exchange_credentials ORDER BY created_at ASC",
+              as: {String, String?, Int32, String}
+            ).map do |row|
+              CredentialRecord.new(
+                id: row[0],
+                public_key: row[1],
+                counter: row[2],
+                created_at: row[3]
+              )
+            end
           end
         raise ArgumentError.new("No passkey credential was found.") if credentials.empty?
 
@@ -301,8 +472,7 @@ module Crater
           rp_id: rp_id,
           username: username
         )
-        state.challenges << challenge
-        write_state(config, state)
+        insert_challenge(config, challenge)
 
         {
           transaction_id: challenge.transaction_id,
@@ -327,25 +497,20 @@ module Crater
       raise ArgumentError.new("Passkey response is missing credential id.") if credential_id.nil? || credential_id.empty?
 
       @@lock.synchronize do
-        state = read_state(config)
-        prune!(state)
+        prune!(config)
 
-        challenge = state.challenges.find do |entry|
-          entry.transaction_id == transaction_id && entry.kind == "authenticate"
-        end
+        challenge = find_challenge(config, transaction_id, "authenticate")
         raise ArgumentError.new("Authentication challenge has expired.") unless challenge
 
-        user = find_user_by_credential(state, credential_id)
+        user = find_user_by_credential(config, credential_id)
         raise ArgumentError.new("No matching passkey credential was found.") unless user
 
         if challenge.username && challenge.username != user.username
           raise ArgumentError.new("Authentication username mismatch.")
         end
 
-        state.challenges.reject! { |entry| entry.transaction_id == transaction_id }
-        session = create_session(state, config, user)
-        write_state(config, state)
-        session
+        database(config).exec("DELETE FROM exchange_challenges WHERE transaction_id = $1", transaction_id)
+        create_session(config, user)
       end
     end
   end

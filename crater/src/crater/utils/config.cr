@@ -8,7 +8,6 @@ module Crater
       getter env : String
       getter crater_url : String
       getter exchange_url : String
-      getter exchange_store_path : String
       getter database_url : String
       getter payment_evm_address : String
       getter payment_chain_id : Int64
@@ -23,7 +22,6 @@ module Crater
         @env : String,
         @crater_url : String,
         @exchange_url : String,
-        @exchange_store_path : String,
         @database_url : String,
         @payment_evm_address : String,
         @payment_chain_id : Int64,
@@ -44,7 +42,6 @@ module Crater
           env: env.fetch("CRYSTAL_ENV", "development"),
           crater_url: crater_url,
           exchange_url: exchange_url,
-          exchange_store_path: env.fetch("EXCHANGE_STORE_PATH", ".data/exchange-state.json"),
           database_url: env.fetch("KEFINE_DATABASE_URL", "postgresql://kefine:kefine@localhost:5432/kefine"),
           payment_evm_address: env.fetch("KEFINE_PAYMENT_EVM_ADDRESS", ""),
           payment_chain_id: env.fetch("KEFINE_PAYMENT_CHAIN_ID", "43114").to_i64,

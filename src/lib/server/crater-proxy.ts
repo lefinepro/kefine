@@ -26,11 +26,19 @@ export async function proxyCraterRequest(
     });
 
     const payload = await response.text();
+    const contentType = response.headers.get('content-type') ?? 'application/json';
+
+    if (!response.ok && !contentType.toLowerCase().includes('application/json')) {
+      const normalized = payload.replace(/\s+/g, ' ').trim();
+      const message = normalized || response.statusText || options.errorMessage;
+
+      return json({ error: message }, { status: response.status });
+    }
 
     return new Response(payload, {
       status: response.status,
       headers: {
-        'content-type': response.headers.get('content-type') ?? 'application/json'
+        'content-type': contentType
       }
     });
   } catch (error) {
