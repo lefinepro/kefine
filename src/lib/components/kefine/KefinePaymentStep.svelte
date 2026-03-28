@@ -13,11 +13,13 @@
   const authIcons = {
     passkey: 'mdi:fingerprint'
   } as const;
-  const FALLBACK_PAYMENT_EVM_ADDRESS = (import.meta.env.VITE_KEFINE_PAYMENT_EVM_ADDRESS as string | undefined)?.trim() ?? '';
-  const FALLBACK_PAYMENT_CHAIN_ID = 43114;
-  const FALLBACK_PAYMENT_TOKEN_ADDRESS = '0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E';
-  const FALLBACK_PAYMENT_TOKEN_SYMBOL = 'USDC';
-  const FALLBACK_PAYMENT_TOKEN_DECIMALS = 6;
+  type PaymentConfig = {
+    paymentAddress: string;
+    paymentChainId: number;
+    paymentTokenAddress: string;
+    paymentTokenSymbol: string;
+    paymentTokenDecimals: number;
+  };
 
   let {
     currentOrder,
@@ -121,7 +123,9 @@
   let promoFeedback = $state('');
   let promoFeedbackTone = $state<'neutral' | 'success' | 'error'>('neutral');
   let paymentQuote = $state<PaymentQuote | null>(null);
+  let paymentConfig = $state<PaymentConfig | null>(null);
   let paymentLoading = $state(false);
+  let paySubmitting = $state(false);
   let paymentError = $state('');
   let promoApplying = $state(false);
   let guestAccessStartedAt = $state<number | null>(null);
@@ -156,7 +160,7 @@
   });
   const quoteReady = $derived(paymentQuote !== null && !paymentLoading);
   const paymentRequestLabel = $derived(paymentQuote?.paymentTokenSymbol ? `EVM ${paymentQuote.paymentTokenSymbol}` : 'EVM payment');
-  const qrPayload = $derived(paymentQuote?.paymentRequest ?? paymentQuote?.paymentAddress ?? null);
+  const qrPayload = $derived(paymentQuote?.paymentAddress ?? null);
   const qrImageUrl = $derived.by(() => {
     if (!qrPayload) {
       return null;
@@ -181,17 +185,18 @@
     return `kefine-vpn-guest-access:${orderId}`;
   }
 
-  function buildPaymentRequest(address: string, amount: number) {
+  function buildPaymentRequest(config: PaymentConfig, amount: number) {
+    const address = config.paymentAddress;
     if (!address || amount <= 0) {
       return undefined;
     }
 
-    const atomicAmount = Math.round(amount * 10 ** FALLBACK_PAYMENT_TOKEN_DECIMALS);
-    return `ethereum:${FALLBACK_PAYMENT_TOKEN_ADDRESS}@${FALLBACK_PAYMENT_CHAIN_ID}/transfer?address=${address}&uint256=${atomicAmount}`;
+    const atomicAmount = Math.round(amount * 10 ** config.paymentTokenDecimals);
+    return `ethereum:${config.paymentTokenAddress}@${config.paymentChainId}/transfer?address=${address}&uint256=${atomicAmount}`;
   }
 
   function buildFallbackQuote(code?: string): PaymentQuote | null {
-    if (!currentOrder) {
+    if (!currentOrder || !paymentConfig) {
       return null;
     }
 
@@ -214,13 +219,40 @@
       promoMessage: normalizedCode ? (promoApplied ? 'Promo applied. VPN delivery is now unlocked.' : 'Promo code not recognized.') : undefined,
       strikeOriginalPrice: promoApplied && originalAmount > 0,
       freeUnlock: promoApplied,
-      paymentAddress: FALLBACK_PAYMENT_EVM_ADDRESS,
-      paymentRequest: buildPaymentRequest(FALLBACK_PAYMENT_EVM_ADDRESS, effectiveAmount),
-      paymentChainId: FALLBACK_PAYMENT_CHAIN_ID,
-      paymentTokenAddress: FALLBACK_PAYMENT_TOKEN_ADDRESS,
-      paymentTokenSymbol: FALLBACK_PAYMENT_TOKEN_SYMBOL,
+      paymentAddress: paymentConfig.paymentAddress,
+      paymentRequest: buildPaymentRequest(paymentConfig, effectiveAmount),
+      paymentChainId: paymentConfig.paymentChainId,
+      paymentTokenAddress: paymentConfig.paymentTokenAddress,
+      paymentTokenSymbol: paymentConfig.paymentTokenSymbol,
+      paymentTokenDecimals: paymentConfig.paymentTokenDecimals,
       paymentUrl: currentOrder.paymentUrl ?? paymentInvoiceFallback,
       labels
+    };
+  }
+
+  function readPaymentConfig(body: unknown): PaymentConfig | null {
+    if (!body || typeof body !== 'object') {
+      return null;
+    }
+
+    const record = body as Record<string, unknown>;
+    const paymentAddress = typeof record.paymentAddress === 'string' ? record.paymentAddress.trim() : '';
+    const paymentTokenAddress = typeof record.paymentTokenAddress === 'string' ? record.paymentTokenAddress.trim() : '';
+    const paymentTokenSymbol = typeof record.paymentTokenSymbol === 'string' ? record.paymentTokenSymbol.trim() : '';
+    const paymentChainId = typeof record.paymentChainId === 'number' ? record.paymentChainId : Number(record.paymentChainId);
+    const paymentTokenDecimals =
+      typeof record.paymentTokenDecimals === 'number' ? record.paymentTokenDecimals : Number(record.paymentTokenDecimals);
+
+    if (!paymentAddress || !paymentTokenAddress || !paymentTokenSymbol || !Number.isFinite(paymentChainId) || !Number.isFinite(paymentTokenDecimals)) {
+      return null;
+    }
+
+    return {
+      paymentAddress,
+      paymentChainId,
+      paymentTokenAddress,
+      paymentTokenSymbol,
+      paymentTokenDecimals
     };
   }
 
@@ -268,22 +300,48 @@
       }
 
       paymentQuote = parsed;
+      paymentConfig = {
+        paymentAddress: parsed.paymentAddress,
+        paymentChainId: parsed.paymentChainId,
+        paymentTokenAddress: parsed.paymentTokenAddress,
+        paymentTokenSymbol: parsed.paymentTokenSymbol,
+        paymentTokenDecimals: parsed.paymentTokenDecimals
+      };
       promoFeedback = parsed.promoMessage ?? '';
       promoFeedbackTone = parsed.promoApplied ? 'success' : 'neutral';
       if (parsed.promoCode) {
         promoCode = parsed.promoCode;
       }
     } catch (error) {
+      await ensurePaymentConfig();
       const fallback = buildFallbackQuote();
       if (fallback) {
         paymentQuote = fallback;
-        paymentError = fallback.paymentAddress ? '' : (error instanceof Error ? error.message : 'Failed to load payment quote.');
+        paymentError = '';
       } else {
         paymentError = error instanceof Error ? error.message : 'Failed to load payment quote.';
       }
     } finally {
       paymentLoading = false;
     }
+  }
+
+  async function ensurePaymentConfig() {
+    if (paymentConfig) {
+      return paymentConfig;
+    }
+
+    const response = await fetch('/payment/config', {
+      headers: { Accept: 'application/json' }
+    });
+    const body = await readJsonOrThrow(response);
+    const parsed = readPaymentConfig(body);
+    if (!parsed) {
+      throw new Error('Payment config is invalid.');
+    }
+
+    paymentConfig = parsed;
+    return parsed;
   }
 
   async function applyPromoCode() {
@@ -317,6 +375,13 @@
       }
 
       paymentQuote = parsed;
+      paymentConfig = {
+        paymentAddress: parsed.paymentAddress,
+        paymentChainId: parsed.paymentChainId,
+        paymentTokenAddress: parsed.paymentTokenAddress,
+        paymentTokenSymbol: parsed.paymentTokenSymbol,
+        paymentTokenDecimals: parsed.paymentTokenDecimals
+      };
       promoFeedback = parsed.promoMessage ?? (parsed.promoApplied ? paymentLabels.promoOk : paymentLabels.promoWrong);
       promoFeedbackTone = parsed.promoApplied ? 'success' : 'error';
 
@@ -341,17 +406,45 @@
     }
   }
 
-  function handlePrimaryPaymentAction() {
+  async function handlePrimaryPaymentAction() {
     if (paymentQuote?.freeUnlock) {
       onRevealResult();
       return;
     }
 
-    onConfirmPayment();
+    if (!paymentQuote?.paymentAddress || !paymentQuote.paymentTokenAddress || !paymentQuote.paymentChainId) {
+      onConfirmPayment();
+      return;
+    }
+
+    paySubmitting = true;
+    paymentError = '';
+
+    try {
+      const { openAppKit, payWithReownErc20Transfer, ReownPaymentError } = await import('$lib/auth/appkit.js');
+
+      await payWithReownErc20Transfer({
+        chainId: paymentQuote.paymentChainId,
+        tokenAddress: paymentQuote.paymentTokenAddress as `0x${string}`,
+        recipientAddress: paymentQuote.paymentAddress as `0x${string}`,
+        amount: paymentQuote.effectiveAmount,
+        decimals: paymentQuote.paymentTokenDecimals
+      });
+
+      onConfirmPayment();
+    } catch (error) {
+      if (error instanceof ReownPaymentError && error.code === 'wallet_not_connected') {
+        await openAppKit();
+      }
+
+      paymentError = error instanceof Error ? error.message : 'Failed to complete Reown payment.';
+    } finally {
+      paySubmitting = false;
+    }
   }
 
-  function handlePayAction() {
-    handlePrimaryPaymentAction();
+  async function handlePayAction() {
+    await handlePrimaryPaymentAction();
   }
 
   $effect(() => {
@@ -359,6 +452,7 @@
       return;
     }
 
+    void ensurePaymentConfig().catch(() => undefined);
     void loadPaymentQuote();
   });
 
@@ -488,8 +582,14 @@
           {/if}
 
           <div class="kefine-payment-action-row">
-            <button type="button" data-variant="primary" onclick={handlePrimaryPaymentAction} disabled={!quoteReady && !paymentError}>
-              {paymentQuote?.freeUnlock ? buttons.openResult : payButtonLabel}
+            <button type="button" data-variant="primary" onclick={handlePrimaryPaymentAction} disabled={paySubmitting || (!quoteReady && !paymentError)}>
+              {#if paySubmitting}
+                Processing...
+              {:else if paymentQuote?.freeUnlock}
+                {buttons.openResult}
+              {:else}
+                {payButtonLabel}
+              {/if}
             </button>
           </div>
 

@@ -1,4 +1,4 @@
-# Kefine
+# Lefine
 
 Kefine is a SvelteKit application for submitting solver tasks, tracking their execution state, and moving through authentication and payment flows. This repository also includes a small backend service called `crater` that accepts orders and serves order status updates.
 

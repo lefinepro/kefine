@@ -392,6 +392,7 @@ export function readPaymentQuote(body: unknown): PaymentQuote | null {
   const paymentTokenAddress = toStringValue(body['paymentTokenAddress']);
   const paymentTokenSymbol = toStringValue(body['paymentTokenSymbol']);
   const paymentChainId = toNumber(body['paymentChainId']);
+  const paymentTokenDecimals = toNumber(body['paymentTokenDecimals']) ?? 6;
 
   if (
     !orderId ||
@@ -425,6 +426,7 @@ export function readPaymentQuote(body: unknown): PaymentQuote | null {
     paymentChainId,
     paymentTokenAddress,
     paymentTokenSymbol,
+    paymentTokenDecimals,
     paymentUrl: toStringValue(body['paymentUrl']) || undefined,
     labels: toStringList(body['labels']) || []
   };

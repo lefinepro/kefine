@@ -170,6 +170,8 @@ export const KEFINE_TEXT_EN = {
     walletAccount: 'Connected account',
     walletNetworkEthereum: 'Ethereum',
     walletNetworkGnosis: 'Gnosis',
+    walletNetworkAvalanche: 'Avalanche',
+    walletNetworkAvalancheFuji: 'Avalanche Testnet',
     anonymousHint: 'Anonymous checkout enabled.'
   },
   executionFlow: {

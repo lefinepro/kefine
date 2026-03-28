@@ -63,6 +63,7 @@ export type PaymentQuote = {
   paymentChainId: number;
   paymentTokenAddress: string;
   paymentTokenSymbol: string;
+  paymentTokenDecimals: number;
   paymentUrl?: string;
   labels: string[];
 };
