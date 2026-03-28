@@ -21,6 +21,8 @@
     paymentTokenDecimals: number;
   };
 
+  const ZERO_EVM_ADDRESS = '0x0000000000000000000000000000000000000000';
+
   let {
     currentOrder,
     paymentInvoiceFallback,
@@ -187,7 +189,7 @@
 
   function buildPaymentRequest(config: PaymentConfig, amount: number) {
     const address = config.paymentAddress;
-    if (!address || amount <= 0) {
+    if (!address || address.toLowerCase() === ZERO_EVM_ADDRESS || amount <= 0) {
       return undefined;
     }
 
@@ -243,7 +245,15 @@
     const paymentTokenDecimals =
       typeof record.paymentTokenDecimals === 'number' ? record.paymentTokenDecimals : Number(record.paymentTokenDecimals);
 
-    if (!paymentAddress || !paymentTokenAddress || !paymentTokenSymbol || !Number.isFinite(paymentChainId) || !Number.isFinite(paymentTokenDecimals)) {
+    if (
+      !paymentAddress ||
+      !paymentTokenAddress ||
+      !paymentTokenSymbol ||
+      paymentAddress.toLowerCase() === ZERO_EVM_ADDRESS ||
+      paymentTokenAddress.toLowerCase() === ZERO_EVM_ADDRESS ||
+      !Number.isFinite(paymentChainId) ||
+      !Number.isFinite(paymentTokenDecimals)
+    ) {
       return null;
     }
 
@@ -331,13 +341,13 @@
       return paymentConfig;
     }
 
-    const response = await fetch('/payment/config', {
+    const response = await fetch('/api/kefine/payment-config', {
       headers: { Accept: 'application/json' }
     });
     const body = await readJsonOrThrow(response);
     const parsed = readPaymentConfig(body);
     if (!parsed) {
-      throw new Error('Payment config is invalid.');
+      throw new Error('Payment config is invalid or not configured on the server.');
     }
 
     paymentConfig = parsed;
@@ -421,6 +431,10 @@
     paymentError = '';
 
     try {
+      if (paymentQuote.paymentAddress.toLowerCase() === ZERO_EVM_ADDRESS) {
+        throw new Error('Payment recipient address is not configured on the server.');
+      }
+
       const { openAppKit, payWithReownErc20Transfer, ReownPaymentError } = await import('$lib/auth/appkit.js');
 
       await payWithReownErc20Transfer({

@@ -194,7 +194,7 @@ module Crater
 
     private def self.build_payment_request(config : Utils::Config, amount : Float64) : String?
       address = config.payment_evm_address.strip
-      return nil if address.empty? || amount <= 0
+      return nil if address.empty? || address.downcase == "0x0000000000000000000000000000000000000000" || amount <= 0
 
       scale = 10_i64 ** config.payment_token_decimals
       atomic_amount = (amount * scale).round.to_i64

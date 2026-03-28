@@ -69,8 +69,9 @@ VITE_REOWN_PROJECT_ID=your_reown_project_id
 Notes:
 
 - `KEFINE_CRATER` is the crater base URL used by the SvelteKit proxy for all order, payment, and passkey operations.
-- `KEFINE_EXCHANGE` is the exchange base URL crater uses for user IDs, payment links, and persisted exchange state.
+- `KEFINE_EXCHANGE` is the exchange base URL crater uses for user IDs and payment links.
 - `VITE_REOWN_PROJECT_ID` is needed if you want wallet login/connect flows to work correctly.
+- `KEFINE_DATABASE_URL` is the Postgres connection string crater uses for orders, payment redemptions, passkey users, challenges, sessions, and outbox activity persistence. In production you should point this to the same database used by the exchange.
 
 ### Remote exchange mode
 
@@ -85,7 +86,7 @@ With this setup:
 
 - the frontend sends task, payment, and passkey requests only to the app's own crater-facing routes,
 - the SvelteKit server forwards those requests to crater,
-- crater can persist exchange users/passkeys locally and use `KEFINE_EXCHANGE` for exchange-facing URLs,
+- crater persists orders, outbox activity, users, passkeys, challenges, sessions, and payment redemptions in Postgres, while still using `KEFINE_EXCHANGE` for exchange-facing URLs,
 - the UI keeps polling status updates through crater instead of talking to the exchange directly.
 
 ### 3. Start the backend
