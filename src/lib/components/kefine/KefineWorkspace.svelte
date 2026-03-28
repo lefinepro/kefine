@@ -48,6 +48,20 @@
     resolveExecutionEstimate,
     toNumber
   } from '$lib/components/kefine/kefine-workflow';
+  import {
+    createContactMailtoUrl,
+    getVisibleOrdersLimit,
+    mergeOrdersById,
+    normalizeDraftOrder,
+    readTaskRouteStateFromLocation
+  } from '$lib/components/kefine/kefine-workspace-helpers';
+  import {
+    fetchOrderStatus,
+    loadWorkspaceOrders,
+    persistWorkspaceOrders,
+    pollWorkspaceOrder,
+    submitWorkspaceOrder
+  } from '$lib/components/kefine/kefine-workspace-orders';
   import { waitForDelay } from '$lib/utils/helpers';
   import { disconnectAppKit } from '$lib/auth/appkit';
 
@@ -372,10 +386,6 @@
     }
   });
 
-  function toggleTheme() {
-    isDarkTheme = !isDarkTheme;
-  }
-
   function resetTransactionState() {
     selectedAuthMethod = null;
     paymentMethod = null;
@@ -384,20 +394,9 @@
     stagePreviewOpen = false;
   }
 
-  function openAuthDialog() {
-    authDialogOpen = true;
-  }
-
-  function closeAuthDialog() {
-    authDialogOpen = false;
-  }
-
-  function closePasskeyDialog() {
-    passkeyDialogOpen = false;
-  }
   async function openSocialAuth() {
         if (!browser) {
-      openAuthDialog();
+      authDialogOpen = true;
       return;
     }
 
@@ -405,7 +404,7 @@
       const { openAppKit } = await import('$lib/auth/appkit.js');
       await openAppKit();
     } catch {
-      openAuthDialog();
+      authDialogOpen = true;
     }
   }
 
@@ -430,25 +429,9 @@
     }
   }
 
-  function toggleLeftNav() {
-    leftNavExpanded = !leftNavExpanded;
-  }
-
   function handleTopbarBrandClick() {
     leftNavExpanded = false;
     newOrder();
-  }
-
-  function selectTopbarTheme() {
-    toggleTheme();
-  }
-
-  function openContactDialog() {
-    contactDialogOpen = true;
-  }
-
-  function closeContactDialog() {
-    contactDialogOpen = false;
   }
 
   function openContactEmailDraft() {
@@ -459,7 +442,7 @@
 
   async function selectTopbarAuth() {
     if (!isAuthenticated) {
-      openAuthDialog();
+      authDialogOpen = true;
       return;
     }
 
@@ -480,89 +463,38 @@
     setKefineLocale(locale);
   }
 
-  function updateContactName(value: string) {
-    contactName = value;
-  }
-
-  function updateContactEmail(value: string) {
-    contactEmail = value;
-  }
-
-  function updateContactMessage(value: string) {
-    contactMessage = value;
-  }
-
   function submitContactEmail() {
     if (!browser) return;
-
-    const subjectSource = contactName.trim() || localeText.brand.name;
-    const bodyLines = [
-      contactName.trim() ? `Name: ${contactName.trim()}` : '',
-      contactEmail.trim() ? `Email: ${contactEmail.trim()}` : '',
-      '',
-      contactMessage.trim()
-    ].filter(Boolean);
-
-    const mailto = new URL(`mailto:${localeText.topbar.contactEmail}`);
-    mailto.searchParams.set('subject', `${localeText.brand.name}: ${subjectSource}`);
-    mailto.searchParams.set('body', bodyLines.join('\n'));
-    window.location.href = mailto.toString();
-    closeContactDialog();
+    window.location.href = createContactMailtoUrl({
+      brandName: localeText.brand.name,
+      recipient: localeText.topbar.contactEmail,
+      name: contactName,
+      email: contactEmail,
+      message: contactMessage
+    });
+    contactDialogOpen = false;
   }
 
   function loadCreatedOrders() {
-    try {
-      const raw = localStorage.getItem(ORDER_STORAGE_KEY);
-      createdOrders = parseStoredOrders(raw, localeText);
-      if (raw !== null) {
-        localStorage.setItem(ORDER_STORAGE_KEY, JSON.stringify(createdOrders));
-      }
-    } catch {
-      createdOrders = [];
-    }
-
-    for (const demoOrder of demoOrders) {
-      const existingIndex = createdOrders.findIndex((order) => order.id === demoOrder.id);
-      if (existingIndex === -1) {
-        createdOrders = [demoOrder, ...createdOrders];
-        continue;
-      }
-
-      const existingOrder = createdOrders[existingIndex];
-      if (!existingOrder) continue;
-
-      createdOrders = [
-        ...createdOrders.slice(0, existingIndex),
-        { ...existingOrder, ...demoOrder, id: existingOrder.id },
-        ...createdOrders.slice(existingIndex + 1)
-      ];
-    }
-
-    persistOrders();
-
-    visibleOrdersLimit = Math.min(ORDER_PAGE_SIZE, createdOrders.length);
+    const loadedState = loadWorkspaceOrders({
+      storage: localStorage,
+      storageKey: ORDER_STORAGE_KEY,
+      localeText,
+      demoOrders,
+      pageSize: ORDER_PAGE_SIZE
+    });
+    createdOrders = loadedState.orders;
+    visibleOrdersLimit = loadedState.visibleLimit;
   }
 
   function persistOrders() {
     if (!browser) return;
-    localStorage.setItem(ORDER_STORAGE_KEY, JSON.stringify(createdOrders));
+    persistWorkspaceOrders(localStorage, ORDER_STORAGE_KEY, createdOrders);
   }
 
   function upsertOrder(order: OrderView) {
-    const index = createdOrders.findIndex((item) => item.id === order.id);
-    if (index === -1) {
-      createdOrders = [order, ...createdOrders];
-    } else {
-      const current = createdOrders[index];
-      if (!current) return;
-      createdOrders = [...createdOrders.slice(0, index), { ...current, ...order, id: current.id }, ...createdOrders.slice(index + 1)];
-    }
-
-    if (createdOrders.length > 0) {
-      visibleOrdersLimit = Math.min(Math.max(visibleOrdersLimit, 1), createdOrders.length);
-    } else {
-      visibleOrdersLimit = ORDER_PAGE_SIZE;
-    }
+    createdOrders = mergeOrdersById(createdOrders, order);
+    visibleOrdersLimit = getVisibleOrdersLimit(createdOrders.length, visibleOrdersLimit, ORDER_PAGE_SIZE);
 
     persistOrders();
   }
@@ -587,53 +519,7 @@
 
   function readTaskRouteState() {
     if (!browser) return null;
-    const hash = window.location.hash.replace(/^#/, '').replace(/\/+$/, '');
-    const hashTaskPrefix = '/task/';
-    const hashLegacyPrefix = '/order/';
-
-    if (hash.startsWith(hashTaskPrefix) || hash.startsWith(hashLegacyPrefix)) {
-      const prefix = hash.startsWith(hashTaskPrefix) ? hashTaskPrefix : hashLegacyPrefix;
-      const remainder = hash.slice(prefix.length);
-      const [encodedId, view] = remainder.split('/');
-      if (!encodedId) return null;
-
-      try {
-        return {
-          orderId: decodeURIComponent(encodedId),
-          view: view === 'result' || view === 'stages' ? view : null
-        } as const;
-      } catch {
-        return {
-          orderId: encodedId,
-          view: view === 'result' || view === 'stages' ? view : null
-        } as const;
-      }
-    }
-
-    const rawPath = window.location.pathname.replace(/\/+$/, '');
-    const taskPrefix = '/task/';
-    const legacyPrefix = '/order/';
-
-    if (!rawPath.startsWith(taskPrefix) && !rawPath.startsWith(legacyPrefix)) {
-      return null;
-    }
-
-    const prefix = rawPath.startsWith(taskPrefix) ? taskPrefix : legacyPrefix;
-    const remainder = rawPath.slice(prefix.length);
-    const [encodedId, view] = remainder.split('/');
-    if (!encodedId) return null;
-
-    try {
-      return {
-        orderId: decodeURIComponent(encodedId),
-        view: view === 'result' || view === 'stages' ? view : null
-      } as const;
-    } catch {
-      return {
-        orderId: encodedId,
-        view: view === 'result' || view === 'stages' ? view : null
-      } as const;
-    }
+    return readTaskRouteStateFromLocation(window.location);
   }
 
   async function openOrderById(orderId: string, preferredView: 'result' | 'stages' | null = null) {
@@ -741,50 +627,14 @@
       createdAt: string;
     }
   ): Promise<OrderView | null> {
-    if (orderId.startsWith('local-')) {
-      return null;
-    }
-
-    const mockPayload = mockOrderStatus[orderId as keyof typeof mockOrderStatus];
-    if (mockPayload) {
-      return extractStatusPayload(
-        mockPayload,
-        {
-          title: fallbackOrder.title,
-          description: fallbackOrder.description,
-          currency: fallbackOrder.currency,
-          createdAt: fallbackOrder.createdAt
-        },
-        localeText
-      );
-    }
-
-    try {
-      const response = await fetch(buildOrderProxyUrl(`/status/${encodeURIComponent(orderId)}`, orderApiBaseUrl()), {
-        headers: {
-          Accept: 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        return null;
-      }
-
-      const payload: unknown = await response.json();
-
-      return extractStatusPayload(
-        payload,
-        {
-          title: fallbackOrder.title,
-          description: fallbackOrder.description,
-          currency: fallbackOrder.currency,
-          createdAt: fallbackOrder.createdAt
-        },
-        localeText
-      );
-    } catch {
-      return null;
-    }
+    return fetchOrderStatus({
+      orderId,
+      fallbackOrder,
+      mockOrderStatus,
+      localeText,
+      fetchFn: fetch,
+      orderApiBaseUrl: orderApiBaseUrl()
+    });
   }
   function startOrderPolling(order: OrderView) {
     if (!pollAbortController || pollAbortController.signal.aborted) {
@@ -797,57 +647,25 @@
   }
 
   async function pollOrderInBackground(order: OrderView, token: symbol, signal: AbortSignal): Promise<void> {
-    let tries = 0;
-    let latestOrder = order;
-
-    while (tries < POLL_LIMIT) {
-      if (signal.aborted) {
-        activePollTokens.delete(order.id);
-        return;
-      }
-
-      if (activePollTokens.get(order.id) !== token) {
-        return;
-      }
-
-      const updated = await requestOrderFromStatus(order.id, {
-        title: latestOrder.title,
-        description: latestOrder.description,
-        currency: latestOrder.currency || localeText.defaults.defaultCurrency,
-        createdAt: latestOrder.createdAt
-      });
-
-      if (activePollTokens.get(order.id) !== token) {
-        return;
-      }
-
-      if (updated) {
-        latestOrder = { ...latestOrder, ...updated, id: latestOrder.id };
-        upsertOrder(latestOrder);
-
-        if (currentOrder?.id === latestOrder.id) {
-          currentOrder = { ...currentOrder, ...updated, id: currentOrder.id };
-        }
-
-        if (updated.status === 'completed') {
-          activePollTokens.delete(order.id);
-          return;
-        }
-      }
-
-      tries += 1;
-
-      try {
-        await waitForDelay(POLL_INTERVAL_MS, signal);
-      } catch {
-        activePollTokens.delete(order.id);
-        return;
-      }
-    }
-
-    if (activePollTokens.get(order.id) === token) {
-      activePollTokens.delete(order.id);
-    }
+    await pollWorkspaceOrder({
+      order,
+      token,
+      signal,
+      pollLimit: POLL_LIMIT,
+      pollIntervalMs: POLL_INTERVAL_MS,
+      localeText,
+      fetchOrderStatus: requestOrderFromStatus,
+      isTokenCurrent: (orderId, currentToken) => activePollTokens.get(orderId) === currentToken,
+      deleteToken: (orderId) => {
+        activePollTokens.delete(orderId);
+      },
+      upsertOrder,
+      getCurrentOrder: () => currentOrder,
+      setCurrentOrder: (orderValue) => {
+        currentOrder = orderValue;
+      },
+      waitForDelay
+    });
   }
 
   async function createOrder(payload: DraftOrder, options?: { background?: boolean }) {
@@ -856,99 +674,38 @@
       step = 'submitting';
     }
 
-    try {
-      const response = await fetch(buildOrderProxyUrl('/create', orderApiBaseUrl()), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json'
-        },
-        body: JSON.stringify(buildCreatePayload(payload))
-      });
+    const result = await submitWorkspaceOrder({
+      payload,
+      isBackground,
+      localeText,
+      fetchFn: fetch,
+      orderApiBaseUrl: orderApiBaseUrl(),
+      toNumber,
+      resolveExecutionEstimate
+    });
 
-      const body: unknown = await response.json();
-      const parsed = response.ok ? readCreateResponse(body) : null;
-      if (!response.ok || !parsed) {
-        throw new Error(localeText.errors.fallback);
-      }
-
-      const createdOrder: OrderView = {
-        id: parsed.orderId,
-        solver: parsed.solver || localeText.defaults.openSolverMarket,
-        status: parsed.status || 'queued',
-        title: payload.title || localeText.defaults.taskTitle,
-        description: payload.description || '',
-        createdAt: new Date().toISOString(),
-        estimatedCost: toNumber(payload.estimatedCost) || undefined,
-        currency: payload.currency || localeText.defaults.defaultCurrency,
-        executionEstimate: resolveExecutionEstimate(payload.executionEstimate, payload.title, localeText),
-        paymentUrl: undefined,
-        uiScenario: parsed.uiScenario
-      };
-
-      upsertOrder(createdOrder);
-
-      startOrderPolling(createdOrder);
-
-      if (isBackground) {
-        return;
-      }
-
-      currentOrder = createdOrder;
-      resetTransactionState();
-      step = 'executing';
-    } catch (error) {
-      const isNetworkError =
-        error instanceof TypeError ||
-        (error instanceof Error && /network|fetch|failed to fetch|load failed/i.test(error.message));
-
-      if (isNetworkError) {
-        const offlineOrder: OrderView = {
-          id:
-            typeof globalThis.crypto !== 'undefined' && typeof globalThis.crypto.randomUUID === 'function'
-              ? `local-${globalThis.crypto.randomUUID()}`
-              : `local-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
-          solver: localeText.defaults.solverNetwork,
-          status: 'queued',
-          title: payload.title || localeText.defaults.taskTitle,
-          description: payload.description || '',
-          createdAt: new Date().toISOString(),
-          estimatedCost: toNumber(payload.estimatedCost) || undefined,
-          currency: payload.currency || localeText.defaults.defaultCurrency,
-          executionEstimate: resolveExecutionEstimate(payload.executionEstimate, payload.title, localeText),
-          paymentUrl: undefined
-        };
-
-        upsertOrder(offlineOrder);
-
-        if (!isBackground) {
-          currentOrder = offlineOrder;
-          resetTransactionState();
-          step = 'executing';
-        }
-
-        return;
-      }
-
+    if (result.kind === 'error') {
       if (!isBackground) {
         step = 'create';
       }
+      return;
+    }
+
+    upsertOrder(result.order);
+
+    if (result.kind === 'remote') {
+      startOrderPolling(result.order);
+    }
+
+    if (!isBackground) {
+      currentOrder = result.order;
+      resetTransactionState();
+      step = 'executing';
     }
   }
 
   async function submitDraft(form: DraftOrder, options?: { background?: boolean }) {
-    const normalized: DraftOrder = {
-      title: form.title.trim(),
-      description: form.description.trim() || form.title.trim(),
-      estimatedCost: form.estimatedCost.trim() || '0',
-      currency: form.currency.trim() || localeText.defaults.defaultCurrency,
-      executionEstimate: form.executionEstimate.trim()
-    };
-
-    if (!normalized.title) {
-      normalized.title = localeText.defaults.taskTitle;
-    }
-
+    const normalized = normalizeDraftOrder(form, localeText);
     await createOrder(normalized, options);
   }
 
@@ -1003,8 +760,8 @@
       userId: session.userId,
       expiresAt: session.expiresAt
     });
-    closeAuthDialog();
-    closePasskeyDialog();
+    authDialogOpen = false;
+    passkeyDialogOpen = false;
 
     setPasskeySession({
       token: session.token,
@@ -1085,10 +842,6 @@
     step = 'payment';
   }
 
-  function closeDepositDialog() {
-    depositDialogOpen = false;
-  }
-
   function selectDepositMethod(method: Exclude<PaymentMethod, null>) {
     stagePreviewOpen = false;
     paymentMethod = method;
@@ -1145,11 +898,11 @@
     languageRussianLabel={localeText.topbar.languageRussian}
     socialLinks={sidebarSocialLinks}
     legalLinks={sidebarLegalLinks}
-    onToggleExpand={toggleLeftNav}
+    onToggleExpand={() => { leftNavExpanded = !leftNavExpanded; }}
     onBrandClick={handleTopbarBrandClick}
     onOpenEmailDraft={openContactEmailDraft}
-    onOpenEmailDialog={openContactDialog}
-    onTheme={selectTopbarTheme}
+    onOpenEmailDialog={() => { contactDialogOpen = true; }}
+    onTheme={() => { isDarkTheme = !isDarkTheme; }}
     onAuth={selectTopbarAuth}
     onLocale={selectTopbarLocale}
   />
@@ -1257,7 +1010,7 @@
           onOpenDepositDialog={() => {
             depositDialogOpen = true;
           }}
-          onCloseDepositDialog={closeDepositDialog}
+          onCloseDepositDialog={() => { depositDialogOpen = false; }}
           onSelectDepositMethod={selectDepositMethod}
           onConfirmPayment={confirmPayment}
           onRevealResult={revealResult}
@@ -1333,7 +1086,7 @@
     localhostTitle={localeText.auth.localhostTitle}
     showLocalhost={isLocalhostRuntime}
     closeLabel={localeText.buttons.closeDialog}
-    onClose={closeAuthDialog}
+    onClose={() => { authDialogOpen = false; }}
     onWallet={chooseWalletMethod}
     onPasskey={choosePasskeyMethod}
     onLocalhost={chooseLocalhostMethod}
@@ -1342,7 +1095,7 @@
   <KefinePasskeyDialog
     open={passkeyDialogOpen}
     title={localeText.auth.passkeyTitle}
-    onClose={closePasskeyDialog}
+    onClose={() => { passkeyDialogOpen = false; }}
     onSuccess={loginWithPasskey}
     onError={handlePasskeyError}
   />
@@ -1362,10 +1115,10 @@
     messagePlaceholder={localeText.placeholders.contactMessage}
     submitLabel={localeText.buttons.sendMessage}
     closeLabel={localeText.buttons.closeDialog}
-    onClose={closeContactDialog}
-    onNameInput={updateContactName}
-    onEmailInput={updateContactEmail}
-    onMessageInput={updateContactMessage}
+    onClose={() => { contactDialogOpen = false; }}
+    onNameInput={(value) => { contactName = value; }}
+    onEmailInput={(value) => { contactEmail = value; }}
+    onMessageInput={(value) => { contactMessage = value; }}
     onSubmit={submitContactEmail}
   />
 </main>

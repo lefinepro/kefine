@@ -44,6 +44,8 @@ Then open:
 
 This is the easiest way to run the frontend together with the local `crater` service.
 
+The frontend production container is built from the repo root [Containerfile](/home/kg/datastore/dev/lefine/kefine/Containerfile) and serves requests through Caddy on port `5173` by default.
+
 ## Local development setup
 
 ### 1. Install dependencies
@@ -234,6 +236,23 @@ To preview it locally:
 
 ```bash
 bun run preview
+```
+
+## Container build
+
+To build the frontend production image directly:
+
+```bash
+docker build -f Containerfile -t kefine-frontend .
+```
+
+To run it on the default Caddy port:
+
+```bash
+docker run --rm -p 5173:5173 \
+  -e KEFINE_CRATER=http://host.docker.internal:3001 \
+  -e KEFINE_EXCHANGE=http://host.docker.internal:3001 \
+  kefine-frontend
 ```
 
 ## Troubleshooting

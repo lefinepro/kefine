@@ -53,11 +53,8 @@ export function findHeadlines(
         results.push(node);
       }
       if (recursive) {
-        // Search within section children
-        for (const child of node.children) {
-          if (isOrgSection(child)) {
-            results.push(...findHeadlines(child.children, filter, recursive));
-          }
+        for (const section of node.children.filter(isOrgSection)) {
+          results.push(...findHeadlines(section.children, filter, recursive));
         }
       }
     } else if (isOrgSection(node)) {

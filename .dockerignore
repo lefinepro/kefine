@@ -1,0 +1,8 @@
+.git
+.svelte-kit
+.vite-cache
+build
+node_modules
+test-results
+playwright-report
+.data
