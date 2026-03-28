@@ -30,6 +30,8 @@
     signInLabel,
     signedInLabel,
     authenticatedLabel,
+    authenticatedSecondaryLabel,
+    authenticatedAvatarUrl,
     isAuthenticated,
     isDarkTheme,
     isExpanded,
@@ -60,6 +62,8 @@
     signInLabel: string;
     signedInLabel: string;
     authenticatedLabel: string | null;
+    authenticatedSecondaryLabel: string | null;
+    authenticatedAvatarUrl: string | null;
     isAuthenticated: boolean;
     isDarkTheme: boolean;
     isExpanded: boolean;
@@ -196,5 +200,19 @@
   data-variant={isAuthenticated ? 'ghost' : 'primary'}
   onclick={onAuth}
 >
-  {isAuthenticated ? authenticatedLabel ?? signedInLabel : signInLabel}
+  {#if isAuthenticated}
+    <span class="kefine-sidebar-auth__content">
+      {#if authenticatedAvatarUrl}
+        <img class="kefine-sidebar-auth__avatar" src={authenticatedAvatarUrl} alt="" aria-hidden="true" />
+      {/if}
+      <span class="kefine-sidebar-auth__copy">
+        <strong>{authenticatedLabel ?? signedInLabel}</strong>
+        {#if authenticatedSecondaryLabel}
+          <small>{authenticatedSecondaryLabel}</small>
+        {/if}
+      </span>
+    </span>
+  {:else}
+    {signInLabel}
+  {/if}
 </button>

@@ -4,13 +4,13 @@
   import { onMount } from 'svelte';
   import { cubicOut } from 'svelte/easing';
   import { fade } from 'svelte/transition';
-  import { authState, clearAuthState, hydrateAuthStateFromSession, updateAuthState } from '$lib/auth/auth-store.svelte.js';
+  import { authState, clearAuthState, hydrateAuthStateFromSession, replaceAuthState, updateAuthState } from '$lib/auth/auth-store.svelte.js';
   import {
     loadPasskeySession,
     passkeySessionStore,
     setPasskeySession
   } from '$lib/auth/passkey-session';
-  import { syncAppKitTheme } from '$lib/auth/appkit';
+  import { readReownAccountState, subscribeToAppKitAccount, syncAppKitTheme } from '$lib/auth/appkit';
   import {
     performAuthentication,
     finishAuthentication,
@@ -49,10 +49,12 @@
     toNumber
   } from '$lib/components/kefine/kefine-workflow';
   import {
+    createGeneratedWalletAvatar,
     createContactMailtoUrl,
     getVisibleOrdersLimit,
     mergeOrdersById,
     normalizeDraftOrder,
+    resolveWalletNetworkLabel,
     readTaskRouteStateFromLocation
   } from '$lib/components/kefine/kefine-workspace-helpers';
   import {
@@ -121,9 +123,8 @@
   const passkeySession = $derived($passkeySessionStore);
   const isPasskeyActive = $derived(passkeySession ? passkeySession.expiresAt.getTime() > Date.now() : false);
   const isAuthenticated = $derived(authState.isConnected || isPasskeyActive);
-  const walletNetworkLabel = $derived(
-    authState.chainId === 100 ? localeText.auth.walletNetworkGnosis : localeText.auth.walletNetworkEthereum
-  );
+  const walletNetworkLabel = $derived(resolveWalletNetworkLabel(authState.chainId, localeText));
+  const walletAvatarUrl = $derived(createGeneratedWalletAvatar(authState.address));
   const normalizedWalletLabel = $derived.by(() => {
     const email = authState.email?.trim();
     if (email) {
@@ -259,11 +260,11 @@
       return `${title} | Lefine`;
     }
 
-    return 'Kefine Solver Exchange';
+    return 'Lefine - Automated Freelance Exchange';
   });
   const authDisplay = $derived({
     appIconUrl: '/favicon.png',
-    socialAvatarUrl: null as string | null,
+    socialAvatarUrl: walletAvatarUrl,
     passkeyAvatarUrl: null as string | null,
     actorAvatarUrl: null as string | null,
     activeMethod: selectedAuthMethod,
@@ -304,7 +305,28 @@
     document.documentElement.setAttribute('data-kefine-theme', isDarkTheme ? 'dark' : 'light');
     document.documentElement.setAttribute('lang', $kefineLocale);
 
+    const syncReownAuthState = async () => {
+      const snapshot = await readReownAccountState();
+      replaceAuthState({
+        isConnected: snapshot.isConnected,
+        address: snapshot.address,
+        chainId: snapshot.chainId,
+        email: snapshot.email,
+        authType: snapshot.authType,
+        status: snapshot.status
+      });
+    };
+
+    void syncReownAuthState();
+    let cancelReownSubscription: (() => void) | void;
+    void subscribeToAppKitAccount(() => {
+      void syncReownAuthState();
+    }).then((result) => {
+      cancelReownSubscription = result;
+    });
+
     return () => {
+      cancelReownSubscription?.();
       pollAbortController?.abort();
       activePollTokens.clear();
     };
@@ -427,6 +449,11 @@
       handlePasskeyError('');
       return false;
     }
+  }
+
+  function closeAuthDialog() {
+    authDialogOpen = false;
+    passkeyDialogOpen = false;
   }
 
   function handleTopbarBrandClick() {
@@ -890,6 +917,8 @@
     signInLabel={localeText.topbar.signIn}
     signedInLabel={localeText.topbar.signedIn}
     authenticatedLabel={authenticatedLabel}
+    authenticatedSecondaryLabel={authState.isConnected ? walletNetworkLabel : null}
+    authenticatedAvatarUrl={authState.isConnected ? walletAvatarUrl : null}
     isAuthenticated={isAuthenticated}
     isDarkTheme={isDarkTheme}
     isExpanded={leftNavExpanded}

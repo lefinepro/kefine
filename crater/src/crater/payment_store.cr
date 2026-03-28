@@ -20,6 +20,7 @@ module Crater
       payment_request : String?,
       payment_token_address : String,
       payment_token_symbol : String,
+      payment_token_decimals : Int32,
       payment_chain_id : Int64,
       labels : Array(String)
 
@@ -133,6 +134,7 @@ module Crater
         payment_request: build_payment_request(config, effective_amount),
         payment_token_address: config.payment_token_address,
         payment_token_symbol: config.payment_token_symbol,
+        payment_token_decimals: config.payment_token_decimals,
         payment_chain_id: config.payment_chain_id,
         labels: labels
       )
@@ -156,8 +158,19 @@ module Crater
         paymentChainId: quote.payment_chain_id,
         paymentTokenAddress: quote.payment_token_address,
         paymentTokenSymbol: quote.payment_token_symbol,
+        paymentTokenDecimals: quote.payment_token_decimals,
         paymentUrl: order.payment_url,
         labels: quote.labels
+      }.to_json
+    end
+
+    def self.to_config_payload(config : Utils::Config) : String
+      {
+        paymentAddress: config.payment_evm_address,
+        paymentChainId: config.payment_chain_id,
+        paymentTokenAddress: config.payment_token_address,
+        paymentTokenSymbol: config.payment_token_symbol,
+        paymentTokenDecimals: config.payment_token_decimals
       }.to_json
     end
 

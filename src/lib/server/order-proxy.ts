@@ -25,6 +25,12 @@ export async function proxyPaymentQuote(request: Request, orderId: string, fetch
   });
 }
 
+export async function proxyPaymentConfig(request: Request, fetchFn: typeof fetch): Promise<Response> {
+  return proxyCraterRequest(request, fetchFn, '/payment-config', {
+    errorMessage: 'Failed to load payment config.'
+  });
+}
+
 export async function proxyPaymentPromo(request: Request, orderId: string, fetchFn: typeof fetch): Promise<Response> {
   return proxyCraterRequest(request, fetchFn, `/payment/${encodeURIComponent(orderId)}/promo`, {
     errorMessage: 'Failed to apply promo code.',

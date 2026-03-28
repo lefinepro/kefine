@@ -142,3 +142,51 @@ export function normalizeDraftOrder(
 
   return normalized;
 }
+
+export function resolveWalletNetworkLabel(chainId: number | null, localeText: KefineLocaleText): string {
+  if (chainId === 43114) {
+    return localeText.auth.walletNetworkAvalanche;
+  }
+
+  if (chainId === 43113) {
+    return localeText.auth.walletNetworkAvalancheFuji;
+  }
+
+  if (chainId === 100) {
+    return localeText.auth.walletNetworkGnosis;
+  }
+
+  return localeText.auth.walletNetworkEthereum;
+}
+
+export function createGeneratedWalletAvatar(address: string | null | undefined): string | null {
+  const normalizedAddress = address?.trim().toLowerCase();
+  if (!normalizedAddress) {
+    return null;
+  }
+
+  let hash = 0;
+  for (let index = 0; index < normalizedAddress.length; index += 1) {
+    hash = (hash * 31 + normalizedAddress.charCodeAt(index)) >>> 0;
+  }
+
+  const hueA = hash % 360;
+  const hueB = (hash >>> 9) % 360;
+  const hueC = (hash >>> 17) % 360;
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+      <defs>
+        <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="hsl(${hueA} 72% 62%)" />
+          <stop offset="100%" stop-color="hsl(${hueB} 68% 42%)" />
+        </linearGradient>
+      </defs>
+      <rect width="64" height="64" rx="20" fill="url(#g)" />
+      <circle cx="20" cy="20" r="9" fill="hsl(${hueC} 78% 82% / 0.88)" />
+      <circle cx="46" cy="22" r="6" fill="hsl(${hueA} 78% 88% / 0.82)" />
+      <path d="M16 46c6-10 26-10 32 0" fill="none" stroke="hsl(${hueC} 88% 94%)" stroke-width="6" stroke-linecap="round" />
+    </svg>
+  `.trim();
+
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}

@@ -9,6 +9,11 @@ module Crater
   module Handlers
     module Payment
       def self.register(config : Utils::Config)
+        get "/payment-config" do |env|
+          env.response.content_type = "application/json"
+          PaymentStore.to_config_payload(config)
+        end
+
         get "/payment/:id" do |env|
           env.response.content_type = "application/json"
 

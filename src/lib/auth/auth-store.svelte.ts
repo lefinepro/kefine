@@ -1,5 +1,5 @@
 import { browser } from '$app/environment';
-import { saveSession, clearSession, loadSession } from './session.js';
+import { saveSession, clearSession, clearWalletSession, loadSession } from './session.js';
 
 export interface AuthState {
 	isConnected: boolean;
@@ -32,6 +32,22 @@ export function updateAuthState(partial: Partial<AuthState>): void {
 			connectedAt: Date.now()
 		});
 	}
+}
+
+export function replaceAuthState(next: AuthState): void {
+	Object.assign(authState, next);
+	if (next.isConnected) {
+		saveSession({
+			address: next.address,
+			chainId: next.chainId,
+			email: next.email,
+			authType: next.authType,
+			connectedAt: Date.now()
+		});
+		return;
+	}
+
+	clearWalletSession();
 }
 
 export function clearAuthState(): void {

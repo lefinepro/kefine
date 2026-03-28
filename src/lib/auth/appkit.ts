@@ -3,8 +3,8 @@ import { browser } from '$app/environment';
 const projectId = (import.meta.env.VITE_REOWN_PROJECT_ID as string | undefined)?.trim() || '909acf523be03f300ad21cca95d966c8';
 
 const metadata = {
-	name: 'Kefine Solver Exchange',
-	description: 'Solver task exchange dashboard',
+	name: 'Lefine - Automated Freelance Exchange',
+	description: 'Automated freelance exchange dashboard',
 	url: typeof window !== 'undefined' ? window.location.origin : 'https://kefine.app',
 	icons: ['https://kefine.app/favicon.png']
 };
@@ -46,7 +46,7 @@ type AppKitLike = {
 	disconnect: () => Promise<void> | void;
 	setThemeMode: (theme: KefineTheme) => void;
 	setThemeVariables: (vars: Record<string, string | number>) => void;
-	subscribeAccount: (callback: (account: any) => void) => void;
+	subscribeAccount: (callback: (account: any) => void) => (() => void) | void;
 };
 
 function detectThemeMode(): KefineTheme {
@@ -78,6 +78,12 @@ export async function ensureAppKit(): Promise<AppKitLike | undefined> {
 	if (appkit) return appkit;
 
 	initPromise ??= (async () => {
+		const scopedGlobal = globalThis as typeof globalThis & { Buffer?: unknown };
+		if (typeof scopedGlobal.Buffer === 'undefined') {
+			const { Buffer } = await import('buffer');
+			scopedGlobal.Buffer = Buffer;
+		}
+
 		const [{ createAppKit }, { WagmiAdapter }, { networks, defaultNetwork }] = await Promise.all([
 			import('@reown/appkit'),
 			import('@reown/appkit-adapter-wagmi'),
@@ -121,13 +127,119 @@ export async function disconnectAppKit(): Promise<void> {
 	await instance?.disconnect?.();
 }
 
-export async function subscribeToAppKitAccount(callback: (account: any) => void): Promise<void> {
+export async function subscribeToAppKitAccount(callback: (account: any) => void): Promise<(() => void) | void> {
 	const instance = await ensureAppKit();
-	instance?.subscribeAccount(callback);
+	return instance?.subscribeAccount(callback);
+}
+
+export type ReownAccountState = {
+	isConnected: boolean;
+	address: string | null;
+	chainId: number | null;
+	email: string | null;
+	authType: 'wallet' | 'email' | null;
+	status: 'connected' | 'disconnected' | 'connecting' | 'reconnecting' | null;
+};
+
+export async function readReownAccountState(): Promise<ReownAccountState> {
+	await ensureAppKit();
+
+	if (!wagmiAdapter?.wagmiConfig) {
+		return {
+			isConnected: false,
+			address: null,
+			chainId: null,
+			email: null,
+			authType: null,
+			status: 'disconnected'
+		};
+	}
+
+	const { getAccount } = await import('@wagmi/core');
+	const account = getAccount(wagmiAdapter.wagmiConfig) as {
+		address?: string;
+		chainId?: number;
+		isConnected?: boolean;
+		status?: 'connected' | 'disconnected' | 'connecting' | 'reconnecting' | null;
+		addresses?: string[];
+		connector?: {
+			id?: string;
+			name?: string;
+		};
+	};
+
+	const address = typeof account.address === 'string' ? account.address : account.addresses?.[0] ?? null;
+	const connectorName = account.connector?.name?.toLowerCase() ?? '';
+	const isEmailSession = connectorName.includes('email');
+
+	return {
+		isConnected: Boolean(account.isConnected && address),
+		address,
+		chainId: typeof account.chainId === 'number' ? account.chainId : null,
+		email: null,
+		authType: isEmailSession ? 'email' : address ? 'wallet' : null,
+		status: account.status ?? (account.isConnected ? 'connected' : 'disconnected')
+	};
 }
 
 export async function syncAppKitTheme(theme: KefineTheme): Promise<void> {
 	if (!appkit) return;
 	appkit.setThemeMode(theme);
 	appkit.setThemeVariables(getThemeVariables(theme));
+}
+
+export class ReownPaymentError extends Error {
+	code: 'wallet_not_connected' | 'payment_config_invalid';
+
+	constructor(code: 'wallet_not_connected' | 'payment_config_invalid', message: string) {
+		super(message);
+		this.name = 'ReownPaymentError';
+		this.code = code;
+	}
+}
+
+type ReownErc20PaymentParams = {
+	chainId: number;
+	tokenAddress: `0x${string}`;
+	recipientAddress: `0x${string}`;
+	amount: number;
+	decimals: number;
+};
+
+export async function payWithReownErc20Transfer(params: ReownErc20PaymentParams): Promise<`0x${string}`> {
+	if (!Number.isFinite(params.amount) || params.amount <= 0) {
+		throw new ReownPaymentError('payment_config_invalid', 'Payment amount is invalid.');
+	}
+
+	await ensureAppKit();
+
+	if (!wagmiAdapter?.wagmiConfig) {
+		throw new ReownPaymentError('wallet_not_connected', 'Wallet is not ready.');
+	}
+
+	const [{ getAccount, switchChain, waitForTransactionReceipt, writeContract }, { erc20Abi, parseUnits }] = await Promise.all([
+		import('@wagmi/core'),
+		import('viem')
+	]);
+
+	const account = getAccount(wagmiAdapter.wagmiConfig);
+	if (!account.isConnected || !account.address) {
+		throw new ReownPaymentError('wallet_not_connected', 'Connect a wallet to continue with Reown payment.');
+	}
+
+	if (account.chainId !== params.chainId) {
+		await switchChain(wagmiAdapter.wagmiConfig, { chainId: params.chainId });
+	}
+
+	const value = parseUnits(params.amount.toString(), params.decimals);
+	const hash = await writeContract(wagmiAdapter.wagmiConfig, {
+		address: params.tokenAddress,
+		abi: erc20Abi,
+		functionName: 'transfer',
+		args: [params.recipientAddress, value],
+		account: account.address
+	});
+
+	await waitForTransactionReceipt(wagmiAdapter.wagmiConfig, { hash, timeout: 25_000 });
+	return hash;
 }

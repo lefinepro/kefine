@@ -35,11 +35,15 @@ export function loadSession(): SessionData | null {
 }
 
 export function clearSession(): void {
+	clearWalletSession();
+	clearPasskeySession();
+}
+
+export function clearWalletSession(): void {
 	if (typeof window === 'undefined') return;
 	try {
 		localStorage.removeItem(WALLET_SESSION_KEY);
 	} catch {
 		// localStorage may be unavailable
 	}
-	clearPasskeySession();
 }
