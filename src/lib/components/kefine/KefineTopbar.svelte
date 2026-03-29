@@ -1,6 +1,7 @@
 <script lang="ts">
   import Icon from '@iconify/svelte';
   import { scheduleAfter } from '$lib/utils/helpers';
+  import type { KefineLocale } from '$lib/constants/kefine-locale';
 
   type SocialLink = {
     id: 'mastodon' | 'discord' | 'linkedin' | 'telegram';
@@ -38,6 +39,7 @@
     locale,
     languageEnglishLabel,
     languageRussianLabel,
+    languageArmenianLabel,
     socialLinks,
     legalLinks,
     onToggleExpand,
@@ -67,9 +69,10 @@
     isAuthenticated: boolean;
     isDarkTheme: boolean;
     isExpanded: boolean;
-    locale: 'en' | 'ru';
+    locale: KefineLocale;
     languageEnglishLabel: string;
     languageRussianLabel: string;
+    languageArmenianLabel: string;
     socialLinks: SocialLink[];
     legalLinks: LegalLink[];
     onToggleExpand: () => void;
@@ -78,12 +81,18 @@
     onOpenEmailDialog: () => void;
     onTheme: () => void;
     onAuth: () => void;
-    onLocale: (locale: 'en' | 'ru') => void;
+    onLocale: (locale: KefineLocale) => void;
   } = $props();
 
   const themeIcon = $derived(isDarkTheme ? 'mdi:white-balance-sunny' : 'mdi:weather-night');
-  const nextLocale = $derived(locale === 'en' ? 'ru' : 'en');
-  const localeLabel = $derived(locale === 'en' ? languageRussianLabel : languageEnglishLabel);
+  const localeCycle: KefineLocale[] = ['en', 'ru', 'hy'];
+  const localeLabels = $derived({
+    en: languageEnglishLabel,
+    ru: languageRussianLabel,
+    hy: languageArmenianLabel
+  });
+  const nextLocale = $derived(localeCycle[(localeCycle.indexOf(locale) + 1) % localeCycle.length] ?? 'en');
+  const localeLabel = $derived(localeLabels[nextLocale]);
   let cancelBrandClick: (() => void) | null = null;
   let cancelEmailClick: (() => void) | null = null;
 

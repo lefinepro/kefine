@@ -89,6 +89,52 @@ With this setup:
 - crater persists orders, outbox activity, users, passkeys, challenges, sessions, and payment redemptions in Postgres, while still using `KEFINE_EXCHANGE` for exchange-facing URLs,
 - the UI keeps polling status updates through crater instead of talking to the exchange directly.
 
+### External crater / global URLs
+
+If `crater` is exposed on a public URL, do not leave the container defaults on `localhost`.
+
+Use separate values for:
+
+- `KEFINE_CRATER`: the public base URL crater uses when generating `orderId`, actor IDs, inbox/outbox URLs, and related links
+- `KEFINE_EXCHANGE`: the public exchange/app base URL crater uses for `/pay/*`, user IDs, and exchange-facing links
+- `ORIGIN`: the public frontend origin
+
+Example when crater is hosted directly on `https://lefine.pro` and exchange is hosted on `https://lefine.pro/exchange`:
+
+```env
+KEFINE_CRATER=https://lefine.pro
+KEFINE_EXCHANGE=https://lefine.pro/exchange
+ORIGIN=https://lefine.pro
+```
+
+### Split pages by domain
+
+The frontend can redirect different page groups onto different public origins without changing route paths.
+
+- `ORIGIN`: primary site origin, used for `/`
+- `KEFINE_LEGAL_ORIGIN`: legal pages origin for `/privacy`, `/terms`, `/refund-policy`
+- `KEFINE_TASK_ORIGIN`: task flow origin for `/create`, `/task/*`, `/order/*`, `/payment/*`, `/pay/*`, `/status*`, `/passkeys/*`, `/api/kefine/*`
+
+Example:
+
+```env
+ORIGIN=https://lefine.pro
+KEFINE_LEGAL_ORIGIN=https://legal.lefine.pro
+KEFINE_TASK_ORIGIN=https://tasks.lefine.pro
+```
+
+With that setup:
+
+- `https://lefine.pro/privacy` redirects to `https://legal.lefine.pro/privacy`
+- `https://lefine.pro/task/<id>` redirects to `https://tasks.lefine.pro/task/<id>`
+- local development on `localhost` is not redirected
+
+For this setup:
+
+- new `orderId` values are emitted under `https://lefine.pro/...` instead of `http://localhost:3001/...`
+- payment and exchange-facing links are emitted under `https://lefine.pro/exchange/...`
+- the frontend proxies requests to the hosted crater at `https://lefine.pro`
+
 ### 3. Start the backend
 
 You have two practical options.

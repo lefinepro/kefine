@@ -3,6 +3,84 @@ import type { KefineLocaleText } from '$lib/constants/kefine-locale';
 
 export type TaskRouteView = 'result' | 'stages' | null;
 
+const GLOBAL_ORDER_PATH_PREFIX = '/orders/';
+const LEGACY_TASK_PATH_PREFIX = '/task/';
+const LEGACY_ORDER_PATH_PREFIX = '/order/';
+
+function extractOrderUuid(orderId: string): string | null {
+  const normalized = orderId.trim();
+  if (!normalized) {
+    return null;
+  }
+
+  const uuidMatch = normalized.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+  return uuidMatch?.[0] ?? null;
+}
+
+export function buildTaskRouteHash(orderId: string, view: TaskRouteView = null): string {
+  const normalized = orderId.trim();
+  if (!normalized) {
+    return '';
+  }
+
+  const routeId = extractOrderUuid(normalized) ?? normalized;
+  const suffix = view ? `/${view}` : '';
+  return `#${GLOBAL_ORDER_PATH_PREFIX}${encodeURIComponent(routeId)}${suffix}`;
+}
+
+export function resolveOrderIdFromRouteValue(routeValue: string, knownOrders: OrderView[]): string {
+  const normalized = routeValue.trim();
+  if (!normalized) {
+    return normalized;
+  }
+
+  const directMatch = knownOrders.find((item) => item.id === normalized);
+  if (directMatch) {
+    return directMatch.id;
+  }
+
+  const suffixMatch = knownOrders.find((item) => item.id.endsWith(`/${normalized}`));
+  if (suffixMatch) {
+    return suffixMatch.id;
+  }
+
+  if (normalized.startsWith('http://') || normalized.startsWith('https://')) {
+    return normalized;
+  }
+
+  return `https://lefine.pro/actor/orders/${normalized}`;
+}
+
+export function resolveOrderIdCandidates(routeValue: string, knownOrders: OrderView[]): string[] {
+  const normalized = routeValue.trim();
+  if (!normalized) {
+    return [];
+  }
+
+  const resolved = resolveOrderIdFromRouteValue(normalized, knownOrders);
+  const candidates = [resolved];
+
+  const suffixMatch = knownOrders.find((item) => item.id.endsWith(`/${normalized}`));
+  if (suffixMatch && !candidates.includes(suffixMatch.id)) {
+    candidates.unshift(suffixMatch.id);
+  }
+
+  if (!normalized.startsWith('http://') && !normalized.startsWith('https://')) {
+    const globalCandidate = `https://lefine.pro/actor/orders/${normalized}`;
+    const legacyCandidate = `http://localhost:3001/actor/orders/${normalized}`;
+
+    if (!candidates.includes(globalCandidate)) {
+      candidates.push(globalCandidate);
+    }
+
+    if (!candidates.includes(legacyCandidate)) {
+      candidates.push(legacyCandidate);
+    }
+  }
+
+  return candidates;
+}
+
 export function createContactMailtoUrl(args: {
   brandName: string;
   recipient: string;
@@ -45,13 +123,6 @@ export function mergeOrdersById(
   ];
 }
 
-export function mergeDemoOrders(
-  orders: OrderView[],
-  demoOrders: OrderView[]
-): OrderView[] {
-  return demoOrders.reduce((nextOrders, demoOrder) => mergeOrdersById(nextOrders, demoOrder), orders);
-}
-
 export function getVisibleOrdersLimit(
   ordersLength: number,
   currentLimit: number,
@@ -80,60 +151,46 @@ function parseTaskRouteValue(rawValue: string): { orderId: string; view: TaskRou
 
 export function readTaskRouteStateFromLocation(location: Location): { orderId: string; view: TaskRouteView } | null {
   const hash = location.hash.replace(/^#/, '').replace(/\/+$/, '');
-  const hashTaskPrefix = '/task/';
-  const hashLegacyPrefix = '/order/';
+  const hashTaskPrefix = GLOBAL_ORDER_PATH_PREFIX;
+  const hashLegacyPrefixes = [LEGACY_TASK_PATH_PREFIX, LEGACY_ORDER_PATH_PREFIX];
 
-  if (hash.startsWith(hashTaskPrefix) || hash.startsWith(hashLegacyPrefix)) {
-    const prefix = hash.startsWith(hashTaskPrefix) ? hashTaskPrefix : hashLegacyPrefix;
+  if (hash.startsWith(hashTaskPrefix) || hashLegacyPrefixes.some((prefix) => hash.startsWith(prefix))) {
+    const prefix = hash.startsWith(hashTaskPrefix)
+      ? hashTaskPrefix
+      : (hashLegacyPrefixes.find((candidate) => hash.startsWith(candidate)) ?? LEGACY_TASK_PATH_PREFIX);
     return parseTaskRouteValue(hash.slice(prefix.length));
   }
 
   const rawPath = location.pathname.replace(/\/+$/, '');
-  const taskPrefix = '/task/';
-  const legacyPrefix = '/order/';
-  if (!rawPath.startsWith(taskPrefix) && !rawPath.startsWith(legacyPrefix)) {
+  const taskPrefixes = [GLOBAL_ORDER_PATH_PREFIX, LEGACY_TASK_PATH_PREFIX, LEGACY_ORDER_PATH_PREFIX];
+  if (!taskPrefixes.some((prefix) => rawPath.startsWith(prefix))) {
     return null;
   }
 
-  const prefix = rawPath.startsWith(taskPrefix) ? taskPrefix : legacyPrefix;
+  const prefix = taskPrefixes.find((candidate) => rawPath.startsWith(candidate)) ?? GLOBAL_ORDER_PATH_PREFIX;
   return parseTaskRouteValue(rawPath.slice(prefix.length));
-}
-
-export function createOfflineOrder(
-  payload: DraftOrder,
-  localeText: KefineLocaleText,
-  resolveExecutionEstimate: (executionEstimate: string | undefined, title: string, localeText: KefineLocaleText) => string | undefined,
-  toNumber: (value: unknown) => number | undefined
-): OrderView {
-  const randomId =
-    typeof globalThis.crypto !== 'undefined' && typeof globalThis.crypto.randomUUID === 'function'
-      ? globalThis.crypto.randomUUID()
-      : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-
-  return {
-    id: `local-${randomId}`,
-    solver: localeText.defaults.solverNetwork,
-    status: 'queued',
-    title: payload.title || localeText.defaults.taskTitle,
-    description: payload.description || '',
-    createdAt: new Date().toISOString(),
-    estimatedCost: toNumber(payload.estimatedCost) || undefined,
-    currency: payload.currency || localeText.defaults.defaultCurrency,
-    executionEstimate: resolveExecutionEstimate(payload.executionEstimate, payload.title, localeText),
-    paymentUrl: undefined
-  };
 }
 
 export function normalizeDraftOrder(
   form: DraftOrder,
   localeText: KefineLocaleText
 ): DraftOrder {
+  const sourceText = form.description.trim() || form.title.trim();
+  const normalizedLines = sourceText
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const normalizedTitle = normalizedLines[0] || form.title.trim();
+  const isVpnOrder = /(?:^|\s)(vpn)(?:$|\s)|телеграм|telegram/i.test(sourceText);
+  const estimatedCost = form.estimatedCost.trim() || (isVpnOrder ? '2' : '0');
+  const currency = form.currency.trim() || (isVpnOrder ? 'USD' : localeText.defaults.defaultCurrency);
   const normalized: DraftOrder = {
-    title: form.title.trim(),
-    description: form.description.trim() || form.title.trim(),
-    estimatedCost: form.estimatedCost.trim() || '0',
-    currency: form.currency.trim() || localeText.defaults.defaultCurrency,
-    executionEstimate: form.executionEstimate.trim()
+    title: normalizedTitle,
+    description: sourceText,
+    estimatedCost,
+    currency,
+    executionEstimate: form.executionEstimate.trim(),
+    files: [...form.files]
   };
 
   if (!normalized.title) {

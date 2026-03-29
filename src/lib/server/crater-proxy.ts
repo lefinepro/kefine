@@ -13,7 +13,8 @@ export async function proxyCraterRequest(
   options: ProxyOptions
 ): Promise<Response> {
   try {
-    const body = request.method === 'GET' || request.method === 'HEAD' ? undefined : await request.text();
+    const body =
+      request.method === 'GET' || request.method === 'HEAD' ? undefined : new Uint8Array(await request.arrayBuffer());
     const response = await fetchFn(buildCraterApiUrl(pathname), {
       method: request.method,
       headers: {

@@ -1,18 +1,18 @@
 <script lang="ts">
   import { browser } from '$app/environment';
   import Icon from '@iconify/svelte';
-  import { readPaymentQuote, type AuthMethod, type PaymentMethod, type PaymentQuote, type PaymentStage, type OrderView } from './kefine-workflow';
-
-  const walletProviders = [
-    { icon: 'logos:metamask-icon', label: 'MetaMask', className: 'is-metamask' },
-    { icon: 'simple-icons:walletconnect', label: 'WalletConnect', className: 'is-walletconnect' },
-    { icon: 'material-symbols:alternate-email-rounded', label: 'Email', className: 'is-email' },
-    { icon: 'logos:google-icon', label: 'Google', className: 'is-google' }
-  ];
-
-  const authIcons = {
-    passkey: 'mdi:fingerprint'
-  } as const;
+  import {
+    isVpnOrder,
+    readPaymentQuote,
+    type AuthMethod,
+    type PaymentMethod,
+    type PaymentQuote,
+    type PaymentStage,
+    type OrderView
+  } from './kefine-workflow';
+  import KefineWalletProviderGrid from '$lib/components/kefine/KefineWalletProviderGrid.svelte';
+  import KefineVpnGuide from '$lib/components/kefine/KefineVpnGuide.svelte';
+  import { KEFINE_AUTH_ICONS } from '$lib/components/kefine/kefine-auth-constants';
   type PaymentConfig = {
     paymentAddress: string;
     paymentChainId: number;
@@ -36,6 +36,7 @@
     authDisplay,
     buttons,
     onBack,
+    onRejectResult,
     onOpenStages,
     onConfirmPayment,
     onRevealResult,
@@ -104,11 +105,13 @@
       payWithPromo: string;
       apply: string;
       openResult: string;
+      rejectResult: string;
       saveResult: string;
       closeDialog: string;
       openAllTasks: string;
     };
     onBack: () => void;
+    onRejectResult: () => void;
     onOpenStages: () => void;
     onOpenDepositDialog: () => void;
     onCloseDepositDialog: () => void;
@@ -134,8 +137,9 @@
   let nowTs = $state(Date.now());
 
   const VPN_GUEST_ACCESS_MS = 10 * 60 * 1000;
+  const showVpnResultWidget = $derived(isVpnOrder(currentOrder) && paymentStage === 'result-ready');
   const vpnGuideAvailable = $derived(
-    currentOrder?.uiScenario === 'vpn-service' && paymentStage === 'result-ready' && Boolean(currentOrder?.vpnGuide)
+    isVpnOrder(currentOrder) && paymentStage === 'result-ready' && Boolean(currentOrder?.vpnGuide)
   );
   const guestResultAccess = $derived(vpnGuideAvailable && (isAuthenticated || selectedAuthMethod === 'anonymous'));
   const effectivePaymentAmount = $derived(paymentQuote?.effectiveAmount ?? currentOrder?.estimatedCost ?? 0);
@@ -429,15 +433,14 @@
 
     paySubmitting = true;
     paymentError = '';
+    const appKitModule = await import('$lib/auth/appkit.js');
 
     try {
       if (paymentQuote.paymentAddress.toLowerCase() === ZERO_EVM_ADDRESS) {
         throw new Error('Payment recipient address is not configured on the server.');
       }
 
-      const { openAppKit, payWithReownErc20Transfer, ReownPaymentError } = await import('$lib/auth/appkit.js');
-
-      await payWithReownErc20Transfer({
+      await appKitModule.payWithReownErc20Transfer({
         chainId: paymentQuote.paymentChainId,
         tokenAddress: paymentQuote.paymentTokenAddress as `0x${string}`,
         recipientAddress: paymentQuote.paymentAddress as `0x${string}`,
@@ -447,8 +450,8 @@
 
       onConfirmPayment();
     } catch (error) {
-      if (error instanceof ReownPaymentError && error.code === 'wallet_not_connected') {
-        await openAppKit();
+      if (error instanceof appKitModule.ReownPaymentError && error.code === 'wallet_not_connected') {
+        await appKitModule.openAppKit();
       }
 
       paymentError = error instanceof Error ? error.message : 'Failed to complete Reown payment.';
@@ -614,7 +617,10 @@
 
   {#if paymentStage === 'result-ready'}
     <section class="kefine-result-overlay" data-testid="kefine-result-panel">
-      <div class="kefine-result-shell">
+      <div
+        class="kefine-result-shell"
+        class:kefine-result-shell--auth-gate={!showVpnResultWidget && !guestResultAccess && !isAuthenticated}
+      >
         <div class="kefine-result-header">
           <button type="button" class="kefine-flow-back" aria-label="Back" onclick={onBack}>←</button>
           <div class="kefine-result-title-block">
@@ -624,6 +630,7 @@
             <span class="kefine-flow-badge kefine-flow-badge--timer">{guestAccessTimerLabel}</span>
             <button type="button" data-variant="ghost" onclick={handlePayAction}>{payButtonLabel}</button>
             <button type="button" data-variant="ghost" onclick={onOpenStages}>View stages</button>
+            <button type="button" data-variant="ghost" onclick={onRejectResult}>{buttons.rejectResult}</button>
           </div>
         </div>
 
@@ -631,47 +638,36 @@
           <span class="kefine-payment-chip">{labels.executionEstimate} {currentOrder?.executionEstimate ?? '-'}</span>
         </div>
 
-        {#if guestResultAccess && currentOrder?.vpnGuide}
+        {#if showVpnResultWidget}
+          <div class="kefine-vpn-widget-surface">
+            <div class="kefine-vpn-widget-body">
+              <strong>{currentOrder?.vpnGuide?.title ?? labels.resultTitle}</strong>
+              <p>{currentOrder?.vpnGuide?.summary ?? 'The VPN delivery widget is ready for this completed order.'}</p>
+
+              {#if currentOrder?.vpnGuide}
+                <KefineVpnGuide guide={currentOrder.vpnGuide} />
+              {:else}
+                <div class="kefine-vpn-widget-lines" aria-hidden="true">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
+              {/if}
+            </div>
+          </div>
+          {#if !isAuthenticated}
+            <div class="kefine-vpn-guide__fallback">
+              <p>Sign in is optional for this completed VPN task. The delivery widget is already available.</p>
+            </div>
+          {/if}
+        {:else if guestResultAccess && currentOrder?.vpnGuide}
           <div class="kefine-vpn-guide" class:kefine-vpn-guide--blurred={guestAccessExpired}>
             <header class="kefine-vpn-guide__header">
               <strong>{currentOrder.vpnGuide.title}</strong>
               <p>{currentOrder.vpnGuide.summary}</p>
             </header>
 
-            <div class="kefine-vpn-guide__steps">
-              {#each currentOrder.vpnGuide.steps as step}
-                <article class="kefine-vpn-guide__card" data-step={step.id}>
-                  <h3>{step.title}</h3>
-                  <p>{step.summary}</p>
-
-                  {#if step.apps}
-                    <div class="kefine-vpn-guide__apps">
-                      {#each step.apps as app}
-                        <a class="kefine-vpn-guide__pill kefine-vpn-guide__pill--link" href={app.href} target="_blank" rel="noreferrer">
-                          {app.label}
-                        </a>
-                      {/each}
-                    </div>
-                  {/if}
-
-                  {#if step.exampleVlessLink}
-                    <pre class="kefine-vpn-guide__code"><code>{step.exampleVlessLink}</code></pre>
-                  {/if}
-
-                  {#if step.linuxClient}
-                    <ol class="kefine-vpn-guide__list">
-                      {#each step.linuxClient as item}
-                        <li>{item}</li>
-                      {/each}
-                    </ol>
-                  {/if}
-
-                  {#if step.otherClientsNote}
-                    <small class="kefine-vpn-guide__note">{step.otherClientsNote}</small>
-                  {/if}
-                </article>
-              {/each}
-            </div>
+            <KefineVpnGuide guide={currentOrder.vpnGuide} />
           </div>
 
           {#if guestAccessExpired}
@@ -693,16 +689,7 @@
           <div class="kefine-auth-grid">
             <button type="button" class="kefine-auth-tile kefine-auth-tile--wallet" data-testid="kefine-result-wallet-tile" onclick={onWalletLogin}>
               <div class="kefine-auth-hero kefine-auth-hero--wallet" aria-hidden="true">
-                <div class="kefine-wallet-grid">
-                  {#each walletProviders as provider}
-                    <span class={provider.className} aria-label={provider.label}>
-                      <span class="kefine-wallet-icon">
-                        <Icon icon={provider.icon} width="100%" height="100%" aria-hidden="true" />
-                      </span>
-                      <small>{provider.label}</small>
-                    </span>
-                  {/each}
-                </div>
+                <KefineWalletProviderGrid />
               </div>
               <strong>{authDisplay.walletLabel ?? authLabels.walletTitle}</strong>
               <small>{authLabels.walletAccount}</small>
@@ -711,7 +698,7 @@
             <button type="button" class="kefine-auth-tile kefine-auth-tile--passkey" data-testid="kefine-result-passkey-tile" onclick={onPasskeyLogin}>
               <div class="kefine-auth-hero kefine-auth-hero--passkey" aria-hidden="true">
                 <span class="kefine-auth-icon">
-                  <Icon icon={authIcons.passkey} width="100%" height="100%" aria-hidden="true" />
+                  <Icon icon={KEFINE_AUTH_ICONS.passkey} width="100%" height="100%" aria-hidden="true" />
                 </span>
               </div>
               <strong>{authLabels.passkeyTitle}</strong>

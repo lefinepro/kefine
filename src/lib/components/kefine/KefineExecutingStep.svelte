@@ -1,21 +1,13 @@
 <script lang="ts">
   import { browser } from '$app/environment';
   import Icon from '@iconify/svelte';
-  import { fade } from 'svelte/transition';
+  import { cubicOut } from 'svelte/easing';
+  import type { TransitionConfig } from 'svelte/transition';
   import type { AuthMethod, ExecutionPresentation, OrderView } from './kefine-workflow';
   import { scheduleAfter } from '$lib/utils/helpers';
-
-  const walletProviders = [
-    { icon: 'logos:metamask-icon', label: 'MetaMask', className: 'is-metamask' },
-    { icon: 'simple-icons:walletconnect', label: 'WalletConnect', className: 'is-walletconnect' },
-    { icon: 'material-symbols:alternate-email-rounded', label: 'Email', className: 'is-email' },
-    { icon: 'logos:google-icon', label: 'Google', className: 'is-google' }
-  ];
-
-  const authIcons = {
-    passkey: 'mdi:fingerprint',
-    anonymous: 'mdi:incognito'
-  } as const;
+  import KefineWalletProviderGrid from '$lib/components/kefine/KefineWalletProviderGrid.svelte';
+  import KefineVpnGuide from '$lib/components/kefine/KefineVpnGuide.svelte';
+  import { KEFINE_AUTH_ICONS } from '$lib/components/kefine/kefine-auth-constants';
 
   let {
     currentOrder,
@@ -101,14 +93,13 @@
   const activeGenericStep = $derived(genericSteps[activeGenericStepIndex] ?? null);
   const showVpnEstimate = $derived(Boolean(isVpnScenario && activeVpnStep?.revealExecutionEstimate));
   const showVpnWidget = $derived(Boolean(isVpnScenario && activeVpnStep?.revealWidget));
-  const showResolvedVpnWidget = $derived(Boolean(showVpnWidget && forceFinalVpnStep));
+  const showResolvedVpnWidget = $derived(Boolean(showVpnWidget && (forceFinalVpnStep || orderCompleted)));
   const vpnFlowKey = $derived(isVpnScenario && currentOrder ? `${currentOrder.id}:${execution.scenario}` : null);
   const genericFlowKey = $derived(
     !isVpnScenario && currentOrder
       ? `${currentOrder.id}:${execution.stage}:${genericSteps.map((step) => `${step.id}:${step.state}`).join('|')}`
       : null
   );
-  const motionDuration = $derived(prefersReducedMotion ? 0 : 260);
   const formattedElapsed = $derived(formatElapsed(elapsedSeconds));
   const vpnProgressPercent = $derived(
     vpnFlow ? Math.max(18, Math.round((visibleVpnSteps / vpnFlow.steps.length) * 100)) : 0
@@ -173,6 +164,22 @@
 
   function openVpnGuestOffer() {
     vpnResultMode = 'guest-offer';
+  }
+
+  function mistDissolve(_: Element): TransitionConfig {
+    return {
+      duration: prefersReducedMotion ? 0 : 540,
+      easing: cubicOut,
+      css: (t, u) => {
+        const blur = u * 8;
+        const scale = 0.99 + t * 0.01;
+        return `
+          opacity: ${t};
+          transform: scale(${scale});
+          filter: blur(${blur}px);
+        `;
+      }
+    };
   }
 
   $effect(() => {
@@ -309,7 +316,7 @@
 
         {#if activeVpnStep}
           {#key activeVpnStep.id}
-            <div class="kefine-vpn-stage-copy" in:fade={{ duration: motionDuration }} out:fade={{ duration: motionDuration }}>
+            <div class="kefine-vpn-stage-copy" in:mistDissolve out:mistDissolve>
               <div class="kefine-vpn-stage-meta">
                 <span class="kefine-vpn-stage-label">{vpnFlow.labels.current}</span>
                 <span class="kefine-flow-badge">
@@ -366,20 +373,21 @@
     </section>
 
     {#if showVpnWidget}
-      <section class="kefine-flow-panel" in:fade={{ duration: motionDuration }} data-testid="kefine-vpn-widget-panel">
+      <section class="kefine-flow-panel" in:mistDissolve out:mistDissolve data-testid="kefine-vpn-widget-panel">
         <div class="kefine-vpn-widget-surface">
-          {#if showResolvedVpnWidget && currentOrder?.vpnGuide}
+          {#if showResolvedVpnWidget}
             <div class="kefine-vpn-widget-body">
-              <strong>{currentOrder.vpnGuide.title}</strong>
-              <p>{currentOrder.vpnGuide.summary}</p>
-              <div class="kefine-vpn-instruction-list">
-                {#each currentOrder.vpnGuide.steps as step}
-                  <article class="kefine-vpn-instruction-card">
-                    <strong>{step.title}</strong>
-                    <p>{step.summary}</p>
-                  </article>
-                {/each}
-              </div>
+              <strong>{currentOrder?.vpnGuide?.title ?? vpnFlow.widget.title}</strong>
+              <p>{currentOrder?.vpnGuide?.summary ?? vpnFlow.widget.summary}</p>
+              {#if currentOrder?.vpnGuide}
+                <KefineVpnGuide guide={currentOrder.vpnGuide} />
+              {:else}
+                <div class="kefine-vpn-widget-lines" aria-hidden="true">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
+              {/if}
             </div>
           {:else}
             <div class="kefine-vpn-widget-body">
@@ -412,16 +420,7 @@
                 <div class="kefine-vpn-widget-actions kefine-auth-grid">
                   <button type="button" class="kefine-auth-tile kefine-auth-tile--wallet" onclick={onWalletLogin}>
                     <div class="kefine-auth-hero kefine-auth-hero--wallet" aria-hidden="true">
-                      <div class="kefine-wallet-grid">
-                        {#each walletProviders as provider}
-                          <span class={provider.className} aria-label={provider.label}>
-                            <span class="kefine-wallet-icon">
-                              <Icon icon={provider.icon} width="100%" height="100%" aria-hidden="true" />
-                            </span>
-                            <small>{provider.label}</small>
-                          </span>
-                        {/each}
-                      </div>
+                      <KefineWalletProviderGrid />
                     </div>
                     <strong>Login</strong>
                   </button>
@@ -436,7 +435,7 @@
                   <button type="button" class="kefine-auth-tile kefine-auth-tile--passkey" onclick={onPasskeyLogin}>
                     <div class="kefine-auth-hero kefine-auth-hero--passkey" aria-hidden="true">
                       <span class="kefine-auth-icon">
-                        <Icon icon={authIcons.passkey} width="100%" height="100%" aria-hidden="true" />
+                        <Icon icon={KEFINE_AUTH_ICONS.passkey} width="100%" height="100%" aria-hidden="true" />
                       </span>
                     </div>
                     <strong>Passkey</strong>
@@ -546,16 +545,7 @@
           onclick={onWalletLogin}
         >
           <div class="kefine-auth-hero kefine-auth-hero--wallet" aria-hidden="true">
-            <div class="kefine-wallet-grid">
-              {#each walletProviders as provider}
-                <span class={provider.className} aria-label={provider.label}>
-                  <span class="kefine-wallet-icon">
-                    <Icon icon={provider.icon} width="100%" height="100%" aria-hidden="true" />
-                  </span>
-                  <small>{provider.label}</small>
-                </span>
-              {/each}
-            </div>
+            <KefineWalletProviderGrid />
           </div>
           {#if authDisplay.walletLabel}
             <strong>{authDisplay.walletLabel}</strong>
@@ -574,7 +564,7 @@
         >
           <div class="kefine-auth-hero kefine-auth-hero--passkey" aria-hidden="true">
             <span class="kefine-auth-icon">
-              <Icon icon={authIcons.passkey} width="100%" height="100%" aria-hidden="true" />
+              <Icon icon={KEFINE_AUTH_ICONS.passkey} width="100%" height="100%" aria-hidden="true" />
             </span>
           </div>
           <strong>{authLabels.passkeyTitle}</strong>

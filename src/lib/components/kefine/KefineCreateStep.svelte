@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
   import type { DraftOrder, OrderView } from './kefine-workflow';
   import { scheduleAfter } from '$lib/utils/helpers';
+  import KefineOrderListItem from '$lib/components/kefine/KefineOrderListItem.svelte';
 
   const PLACEHOLDER_TYPE_DELAY_MS = 58;
   const PLACEHOLDER_DELETE_DELAY_MS = 34;
@@ -15,6 +15,7 @@
     placeholder,
     placeholderVariants,
     executeAria,
+    backgroundExecuteAria,
     solverLabel,
     recentOrders,
     matchedOrders,
@@ -22,12 +23,18 @@
     totalOrders,
     hasMoreOrders,
     matchedTasksLabel,
+    addFileLabel,
+    addPriceLabel,
+    fileCountLabel,
+    composerHints,
     timeLeftLabel,
     priceLabel,
     statusLabel,
     stopTaskLabel,
     onSubmit,
     onQueueTask,
+    onAttachFiles,
+    onRemoveFile,
     onStopOrder,
     onOpenOrder,
     onLoadMoreOrders
@@ -38,6 +45,7 @@
     placeholder: string;
     placeholderVariants: readonly string[];
     executeAria: string;
+    backgroundExecuteAria: string;
     solverLabel: string;
     recentOrders: OrderView[];
     matchedOrders: OrderView[];
@@ -45,63 +53,138 @@
     totalOrders: number;
     hasMoreOrders: boolean;
     matchedTasksLabel: string;
+    addFileLabel: string;
+    addPriceLabel: string;
+    fileCountLabel: (count: number) => string;
+    composerHints: string;
     timeLeftLabel: string;
     priceLabel: string;
     statusLabel: string;
     stopTaskLabel: string;
     onSubmit: () => void;
-    onQueueTask: (title: string) => Promise<void> | void;
+    onQueueTask: () => Promise<void> | void;
+    onAttachFiles: (files: FileList) => void;
+    onRemoveFile: (index: number) => void;
     onStopOrder: (order: OrderView, event: Event) => void;
     onOpenOrder: (order: OrderView) => void;
     onLoadMoreOrders: () => void;
   } = $props();
 
   let animatedPlaceholder = $state('');
-  let currentPlaceholderPhrase = $state('');
+  let placeholderVisible = $state(false);
+  let placeholderFocused = $state(false);
   let isLoadingMore = $state(false);
+  let priceEditorOpen = $state(false);
+  let taskTextarea = $state<HTMLTextAreaElement | null>(null);
+  let fileInput = $state<HTMLInputElement | null>(null);
   let touchStopTimers = new Map<string, () => void>();
   let touchStopTriggered = new Set<string>();
+  let cancelPlaceholderTick: (() => void) | null = null;
+  let placeholderVariantIndex = $state(0);
+  let placeholderCharIndex = $state(0);
+  let placeholderDeleting = $state(false);
+  const isMultilineDraft = $derived(draft.description.includes('\n'));
 
-  onMount(() => {
-    const variants = placeholderVariants.length > 0 ? [...placeholderVariants] : [placeholder];
-    let cancelTick: (() => void) | null = null;
-    let variantIndex = 0;
-    let charIndex = 0;
-    let deleting = false;
+  function resizeTaskInput() {
+    if (!taskTextarea) {
+      return;
+    }
 
-    const tick = () => {
-      const active = variants[variantIndex] ?? placeholder;
-      currentPlaceholderPhrase = active;
+    if (!isMultilineDraft) {
+      taskTextarea.style.height = '';
+      return;
+    }
 
-      if (!deleting) {
-        if (charIndex < active.length) {
-          charIndex += 1;
-          animatedPlaceholder = active.slice(0, charIndex);
-          cancelTick = scheduleAfter(PLACEHOLDER_TYPE_DELAY_MS, tick);
-          return;
-        }
+    taskTextarea.style.height = '0px';
+    taskTextarea.style.height = `${Math.min(Math.max(taskTextarea.scrollHeight, 104), 288)}px`;
+  }
 
-        deleting = true;
-        cancelTick = scheduleAfter(PLACEHOLDER_PAUSE_MS, tick);
+  function stopPlaceholderAnimation({ hide = false }: { hide?: boolean } = {}) {
+    cancelPlaceholderTick?.();
+    cancelPlaceholderTick = null;
+    if (hide) {
+      placeholderVisible = false;
+      animatedPlaceholder = '';
+    }
+  }
+
+  function resetPlaceholderAnimation() {
+    placeholderVariantIndex = 0;
+    placeholderCharIndex = 0;
+    placeholderDeleting = false;
+    animatedPlaceholder = '';
+    placeholderVisible = false;
+  }
+
+  function schedulePlaceholderTick(delay: number) {
+    cancelPlaceholderTick?.();
+    cancelPlaceholderTick = scheduleAfter(delay, runPlaceholderTick);
+  }
+
+  function runPlaceholderTick() {
+    const variants = placeholderVariants.length > 0 ? placeholderVariants : [placeholder];
+    const active = variants[placeholderVariantIndex] ?? placeholder;
+
+    if (placeholderFocused || draft.description.trim()) {
+      stopPlaceholderAnimation({ hide: true });
+      return;
+    }
+
+    if (!placeholderDeleting) {
+      placeholderVisible = true;
+
+      if (placeholderCharIndex < active.length) {
+        placeholderCharIndex += 1;
+        animatedPlaceholder = active.slice(0, placeholderCharIndex);
+        schedulePlaceholderTick(PLACEHOLDER_TYPE_DELAY_MS);
         return;
       }
 
-      if (charIndex > 0) {
-        charIndex -= 1;
-        animatedPlaceholder = active.slice(0, charIndex);
-        cancelTick = scheduleAfter(PLACEHOLDER_DELETE_DELAY_MS, tick);
-        return;
-      }
+      placeholderDeleting = true;
+      schedulePlaceholderTick(PLACEHOLDER_PAUSE_MS);
+      return;
+    }
 
-      deleting = false;
-      variantIndex = (variantIndex + 1) % variants.length;
-      cancelTick = scheduleAfter(PLACEHOLDER_NEXT_DELAY_MS, tick);
-    };
+    if (placeholderCharIndex > 0) {
+      placeholderCharIndex -= 1;
+      animatedPlaceholder = active.slice(0, placeholderCharIndex);
+      schedulePlaceholderTick(PLACEHOLDER_DELETE_DELAY_MS);
+      return;
+    }
 
-    tick();
+    placeholderVisible = false;
+    placeholderDeleting = false;
+    placeholderVariantIndex = (placeholderVariantIndex + 1) % variants.length;
+    schedulePlaceholderTick(PLACEHOLDER_NEXT_DELAY_MS);
+  }
+
+  $effect(() => {
+    draft.description;
+    resizeTaskInput();
+  });
+
+  $effect(() => {
+    const shouldAnimate = !draft.description.trim() && !placeholderFocused;
+
+    if (!shouldAnimate) {
+      stopPlaceholderAnimation({ hide: true });
+      return;
+    }
+
+    if (!cancelPlaceholderTick) {
+      schedulePlaceholderTick(animatedPlaceholder ? PLACEHOLDER_TYPE_DELAY_MS : 0);
+    }
 
     return () => {
-      cancelTick?.();
+      cancelPlaceholderTick?.();
+      cancelPlaceholderTick = null;
+    };
+  });
+
+  $effect(() => {
+    return () => {
+      cancelPlaceholderTick?.();
+      cancelPlaceholderTick = null;
 
       for (const cancelTimer of touchStopTimers.values()) {
         cancelTimer();
@@ -117,24 +200,28 @@
       return;
     }
 
+    if (event.shiftKey) {
+      return;
+    }
+
     event.preventDefault();
 
-    if (event.shiftKey) {
-      const titleValue = draft.title.trim();
-      if (titleValue) {
-        void onQueueTask(titleValue);
-        draft.title = '';
-        return;
-      }
-
-      const placeholderValue = currentPlaceholderPhrase.trim();
-      if (placeholderValue) {
-        void onQueueTask(placeholderValue);
-      }
+    if (event.altKey) {
+      void onQueueTask();
       return;
     }
 
     onSubmit();
+  }
+
+  function handleFileChange(event: Event) {
+    const target = event.currentTarget as HTMLInputElement | null;
+    if (!target?.files || target.files.length === 0) {
+      return;
+    }
+
+    onAttachFiles(target.files);
+    target.value = '';
   }
 
   function handleRecentOrdersScroll(event: Event) {
@@ -204,148 +291,440 @@
     onOpenOrder(order);
   }
 
-  function formatStatusLabel(status: string) {
-    const normalized = status.trim().toLowerCase();
-    if (normalized === 'done' || normalized === 'completed') return 'Completed';
-    if (normalized === 'stopped' || normalized === 'cancelled' || normalized === 'canceled') return 'Stopped';
-    if (normalized === 'executing' || normalized === 'accepted') return 'Executing';
-    if (normalized === 'queued') return 'Queued';
-    if (!normalized) return 'Queued';
-    return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+  function handleTaskInputFocus() {
+    placeholderFocused = true;
+    stopPlaceholderAnimation({ hide: true });
   }
 
-  function formatOrderPrice(order: OrderView) {
-    if (order.estimatedCost === undefined) {
-      return `${priceLabel} -`;
+  function handleTaskInputBlur() {
+    placeholderFocused = false;
+    if (!draft.description.trim()) {
+      resetPlaceholderAnimation();
+      schedulePlaceholderTick(PLACEHOLDER_NEXT_DELAY_MS);
     }
-
-    const amount = Number.isInteger(order.estimatedCost)
-      ? String(order.estimatedCost)
-      : order.estimatedCost.toFixed(2).replace(/\.?0+$/, '');
-
-    return `${priceLabel} ${amount} ${order.currency}`;
   }
 
-  function formatOrderTime(order: OrderView) {
-    return order.executionEstimate ? `${timeLeftLabel} ${order.executionEstimate}` : `${timeLeftLabel} -`;
+  function handleTaskInputPointerDown() {
+    placeholderFocused = true;
+    stopPlaceholderAnimation({ hide: true });
   }
 
 </script>
 
-<article class="kefine-card kefine-card--wide kefine-card--create">
-  <h2 class="kefine-create-title">{title}</h2>
+<article class="kefine-card kefine-card--wide" data-kefine-create>
+  <h2>{title}</h2>
 
   <form
-    class="kefine-form"
+    data-part="form"
     onsubmit={(event) => {
       event.preventDefault();
       onSubmit();
     }}
   >
-    <fieldset class="kefine-exec-row" data-testid="kefine-create-form">
-      <p class="kefine-task-block">
+    <fieldset data-part="exec-row" data-testid="kefine-create-form">
+      <kefine-task-shell>
         <textarea
           id="order-title"
-          bind:value={draft.title}
-          class="kefine-task-input"
+          bind:this={taskTextarea}
+          bind:value={draft.description}
+          data-part="task-input"
+          data-empty={!draft.description.trim()}
+          data-multiline={isMultilineDraft}
           data-testid="kefine-task-input"
-          style={`font-size: ${titleFontSize}rem;`}
-          placeholder={animatedPlaceholder}
+          style={`--kef-task-font-size: ${titleFontSize}rem;`}
+          placeholder=""
+          rows="1"
+          wrap={isMultilineDraft ? 'soft' : 'off'}
           onkeydown={handleTaskInputKeydown}
+          oninput={resizeTaskInput}
+          onfocus={handleTaskInputFocus}
+          onblur={handleTaskInputBlur}
+          onpointerdown={handleTaskInputPointerDown}
         ></textarea>
-      </p>
+        {#if !draft.description.trim()}
+          <kefine-task-placeholder
+            data-visible={placeholderVisible}
+            style={`--kef-task-font-size: ${titleFontSize}rem;`}
+            aria-hidden="true"
+          >
+            {animatedPlaceholder}
+          </kefine-task-placeholder>
+        {/if}
+      </kefine-task-shell>
       <button
         type="submit"
         data-variant="primary"
-        class="kefine-exec-btn"
+        data-part="exec-button"
         data-testid="kefine-submit-task"
         aria-label={executeAria}
       >
-        <span class="kefine-exec-arrow" aria-hidden="true">➵</span>
+        <kefine-exec-arrow aria-hidden="true">➵</kefine-exec-arrow>
       </button>
     </fieldset>
+
+    <kefine-composer-strip aria-label={composerHints}>
+      <button type="button" data-part="composer-chip" title={backgroundExecuteAria} onclick={() => fileInput?.click()}>
+        <span>{addFileLabel}</span>
+        {#if draft.files.length > 0}
+          <strong>{fileCountLabel(draft.files.length)}</strong>
+        {/if}
+      </button>
+      {#if priceEditorOpen}
+        <kefine-price-editor>
+          <input bind:value={draft.estimatedCost} data-part="price-input" inputmode="decimal" />
+          <input bind:value={draft.currency} data-part="currency-input" maxlength="8" />
+        </kefine-price-editor>
+      {:else}
+        <button type="button" data-part="composer-chip" onclick={() => { priceEditorOpen = true; }}>
+          <span>{addPriceLabel}</span>
+        </button>
+      {/if}
+      <input bind:this={fileInput} data-part="file-input" type="file" multiple onchange={handleFileChange} />
+    </kefine-composer-strip>
+
+    {#if draft.files.length > 0}
+      <kefine-file-list>
+        {#each draft.files as file, index (`${file.name}-${file.size}-${index}`)}
+          <button type="button" data-part="file-pill" onclick={() => onRemoveFile(index)}>
+            <span>{file.name}</span>
+            <strong>{Math.max(1, Math.round(file.size / 1024))} KB</strong>
+          </button>
+        {/each}
+      </kefine-file-list>
+    {/if}
+
+    <p data-part="composer-hints">{composerHints}</p>
   </form>
 
-  <section class="kefine-recent" aria-label={isSearching ? matchedTasksLabel : solverLabel}>
+  <section data-part="recent" aria-label={isSearching ? matchedTasksLabel : solverLabel}>
     {#if isSearching && matchedOrders.length > 0}
-      <kefine-recent-title class="kefine-recent-title">{matchedTasksLabel}</kefine-recent-title>
-      <ul class="kefine-recent-list kefine-recent-list--compact" data-testid="kefine-search-results">
+      <kefine-recent-title>{matchedTasksLabel}</kefine-recent-title>
+      <ul data-part="recent-list" data-compact="true" data-testid="kefine-search-results">
         {#each matchedOrders as order (order.id)}
-          <li>
-            <kefine-order-card
-              class="kefine-recent-item kefine-queued-task kefine-order-item"
-              data-testid={`kefine-search-order-${order.id}`}
-              data-order-id={order.id}
-              data-status={order.status}
-              role="button"
-              tabindex="0"
-              onclick={() => onOpenOrder(order)}
-              onkeydown={(event: KeyboardEvent) => handleOpenOrderKeydown(order, event)}
-            >
-                <section class="kefine-order-open" data-testid={`kefine-open-search-order-${order.id}`}>
-                  <kefine-order-summary class="kefine-order-summary">
-                    <kr-title>{order.title}</kr-title>
-                    <kefine-order-meta class="kefine-order-meta">
-                      <kefine-order-solver>{order.solver}</kefine-order-solver>
-                      <kefine-order-estimate class="kefine-order-estimate" data-testid={`kefine-order-eta-${order.id}`}>
-                        <span>{statusLabel} {formatStatusLabel(order.status)}</span>
-                        <span>{formatOrderTime(order)}</span>
-                        <span>{formatOrderPrice(order)}</span>
-                      </kefine-order-estimate>
-                    </kefine-order-meta>
-                </kefine-order-summary>
-              </section>
-            </kefine-order-card>
-          </li>
+          <KefineOrderListItem
+            {order}
+            {statusLabel}
+            {timeLeftLabel}
+            {priceLabel}
+            itemTestId={`kefine-search-order-${order.id}`}
+            openTestId={`kefine-open-search-order-${order.id}`}
+            etaTestId={`kefine-order-eta-${order.id}`}
+            onOpen={() => onOpenOrder(order)}
+            onOpenKeydown={(event) => handleOpenOrderKeydown(order, event)}
+          />
         {/each}
       </ul>
     {:else if totalOrders > 0}
-      <section class="kefine-recent-scroll" data-testid="kefine-recent-scroll" onscroll={handleRecentOrdersScroll}>
-        <ul class="kefine-recent-list" data-testid="kefine-recent-list">
+      <section data-part="recent-scroll" data-testid="kefine-recent-scroll" onscroll={handleRecentOrdersScroll}>
+        <ul data-part="recent-list" data-testid="kefine-recent-list">
           {#each recentOrders as order (order.id)}
-            <li>
-              <kefine-order-card
-                class="kefine-recent-item kefine-queued-task kefine-order-item"
-                data-testid={`kefine-order-item-${order.id}`}
-                data-order-id={order.id}
-                data-status={order.status}
-                role="button"
-                tabindex="0"
-                onclick={() => onOpenOrder(order)}
-                onkeydown={(event: KeyboardEvent) => handleOpenOrderKeydown(order, event)}
-              >
-                <button
-                  type="button"
-                  class="kefine-status-toggle kefine-status-toggle--order"
-                  data-testid={`kefine-stop-order-${order.id}`}
-                  aria-label={`${stopTaskLabel}: ${order.title}`}
-                  data-status={order.status}
-                  onpointerdown={(event) => startStopPress(order, event)}
-                  onpointerup={() => clearStopPress(order.id)}
-                  onpointerleave={() => clearStopPress(order.id)}
-                  onpointercancel={() => clearStopPress(order.id)}
-                  onclick={(event) => handleStopClick(order, event)}
-                >
-                  <status-mark aria-hidden="true" data-status={order.status}><task-dot></task-dot></status-mark>
-                </button>
-                <section class="kefine-order-open" data-testid={`kefine-open-order-${order.id}`}>
-                  <kefine-order-summary class="kefine-order-summary">
-                    <kr-title>{order.title}</kr-title>
-                    <kefine-order-meta class="kefine-order-meta">
-                      <kefine-order-solver>{order.solver}</kefine-order-solver>
-                      <kefine-order-estimate class="kefine-order-estimate" data-testid={`kefine-order-eta-${order.id}`}>
-                        <span>{statusLabel} {formatStatusLabel(order.status)}</span>
-                        <span>{formatOrderTime(order)}</span>
-                        <span>{formatOrderPrice(order)}</span>
-                      </kefine-order-estimate>
-                    </kefine-order-meta>
-                  </kefine-order-summary>
-                </section>
-              </kefine-order-card>
-            </li>
+            <KefineOrderListItem
+              {order}
+              {statusLabel}
+              {timeLeftLabel}
+              {priceLabel}
+              {stopTaskLabel}
+              showStop={true}
+              itemTestId={`kefine-order-item-${order.id}`}
+              openTestId={`kefine-open-order-${order.id}`}
+              etaTestId={`kefine-order-eta-${order.id}`}
+              stopTestId={`kefine-stop-order-${order.id}`}
+              onOpen={() => onOpenOrder(order)}
+              onOpenKeydown={(event) => handleOpenOrderKeydown(order, event)}
+              onStop={(event) => handleStopClick(order, event)}
+              onStopPointerDown={(event) => startStopPress(order, event)}
+              onStopPointerUp={() => clearStopPress(order.id)}
+              onStopPointerLeave={() => clearStopPress(order.id)}
+              onStopPointerCancel={() => clearStopPress(order.id)}
+            />
           {/each}
         </ul>
       </section>
     {/if}
   </section>
 </article>
+
+<style>
+  [data-kefine-create] {
+    grid-template-rows: auto auto auto minmax(0, auto);
+    align-content: start;
+    width: min(100%, calc(100vw - 7rem));
+    max-width: 64rem;
+    justify-self: center;
+    margin-inline: auto;
+  }
+
+  [data-kefine-create] h2 {
+    font-size: clamp(1.35rem, 2vw, 1.75rem);
+    margin: 0;
+  }
+
+  form[data-part='form'] {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  fieldset[data-part='exec-row'] {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 4.05rem;
+    gap: clamp(0.45rem, 2vw, 0.75rem);
+    align-items: center;
+    border-radius: 0.38rem;
+    padding: 0.28rem;
+    margin: 0;
+    border: 0;
+    min-inline-size: 0;
+    background: color-mix(in oklab, var(--kef-bg-card) 98%, var(--kef-bg));
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--kef-bg) 42%, transparent);
+  }
+
+  fieldset[data-part='exec-row']:focus-within {
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--kef-bg-card) 78%, transparent), var(--kef-ring-focus);
+  }
+
+  kefine-task-shell {
+    margin: 0;
+    display: grid;
+    gap: 0.5rem;
+    min-width: 0;
+    position: relative;
+  }
+
+  textarea[data-part='task-input'] {
+    min-height: clamp(3.3rem, 7vw, 4rem);
+    height: clamp(3.3rem, 7vw, 4rem);
+    max-height: 18rem;
+    font-size: var(--kef-task-font-size, clamp(1.15rem, 2.7vw, 2.2rem));
+    font-weight: 740;
+    line-height: 1.04;
+    letter-spacing: -0.02em;
+    text-align: left;
+    color: var(--kef-on-primary);
+    background: var(--kef-primary);
+    border: var(--kef-border-width-strong) solid var(--kef-line-strong);
+    border-radius: 0.3rem;
+    resize: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-inline: clamp(0.72rem, 2.5vw, 0.92rem);
+    padding-top: max(0.48rem, calc((clamp(3.3rem, 7vw, 4rem) - 1.04em) / 2));
+    padding-bottom: max(0.48rem, calc((clamp(3.3rem, 7vw, 4rem) - 1.04em) / 2));
+    overflow-wrap: normal;
+    white-space: nowrap;
+    transition:
+      border-color var(--kef-motion-fast) var(--kef-ease-soft),
+      box-shadow var(--kef-motion-fast) var(--kef-ease-soft),
+      background-color var(--kef-motion-fast) var(--kef-ease-soft);
+  }
+
+  textarea[data-part='task-input']:focus {
+    box-shadow: 0 16px 24px color-mix(in oklab, var(--kef-primary) 14%, transparent);
+  }
+
+  textarea[data-part='task-input'][data-multiline='true'] {
+    height: auto;
+    overflow-x: hidden;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    padding-top: 0.72rem;
+    padding-bottom: 0.72rem;
+  }
+
+  kefine-task-placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    min-height: clamp(3.3rem, 7vw, 4rem);
+    padding-inline: clamp(0.72rem, 2.5vw, 0.92rem);
+    padding-top: max(0.48rem, calc((clamp(3.3rem, 7vw, 4rem) - 1.04em) / 2));
+    padding-bottom: max(0.48rem, calc((clamp(3.3rem, 7vw, 4rem) - 1.04em) / 2));
+    color: color-mix(in oklab, var(--kef-on-primary) 78%, transparent);
+    font-size: var(--kef-task-font-size, clamp(1.15rem, 2.7vw, 2.2rem));
+    font-weight: 720;
+    opacity: 0;
+    pointer-events: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: opacity 220ms var(--kef-ease-soft);
+  }
+
+  kefine-task-placeholder[data-visible='true'] {
+    opacity: 1;
+  }
+
+  button[data-part='exec-button'] {
+    width: 100%;
+    height: clamp(3.3rem, 7vw, 4rem);
+    min-height: clamp(3.3rem, 7vw, 4rem);
+    max-width: 4.05rem;
+    border-radius: 0.3rem;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0;
+  }
+
+  kefine-exec-arrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    font-size: clamp(2.35rem, 8vw, 3.6rem);
+    font-weight: 400;
+    line-height: 1;
+    text-align: center;
+  }
+
+  kefine-composer-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+    align-items: center;
+    padding: 0.1rem 0;
+    border-bottom: 1px dashed color-mix(in oklab, var(--kef-line) 72%, transparent);
+  }
+
+  button[data-part='composer-chip'],
+  input[data-part='price-input'],
+  input[data-part='currency-input'],
+  button[data-part='file-pill'] {
+    min-height: 2.5rem;
+    padding: 0.6rem 0.85rem;
+    border-radius: 999px;
+    border: 1px solid color-mix(in oklab, var(--kef-line) 78%, transparent);
+    background: color-mix(in oklab, var(--kef-bg-card) 92%, transparent);
+    color: var(--kef-text);
+    font: inherit;
+  }
+
+  kefine-price-editor {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  input[data-part='price-input'] {
+    width: 7rem;
+  }
+
+  input[data-part='currency-input'] {
+    width: 5.5rem;
+    text-transform: uppercase;
+  }
+
+  input[data-part='file-input'] {
+    display: none;
+  }
+
+  kefine-file-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  button[data-part='file-pill'] {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.65rem;
+  }
+
+  p[data-part='composer-hints'] {
+    margin: 0;
+    color: var(--kef-text-soft);
+    font-size: 0.85rem;
+  }
+
+  section[data-part='recent'] {
+    display: grid;
+    gap: 0.65rem;
+    min-height: 0;
+  }
+
+  kefine-recent-title {
+    font-size: 0.95rem;
+    font-weight: 650;
+    color: var(--kef-text-soft);
+    margin: 0;
+  }
+
+  ul[data-part='recent-list'] {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  ul[data-part='recent-list'][data-compact='true'] {
+    gap: 0.42rem;
+  }
+
+  section[data-part='recent-scroll'] {
+    border: 0;
+    border-radius: 0.35rem;
+    height: auto;
+    max-height: min(40vh, 24rem);
+    overflow: auto;
+    padding: clamp(0.3rem, 2vw, 0.5rem);
+    background: transparent;
+  }
+
+  @media (min-width: 960px) {
+    [data-kefine-create] {
+      width: min(64rem, calc(100vw - 8rem));
+    }
+
+    fieldset[data-part='exec-row'] {
+      grid-template-columns: minmax(0, 1fr) 3.95rem;
+      gap: 0.5rem;
+    }
+
+    textarea[data-part='task-input'] {
+      min-height: 4.5rem;
+      height: 4.5rem;
+      font-size: clamp(1.2rem, 1.6vw, 1.75rem);
+      line-height: 1.02;
+      padding-inline: 1rem;
+      padding-top: calc((4.5rem - 1.02em) / 2);
+      padding-bottom: calc((4.5rem - 1.02em) / 2);
+    }
+
+    kefine-task-placeholder {
+      padding-inline: 1rem;
+      padding-top: calc((4.5rem - 1.02em) / 2);
+      padding-bottom: calc((4.5rem - 1.02em) / 2);
+    }
+
+    button[data-part='exec-button'] {
+      height: 4.5rem;
+      min-height: 4.5rem;
+      max-width: 3.95rem;
+    }
+  }
+
+  @media (max-width: 760px) {
+    [data-kefine-create] {
+      width: min(100%, calc(100vw - 2rem));
+    }
+
+    fieldset[data-part='exec-row'] {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    textarea[data-part='task-input'] {
+      font-size: min(var(--kef-task-font-size, 1rem), 0.82rem);
+    }
+
+    kefine-task-placeholder {
+      font-size: min(var(--kef-task-font-size, 1rem), 0.82rem);
+    }
+
+    p[data-part='composer-hints'] {
+      display: none;
+    }
+  }
+</style>

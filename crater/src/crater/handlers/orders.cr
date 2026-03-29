@@ -96,13 +96,11 @@ module Crater
       end
 
       private def self.create_order(env, config : Utils::Config)
-        body = env.request.body.try(&.gets_to_end) || ""
-
         payload = begin
-          JSON.parse(body)
-        rescue JSON::ParseException
+          read_create_payload(env)
+        rescue ex : JSON::ParseException
           env.response.status_code = 400
-          return({error: "Invalid JSON body"}.to_json)
+          return({error: "Invalid request body", reason: ex.message}.to_json)
         end
 
         record = begin
@@ -131,6 +129,62 @@ module Crater
           uiScenario: record.ui_scenario,
           paymentUrl: record.payment_url
         }.to_json
+      end
+
+      private def self.read_create_payload(env) : JSON::Any
+        content_type = env.request.headers["Content-Type"]?.to_s
+        if content_type.starts_with?("multipart/form-data")
+          return read_multipart_payload(env)
+        end
+
+        body = env.request.body.try(&.gets_to_end) || ""
+        JSON.parse(body)
+      end
+
+      private def self.read_multipart_payload(env) : JSON::Any
+        params = env.params.body
+        files = env.params.files.values
+
+        attachment_items = files.map do |file|
+          media_type = file.headers["Content-Type"]?.to_s
+          media_type = "application/octet-stream" if media_type.nil? || media_type.empty?
+          {
+            "type" => "Document",
+            "name" => file.filename,
+            "mediaType" => media_type,
+            "size" => file.size,
+          }
+        end
+
+        payload = {} of String => String | Int64 | Array(String) | Array(Hash(String, String | Int64))
+        add_string_field(payload, "name", params["name"]?)
+        add_string_field(payload, "title", params["title"]?)
+        add_string_field(payload, "content", params["content"]?)
+        add_string_field(payload, "description", params["description"]?)
+        add_string_field(payload, "estimatedCost", params["estimatedCost"]?)
+        add_string_field(payload, "currency", params["currency"]?)
+        add_string_field(payload, "executionEstimate", params["executionEstimate"]?)
+        add_string_field(payload, "uiScenario", params["uiScenario"]?)
+
+        labels = parse_json_array(params["labels"]?)
+        payload["labels"] = labels unless labels.empty?
+        payload["attachment"] = attachment_items unless attachment_items.empty?
+
+        JSON.parse(payload.to_json)
+      end
+
+      private def self.add_string_field(payload, key : String, value : String?) : Nil
+        return if value.nil? || value.empty?
+
+        payload[key] = value
+      end
+
+      private def self.parse_json_array(raw : String?) : Array(String)
+        return [] of String if raw.nil? || raw.empty?
+
+        JSON.parse(raw).as_a.compact_map(&.as_s?)
+      rescue
+        raw.split(',').map(&.strip).reject(&.empty?)
       end
 
       private def self.forward_to_order_queue(target : String, payload : String) : Nil

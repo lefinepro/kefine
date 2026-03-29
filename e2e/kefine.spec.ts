@@ -220,6 +220,26 @@ test('anonymous payment path opens deposit dialog and reveals result panel', asy
   await expect(page.getByTestId('kefine-save-result')).toBeVisible();
 });
 
+test('View stages opens the execution flow from the result panel', async ({ page }) => {
+  await mockOrderApi(page);
+  await gotoAndWaitForReady(page);
+
+  await page.getByTestId('kefine-task-input').fill('Deploy private VPN for the team');
+  await page.getByTestId('kefine-submit-task').click();
+
+  await expect(page).toHaveURL(/\/task\/order-1$/);
+  await page.getByTestId('kefine-anonymous-tile').click();
+  await expect(page.getByTestId('kefine-anonymous-payment')).toBeVisible();
+  await page.getByRole('button', { name: 'Continue to result' }).click();
+
+  await expect(page.getByTestId('kefine-result-panel')).toBeVisible();
+  await page.getByRole('button', { name: 'View stages' }).click();
+
+  await expect(page).toHaveURL(/\/task\/order-1\/stages$/);
+  await expect(page.getByTestId('kefine-subtask-list')).toBeVisible();
+  await expect(page.getByTestId('kefine-result-panel')).toHaveCount(0);
+});
+
 test('desktop stop marks task stopped from shared list', async ({ page }) => {
   const api = await mockOrderApi(page);
   await gotoAndWaitForReady(page);

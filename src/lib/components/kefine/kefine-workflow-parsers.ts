@@ -26,6 +26,11 @@ function toNumber(value: unknown): number | undefined {
   return undefined;
 }
 
+function detectVpnScenario(payload: DraftOrder): boolean {
+  const source = `${payload.title} ${payload.description}`.toLowerCase();
+  return /\bvpn\b/.test(source) || source.includes('telegram') || source.includes('телеграм');
+}
+
 function toUiScenario(value: unknown): Exclude<UiScenario, 'default'> | undefined {
   return value === 'vpn-service' ? value : undefined;
 }
@@ -267,10 +272,11 @@ export function parseStoredOrders(raw: string | null, localeText: KefineLocaleTe
         paymentUrl: toStringValue(order['paymentUrl']) || undefined,
         uiScenario: toUiScenario(order['uiScenario']),
         labels: toStringList(order['labels']),
-        vpnGuide: extractVpnGuide(order)
+        vpnGuide: extractVpnGuide(order),
+        activitypub: toRecord(order['activitypub']) || undefined
       };
     })
-    .filter((order) => order.id.length > 0 && !order.id.startsWith('temp-'));
+    .filter((order) => order.id.length > 0 && !order.id.startsWith('temp-') && !order.id.startsWith('local-'));
 }
 
 export function readCreateResponse(body: unknown): {
@@ -306,6 +312,7 @@ export function extractStatusPayload(
   },
   localeText: KefineLocaleText
 ): OrderView | null {
+  const rootPayload = toRecord(payload);
   const activityOrObject = unwrapActivityObject(payload);
   if (!activityOrObject) return null;
 
@@ -375,7 +382,8 @@ export function extractStatusPayload(
     paymentUrl: extractHref(paymentLink ?? {}) || toStringValue(source['paymentUrl']) || undefined,
     uiScenario: toUiScenario(source['uiScenario']) || toUiScenario(ticket['uiScenario']),
     labels: toStringList(source['labels']) || toStringList(ticket['labels']),
-    vpnGuide
+    vpnGuide,
+    activitypub: rootPayload || undefined
   };
 }
 
@@ -433,6 +441,14 @@ export function readPaymentQuote(body: unknown): PaymentQuote | null {
 }
 
 export function buildCreatePayload(payload: DraftOrder) {
+  const isVpnScenario = detectVpnScenario(payload);
+  const fileAttachments = payload.files.map((file) => ({
+    type: 'Document',
+    name: file.name,
+    mediaType: file.type || 'application/octet-stream',
+    size: file.size
+  }));
+
   return {
     name: payload.title,
     title: payload.title,
@@ -440,6 +456,9 @@ export function buildCreatePayload(payload: DraftOrder) {
     description: payload.description,
     estimatedCost: toNumber(payload.estimatedCost) || 0,
     currency: payload.currency,
-    executionEstimate: payload.executionEstimate || undefined
+    executionEstimate: payload.executionEstimate || undefined,
+    uiScenario: isVpnScenario ? 'vpn-service' : undefined,
+    labels: isVpnScenario ? ['vpn'] : undefined,
+    attachment: fileAttachments.length > 0 ? fileAttachments : undefined
   };
 }

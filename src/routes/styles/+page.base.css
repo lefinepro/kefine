@@ -35,11 +35,11 @@
     --kef-line-error: color-mix(in oklab, var(--kef-error) 26%, var(--kef-line));
     --kef-ring-focus: 0 0 0 2px color-mix(in oklab, var(--kef-primary) 14%, transparent);
     --kef-shadow: 0 8px 22px color-mix(in oklab, #2f241a 6%, transparent);
-    --kef-motion-fast: 160ms;
-    --kef-motion-base: 240ms;
-    --kef-motion-slow: 380ms;
-    --kef-ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
-    --kef-ease-soft: cubic-bezier(0.2, 0.8, 0.2, 1);
+    --kef-motion-fast: 220ms;
+    --kef-motion-base: 360ms;
+    --kef-motion-slow: 620ms;
+    --kef-ease-standard: cubic-bezier(0.24, 0.72, 0.2, 1);
+    --kef-ease-soft: cubic-bezier(0.18, 0.78, 0.16, 1);
     color-scheme: light dark;
   }
 
@@ -358,6 +358,8 @@
 
   .kefine-layout--create {
     min-height: calc(100vh - clamp(1.5rem, 4vw, 2.8rem));
+    width: 100%;
+    max-width: none;
   }
 
   .kefine-layout--flow {

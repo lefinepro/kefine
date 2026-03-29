@@ -1,13 +1,7 @@
 <script lang="ts">
   import Icon from '@iconify/svelte';
   import KefineModal from '$lib/components/kefine/KefineModal.svelte';
-
-  const walletProviders = [
-    { icon: 'logos:metamask-icon', label: 'MetaMask', className: 'is-metamask' },
-    { icon: 'simple-icons:walletconnect', label: 'WalletConnect', className: 'is-walletconnect' },
-    { icon: 'material-symbols:alternate-email-rounded', label: 'Email', className: 'is-email' },
-    { icon: 'logos:google-icon', label: 'Google', className: 'is-google' }
-  ];
+  import KefineWalletProviderGrid from '$lib/components/kefine/KefineWalletProviderGrid.svelte';
   let {
     open,
     title,
@@ -49,16 +43,7 @@
   <section class="kefine-auth-dialog__actions">
     <button type="button" class="kefine-auth-tile kefine-auth-tile--wallet" onclick={onWallet}>
       <div class="kefine-auth-hero kefine-auth-hero--wallet" aria-hidden="true">
-        <div class="kefine-wallet-grid">
-          {#each walletProviders as provider}
-            <span class={provider.className} aria-label={provider.label}>
-              <span class="kefine-wallet-icon">
-                <Icon icon={provider.icon} width="100%" height="100%" aria-hidden="true" />
-              </span>
-              <small>{provider.label}</small>
-            </span>
-          {/each}
-        </div>
+        <KefineWalletProviderGrid />
       </div>
       <strong>{walletTitle}</strong>
     </button>
@@ -144,51 +129,6 @@
   .kefine-auth-hero--wallet,
   .kefine-auth-hero--passkey {
     background: transparent;
-  }
-
-  .kefine-wallet-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.5rem 0.55rem;
-    width: 100%;
-  }
-
-  .kefine-wallet-grid > span {
-    display: grid;
-    justify-items: center;
-    align-content: center;
-    gap: 0.18rem;
-    color: var(--kef-text, #2e2317);
-  }
-
-  .kefine-wallet-grid > span small {
-    margin: 0;
-    font-size: 0.44rem;
-    line-height: 1.1;
-    color: var(--kef-text-soft, #6f6254);
-    opacity: 1;
-  }
-
-  .kefine-wallet-icon {
-    display: grid;
-    place-items: center;
-    width: 3.2rem;
-    height: 3.2rem;
-  }
-
-  :global(.kefine-wallet-icon svg) {
-    width: 100%;
-    height: 100%;
-  }
-
-  :global(.kefine-wallet-grid span.is-metamask .kefine-wallet-icon svg) {
-    width: 90%;
-    height: 90%;
-  }
-
-  :global(.kefine-wallet-grid span.is-google .kefine-wallet-icon svg) {
-    width: 86%;
-    height: 86%;
   }
 
   .kefine-auth-icon {
