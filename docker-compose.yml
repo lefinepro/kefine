@@ -16,8 +16,11 @@ services:
     depends_on:
       - postgres
     environment:
+      KEFINE_CRATER: ${KEFINE_CRATER:-https://lefine.pro}
       KEFINE_DATABASE_URL: ${KEFINE_DATABASE_URL:-${DATABASE_URL:-postgresql://kefine:kefine@postgres:5432/kefine}}
-      KEFINE_EXCHANGE: ${KEFINE_EXCHANGE:-http://localhost:5173}
+      KEFINE_EXCHANGE: ${KEFINE_EXCHANGE:-https://lefine.pro/exchange}
+      KEFINE_LEGAL_ORIGIN: ${KEFINE_LEGAL_ORIGIN:-}
+      KEFINE_TASK_ORIGIN: ${KEFINE_TASK_ORIGIN:-}
       KEFINE_PAYMENT_EVM_ADDRESS: ${KEFINE_PAYMENT_EVM_ADDRESS:-0x0000000000000000000000000000000000000000}
     ports:
       - "3001:3001"
@@ -29,9 +32,11 @@ services:
     depends_on:
       - crater
     environment:
-      KEFINE_CRATER: http://crater:3001
+      KEFINE_CRATER: ${KEFINE_CRATER:-https://lefine.pro}
       PORT: 5173
-      ORIGIN: http://localhost:5173
+      ORIGIN: ${ORIGIN:-https://lefine.pro}
+      KEFINE_LEGAL_ORIGIN: ${KEFINE_LEGAL_ORIGIN:-}
+      KEFINE_TASK_ORIGIN: ${KEFINE_TASK_ORIGIN:-}
     ports:
       - "5173:5173"
 

@@ -14,6 +14,7 @@ export const KEFINE_TEXT_EN = {
     languageAria: 'Open language menu',
     languageEnglish: 'English',
     languageRussian: 'Russian',
+    languageArmenian: 'Armenian',
     theme: {
       switchToDark: 'Switch to dark theme',
       switchToLight: 'Switch to light theme'
@@ -59,6 +60,11 @@ export const KEFINE_TEXT_EN = {
     placeholder: 'Describe what should be solved...',
     placeholderVariants: ['Need access to Telegram', 'Deploy private VPN for the team', 'Deploy my production app', 'Optimize an algorithm'],
     executeAria: 'Execute task',
+    backgroundExecuteAria: 'Send task in background',
+    addFile: '+ file',
+    addPrice: '+ price',
+    fileCount: (count: number) => `${count} file${count === 1 ? '' : 's'}`,
+    composerHints: 'Enter to send, Alt+Enter to queue, Shift+Enter for a new line',
     pathsTitle: 'Task routes',
     pathCreateLabel: 'Create task:',
     pathStatusLabel: 'Task:',
@@ -141,6 +147,7 @@ export const KEFINE_TEXT_EN = {
     depositNow: 'Deposit',
     confirmLinkedWallet: 'Confirm linked wallet',
     openResult: 'Open result',
+    rejectResult: 'Reject result',
     saveResult: 'Save result',
     enterPromo: 'Enter promo code',
     closeDialog: 'Close',

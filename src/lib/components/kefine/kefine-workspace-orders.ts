@@ -2,7 +2,6 @@ import { buildOrderProxyUrl } from '$lib/order-proxy-path';
 import type { DraftOrder, OrderView } from '$lib/components/kefine/kefine-workflow';
 import { buildCreatePayload, extractStatusPayload, parseStoredOrders, readCreateResponse } from '$lib/components/kefine/kefine-workflow';
 import type { KefineLocaleText } from '$lib/constants/kefine-locale';
-import { createOfflineOrder, mergeDemoOrders } from '$lib/components/kefine/kefine-workspace-helpers';
 
 type OrderFallback = {
   title: string;
@@ -15,7 +14,6 @@ export function loadWorkspaceOrders(args: {
   storage: Storage;
   storageKey: string;
   localeText: KefineLocaleText;
-  demoOrders: OrderView[];
   pageSize: number;
 }): { orders: OrderView[]; visibleLimit: number } {
   let orders: OrderView[];
@@ -30,12 +28,11 @@ export function loadWorkspaceOrders(args: {
     orders = [];
   }
 
-  const mergedOrders = mergeDemoOrders(orders, args.demoOrders);
-  args.storage.setItem(args.storageKey, JSON.stringify(mergedOrders));
+  args.storage.setItem(args.storageKey, JSON.stringify(orders));
 
   return {
-    orders: mergedOrders,
-    visibleLimit: Math.min(args.pageSize, mergedOrders.length)
+    orders,
+    visibleLimit: Math.min(args.pageSize, orders.length)
   };
 }
 
@@ -46,20 +43,10 @@ export function persistWorkspaceOrders(storage: Storage, storageKey: string, ord
 export async function fetchOrderStatus(args: {
   orderId: string;
   fallbackOrder: OrderFallback;
-  mockOrderStatus: Record<string, unknown>;
   localeText: KefineLocaleText;
   fetchFn: typeof fetch;
   orderApiBaseUrl: string;
 }): Promise<OrderView | null> {
-  if (args.orderId.startsWith('local-')) {
-    return null;
-  }
-
-  const mockPayload = args.mockOrderStatus[args.orderId];
-  if (mockPayload) {
-    return extractStatusPayload(mockPayload, args.fallbackOrder, args.localeText);
-  }
-
   try {
     const response = await args.fetchFn(
       buildOrderProxyUrl(`/status/${encodeURIComponent(args.orderId)}`, args.orderApiBaseUrl),
@@ -160,21 +147,46 @@ export async function submitWorkspaceOrder(args: {
   resolveExecutionEstimate: (executionEstimate: string | undefined, title: string, localeText: KefineLocaleText) => string | undefined;
 }): Promise<
   | { kind: 'remote'; order: OrderView }
-  | { kind: 'offline'; order: OrderView }
   | { kind: 'error' }
 > {
   try {
+    const requestPayload = buildCreatePayload(args.payload);
+    const hasFiles = args.payload.files.length > 0;
+    const requestBody = hasFiles
+      ? (() => {
+          const formData = new FormData();
+          for (const [key, value] of Object.entries(requestPayload)) {
+            if (value === undefined || value === null) {
+              continue;
+            }
+
+            if (Array.isArray(value) || typeof value === 'object') {
+              formData.append(key, JSON.stringify(value));
+              continue;
+            }
+
+            formData.append(key, String(value));
+          }
+
+          for (const file of args.payload.files) {
+            formData.append('files', file, file.name);
+          }
+
+          return formData;
+        })()
+      : JSON.stringify(requestPayload);
+
     const response = await args.fetchFn(buildOrderProxyUrl('/create', args.orderApiBaseUrl), {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json'
+        Accept: 'application/json',
+        ...(hasFiles ? {} : { 'Content-Type': 'application/json' })
       },
-      body: JSON.stringify(buildCreatePayload(args.payload))
+      body: requestBody
     });
 
-    const body: unknown = await response.json();
-    const parsed = response.ok ? readCreateResponse(body) : null;
+    const responseBody: unknown = await response.json();
+    const parsed = response.ok ? readCreateResponse(responseBody) : null;
     if (!response.ok || !parsed) {
       throw new Error(args.localeText.errors.fallback);
     }
@@ -199,18 +211,7 @@ export async function submitWorkspaceOrder(args: {
         uiScenario: parsed.uiScenario
       }
     };
-  } catch (error) {
-    const isNetworkError =
-      error instanceof TypeError ||
-      (error instanceof Error && /network|fetch|failed to fetch|load failed/i.test(error.message));
-
-    if (isNetworkError) {
-      return {
-        kind: 'offline',
-        order: createOfflineOrder(args.payload, args.localeText, args.resolveExecutionEstimate, args.toNumber)
-      };
-    }
-
+  } catch {
     return { kind: 'error' };
   }
 }

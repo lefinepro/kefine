@@ -6,6 +6,10 @@ function normalizeProxyBasePath(value: string): string {
     return '';
   }
 
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed.replace(/\/+$/, '');
+  }
+
   const withLeadingSlash = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
   return withLeadingSlash.replace(/\/+$/, '');
 }

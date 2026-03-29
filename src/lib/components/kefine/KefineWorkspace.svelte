@@ -1,9 +1,9 @@
 <script lang="ts">
   import { browser } from '$app/environment';
-  import { buildOrderProxyUrl, resolveOrderProxyBasePath } from '$lib/order-proxy-path';
+  import { resolveOrderProxyBasePath } from '$lib/order-proxy-path';
   import { onMount } from 'svelte';
-  import { cubicOut } from 'svelte/easing';
-  import { fade } from 'svelte/transition';
+import { cubicOut } from 'svelte/easing';
+  import type { TransitionConfig } from 'svelte/transition';
   import { authState, clearAuthState, hydrateAuthStateFromSession, replaceAuthState, updateAuthState } from '$lib/auth/auth-store.svelte.js';
   import {
     loadPasskeySession,
@@ -19,7 +19,8 @@
   import {
     getLocaleText,
     kefineLocale,
-    setKefineLocale
+    setKefineLocale,
+    type KefineLocale
   } from '$lib/constants/kefine-locale';
   import KefineTopbar from '$lib/components/kefine/KefineTopbar.svelte';
   import KefineCreateStep from '$lib/components/kefine/KefineCreateStep.svelte';
@@ -29,7 +30,6 @@
   import KefineSubmittingStep from '$lib/components/kefine/KefineSubmittingStep.svelte';
   import KefineExecutingStep from '$lib/components/kefine/KefineExecutingStep.svelte';
   import KefinePaymentStep from '$lib/components/kefine/KefinePaymentStep.svelte';
-  import mockOrderStatus from '../../../../.meta/data/mocks/order-status.mock.json';
   import {
     ORDER_STORAGE_KEY,
     POLL_INTERVAL_MS,
@@ -40,20 +40,20 @@
     type OrderView,
     type PaymentMethod,
     type PaymentStage,
-    buildCreatePayload,
     deriveExecutionPresentation,
     extractStatusPayload,
-    parseStoredOrders,
-    readCreateResponse,
     resolveExecutionEstimate,
     toNumber
   } from '$lib/components/kefine/kefine-workflow';
   import {
+    buildTaskRouteHash,
     createGeneratedWalletAvatar,
     createContactMailtoUrl,
     getVisibleOrdersLimit,
     mergeOrdersById,
     normalizeDraftOrder,
+    resolveOrderIdCandidates,
+    resolveOrderIdFromRouteValue,
     resolveWalletNetworkLabel,
     readTaskRouteStateFromLocation
   } from '$lib/components/kefine/kefine-workspace-helpers';
@@ -83,8 +83,9 @@
     title: '',
     description: '',
     estimatedCost: '',
-    currency: 'USDC',
-    executionEstimate: ''
+    currency: 'USD',
+    executionEstimate: '',
+    files: []
   });
   let draftQueued = $state<DraftOrder | null>(null);
   let currentOrder = $state<OrderView | null>(
@@ -165,7 +166,7 @@
     isDarkTheme ? localeText.topbar.theme.switchToLight : localeText.topbar.theme.switchToDark
   );
   const matchedOrders = $derived.by(() => {
-    const query = draft.title.trim().toLowerCase();
+    const query = draft.description.trim().toLowerCase();
     if (!query) {
       return [];
     }
@@ -227,25 +228,6 @@
   const executionPresentation = $derived(
     deriveExecutionPresentation(currentOrder, localeText, selectedAuthMethod, step === 'payment')
   );
-  const demoOrders = $derived.by(() => {
-    const vpnDemo = mockOrderStatus['vpn-demo-1'];
-    if (!vpnDemo) {
-      return [] satisfies OrderView[];
-    }
-
-    const parsed = extractStatusPayload(
-      vpnDemo,
-      {
-        title: localeText.defaults.taskTitle,
-        description: localeText.defaults.defaultDescription || '',
-        currency: localeText.defaults.defaultCurrency,
-        createdAt: new Date('2026-03-24T10:00:00.000Z').toISOString()
-      },
-      localeText
-    );
-
-    return parsed ? [parsed] satisfies OrderView[] : ([] satisfies OrderView[]);
-  });
   const browserTitle = $derived.by(() => {
     const title = currentOrder?.title?.trim();
     const isTaskRoute =
@@ -272,20 +254,51 @@
     passkeyLabel: normalizedPasskeyLabel
   });
 
-  const TITLE_FONT_MAX = 2.2;
-  const TITLE_FONT_MIN = 1.1;
-  const TITLE_FONT_SHRINK_AT = 34;
-  const TITLE_FONT_SHRINK_STEP = 18;
+  const TITLE_FONT_MAX = 2.0;
+  const TITLE_FONT_MIN = 1.0;
+  const TITLE_FONT_SHRINK_AT = 24;
+  const TITLE_FONT_SHRINK_STEP = 20;
   const screenDissolveTransition = {
-    duration: 240,
+    duration: 640,
     easing: cubicOut
   } as const;
   const titleFontSize = $derived(
     Math.max(
       TITLE_FONT_MIN,
-      TITLE_FONT_MAX - Math.max(0, (draft.title.length - TITLE_FONT_SHRINK_AT) / TITLE_FONT_SHRINK_STEP)
+      TITLE_FONT_MAX - Math.max(0, (draft.description.length - TITLE_FONT_SHRINK_AT) / TITLE_FONT_SHRINK_STEP)
     )
   );
+
+  $effect(() => {
+    const source = draft.description.trim().toLowerCase();
+    const isVpnDraft = /\bvpn\b/.test(source) || source.includes('telegram') || source.includes('телеграм');
+    if (!isVpnDraft) {
+      return;
+    }
+
+    if (!draft.estimatedCost.trim()) {
+      draft.estimatedCost = '2';
+    }
+
+    if (!draft.currency.trim()) {
+      draft.currency = 'USD';
+    }
+  });
+
+  function softScreenTransition(_: Element): TransitionConfig {
+    return {
+      ...screenDissolveTransition,
+      css: (t, u) => {
+        const blur = u * 12;
+        const scale = 0.988 + t * 0.012;
+        return `
+          opacity: ${t};
+          transform: scale(${scale});
+          filter: blur(${blur}px);
+        `;
+      }
+    };
+  }
 
   onMount(() => {
     if (!browser) return;
@@ -383,6 +396,18 @@
   });
 
   $effect(() => {
+    if (!currentOrder || step !== 'executing' || stagePreviewOpen) {
+      return;
+    }
+
+    const normalizedStatus = currentOrder.status.trim().toLowerCase();
+    if (normalizedStatus === 'completed' || normalizedStatus === 'done') {
+      paymentStage = 'result-ready';
+      step = 'payment';
+    }
+  });
+
+  $effect(() => {
     if (!browser) return;
     if (isHydratingRoute) return;
     const nextUrl = new URL(window.location.href);
@@ -396,11 +421,11 @@
     if (!orderId) {
       nextUrl.hash = '';
     } else if (step === 'payment' && paymentStage === 'result-ready') {
-      nextUrl.hash = `#/task/${encodeURIComponent(orderId)}/result`;
+      nextUrl.hash = buildTaskRouteHash(orderId, 'result');
     } else if (step === 'executing' && stagePreviewOpen) {
-      nextUrl.hash = `#/task/${encodeURIComponent(orderId)}/stages`;
+      nextUrl.hash = buildTaskRouteHash(orderId, 'stages');
     } else {
-      nextUrl.hash = `#/task/${encodeURIComponent(orderId)}`;
+      nextUrl.hash = buildTaskRouteHash(orderId);
     }
 
     if (window.location.href !== nextUrl.toString()) {
@@ -486,7 +511,7 @@
     passkeyDialogOpen = false;
   }
 
-  function selectTopbarLocale(locale: 'en' | 'ru') {
+  function selectTopbarLocale(locale: KefineLocale) {
     setKefineLocale(locale);
   }
 
@@ -507,7 +532,6 @@
       storage: localStorage,
       storageKey: ORDER_STORAGE_KEY,
       localeText,
-      demoOrders,
       pageSize: ORDER_PAGE_SIZE
     });
     createdOrders = loadedState.orders;
@@ -549,27 +573,37 @@
     return readTaskRouteStateFromLocation(window.location);
   }
 
+  function showOrderFlow(order: OrderView, preferredView: 'result' | 'stages' | null = null) {
+    currentOrder = order;
+    resetTransactionState();
+
+    if (order.status === 'completed') {
+      if (preferredView === 'stages') {
+        stagePreviewOpen = true;
+        step = 'executing';
+        return;
+      }
+
+      paymentStage = 'result-ready';
+      step = 'payment';
+      return;
+    }
+
+    step = 'executing';
+  }
+
   async function openOrderById(orderId: string, preferredView: 'result' | 'stages' | null = null) {
     if (!orderId) return;
-    try {
-      const local = createdOrders.find((item) => item.id === orderId);
-      if (local) {
-        currentOrder = local;
-        resetTransactionState();
-        if (local.status === 'completed') {
-          if (preferredView === 'stages') {
-            stagePreviewOpen = true;
-            step = 'executing';
-          } else {
-            paymentStage = 'result-ready';
-            step = 'payment';
-          }
-        } else {
-          step = 'executing';
-        }
+    const resolvedOrderId = resolveOrderIdFromRouteValue(orderId, createdOrders);
+    const candidateOrderIds = resolveOrderIdCandidates(orderId, createdOrders);
 
-        if (!local.id.startsWith('local-') && local.status !== 'completed') {
-          const updated = await requestOrderFromStatus(orderId, {
+    try {
+      const local = createdOrders.find((item) => item.id === resolvedOrderId || item.id.endsWith(`/${orderId}`));
+      if (local) {
+        showOrderFlow(local, preferredView);
+
+        if (local.status !== 'completed') {
+          const updated = await requestOrderFromStatus(local.id, {
             title: local.title,
             description: local.description,
             currency: local.currency,
@@ -577,37 +611,32 @@
           });
 
           if (updated) {
-            currentOrder = { ...currentOrder, ...updated, id: currentOrder.id };
-            upsertOrder(currentOrder);
+            const nextOrder = {
+              ...(currentOrder ?? local),
+              ...updated,
+              id: (currentOrder ?? local).id
+            };
+            currentOrder = nextOrder;
+            upsertOrder(nextOrder);
           }
         }
 
         return;
       }
 
-      const remote = await requestOrderFromStatus(orderId, {
-        title: '',
-        description: localeText.defaults.defaultDescription || '',
-        currency: localeText.defaults.defaultCurrency,
-        createdAt: new Date().toISOString()
-      });
+      for (const candidateOrderId of candidateOrderIds) {
+        const remote = await requestOrderFromStatus(candidateOrderId, {
+          title: '',
+          description: localeText.defaults.defaultDescription || '',
+          currency: localeText.defaults.defaultCurrency,
+          createdAt: new Date().toISOString()
+        });
 
-      if (remote) {
-        currentOrder = remote;
-        upsertOrder(remote);
-        resetTransactionState();
-        if (remote.status === 'completed') {
-          if (preferredView === 'stages') {
-            stagePreviewOpen = true;
-            step = 'executing';
-          } else {
-            paymentStage = 'result-ready';
-            step = 'payment';
-          }
-        } else {
-          step = 'executing';
+        if (remote) {
+          upsertOrder(remote);
+          showOrderFlow(remote, preferredView);
+          return;
         }
-        return;
       }
 
       step = 'create';
@@ -617,15 +646,7 @@
   }
 
   function openOrder(order: OrderView) {
-    currentOrder = order;
-    resetTransactionState();
-    if (order.status === 'completed') {
-      paymentStage = 'result-ready';
-      step = 'payment';
-      return;
-    }
-
-    step = 'executing';
+    showOrderFlow(order);
   }
 
   function loadMoreOrders() {
@@ -637,12 +658,16 @@
   }
 
   function orderApiBaseUrl(): string {
+    if (browser && isLocalhostRuntime) {
+      return resolveOrderProxyBasePath('https://lefine.pro');
+    }
+
     return resolveOrderProxyBasePath('');
   }
 
   function craterBaseUrl(): string {
     if (!browser) return '';
-    return window.location.origin;
+    return isLocalhostRuntime ? 'https://lefine.pro' : window.location.origin;
   }
 
   async function requestOrderFromStatus(
@@ -657,7 +682,6 @@
     return fetchOrderStatus({
       orderId,
       fallbackOrder,
-      mockOrderStatus,
       localeText,
       fetchFn: fetch,
       orderApiBaseUrl: orderApiBaseUrl()
@@ -715,25 +739,35 @@
       if (!isBackground) {
         step = 'create';
       }
-      return;
+      return false;
     }
 
     upsertOrder(result.order);
-
-    if (result.kind === 'remote') {
-      startOrderPolling(result.order);
-    }
+    startOrderPolling(result.order);
 
     if (!isBackground) {
       currentOrder = result.order;
       resetTransactionState();
       step = 'executing';
     }
+
+    return true;
   }
 
   async function submitDraft(form: DraftOrder, options?: { background?: boolean }) {
     const normalized = normalizeDraftOrder(form, localeText);
-    await createOrder(normalized, options);
+    const created = await createOrder(normalized, options);
+
+    if (created && options?.background) {
+      draft = {
+        title: '',
+        description: '',
+        estimatedCost: '',
+        currency: 'USD',
+        executionEstimate: '',
+        files: []
+      };
+    }
   }
 
   async function continueAfterAuth() {
@@ -748,17 +782,17 @@
     void submitDraft(draft);
   }
 
-  async function queueTaskBelow(title: string) {
-    const normalizedTitle = title.trim();
-    if (!normalizedTitle) return;
+  async function queueTaskBelow() {
+    if (!draft.description.trim()) return;
+    await submitDraft(draft, { background: true });
+  }
 
-    await submitDraft(
-      {
-        ...draft,
-        title: normalizedTitle
-      },
-      { background: true }
-    );
+  function attachFiles(files: FileList) {
+    draft.files = [...draft.files, ...Array.from(files)];
+  }
+
+  function removeAttachedFile(index: number) {
+    draft.files = draft.files.filter((_, fileIndex) => fileIndex !== index);
   }
 
   function handleStopOrder(order: OrderView, event: Event) {
@@ -772,8 +806,9 @@
       title: '',
       description: '',
       estimatedCost: '',
-      currency: draft.currency,
-      executionEstimate: ''
+      currency: 'USD',
+      executionEstimate: '',
+      files: []
     };
     draftQueued = null;
     currentOrder = null;
@@ -886,6 +921,24 @@
     paymentStage = 'result-ready';
   }
 
+  function rejectResult() {
+    if (!currentOrder) {
+      resetTransactionState();
+      step = 'create';
+      return;
+    }
+
+    const rejectedOrder: OrderView = {
+      ...currentOrder,
+      status: 'rejected'
+    };
+
+    currentOrder = rejectedOrder;
+    upsertOrder(rejectedOrder);
+    resetTransactionState();
+    step = 'create';
+  }
+
   function saveAnonymousResult() {
     selectedAuthMethod = 'passkey';
     void loginWithDefaultPasskey();
@@ -925,6 +978,7 @@
     locale={$kefineLocale}
     languageEnglishLabel={localeText.topbar.languageEnglish}
     languageRussianLabel={localeText.topbar.languageRussian}
+    languageArmenianLabel={localeText.topbar.languageArmenian}
     socialLinks={sidebarSocialLinks}
     legalLinks={sidebarLegalLinks}
     onToggleExpand={() => { leftNavExpanded = !leftNavExpanded; }}
@@ -942,7 +996,7 @@
     class:kefine-layout--flow={step === 'executing' || step === 'payment' || step === 'submitting'}
   >
     {#if step === 'create'}
-      <kefine-screen class="kefine-screen" in:fade={screenDissolveTransition} out:fade={screenDissolveTransition}>
+      <kefine-screen class="kefine-screen" in:softScreenTransition out:softScreenTransition>
         <KefineCreateStep
           draft={draft}
           title={localeText.create.title}
@@ -950,6 +1004,7 @@
           placeholder={localeText.create.placeholder}
           placeholderVariants={localeText.create.placeholderVariants}
           executeAria={localeText.create.executeAria}
+          backgroundExecuteAria={localeText.create.backgroundExecuteAria}
           solverLabel={localeText.labels.solver}
           recentOrders={visibleOrders}
           matchedOrders={matchedOrders}
@@ -958,12 +1013,18 @@
           hasMoreOrders={hasMoreOrders}
           onLoadMoreOrders={loadMoreOrders}
           matchedTasksLabel={localeText.create.matchedTasks}
+          addFileLabel={localeText.create.addFile}
+          addPriceLabel={localeText.create.addPrice}
+          fileCountLabel={localeText.create.fileCount}
+          composerHints={localeText.create.composerHints}
           timeLeftLabel={localeText.labels.timeLeft}
           priceLabel={localeText.labels.price}
           statusLabel={localeText.labels.taskStatus}
           stopTaskLabel={localeText.buttons.stopTask}
           onSubmit={handleSubmit}
           onQueueTask={queueTaskBelow}
+          onAttachFiles={attachFiles}
+          onRemoveFile={removeAttachedFile}
           onStopOrder={handleStopOrder}
           onOpenOrder={openOrder}
         />
@@ -971,13 +1032,13 @@
     {/if}
 
     {#if step === 'submitting'}
-      <kefine-screen class="kefine-screen" in:fade={screenDissolveTransition} out:fade={screenDissolveTransition}>
+      <kefine-screen class="kefine-screen" in:softScreenTransition out:softScreenTransition>
         <KefineSubmittingStep />
       </kefine-screen>
     {/if}
 
     {#if step === 'executing'}
-      <kefine-screen class="kefine-screen" in:fade={screenDissolveTransition} out:fade={screenDissolveTransition}>
+      <kefine-screen class="kefine-screen" in:softScreenTransition out:softScreenTransition>
         <KefineExecutingStep
           currentOrder={currentOrder}
           execution={executionPresentation}
@@ -1018,7 +1079,7 @@
     {/if}
 
     {#if step === 'payment'}
-      <kefine-screen class="kefine-screen" in:fade={screenDissolveTransition} out:fade={screenDissolveTransition}>
+      <kefine-screen class="kefine-screen" in:softScreenTransition out:softScreenTransition>
         <KefinePaymentStep
           currentOrder={currentOrder}
           remainingAmount={remainingAmount}
@@ -1032,9 +1093,16 @@
             resetTransactionState();
             step = 'create';
           }}
+          onRejectResult={rejectResult}
           onOpenStages={() => {
-            stagePreviewOpen = true;
-            step = 'executing';
+            const orderId = currentOrder?.id;
+            if (!orderId) {
+              stagePreviewOpen = true;
+              step = 'executing';
+              return;
+            }
+
+            void openOrderById(orderId, 'stages');
           }}
           onOpenDepositDialog={() => {
             depositDialogOpen = true;
@@ -1096,6 +1164,7 @@
             depositNow: localeText.buttons.depositNow,
             payWithPromo: localeText.buttons.payWithPromo,
             openResult: localeText.buttons.openResult,
+            rejectResult: localeText.buttons.rejectResult,
             openAllTasks: localeText.buttons.openAllTasks,
             saveResult: localeText.buttons.saveResult,
             closeDialog: localeText.buttons.closeDialog

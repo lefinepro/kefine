@@ -28,6 +28,7 @@ export type DraftOrder = {
   estimatedCost: string;
   currency: string;
   executionEstimate: string;
+  files: File[];
 };
 
 export type OrderView = {
@@ -44,6 +45,7 @@ export type OrderView = {
   uiScenario?: Exclude<UiScenario, 'default'>;
   labels?: string[];
   vpnGuide?: VpnDeliveryGuide;
+  activitypub?: Record<string, unknown>;
 };
 
 export type PaymentQuote = {
@@ -186,6 +188,24 @@ export type ExecutionPresentation = {
   };
 };
 
+export function isVpnOrder(order: OrderView | null): boolean {
+  if (!order) {
+    return false;
+  }
+
+  if (order.uiScenario === 'vpn-service') {
+    return true;
+  }
+
+  const labels = Array.isArray(order.labels) ? order.labels : [];
+  if (labels.some((label) => /(?:^|\W)(vpn|vless|wireguard|outline)(?:$|\W)|telegram|телеграм/i.test(label))) {
+    return true;
+  }
+
+  const source = `${order.title ?? ''} ${order.description ?? ''}`.toLowerCase();
+  return /\bvpn\b/.test(source) || source.includes('telegram') || source.includes('телеграм');
+}
+
 export const POLL_LIMIT = 30;
 export const POLL_INTERVAL_MS = 1500;
 export const ORDER_STORAGE_KEY = 'kefine-created-orders-v1';
@@ -210,6 +230,10 @@ export function toNumber(value: unknown): number | undefined {
   }
 
   return undefined;
+}
+
+function toStringValue(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
 }
 
 function splitEstimate(value: string | undefined, localeText: KefineLocaleText) {
@@ -395,7 +419,7 @@ export function deriveExecutionPresentation(
   const stage = deriveExecutionStage(order, authMethod, paymentReady);
   const stageConfig = localeText.executionFlow[stage === 'winner-selected' ? 'winnerSelected' : stage];
   const estimate = splitEstimate(order?.executionEstimate, localeText);
-  const isVpnScenario = order?.uiScenario === 'vpn-service';
+  const isVpnScenario = isVpnOrder(order);
 
   const vpnFlow = isVpnScenario
     ? {
@@ -433,7 +457,7 @@ export function deriveResultSurface(
   localeText: KefineLocaleText,
   fallbackHref: string
 ): ResultSurface {
-  if (order?.uiScenario === 'vpn-service') {
+  if (isVpnOrder(order)) {
     return {
       type: 'widget',
       title: localeText.result.widgetTitle,

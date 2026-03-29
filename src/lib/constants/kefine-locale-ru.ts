@@ -14,6 +14,7 @@ export const KEFINE_TEXT_RU = {
     languageAria: 'Открыть меню языков',
     languageEnglish: 'Английский',
     languageRussian: 'Русский',
+    languageArmenian: 'Армянский',
     theme: {
       switchToDark: 'Переключить на тёмную тему',
       switchToLight: 'Переключить на светлую тему'
@@ -59,6 +60,11 @@ export const KEFINE_TEXT_RU = {
     placeholder: 'Опишите, что нужно решить...',
     placeholderVariants: ['Нужен доступ к Telegram', 'Развернуть приватный VPN для команды', 'Деплой production-приложения', 'Оптимизация алгоритма'],
     executeAria: 'Выполнить задачу',
+    backgroundExecuteAria: 'Отправить задачу в фоне',
+    addFile: '+ файл',
+    addPrice: '+ цена',
+    fileCount: (count: number) => `${count} файл${count === 1 ? '' : count < 5 ? 'а' : 'ов'}`,
+    composerHints: 'Enter отправляет, Alt+Enter ставит в фон, Shift+Enter делает новую строку',
     pathsTitle: 'Пути задачи',
     pathCreateLabel: 'Создание:',
     pathStatusLabel: 'Задача:',
@@ -142,6 +148,7 @@ export const KEFINE_TEXT_RU = {
     depositNow: 'Внести депозит',
     confirmLinkedWallet: 'Подтвердить привязанный кошелёк',
     openResult: 'Открыть результат',
+    rejectResult: 'Отклонить результат',
     saveResult: 'Сохранить результат',
     enterPromo: 'Ввести промокод',
     closeDialog: 'Закрыть',
