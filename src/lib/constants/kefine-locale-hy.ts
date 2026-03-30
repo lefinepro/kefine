@@ -39,13 +39,14 @@ export const KEFINE_TEXT_HY = {
   },
   create: {
     ...KEFINE_TEXT_EN.create,
-    title: 'Խնդիրները լուծեք ժամերի ընթացքում, ոչ թե ամիսների',
-    placeholder: 'Նկարագրեք, թե ինչ պետք է լուծել...',
+    title: 'Նկարագրեք տեխնիկական առաջադրանք',
+    subtitle: 'Սահմանեք բյուջեն։ Lefine-ը գտնում է solver, հաստատում գինն ու ETA-ն, հետո հանձնում արդյունքը։',
+    placeholder: 'Նկարագրեք VPN կամ DevOps առաջադրանքը...',
     placeholderVariants: [
-      'Պետք է VPN Telegram-ի համար',
       'Թիմի համար տեղակայել մասնավոր VPN',
-      'Տեղակայել production հավելվածս',
-      'Օպտիմիզացնել ալգորիթմը'
+      'Կարգավորել WireGuard endpoint պտտմամբ',
+      'Ավտոմատացնել staging deploy pipeline-ը',
+      'Ուղղել CI/CD rollback flow-ը'
     ],
     executeAria: 'Ուղարկել առաջադրանքը',
     backgroundExecuteAria: 'Ուղարկել առաջադրանքը ֆոնային ռեժիմով',
@@ -166,6 +167,28 @@ export const KEFINE_TEXT_HY = {
     externalTitle: 'Արտաքին արդյունքի հղում',
     externalSummary: 'Այս պատվերի արդյունքը բացվում է արտաքին ռեսուրսում։',
     anonymousSaveHint: 'Նույնականացեք, որպեսզի պահպանեք արդյունքն ու հետագայում վերադառնաք դրան։'
+  },
+  afe: {
+    ...KEFINE_TEXT_EN.afe,
+    title: 'Ինչպես է աշխատում AFE-ն',
+    cards: {
+      afe: {
+        title: 'Ի՞նչ է AFE-ն',
+        detail: 'AFE նշանակում է Automated Freelance Exchange։ Դուք ուղարկում եք տեխնիկական առաջադրանք, solver-ները մրցում են դրա համար, իսկ Lefine-ը ընտրում է լավագույն տարբերակը։'
+      },
+      task: {
+        title: '1. Նկարագրեք առաջադրանքը',
+        detail: 'Նկարագրեք ցանկալի VPN կամ DevOps արդյունքը և սահմանեք բյուջեի վերին շեմը։'
+      },
+      quote: {
+        title: '2. Solver-ի quote',
+        detail: 'Solver-ը ընդունում է առաջադրանքը և հաստատում երթուղին, գինը և ETA-ն այդ շրջանակում։'
+      },
+      delivery: {
+        title: '3. Արդյունքի հանձնում',
+        detail: 'Lefine-ը վարում է իրականացումը և բացում է վերջնական access package-ը կամ արդյունքը։'
+      }
+    }
   },
   vpnFlow: {
     ...KEFINE_TEXT_EN.vpnFlow,

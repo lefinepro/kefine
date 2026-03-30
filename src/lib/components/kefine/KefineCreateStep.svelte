@@ -12,6 +12,8 @@
     draft,
     titleFontSize,
     title,
+    subtitle,
+    afe,
     placeholder,
     placeholderVariants,
     executeAria,
@@ -42,6 +44,14 @@
     draft: DraftOrder;
     titleFontSize: number;
     title: string;
+    subtitle: string;
+    afe: {
+      title: string;
+      cards: Array<{
+        title: string;
+        detail: string;
+      }>;
+    };
     placeholder: string;
     placeholderVariants: readonly string[];
     executeAria: string;
@@ -84,6 +94,8 @@
   let placeholderCharIndex = $state(0);
   let placeholderDeleting = $state(false);
   const isMultilineDraft = $derived(draft.description.includes('\n'));
+  const afeIntroCard = $derived(afe.cards[0] ?? null);
+  const afeStepCards = $derived(afe.cards.slice(1));
 
   function resizeTaskInput() {
     if (!taskTextarea) {
@@ -313,6 +325,7 @@
 
 <article class="kefine-card kefine-card--wide" data-kefine-create>
   <h2>{title}</h2>
+  <p data-part="subtitle">{subtitle}</p>
 
   <form
     data-part="form"
@@ -396,53 +409,81 @@
     <p data-part="composer-hints">{composerHints}</p>
   </form>
 
-  <section data-part="recent" aria-label={isSearching ? matchedTasksLabel : solverLabel}>
-    {#if isSearching && matchedOrders.length > 0}
-      <kefine-recent-title>{matchedTasksLabel}</kefine-recent-title>
-      <ul data-part="recent-list" data-compact="true" data-testid="kefine-search-results">
-        {#each matchedOrders as order (order.id)}
-          <KefineOrderListItem
-            {order}
-            {statusLabel}
-            {timeLeftLabel}
-            {priceLabel}
-            itemTestId={`kefine-search-order-${order.id}`}
-            openTestId={`kefine-open-search-order-${order.id}`}
-            etaTestId={`kefine-order-eta-${order.id}`}
-            onOpen={() => onOpenOrder(order)}
-            onOpenKeydown={(event) => handleOpenOrderKeydown(order, event)}
-          />
-        {/each}
-      </ul>
-    {:else if totalOrders > 0}
-      <section data-part="recent-scroll" data-testid="kefine-recent-scroll" onscroll={handleRecentOrdersScroll}>
-        <ul data-part="recent-list" data-testid="kefine-recent-list">
-          {#each recentOrders as order (order.id)}
+  {#if (isSearching && matchedOrders.length > 0) || totalOrders > 0}
+    <section data-part="recent" aria-label={isSearching ? matchedTasksLabel : solverLabel}>
+      {#if isSearching && matchedOrders.length > 0}
+        <kefine-recent-title>{matchedTasksLabel}</kefine-recent-title>
+        <ul data-part="recent-list" data-compact="true" data-testid="kefine-search-results">
+          {#each matchedOrders as order (order.id)}
             <KefineOrderListItem
               {order}
               {statusLabel}
               {timeLeftLabel}
               {priceLabel}
-              {stopTaskLabel}
-              showStop={true}
-              itemTestId={`kefine-order-item-${order.id}`}
-              openTestId={`kefine-open-order-${order.id}`}
+              itemTestId={`kefine-search-order-${order.id}`}
+              openTestId={`kefine-open-search-order-${order.id}`}
               etaTestId={`kefine-order-eta-${order.id}`}
-              stopTestId={`kefine-stop-order-${order.id}`}
               onOpen={() => onOpenOrder(order)}
               onOpenKeydown={(event) => handleOpenOrderKeydown(order, event)}
-              onStop={(event) => handleStopClick(order, event)}
-              onStopPointerDown={(event) => startStopPress(order, event)}
-              onStopPointerUp={() => clearStopPress(order.id)}
-              onStopPointerLeave={() => clearStopPress(order.id)}
-              onStopPointerCancel={() => clearStopPress(order.id)}
             />
           {/each}
         </ul>
-      </section>
-    {/if}
-  </section>
+      {:else if totalOrders > 0}
+        <section data-part="recent-scroll" data-testid="kefine-recent-scroll" onscroll={handleRecentOrdersScroll}>
+          <ul data-part="recent-list" data-testid="kefine-recent-list">
+            {#each recentOrders as order (order.id)}
+              <KefineOrderListItem
+                {order}
+                {statusLabel}
+                {timeLeftLabel}
+                {priceLabel}
+                {stopTaskLabel}
+                showStop={true}
+                itemTestId={`kefine-order-item-${order.id}`}
+                openTestId={`kefine-open-order-${order.id}`}
+                etaTestId={`kefine-order-eta-${order.id}`}
+                stopTestId={`kefine-stop-order-${order.id}`}
+                onOpen={() => onOpenOrder(order)}
+                onOpenKeydown={(event) => handleOpenOrderKeydown(order, event)}
+                onStop={(event) => handleStopClick(order, event)}
+                onStopPointerDown={(event) => startStopPress(order, event)}
+                onStopPointerUp={() => clearStopPress(order.id)}
+                onStopPointerLeave={() => clearStopPress(order.id)}
+                onStopPointerCancel={() => clearStopPress(order.id)}
+              />
+            {/each}
+          </ul>
+        </section>
+      {/if}
+    </section>
+  {/if}
 </article>
+
+<section class="kefine-afe-showcase" data-part="below-fold">
+  <div class="kefine-afe-layout">
+    {#if afeIntroCard}
+      <article class="kefine-afe-intro">
+        <p class="kefine-afe-intro__eyebrow">{afeIntroCard.title}</p>
+        <h3>{afeIntroCard.detail}</h3>
+      </article>
+    {/if}
+
+    <div class="kefine-afe-steps">
+      <div class="kefine-section-head">
+        <p>{afe.title}</p>
+      </div>
+
+      <div class="kefine-afe-grid kefine-afe-grid--executing">
+        {#each afeStepCards as card}
+          <article class="kefine-afe-card kefine-afe-card--executing">
+            <strong>{card.title}</strong>
+            <p>{card.detail}</p>
+          </article>
+        {/each}
+      </div>
+    </div>
+  </div>
+</section>
 
 <style>
   [data-kefine-create] {
@@ -454,9 +495,22 @@
     margin-inline: auto;
   }
 
+  .kefine-afe-showcase {
+    width: min(100%, calc(100vw - 7rem));
+    max-width: 64rem;
+    justify-self: center;
+    margin-inline: auto;
+  }
+
   [data-kefine-create] h2 {
     font-size: clamp(1.35rem, 2vw, 1.75rem);
     margin: 0;
+  }
+
+  p[data-part='subtitle'] {
+    margin: 0;
+    max-width: 42rem;
+    color: var(--kef-text-soft);
   }
 
   form[data-part='form'] {
@@ -673,8 +727,16 @@
     background: transparent;
   }
 
+  section[data-part='below-fold'] {
+    margin-top: clamp(0.7rem, 2vh, 1.05rem);
+  }
+
   @media (min-width: 960px) {
     [data-kefine-create] {
+      width: min(64rem, calc(100vw - 8rem));
+    }
+
+    .kefine-afe-showcase {
       width: min(64rem, calc(100vw - 8rem));
     }
 
@@ -708,6 +770,10 @@
 
   @media (max-width: 760px) {
     [data-kefine-create] {
+      width: min(100%, calc(100vw - 2rem));
+    }
+
+    .kefine-afe-showcase {
       width: min(100%, calc(100vw - 2rem));
     }
 
