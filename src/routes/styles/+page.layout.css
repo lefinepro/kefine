@@ -147,6 +147,133 @@
       );
   }
 
+  .kefine-flow-panel--afe {
+    gap: 1rem;
+  }
+
+  .kefine-afe-showcase {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .kefine-afe-layout {
+    display: grid;
+    gap: 1.05rem;
+  }
+
+  .kefine-afe-intro,
+  .kefine-afe-steps {
+    position: relative;
+    min-width: 0;
+  }
+
+  .kefine-afe-intro {
+    display: grid;
+    align-content: center;
+    gap: 0.9rem;
+    min-height: 100%;
+    padding: clamp(1.2rem, 2.2vw, 1.8rem);
+    border-radius: 1.3rem;
+    border: 1px solid color-mix(in oklab, var(--kef-line-on-primary) 46%, transparent);
+    background: color-mix(in oklab, var(--kef-bg-card) 92%, #17110d);
+    box-shadow:
+      inset 0 1px 0 color-mix(in oklab, white 4%, transparent),
+      0 18px 30px color-mix(in oklab, black 14%, transparent);
+  }
+
+  .kefine-afe-intro__eyebrow,
+  .kefine-afe-intro h3 {
+    margin: 0;
+  }
+
+  .kefine-afe-intro__eyebrow {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: color-mix(in oklab, var(--kef-text-soft) 70%, #9b8c78);
+  }
+
+  .kefine-afe-intro h3 {
+    max-width: 20ch;
+    font-size: clamp(1.7rem, 3vw, 3.15rem);
+    font-weight: 780;
+    line-height: 0.98;
+    letter-spacing: -0.05em;
+    color: #f5efe4;
+  }
+
+  .kefine-afe-steps {
+    display: grid;
+    gap: 0.9rem;
+  }
+
+  .kefine-afe-grid {
+    display: grid;
+    gap: 0.8rem;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .kefine-afe-grid--executing {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.95rem;
+  }
+
+  .kefine-afe-card {
+    display: grid;
+    gap: 0.45rem;
+    padding: 1rem;
+    border-radius: 1rem;
+    border: var(--kef-border-width-soft) solid var(--kef-line);
+    background:
+      linear-gradient(
+        180deg,
+        color-mix(in oklab, var(--kef-bg-card) 99%, white),
+        color-mix(in oklab, var(--kef-bg-soft) 94%, var(--kef-bg-card))
+      );
+    min-width: 0;
+  }
+
+  .kefine-afe-card--executing {
+    min-height: 12rem;
+    align-content: start;
+    padding: 1.2rem;
+    border-radius: 1.15rem;
+    border-color: color-mix(in oklab, var(--kef-line-on-primary) 42%, transparent);
+    background: color-mix(in oklab, var(--kef-bg-card) 94%, #19120e);
+    box-shadow:
+      inset 0 1px 0 color-mix(in oklab, white 4%, transparent),
+      0 16px 28px color-mix(in oklab, black 12%, transparent);
+  }
+
+  .kefine-afe-card strong,
+  .kefine-afe-card p {
+    margin: 0;
+  }
+
+  .kefine-afe-card strong {
+    line-height: 1.2;
+  }
+
+  .kefine-afe-card--executing strong {
+    max-width: 18ch;
+    font-size: clamp(1.08rem, 1.9vw, 1.3rem);
+    font-weight: 760;
+    letter-spacing: -0.02em;
+    color: #f3e7d3;
+  }
+
+  .kefine-afe-card p {
+    color: var(--kef-text-soft);
+  }
+
+  .kefine-afe-card--executing p {
+    max-width: 30ch;
+    font-size: 1rem;
+    line-height: 1.46;
+    color: color-mix(in oklab, var(--kef-text-soft) 86%, #c6b59c);
+  }
+
   .kefine-flow-topline {
     display: flex;
     align-items: center;
@@ -1568,7 +1695,22 @@
     }
   }
 
+  @media (min-width: 761px) {
+    .kefine-afe-layout {
+      grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.4fr);
+      align-items: stretch;
+    }
+  }
+
   @media (max-width: 760px) {
+    .kefine-afe-layout {
+      grid-template-columns: 1fr;
+    }
+
+    .kefine-afe-grid--executing {
+      grid-template-columns: 1fr;
+    }
+
     .kefine-payment-layout {
       grid-template-columns: 1fr;
       min-height: auto;
@@ -1638,6 +1780,7 @@
     }
 
     .kefine-metrics-grid,
+    .kefine-afe-grid,
     .kefine-auth-grid,
     .kefine-vpn-guide__steps,
     .kefine-payment-summary,
@@ -1650,6 +1793,10 @@
     }
 
     .kefine-auth-tile {
+      min-height: 0;
+    }
+
+    .kefine-afe-card--executing {
       min-height: 0;
     }
   }

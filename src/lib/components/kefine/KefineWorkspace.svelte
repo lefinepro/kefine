@@ -41,7 +41,6 @@ import { cubicOut } from 'svelte/easing';
     type PaymentMethod,
     type PaymentStage,
     deriveExecutionPresentation,
-    extractStatusPayload,
     resolveExecutionEstimate,
     toNumber
   } from '$lib/components/kefine/kefine-workflow';
@@ -1000,6 +999,16 @@ import { cubicOut } from 'svelte/easing';
         <KefineCreateStep
           draft={draft}
           title={localeText.create.title}
+          subtitle={localeText.create.subtitle}
+          afe={{
+            title: localeText.afe.title,
+            cards: [
+              localeText.afe.cards.afe,
+              localeText.afe.cards.task,
+              localeText.afe.cards.quote,
+              localeText.afe.cards.delivery
+            ]
+          }}
           titleFontSize={titleFontSize}
           placeholder={localeText.create.placeholder}
           placeholderVariants={localeText.create.placeholderVariants}
@@ -1008,7 +1017,7 @@ import { cubicOut } from 'svelte/easing';
           solverLabel={localeText.labels.solver}
           recentOrders={visibleOrders}
           matchedOrders={matchedOrders}
-          isSearching={draft.title.trim().length > 0}
+          isSearching={draft.description.trim().length > 0}
           totalOrders={createdOrders.length}
           hasMoreOrders={hasMoreOrders}
           onLoadMoreOrders={loadMoreOrders}

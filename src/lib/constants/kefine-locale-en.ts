@@ -56,9 +56,15 @@ export const KEFINE_TEXT_EN = {
     contactEmail: 'order@lefine.pro'
   },
   create: {
-    title: 'Solve problems in hours, not months.',
-    placeholder: 'Describe what should be solved...',
-    placeholderVariants: ['Need access to Telegram', 'Deploy private VPN for the team', 'Deploy my production app', 'Optimize an algorithm'],
+    title: 'Describe a technical task',
+    subtitle: 'Set your budget. Lefine finds a solver, confirms the price and ETA, and delivers the result.',
+    placeholder: 'Describe the VPN or DevOps task...',
+    placeholderVariants: [
+      'Deploy private VPN for the team',
+      'Set up a WireGuard endpoint with rotation',
+      'Automate the staging deploy pipeline',
+      'Fix the CI/CD rollback flow'
+    ],
     executeAria: 'Execute task',
     backgroundExecuteAria: 'Send task in background',
     addFile: '+ file',
@@ -263,6 +269,27 @@ export const KEFINE_TEXT_EN = {
     externalTitle: 'External result link',
     externalSummary: 'This order completes on an external resource.',
     anonymousSaveHint: 'Authenticate to save and revisit this result later.'
+  },
+  afe: {
+    title: 'How AFE works',
+    cards: {
+      afe: {
+        title: 'What is AFE',
+        detail: 'AFE means Automated Freelance Exchange. You submit a technical task, solvers compete for it, and Lefine routes the best fit.'
+      },
+      task: {
+        title: '1. Describe the task',
+        detail: 'Describe the VPN or DevOps outcome and set a budget cap.'
+      },
+      quote: {
+        title: '2. Solver quote',
+        detail: 'A solver accepts the task, confirms the route, price, and ETA within that scope.'
+      },
+      delivery: {
+        title: '3. Delivery',
+        detail: 'Lefine manages execution and unlocks the final access package or result.'
+      }
+    }
   },
   vpnFlow: {
     discoveryTitle: 'We determine the best VPN service',

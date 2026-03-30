@@ -56,9 +56,15 @@ export const KEFINE_TEXT_RU = {
     contactEmail: 'order@lefine.pro'
   },
   create: {
-    title: 'Решайте задачи за часы, а не за месяцы',
-    placeholder: 'Опишите, что нужно решить...',
-    placeholderVariants: ['Нужен доступ к Telegram', 'Развернуть приватный VPN для команды', 'Деплой production-приложения', 'Оптимизация алгоритма'],
+    title: 'Опишите техническую задачу',
+    subtitle: 'Задайте бюджет. Lefine найдёт solver’а, подтвердит цену и срок, а затем доставит результат.',
+    placeholder: 'Опишите задачу по VPN или DevOps...',
+    placeholderVariants: [
+      'Развернуть приватный VPN для команды',
+      'Настроить WireGuard endpoint с ротацией',
+      'Автоматизировать staging deploy pipeline',
+      'Исправить CI/CD rollback flow'
+    ],
     executeAria: 'Выполнить задачу',
     backgroundExecuteAria: 'Отправить задачу в фоне',
     addFile: '+ файл',
@@ -264,6 +270,27 @@ export const KEFINE_TEXT_RU = {
     externalTitle: 'Внешняя ссылка на результат',
     externalSummary: 'Этот заказ завершается на внешнем ресурсе.',
     anonymousSaveHint: 'Авторизуйтесь, чтобы сохранить результат и вернуться к нему позже.'
+  },
+  afe: {
+    title: 'Как работает AFE',
+    cards: {
+      afe: {
+        title: 'Что такое AFE',
+        detail: 'AFE означает Automated Freelance Exchange. Вы отправляете техническую задачу, solver’ы конкурируют за неё, а Lefine маршрутизирует лучший вариант.'
+      },
+      task: {
+        title: '1. Опишите задачу',
+        detail: 'Опишите нужный VPN или DevOps-результат и задайте верхнюю границу бюджета.'
+      },
+      quote: {
+        title: '2. Квота от solver’а',
+        detail: 'Solver принимает задачу, подтверждает маршрут, цену и ETA в рамках этого запроса.'
+      },
+      delivery: {
+        title: '3. Доставка результата',
+        detail: 'Lefine ведёт исполнение и открывает финальный пакет доступа или результат.'
+      }
+    }
   },
   vpnFlow: {
     discoveryTitle: 'Выясняем, какой VPN сервис лучше',
