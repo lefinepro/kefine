@@ -1,1 +1,0 @@
-import{r as e}from"../chunks/BO73DafF.js";import{ot as t,st as n}from"../chunks/Co55RbUi.js";import"../chunks/CT0T0Gak.js";import{t as r}from"../chunks/D9woh7Ro.js";var i=e({load:()=>a,prerender:()=>!1}),a=({params:e})=>({initialOrderId:e.id});function o(e,i){n(i,!0),r(e,{get initialOrderId(){return i.data.initialOrderId}}),t()}export{o as component,i as universal};
