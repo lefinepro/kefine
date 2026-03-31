@@ -39,7 +39,10 @@
     onRemoveFile,
     onStopOrder,
     onOpenOrder,
-    onLoadMoreOrders
+    onLoadMoreOrders,
+    onDescriptionChange,
+    onCostChange,
+    onCurrencyChange
   }: {
     draft: DraftOrder;
     titleFontSize: number;
@@ -78,6 +81,9 @@
     onStopOrder: (order: OrderView, event: Event) => void;
     onOpenOrder: (order: OrderView) => void;
     onLoadMoreOrders: () => void;
+    onDescriptionChange?: (value: string) => void;
+    onCostChange?: (value: string) => void;
+    onCurrencyChange?: (value: string) => void;
   } = $props();
 
   let animatedPlaceholder = $state('');
@@ -87,6 +93,7 @@
   let priceEditorOpen = $state(false);
   let taskTextarea = $state<HTMLTextAreaElement | null>(null);
   let fileInput = $state<HTMLInputElement | null>(null);
+  let filePreviews = $state<Map<number, string>>(new Map());
   let touchStopTimers = new Map<string, () => void>();
   let touchStopTriggered = new Set<string>();
   let cancelPlaceholderTick: (() => void) | null = null;
@@ -206,6 +213,8 @@
     };
   });
 
+
+
   function handleTaskInputKeydown(event: KeyboardEvent) {
     if (event.key !== 'Enter') {
       return;
@@ -225,13 +234,50 @@
     onSubmit();
   }
 
-  function handleFileChange(event: Event) {
+  function isImageFile(file: File): boolean {
+    return file.type.startsWith('image/');
+  }
+
+  async function createPreview(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        resolve(event.target?.result as string);
+      };
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function handleFileChange(event: Event) {
     const target = event.currentTarget as HTMLInputElement | null;
     if (!target?.files || target.files.length === 0) {
       return;
     }
 
-    onAttachFiles(target.files);
+    const filesToProcess = Array.from(target.files);
+
+    // Ensure placeholder is hidden when files are being attached
+    if (!draft.description.trim()) {
+      placeholderFocused = false;
+    }
+
+    // Generate previews for image files
+    filesToProcess.forEach((file, i) => {
+      if (isImageFile(file)) {
+        createPreview(file)
+          .then((dataUrl) => {
+            filePreviews.set(i, dataUrl);
+            filePreviews = new Map(filePreviews);
+          })
+          .catch((err) => {
+            console.error('Failed to create preview:', err);
+          });
+      }
+    });
+
+    // Notify parent about the files
+    onAttachFiles(filesToProcess);
     target.value = '';
   }
 
@@ -338,7 +384,7 @@
         <textarea
           id="order-title"
           bind:this={taskTextarea}
-          bind:value={draft.description}
+          value={draft.description}
           data-part="task-input"
           data-empty={!draft.description.trim()}
           data-multiline={isMultilineDraft}
@@ -348,7 +394,11 @@
           rows="1"
           wrap={isMultilineDraft ? 'soft' : 'off'}
           onkeydown={handleTaskInputKeydown}
-          oninput={() => resizeTaskInput(draft.description)}
+          oninput={(e) => {
+            const target = e.currentTarget as HTMLTextAreaElement;
+            onDescriptionChange?.(target.value);
+            resizeTaskInput(target.value);
+          }}
           onfocus={handleTaskInputFocus}
           onblur={handleTaskInputBlur}
           onpointerdown={handleTaskInputPointerDown}
@@ -383,8 +433,18 @@
       </button>
       {#if priceEditorOpen}
         <kefine-price-editor>
-          <input bind:value={draft.estimatedCost} data-part="price-input" inputmode="decimal" />
-          <input bind:value={draft.currency} data-part="currency-input" maxlength="8" />
+          <input 
+            value={draft.estimatedCost} 
+            data-part="price-input" 
+            inputmode="decimal"
+            oninput={(e) => onCostChange?.((e.currentTarget as HTMLInputElement).value)}
+          />
+          <input 
+            value={draft.currency} 
+            data-part="currency-input" 
+            maxlength="8"
+            oninput={(e) => onCurrencyChange?.((e.currentTarget as HTMLInputElement).value)}
+          />
         </kefine-price-editor>
       {:else}
         <button type="button" data-part="composer-chip" onclick={() => { priceEditorOpen = true; }}>
@@ -398,7 +458,16 @@
       <kefine-file-list>
         {#each draft.files as file, index (`${file.name}-${file.size}-${index}`)}
           <button type="button" data-part="file-pill" onclick={() => onRemoveFile(index)}>
-            <lefine-text>{file.name}</lefine-text>
+            {#if isImageFile(file) && filePreviews.has(index)}
+              <div data-part="file-preview-wrapper">
+                <img
+                  src={filePreviews.get(index)}
+                  alt={file.name}
+                  data-part="file-preview"
+                />
+              </div>
+            {/if}
+            <span>{file.name}</span>
             <strong>{Math.max(1, Math.round(file.size / 1024))} KB</strong>
           </button>
         {/each}
@@ -683,6 +752,25 @@
     display: inline-flex;
     align-items: center;
     gap: 0.65rem;
+  }
+
+  img[data-part='file-preview'] {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+
+  div[data-part='file-preview-wrapper'] {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.3rem;
+    flex-shrink: 0;
+    overflow: hidden;
+    background: color-mix(in oklab, var(--kef-bg-card) 50%, transparent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   p[data-part='composer-hints'] {

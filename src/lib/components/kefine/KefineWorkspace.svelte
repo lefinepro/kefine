@@ -31,6 +31,7 @@ import { cubicOut } from 'svelte/easing';
   import KefineContactDialog from '$lib/components/kefine/KefineContactDialog.svelte';
   import KefinePasskeyDialog from '$lib/components/kefine/KefinePasskeyDialog.svelte';
   import KefineSubmittingStep from '$lib/components/kefine/KefineSubmittingStep.svelte';
+  import KefineErrorStep from '$lib/components/kefine/KefineErrorStep.svelte';
   import KefineExecutingStep from '$lib/components/kefine/KefineExecutingStep.svelte';
   import KefinePaymentStep from '$lib/components/kefine/KefinePaymentStep.svelte';
   import {
@@ -121,6 +122,7 @@ import { cubicOut } from 'svelte/easing';
   let createdOrders = $state<OrderView[]>([]);
   let leftNavExpanded = $state(false);
   let isLocalhostRuntime = $state(false);
+  let errorMessage = $state('');
 
   let isDarkTheme = $state(false);
   let selectedAuthMethod = $state<AuthMethod>(null);
@@ -885,7 +887,8 @@ import { cubicOut } from 'svelte/easing';
 
     if (result.kind === 'error') {
       if (!isBackground) {
-        step = 'create';
+        errorMessage = result.message || localeText.errors.fallback;
+        step = 'error';
       }
       return false;
     }
@@ -976,6 +979,18 @@ import { cubicOut } from 'svelte/easing';
 
   function removeAttachedFile(index: number) {
     draft.files = draft.files.filter((_, fileIndex) => fileIndex !== index);
+  }
+
+  function updateDescription(value: string) {
+    draft.description = value;
+  }
+
+  function updateCost(value: string) {
+    draft.estimatedCost = value;
+  }
+
+  function updateCurrency(value: string) {
+    draft.currency = value;
   }
 
   function handleStopOrder(order: OrderView, event: Event) {
@@ -1330,7 +1345,11 @@ import { cubicOut } from 'svelte/easing';
     onLocale={selectTopbarLocale}
   />
 
-  <kefine-layout data-mode={layoutMode}>
+  <section
+    class="kefine-layout"
+    class:kefine-layout--create={step === 'create'}
+    class:kefine-layout--flow={step === 'executing' || step === 'payment' || step === 'submitting' || step === 'error'}
+  >
     {#if step === 'create'}
       <kefine-screen in:softScreenTransition out:softScreenTransition>
         <KefineCreateStep
@@ -1373,6 +1392,9 @@ import { cubicOut } from 'svelte/easing';
           onRemoveFile={removeAttachedFile}
           onStopOrder={handleStopOrder}
           onOpenOrder={openOrder}
+          onDescriptionChange={updateDescription}
+          onCostChange={updateCost}
+          onCurrencyChange={updateCurrency}
         />
       </kefine-screen>
     {/if}
@@ -1380,6 +1402,19 @@ import { cubicOut } from 'svelte/easing';
     {#if step === 'submitting'}
       <kefine-screen in:softScreenTransition out:softScreenTransition>
         <KefineSubmittingStep />
+      </kefine-screen>
+    {/if}
+
+    {#if step === 'error'}
+      <kefine-screen class="kefine-screen" in:softScreenTransition out:softScreenTransition>
+        <KefineErrorStep
+          message={errorMessage}
+          retryLabel={localeText.buttons.tryAgain}
+          onRetry={() => {
+            errorMessage = '';
+            step = 'create';
+          }}
+        />
       </kefine-screen>
     {/if}
 
@@ -1519,7 +1554,7 @@ import { cubicOut } from 'svelte/easing';
       </kefine-screen>
     {/if}
 
-  </kefine-layout>
+  </section>
 
   <KefineAuthDialog
     open={authDialogOpen}
