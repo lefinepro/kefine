@@ -1,4 +1,4 @@
-import type { Quarter } from '$lib/types/okr';
+type Quarter = 'Q1' | 'Q2' | 'Q3' | 'Q4';
 
 /**
  * Get quarter from a date

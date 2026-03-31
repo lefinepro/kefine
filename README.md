@@ -54,39 +54,60 @@ The frontend production container is built from the repo root [Containerfile](/h
 bun install
 ```
 
-### 2. Create an environment file
+### 2. Configure `kefine.config.json`
 
-Create a `.env` file in the project root.
+All runtime configuration now lives in the repo-root [`kefine.config.json`](/home/kg/datastore/dev/lefine/kefine/kefine.config.json).
 
-Example:
+Main sections:
 
-```env
-KEFINE_CRATER=http://localhost:3001
-KEFINE_EXCHANGE=http://localhost:3001
-VITE_REOWN_PROJECT_ID=your_reown_project_id
+```json
+{
+  "app": {
+    "reownProjectId": "your_reown_project_id"
+  },
+  "origins": {
+    "primary": "https://lefine.pro",
+    "legal": "https://legal.lefine.pro",
+    "task": "https://tasks.lefine.pro"
+  },
+  "backend": {
+    "craterBaseUrl": "http://localhost:3001",
+    "exchangeBaseUrl": "https://lefine.pro/exchange",
+    "databaseUrl": "postgresql://kefine:kefine@localhost:5432/kefine"
+  },
+  "company": {
+    "legalName": "Lefine",
+    "email": "order@lefine.pro"
+  }
+}
 ```
 
 Notes:
 
-- `KEFINE_CRATER` is the crater base URL used by the SvelteKit proxy for all order, payment, and passkey operations.
-- `KEFINE_EXCHANGE` is the exchange base URL crater uses for user IDs and payment links.
-- `VITE_REOWN_PROJECT_ID` is needed if you want wallet login/connect flows to work correctly.
-- `KEFINE_DATABASE_URL` is the Postgres connection string crater uses for orders, payment redemptions, passkey users, challenges, sessions, and outbox activity persistence. In production you should point this to the same database used by the exchange.
+- `app.reownProjectId` is needed if you want wallet login/connect flows to work correctly.
+- `backend.craterBaseUrl` is the crater base URL used by the SvelteKit proxy for order, payment, and passkey operations.
+- `backend.exchangeBaseUrl` is the exchange base URL crater uses for user IDs and payment links.
+- `backend.databaseUrl` is the Postgres connection string crater uses for orders, payment redemptions, passkey users, challenges, sessions, and outbox activity persistence.
+- `company.*` controls the new `/legal-information` company page. Empty optional fields are hidden automatically.
 
 ### Remote exchange mode
 
 To test against the hosted Lefine exchange instead of the local `crater`, use:
 
-```env
-KEFINE_CRATER=http://localhost:3001
-KEFINE_EXCHANGE=https://lefine.pro/exchange
+```json
+{
+  "backend": {
+    "craterBaseUrl": "http://localhost:3001",
+    "exchangeBaseUrl": "https://lefine.pro/exchange"
+  }
+}
 ```
 
 With this setup:
 
 - the frontend sends task, payment, and passkey requests only to the app's own crater-facing routes,
 - the SvelteKit server forwards those requests to crater,
-- crater persists orders, outbox activity, users, passkeys, challenges, sessions, and payment redemptions in Postgres, while still using `KEFINE_EXCHANGE` for exchange-facing URLs,
+- crater persists orders, outbox activity, users, passkeys, challenges, sessions, and payment redemptions in Postgres, while still using `backend.exchangeBaseUrl` for exchange-facing URLs,
 - the UI keeps polling status updates through crater instead of talking to the exchange directly.
 
 ### External crater / global URLs
@@ -95,32 +116,44 @@ If `crater` is exposed on a public URL, do not leave the container defaults on `
 
 Use separate values for:
 
-- `KEFINE_CRATER`: the public base URL crater uses when generating `orderId`, actor IDs, inbox/outbox URLs, and related links
-- `KEFINE_EXCHANGE`: the public exchange/app base URL crater uses for `/pay/*`, user IDs, and exchange-facing links
-- `ORIGIN`: the public frontend origin
+- `backend.craterBaseUrl`: the public base URL crater uses when generating `orderId`, actor IDs, inbox/outbox URLs, and related links
+- `backend.exchangeBaseUrl`: the public exchange/app base URL crater uses for `/pay/*`, user IDs, and exchange-facing links
+- `origins.primary`: the public frontend origin
 
 Example when crater is hosted directly on `https://lefine.pro` and exchange is hosted on `https://lefine.pro/exchange`:
 
-```env
-KEFINE_CRATER=https://lefine.pro
-KEFINE_EXCHANGE=https://lefine.pro/exchange
-ORIGIN=https://lefine.pro
+```json
+{
+  "backend": {
+    "craterBaseUrl": "https://lefine.pro",
+    "exchangeBaseUrl": "https://lefine.pro/exchange"
+  },
+  "origins": {
+    "primary": "https://lefine.pro",
+    "legal": "https://lefine.pro",
+    "task": "https://lefine.pro"
+  }
+}
 ```
 
 ### Split pages by domain
 
 The frontend can redirect different page groups onto different public origins without changing route paths.
 
-- `ORIGIN`: primary site origin, used for `/`
-- `KEFINE_LEGAL_ORIGIN`: legal pages origin for `/privacy`, `/terms`, `/refund-policy`
-- `KEFINE_TASK_ORIGIN`: task flow origin for `/create`, `/task/*`, `/order/*`, `/payment/*`, `/pay/*`, `/status*`, `/passkeys/*`, `/api/kefine/*`
+- `origins.primary`: primary site origin, used for `/`
+- `origins.legal`: legal pages origin for `/privacy`, `/terms`, `/legal-information`
+- `origins.task`: task flow origin for `/create`, `/task/*`, `/order/*`, `/payment/*`, `/pay/*`, `/status*`, `/passkeys/*`, `/api/kefine/*`
 
 Example:
 
-```env
-ORIGIN=https://lefine.pro
-KEFINE_LEGAL_ORIGIN=https://legal.lefine.pro
-KEFINE_TASK_ORIGIN=https://tasks.lefine.pro
+```json
+{
+  "origins": {
+    "primary": "https://lefine.pro",
+    "legal": "https://legal.lefine.pro",
+    "task": "https://tasks.lefine.pro"
+  }
+}
 ```
 
 With that setup:
@@ -131,8 +164,8 @@ With that setup:
 
 For this setup:
 
-- new `orderId` values are emitted under `https://lefine.pro/...` instead of `http://localhost:3001/...`
-- payment and exchange-facing links are emitted under `https://lefine.pro/exchange/...`
+- new `orderId` values are emitted under the configured public crater/exchange URLs instead of local defaults
+- payment and exchange-facing links are emitted under the configured exchange URL
 - the frontend proxies requests to the hosted crater at `https://lefine.pro`
 
 ### 3. Start the backend
@@ -204,7 +237,7 @@ The task detail flow supports several auth paths before payment:
 
 #### Wallet
 
-- Requires `VITE_REOWN_PROJECT_ID`
+- Requires `app.reownProjectId` in `kefine.config.json`
 - Lets you connect a wallet via Reown/AppKit
 - Best option if you want to exercise the wallet-based payment path
 
@@ -266,8 +299,8 @@ bun run test:e2e
 
 ## Useful development notes
 
-- The frontend assumes crater is reachable on port `3001` unless `KEFINE_CRATER` overrides it.
-- Exchange-facing IDs and payment links are derived from `KEFINE_EXCHANGE`.
+- The frontend assumes crater is reachable on port `3001` unless `backend.craterBaseUrl` overrides it.
+- Exchange-facing IDs and payment links are derived from `backend.exchangeBaseUrl`.
 - Passkey and exchange account data are stored by crater in `.data/exchange-state.json`; deleting that file resets local state.
 - The backend default configuration is development-friendly and should work locally without additional setup.
 
@@ -296,10 +329,7 @@ docker build -f Containerfile -t kefine-frontend .
 To run it on the default Caddy port:
 
 ```bash
-docker run --rm -p 5173:5173 \
-  -e KEFINE_CRATER=http://host.docker.internal:3001 \
-  -e KEFINE_EXCHANGE=http://host.docker.internal:3001 \
-  kefine-frontend
+docker run --rm -p 5173:5173 kefine-frontend
 ```
 
 ## Troubleshooting
@@ -309,15 +339,16 @@ docker run --rm -p 5173:5173 \
 Check that:
 
 - `crater` is running on `localhost:3001`
-- `KEFINE_CRATER` points to the correct crater URL
+- `backend.craterBaseUrl` in `kefine.config.json` points to the correct crater URL
 - your browser can access both the frontend and backend ports
 
 ### Wallet connect does not work
 
 Check that:
 
-- `VITE_REOWN_PROJECT_ID` is set
-- you restarted the dev server after changing `.env`
+- `app.reownProjectId` is set
+- you updated `app.reownProjectId` in `kefine.config.json`
+- you restarted the dev server after changing the config file
 
 ### Passkey registration or login fails
 

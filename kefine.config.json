@@ -1,0 +1,54 @@
+{
+  "app": {
+    "name": "Lefine",
+    "supportEmail": "order@lefine.pro",
+    "githubUrl": "https://github.com/lefine",
+    "reownProjectId": "909acf523be03f300ad21cca95d966c8",
+    "socialLinks": {
+      "mastodon": "https://mastodon.social/@lefine",
+      "discord": "https://discord.com/invite/lefine",
+      "linkedin": "https://www.linkedin.com/company/lefine",
+      "telegram": "https://t.me/lefine"
+    },
+    "legalUpdatedAt": {
+      "en": "March 2026",
+      "ru": "Март 2026",
+      "hy": "Մարտ 2026"
+    }
+  },
+  "origins": {
+    "primary": "https://lefine.pro",
+    "legal": "https://lefine.pro",
+    "task": "https://lefine.pro"
+  },
+  "backend": {
+    "craterBaseUrl": "http://localhost:3001",
+    "exchangeBaseUrl": "http://localhost:3001",
+    "port": 3001,
+    "host": "0.0.0.0",
+    "environment": "development",
+    "databaseUrl": "postgresql://kefine:kefine@localhost:5432/kefine",
+    "logLevel": "info"
+  },
+  "payment": {
+    "evmAddress": "",
+    "chainId": 43114,
+    "tokenAddress": "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E",
+    "tokenSymbol": "USDC",
+    "tokenDecimals": 6
+  },
+  "company": {
+    "legalName": "Lefine",
+    "businessType": "",
+    "registrationDate": "",
+    "country": "Armenia",
+    "registeredAddress": "",
+    "email": "order@lefine.pro",
+    "phone": "",
+    "registrationNumber": "",
+    "vatNumber": "",
+    "taxId": "",
+    "soleProprietor": "",
+    "legalDisclaimer": ""
+  }
+}

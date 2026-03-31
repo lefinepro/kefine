@@ -1,5 +1,7 @@
 <script lang="ts">
   import { browser } from '$app/environment';
+  import { page } from '$app/state';
+  import { resolvePublicRuntimeConfig } from '$lib/config/public-config';
   import { resolveOrderProxyBasePath } from '$lib/order-proxy-path';
   import { onMount } from 'svelte';
 import { cubicOut } from 'svelte/easing';
@@ -72,6 +74,7 @@ import { cubicOut } from 'svelte/easing';
     initialOrderId?: string;
   } = $props();
   const localeText = $derived(getLocaleText($kefineLocale));
+  const runtimeConfig = $derived(resolvePublicRuntimeConfig(page.data.publicConfig));
 
   function getNormalizedInitialOrderId() {
     return initialOrderId?.trim() || null;
@@ -184,25 +187,25 @@ import { cubicOut } from 'svelte/easing';
     {
       id: 'mastodon' as const,
       label: localeText.topbar.socialLinks.mastodon.label,
-      href: localeText.topbar.socialLinks.mastodon.href,
+      href: runtimeConfig.app.socialLinks.mastodon,
       icon: 'mdi:mastodon'
     },
     {
       id: 'discord' as const,
       label: localeText.topbar.socialLinks.discord.label,
-      href: localeText.topbar.socialLinks.discord.href,
+      href: runtimeConfig.app.socialLinks.discord,
       icon: 'mdi:discord'
     },
     {
       id: 'linkedin' as const,
       label: localeText.topbar.socialLinks.linkedin.label,
-      href: localeText.topbar.socialLinks.linkedin.href,
+      href: runtimeConfig.app.socialLinks.linkedin,
       icon: 'mdi:linkedin'
     },
     {
       id: 'telegram' as const,
       label: localeText.topbar.socialLinks.telegram.label,
-      href: localeText.topbar.socialLinks.telegram.href,
+      href: runtimeConfig.app.socialLinks.telegram,
       icon: 'mdi:telegram'
     }
   ]);
@@ -218,9 +221,9 @@ import { cubicOut } from 'svelte/easing';
       href: '/terms'
     },
     {
-      id: 'refund' as const,
-      label: localeText.topbar.legalLinks.refund,
-      href: '/refund-policy'
+      id: 'company' as const,
+      label: localeText.topbar.legalLinks.company,
+      href: '/legal-information'
     }
   ]);
   const remainingAmount = $derived(currentOrder?.estimatedCost ?? 0);
@@ -241,7 +244,7 @@ import { cubicOut } from 'svelte/easing';
       return `${title} | Lefine`;
     }
 
-    return 'Lefine - Automated Freelance Exchange';
+    return 'Lefine | From task to best-fit solution.';
   });
   const authDisplay = $derived({
     appIconUrl: '/favicon.png',
@@ -488,7 +491,7 @@ import { cubicOut } from 'svelte/easing';
   function openContactEmailDraft() {
     if (!browser) return;
 
-    window.location.href = `mailto:${localeText.topbar.contactEmail}`;
+    window.location.href = `mailto:${runtimeConfig.app.supportEmail}`;
   }
 
   async function selectTopbarAuth() {
@@ -518,7 +521,7 @@ import { cubicOut } from 'svelte/easing';
     if (!browser) return;
     window.location.href = createContactMailtoUrl({
       brandName: localeText.brand.name,
-      recipient: localeText.topbar.contactEmail,
+      recipient: runtimeConfig.app.supportEmail,
       name: contactName,
       email: contactEmail,
       message: contactMessage
@@ -964,7 +967,7 @@ import { cubicOut } from 'svelte/easing';
     legalLabel={localeText.topbar.legalLabel}
     mailLabel={localeText.topbar.mailLabel}
     githubLabel={localeText.topbar.githubLabel}
-    githubUrl={localeText.topbar.githubUrl}
+    githubUrl={runtimeConfig.app.githubUrl}
     themeLabel={topbarThemeActionLabel}
     signInLabel={localeText.topbar.signIn}
     signedInLabel={localeText.topbar.signedIn}

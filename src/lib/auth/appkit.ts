@@ -1,10 +1,11 @@
 import { browser } from '$app/environment';
+import { readBrowserPublicRuntimeConfig } from '$lib/config/public-config';
 
-const projectId = (import.meta.env.VITE_REOWN_PROJECT_ID as string | undefined)?.trim() || '909acf523be03f300ad21cca95d966c8';
+const projectId = readBrowserPublicRuntimeConfig().app.reownProjectId;
 
 const metadata = {
-	name: 'Lefine - Automated Freelance Exchange',
-	description: 'Automated freelance exchange dashboard',
+	name: 'Lefine | From task to best-fit solution.',
+	description: 'Lefine helps you describe a technical task and get the best-fitting solution path.',
 	url: typeof window !== 'undefined' ? window.location.origin : 'https://kefine.app',
 	icons: ['https://kefine.app/favicon.png']
 };

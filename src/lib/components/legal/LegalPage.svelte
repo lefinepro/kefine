@@ -44,9 +44,28 @@
       {#each content.sections as section}
         <section class="legal-section">
           <h2>{section.title}</h2>
-          {#each section.paragraphs as paragraph}
-            <p>{paragraph}</p>
-          {/each}
+          {#if section.facts?.length}
+            <dl class="legal-facts">
+              {#each section.facts as fact}
+                <div class="legal-fact">
+                  <dt>{fact.label}</dt>
+                  <dd>{fact.value}</dd>
+                </div>
+              {/each}
+            </dl>
+          {/if}
+          {#if section.paragraphs}
+            {#each section.paragraphs as paragraph}
+              <p>{paragraph}</p>
+            {/each}
+          {/if}
+          {#if section.bullets?.length}
+            <ul class="legal-bullets">
+              {#each section.bullets as bullet}
+                <li>{bullet}</li>
+              {/each}
+            </ul>
+          {/if}
         </section>
       {/each}
     </section>
@@ -132,11 +151,41 @@
   }
 
   .legal-header p,
-  .legal-section p {
+  .legal-section p,
+  .legal-facts dd,
+  .legal-facts dt,
+  .legal-bullets li {
     margin: 0;
     color: color-mix(in oklab, var(--kef-text-soft, #5d5144) 94%, #695949);
     line-height: 1.76;
     max-width: 72ch;
+  }
+
+  .legal-facts {
+    display: grid;
+    gap: 0.55rem;
+    margin: 0;
+  }
+
+  .legal-fact {
+    display: grid;
+    gap: 0.12rem;
+  }
+
+  .legal-facts dt {
+    font-weight: 700;
+    color: var(--kef-text, #30281f);
+  }
+
+  .legal-facts dd {
+    margin: 0;
+  }
+
+  .legal-bullets {
+    margin: 0;
+    padding-left: 1.15rem;
+    display: grid;
+    gap: 0.35rem;
   }
 
   .legal-sections {
