@@ -47,7 +47,7 @@ export const KEFINE_TEXT_RU = {
     legalLinks: {
       privacy: 'Политика конфиденциальности',
       terms: 'Условия',
-      refund: 'Возврат',
+      company: 'Реквизиты компании',
       related: 'Связанные юридические страницы',
       updated: 'Обновлено',
       backToApp: 'Вернуться в приложение'
@@ -272,11 +272,12 @@ export const KEFINE_TEXT_RU = {
     anonymousSaveHint: 'Авторизуйтесь, чтобы сохранить результат и вернуться к нему позже.'
   },
   afe: {
-    title: 'Как работает AFE',
+    title: 'Как работает Lefine',
     cards: {
       afe: {
-        title: 'Что такое AFE',
-        detail: 'AFE означает Automated Freelance Exchange. Вы отправляете техническую задачу, solver’ы конкурируют за неё, а Lefine маршрутизирует лучший вариант.'
+        title: 'Что такое Lefine?',
+        detail:
+          'Lefine — это Automated Freelance Exchange (AFE). Вам достаточно описать задачу, а мы подберём решение, которое лучше всего ей подходит.'
       },
       task: {
         title: '1. Опишите задачу',

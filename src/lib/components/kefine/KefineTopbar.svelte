@@ -11,7 +11,7 @@
   };
 
   type LegalLink = {
-    id: 'privacy' | 'terms' | 'refund';
+    id: 'privacy' | 'terms' | 'company';
     label: string;
     href: string;
   };

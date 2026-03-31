@@ -1,11 +1,12 @@
 module Crater
   module Config
-    PORT        = (ENV["PORT"]? || "3001").to_i
-    BASE_URL    = ENV["BASE_URL"]? || "http://localhost:#{PORT}"
-    ACTOR_NAME  = ENV["ACTOR_NAME"]? || "crater"
-    DOMAIN      = ENV["DOMAIN"]? || "localhost:#{PORT}"
-    CRYSTAL_ENV = ENV["CRYSTAL_ENV"]? || "development"
-    PRIVATE_KEY = ENV["PRIVATE_KEY"]? || ""
+    CONFIG      = Utils::Config.load
+    PORT        = CONFIG.port
+    BASE_URL    = CONFIG.crater_url
+    ACTOR_NAME  = CONFIG.actor_username
+    DOMAIN      = CONFIG.domain
+    CRYSTAL_ENV = CONFIG.env
+    PRIVATE_KEY = ""
 
     def self.development?
       CRYSTAL_ENV == "development"

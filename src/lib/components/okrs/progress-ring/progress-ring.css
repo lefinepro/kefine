@@ -1,4 +1,0 @@
-/* .progress-arc: animated SVG progress arc */
-.progress-arc {
-  transition: stroke-dashoffset 500ms ease-out, stroke 300ms ease;
-}

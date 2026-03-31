@@ -1,3 +1,5 @@
+import { getKefineConfig } from '$lib/server/kefine-config';
+
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
 
 type DomainBucket = 'primary' | 'legal' | 'task';
@@ -39,6 +41,7 @@ function getDomainBucket(pathname: string): DomainBucket {
   if (
     normalizedPath === '/privacy' ||
     normalizedPath === '/terms' ||
+    normalizedPath === '/legal-information' ||
     normalizedPath === '/refund-policy'
   ) {
     return 'legal';
@@ -62,20 +65,12 @@ function getDomainBucket(pathname: string): DomainBucket {
 }
 
 function getConfiguredOrigins(): DomainConfig {
-  const primaryOrigin =
-    parseOrigin(process.env.ORIGIN) ??
-    parseOrigin(process.env.KEFINE_PRIMARY_ORIGIN) ??
-    parseOrigin('https://lefine.pro');
+  const { origins } = getKefineConfig();
+  const primaryOrigin = parseOrigin(origins.primary);
 
-  const legalOrigin =
-    parseOrigin(process.env.KEFINE_LEGAL_ORIGIN) ??
-    parseOrigin(process.env.LEGAL_ORIGIN) ??
-    primaryOrigin;
+  const legalOrigin = parseOrigin(origins.legal) ?? primaryOrigin;
 
-  const taskOrigin =
-    parseOrigin(process.env.KEFINE_TASK_ORIGIN) ??
-    parseOrigin(process.env.TASK_ORIGIN) ??
-    primaryOrigin;
+  const taskOrigin = parseOrigin(origins.task) ?? primaryOrigin;
 
   return {
     primaryOrigin,

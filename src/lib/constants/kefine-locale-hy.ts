@@ -31,7 +31,7 @@ export const KEFINE_TEXT_HY = {
       ...KEFINE_TEXT_EN.topbar.legalLinks,
       privacy: 'Գաղտնիության քաղաքականություն',
       terms: 'Պայմաններ',
-      refund: 'Վերադարձ',
+      company: 'Իրավական տվյալներ',
       related: 'Կապակցված իրավական էջեր',
       updated: 'Թարմացվել է',
       backToApp: 'Վերադառնալ հավելված'
@@ -170,11 +170,12 @@ export const KEFINE_TEXT_HY = {
   },
   afe: {
     ...KEFINE_TEXT_EN.afe,
-    title: 'Ինչպես է աշխատում AFE-ն',
+    title: 'Ինչպես է աշխատում Lefine-ը',
     cards: {
       afe: {
-        title: 'Ի՞նչ է AFE-ն',
-        detail: 'AFE նշանակում է Automated Freelance Exchange։ Դուք ուղարկում եք տեխնիկական առաջադրանք, solver-ները մրցում են դրա համար, իսկ Lefine-ը ընտրում է լավագույն տարբերակը։'
+        title: 'Ի՞նչ է Lefine-ը',
+        detail:
+          'Lefine-ը Automated Freelance Exchange (AFE) է։ Դուք պարզապես նկարագրում եք առաջադրանքը, իսկ մենք ընտրում ենք այն լուծումը, որը լավագույնս համապատասխանում է դրան։'
       },
       task: {
         title: '1. Նկարագրեք առաջադրանքը',

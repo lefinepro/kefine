@@ -1,30 +1,299 @@
 import type { KefineLocale } from '$lib/constants/kefine-locale';
+import type { KefineCompanyPublicConfig } from '$lib/config/public-config';
 
-export type LegalPageId = 'privacy' | 'terms' | 'refund';
+export type LegalPageId = 'privacy' | 'terms' | 'company';
+
+export type LegalFact = {
+  label: string;
+  value: string;
+};
 
 export type LegalSection = {
   title: string;
-  paragraphs: string[];
+  paragraphs?: string[];
+  bullets?: string[];
+  facts?: LegalFact[];
 };
 
 export type LegalPageContent = {
   id: LegalPageId;
-  path: '/privacy' | '/terms' | '/refund-policy';
+  path: '/privacy' | '/terms' | '/legal-information';
   title: string;
   updatedAt: string;
   intro: string[];
   sections: LegalSection[];
 };
 
-const CONTACT_EMAIL = 'order@lefine.pro';
-const UPDATED_AT = 'March 2026';
+function compactFacts(facts: LegalFact[]): LegalFact[] {
+  return facts.filter((fact) => fact.value.trim().length > 0);
+}
 
-const EN_CONTENT: Record<LegalPageId, LegalPageContent> = {
-  privacy: {
+function formatCompanyFacts(locale: KefineLocale, company: KefineCompanyPublicConfig): LegalFact[] {
+  const labels = {
+    en: {
+      legalName: 'Legal name',
+      businessType: 'Business type',
+      registrationDate: 'Registration date',
+      country: 'Country of registration',
+      registeredAddress: 'Registered address',
+      email: 'Email',
+      phone: 'Phone',
+      registrationNumber: 'Registration number',
+      vatNumber: 'VAT number',
+      taxId: 'Tax ID',
+      soleProprietor: 'Sole proprietor / IP'
+    },
+    ru: {
+      legalName: 'Юридическое наименование',
+      businessType: 'Форма деятельности',
+      registrationDate: 'Дата регистрации',
+      country: 'Страна регистрации',
+      registeredAddress: 'Юридический адрес',
+      email: 'Email',
+      phone: 'Телефон',
+      registrationNumber: 'Регистрационный номер',
+      vatNumber: 'VAT номер',
+      taxId: 'TAX ID',
+      soleProprietor: 'ИП / форма предпринимателя'
+    },
+    hy: {
+      legalName: 'Իրավաբանական անվանում',
+      businessType: 'Գործունեության ձև',
+      registrationDate: 'Գրանցման ամսաթիվ',
+      country: 'Գրանցման երկիր',
+      registeredAddress: 'Գրանցված հասցե',
+      email: 'Էլ. փոստ',
+      phone: 'Հեռախոս',
+      registrationNumber: 'Գրանցման համար',
+      vatNumber: 'VAT համար',
+      taxId: 'TAX ID',
+      soleProprietor: 'ԱՁ / ձեռնարկատիրոջ ձև'
+    }
+  }[locale];
+
+  return compactFacts([
+    { label: labels.legalName, value: company.legalName },
+    { label: labels.businessType, value: company.businessType },
+    { label: labels.registrationDate, value: company.registrationDate },
+    { label: labels.country, value: company.country },
+    { label: labels.registeredAddress, value: company.registeredAddress },
+    { label: labels.email, value: company.email },
+    { label: labels.phone, value: company.phone },
+    { label: labels.registrationNumber, value: company.registrationNumber },
+    { label: labels.vatNumber, value: company.vatNumber },
+    { label: labels.taxId, value: company.taxId },
+    { label: labels.soleProprietor, value: company.soleProprietor }
+  ]);
+}
+
+function buildCompanyContent(locale: KefineLocale, company: KefineCompanyPublicConfig, updatedAt: string): LegalPageContent {
+  const companyFacts = formatCompanyFacts(locale, company);
+
+  if (locale === 'ru') {
+    return {
+      id: 'company',
+      path: '/legal-information',
+      title: 'Реквизиты компании',
+      updatedAt,
+      intro: [
+        'На этой странице опубликованы основные сведения о компании Lefine, каналы связи, информация о цифровом продукте и юридические уведомления для пользователей.',
+        'Пустые поля в реквизитах намеренно не отображаются, чтобы страница показывала только заполненные и актуальные данные.'
+      ],
+      sections: [
+        {
+          title: '1. Сведения о компании',
+          facts: companyFacts
+        },
+        {
+          title: '2. Контактная информация',
+          paragraphs: [
+            'По вопросам заказов, поддержки, платежей и документов вы можете связаться с нами по указанным на этой странице контактам.',
+            'Если для конкретного запроса нужен подтверждающий документ или дополнительная идентификация, мы можем запросить уточняющие данные.'
+          ]
+        },
+        {
+          title: '3. Информация о продукте',
+          paragraphs: [
+            'Lefine предоставляет цифровой сервис для постановки технических задач, их маршрутизации через solver-процессы, прохождения этапов авторизации и оплаты и последующей цифровой выдачи результата.',
+            'Все результаты сервиса предоставляются в цифровой форме. Физическая доставка товаров или бумажных документов через продукт не осуществляется, если иное прямо не указано.'
+          ]
+        },
+        {
+          title: '4. Платежи и расчёты',
+          paragraphs: [
+            'Стоимость заказа, поддерживаемые способы оплаты, валюта расчёта и технический маршрут оплаты могут зависеть от типа задачи, выбранного сценария оплаты и доступной платёжной инфраструктуры.',
+            'Платёж может обрабатываться непосредственно Lefine либо через внешних провайдеров и инфраструктурных партнёров, действующих по собственным юридическим условиям.'
+          ],
+          bullets: [
+            'Цены и условия оплаты отображаются до подтверждения платежа.',
+            'Цифровой продукт может начать исполняться вскоре после оплаты.',
+            'Возвраты и потребительские права регулируются применимым законодательством и условиями конкретного платёжного канала.'
+          ]
+        },
+        {
+          title: '5. Принимаемые способы оплаты',
+          paragraphs: [
+            'Поддерживаемые способы оплаты и доступные платёжные сети определяются текущей конфигурацией продукта и могут изменяться без отдельного предварительного уведомления.',
+            'Если технически доступно, пользователю показываются только те способы оплаты, которые актуальны для его сценария заказа.'
+          ]
+        },
+        {
+          title: '6. Юридические документы',
+          paragraphs: [
+            'Использование сервиса также регулируется Политикой конфиденциальности и Условиями использования, опубликованными на отдельных страницах legal-раздела.',
+            'Если отдельное положение на этой странице конфликтует с обязательными нормами применимого права, применяется соответствующая обязательная норма.'
+          ]
+        },
+        {
+          title: '7. Правовое уведомление',
+          paragraphs: company.legalDisclaimer
+            ? [company.legalDisclaimer]
+            : [
+                'Информация на этой странице предоставляется в информационных целях и отражает опубликованные реквизиты и общие сведения о цифровом сервисе Lefine на дату обновления.'
+              ]
+        }
+      ]
+    };
+  }
+
+  if (locale === 'hy') {
+    return {
+      id: 'company',
+      path: '/legal-information',
+      title: 'Իրավական տվյալներ',
+      updatedAt,
+      intro: [
+        'Այս էջում հրապարակվում են Lefine-ի հիմնական ընկերական տվյալները, կապի միջոցները, թվային ծառայության մասին տեղեկությունները և օգտագործողների համար իրավական ծանուցումները։',
+        'Չլրացված դաշտերը միտումնավոր չեն ցուցադրվում, որպեսզի էջում մնան միայն լրացված և արդիական տվյալները։'
+      ],
+      sections: [
+        {
+          title: '1. Ընկերության տվյալներ',
+          facts: companyFacts
+        },
+        {
+          title: '2. Կապի տվյալներ',
+          paragraphs: [
+            'Պատվերների, աջակցության, վճարումների և փաստաթղթերի հարցերով կարող եք կապվել մեզ հետ այս էջում նշված կոնտակտներով։',
+            'Եթե որոշ դիմումների համար անհրաժեշտ է հաստատող փաստաթուղթ կամ լրացուցիչ նույնականացում, մենք կարող ենք հարցնել լրացուցիչ տեղեկություն։'
+          ]
+        },
+        {
+          title: '3. Ապրանքի մասին',
+          paragraphs: [
+            'Lefine-ը թվային ծառայություն է, որը թույլ է տալիս ստեղծել տեխնիկական առաջադրանքներ, ուղարկել դրանք solver հոսքերով, անցնել նույնականացման և վճարման փուլերը և ստանալ թվային արդյունք։',
+            'Ծառայության բոլոր արդյունքները տրամադրվում են թվային ձևաչափով։ Ֆիզիկական ապրանքների կամ թղթային փաստաթղթերի առաքում չի իրականացվում, եթե դա հատուկ նշված չէ։'
+          ]
+        },
+        {
+          title: '4. Վճարումներ և հաշվարկներ',
+          paragraphs: [
+            'Պատվերի արժեքը, աջակցվող վճարման եղանակները, հաշվարկի արժույթը և վճարման տեխնիկական ուղին կարող են կախված լինել առաջադրանքի տեսակից, ընտրված սցենարից և առկա վճարային ենթակառուցվածքից։',
+            'Վճարումը կարող է մշակվել Lefine-ի կողմից կամ արտաքին մատակարարների և վճարային գործընկերների միջոցով, որոնք գործում են իրենց սեփական իրավական պայմաններով։'
+          ],
+          bullets: [
+            'Գինը և վճարման պայմանները ցուցադրվում են մինչև վճարման հաստատումը։',
+            'Թվային ծառայության կատարումը կարող է սկսվել վճարումից անմիջապես հետո։',
+            'Վերադարձները և սպառողական իրավունքները կարգավորվում են կիրառելի օրենքներով և համապատասխան վճարային ալիքի պայմաններով։'
+          ]
+        },
+        {
+          title: '5. Ընդունվող վճարային եղանակներ',
+          paragraphs: [
+            'Աջակցվող վճարային եղանակներն ու ցանցերը որոշվում են արտադրանքի ընթացիկ կարգավորումներով և կարող են փոփոխվել առանց առանձին նախնական ծանուցման։',
+            'Եթե տեխնիկապես հասանելի է, օգտատիրոջը ցուցադրվում են միայն այն վճարման եղանակները, որոնք վերաբերում են իր պատվերի սցենարին։'
+          ]
+        },
+        {
+          title: '6. Իրավական փաստաթղթեր',
+          paragraphs: [
+            'Ծառայության օգտագործումը կարգավորվում է նաև առանձին legal էջերում հրապարակված Գաղտնիության քաղաքականությամբ և Օգտագործման պայմաններով։',
+            'Եթե այս էջի որևէ դրույթ հակասում է կիրառելի իրավունքի պարտադիր պահանջներին, կիրառվում է համապատասխան պարտադիր նորմը։'
+          ]
+        },
+        {
+          title: '7. Իրավական ծանուցում',
+          paragraphs: company.legalDisclaimer
+            ? [company.legalDisclaimer]
+            : [
+                'Այս էջի տեղեկատվությունը տրամադրվում է տեղեկատվական նպատակներով և արտացոլում է Lefine թվային ծառայության հրապարակված տվյալներն ու ընդհանուր նկարագրությունը թարմացման ամսաթվի դրությամբ։'
+              ]
+        }
+      ]
+    };
+  }
+
+  return {
+    id: 'company',
+    path: '/legal-information',
+    title: 'Legal Information',
+    updatedAt,
+    intro: [
+      'This page publishes Lefine company details, contact channels, digital-product disclosures, and legal notices for customers and counterparties.',
+      'Blank company fields are intentionally hidden so the page only shows values that are currently configured.'
+    ],
+    sections: [
+      {
+        title: '1. Company Details',
+        facts: companyFacts
+      },
+      {
+        title: '2. Contact Information',
+        paragraphs: [
+          'For order, support, payment, or document-related questions, contact us using the details shown on this page.',
+          'If a specific request requires supporting documentation or additional verification, we may ask for further information.'
+        ]
+      },
+      {
+        title: '3. Product Information',
+        paragraphs: [
+          'Lefine provides a digital service for submitting technical tasks, routing them through solver workflows, completing authentication and payment steps, and delivering digital results.',
+          'All product outputs are delivered digitally. No physical goods or paper documents are shipped unless explicitly stated otherwise.'
+        ]
+      },
+      {
+        title: '4. Payments and Consumer Information',
+        paragraphs: [
+          'Pricing, supported payment methods, settlement currency, and the technical payment path may vary depending on the task type, selected payment flow, and available infrastructure.',
+          'Payments may be processed directly by Lefine or through external providers and infrastructure partners operating under their own legal terms.'
+        ],
+        bullets: [
+          'Applicable pricing and payment terms are shown before payment confirmation.',
+          'Digital fulfillment may begin shortly after payment is received.',
+          'Refunds and consumer rights are governed by applicable law and the relevant payment channel terms.'
+        ]
+      },
+      {
+        title: '5. Accepted Payment Methods',
+        paragraphs: [
+          'Supported payment methods and networks are determined by the current product configuration and may change without separate advance notice.',
+          'When technically available, the product shows only the payment options relevant to the current order flow.'
+        ]
+      },
+      {
+        title: '6. Legal Documents',
+        paragraphs: [
+          'Use of the service is also governed by the Privacy Policy and Terms of Service published on separate legal pages.',
+          'If any statement on this page conflicts with mandatory applicable law, the mandatory legal rule prevails.'
+        ]
+      },
+      {
+        title: '7. Legal Disclaimer',
+        paragraphs: company.legalDisclaimer
+          ? [company.legalDisclaimer]
+          : [
+              'The information on this page is provided for general informational purposes and reflects the published company details and service disclosures available as of the update date.'
+            ]
+      }
+    ]
+  };
+}
+
+const PRIVACY_CONTENT: Record<KefineLocale, Omit<LegalPageContent, 'updatedAt'>> = {
+  en: {
     id: 'privacy',
     path: '/privacy',
     title: 'Privacy Policy',
-    updatedAt: UPDATED_AT,
     intro: [
       'This Privacy Policy explains how Lefine collects, uses, and protects personal data when you visit the website, create solver tasks, authenticate, make payments, or use related digital delivery features.',
       'This policy applies to the Lefine product and related services delivered through the website and crater-backed infrastructure.'
@@ -71,7 +340,7 @@ const EN_CONTENT: Record<LegalPageId, LegalPageContent> = {
         title: '6. Your Rights',
         paragraphs: [
           'Depending on applicable law, you may have rights to request access, correction, deletion, restriction, or objection regarding your personal data.',
-          `To make a privacy-related request, contact us at ${CONTACT_EMAIL}.`
+          'To make a privacy-related request, contact us using the email address listed on the Legal Information page.'
         ]
       },
       {
@@ -82,11 +351,135 @@ const EN_CONTENT: Record<LegalPageId, LegalPageContent> = {
       }
     ]
   },
-  terms: {
+  ru: {
+    id: 'privacy',
+    path: '/privacy',
+    title: 'Политика конфиденциальности',
+    intro: [
+      'Эта Политика конфиденциальности объясняет, как Lefine собирает, использует и защищает персональные данные, когда вы посещаете сайт, создаёте задачи, проходите авторизацию, совершаете оплату или используете цифровую выдачу результата.',
+      'Политика применяется к продукту Lefine и связанным сервисам, работающим через сайт и crater-инфраструктуру.'
+    ],
+    sections: [
+      {
+        title: '1. Какие данные мы собираем',
+        paragraphs: [
+          'Мы можем собирать данные аккаунта и связи, включая email, имя пользователя и переписку со службой поддержки.',
+          'Мы можем собирать техническую информацию, такую как IP-адрес, тип браузера, сведения об устройстве, операционная система, метаданные сессии и журналы безопасности.',
+          'Если вы используете passkey или авторизацию через кошелёк, мы можем обрабатывать идентификаторы и проверочные данные, необходимые для работы этих сценариев входа.'
+        ]
+      },
+      {
+        title: '2. Платёжные и транзакционные данные',
+        paragraphs: [
+          'Мы можем обрабатывать ограниченный набор данных о заказе и транзакции, необходимых для создания задач, генерации платёжных ссылок, подтверждения доступа, предотвращения злоупотреблений и обработки обращений.',
+          'Платёжные провайдеры или партнёры платёжной инфраструктуры могут обрабатывать биллинговые и платёжные данные на основании собственных условий и политик конфиденциальности.',
+          'Не все платёжные данные обязательно хранятся непосредственно в Lefine; часть информации может обрабатываться внешними процессорами или инфраструктурными провайдерами.'
+        ]
+      },
+      {
+        title: '3. Как мы используем персональные данные',
+        paragraphs: [
+          'Мы используем персональные данные для работы продукта, авторизации пользователей, выдачи цифровых результатов, обработки обращений в поддержку, повышения надёжности сервиса и выполнения юридических обязанностей.',
+          'Технические данные также могут использоваться для мониторинга безопасности, предотвращения мошенничества, диагностики сервиса и агрегированной аналитики.'
+        ]
+      },
+      {
+        title: '4. Передача данных',
+        paragraphs: [
+          'Мы можем передавать ограниченные персональные данные провайдерам инфраструктуры, хостинга, платежей, коммуникаций и безопасности, если это необходимо для работы сервиса.',
+          'Мы не продаём персональные данные третьим лицам.'
+        ]
+      },
+      {
+        title: '5. Срок хранения данных',
+        paragraphs: [
+          'Мы храним персональные данные только столько, сколько разумно необходимо для работы сервиса, поддержки доступа к аккаунту, разрешения споров, защиты платформы и выполнения юридических, бухгалтерских или комплаенс-обязанностей.',
+          'Аутентификационные записи, метаданные заказов и обращения в поддержку могут храниться для операционной устойчивости и проверки безопасности.'
+        ]
+      },
+      {
+        title: '6. Ваши права',
+        paragraphs: [
+          'В зависимости от применимого права у вас могут быть права на доступ, исправление, удаление, ограничение обработки или возражение в отношении ваших персональных данных.',
+          'Чтобы направить privacy-запрос, используйте email, указанный на странице реквизитов компании.'
+        ]
+      },
+      {
+        title: '7. Изменения политики',
+        paragraphs: [
+          'Мы можем время от времени обновлять эту Политику конфиденциальности. Существенные изменения будут отражены на этой странице с новой датой вступления в силу.'
+        ]
+      }
+    ]
+  },
+  hy: {
+    id: 'privacy',
+    path: '/privacy',
+    title: 'Գաղտնիության քաղաքականություն',
+    intro: [
+      'Այս Գաղտնիության քաղաքականությունը բացատրում է, թե ինչպես է Lefine-ը հավաքում, օգտագործում և պաշտպանում անձնական տվյալները, երբ դուք այցելում եք կայքը, ստեղծում եք առաջադրանքներ, անցնում եք նույնականացում, կատարում եք վճարումներ կամ ստանում եք թվային արդյունքներ։',
+      'Քաղաքականությունը վերաբերում է Lefine արտադրանքին և կայքի ու crater ենթակառուցվածքի միջոցով մատուցվող ծառայություններին։'
+    ],
+    sections: [
+      {
+        title: '1. Ինչ տվյալներ ենք հավաքում',
+        paragraphs: [
+          'Մենք կարող ենք հավաքել հաշվի և կապի տվյալներ, օրինակ` էլ. փոստ, օգտանուն և աջակցության նամակագրություն։',
+          'Մենք կարող ենք հավաքել տեխնիկական տեղեկություն, օրինակ` IP հասցե, դիտարկչի տեսակ, սարքի տվյալներ, օպերացիոն համակարգ, սեսիայի մետատվյալներ և անվտանգության լոգեր։',
+          'Եթե օգտագործում եք passkey կամ wallet-ով մուտք, մենք կարող ենք մշակել նույնականացման համար անհրաժեշտ տեխնիկական նույնացուցիչներ և հաստատման տվյալներ։'
+        ]
+      },
+      {
+        title: '2. Վճարային և գործարքային տվյալներ',
+        paragraphs: [
+          'Մենք կարող ենք մշակել պատվերի և գործարքի սահմանափակ տվյալներ, որոնք անհրաժեշտ են առաջադրանք ստեղծելու, վճարման հղումներ գեներացնելու, հասանելիությունը հաստատելու, չարաշահումը կանխելու և աջակցություն ցուցաբերելու համար։',
+          'Վճարային մատակարարները կամ ենթակառուցվածքային գործընկերները կարող են մշակել վճարային տվյալները իրենց սեփական իրավական պայմաններով և գաղտնիության կանոններով։',
+          'Բոլոր վճարային տվյալները պարտադիր չէ, որ պահվեն անմիջապես Lefine-ում. դրանց մի մասը կարող է մշակվել արտաքին մատակարարների կողմից։'
+        ]
+      },
+      {
+        title: '3. Ինչպես ենք օգտագործում անձնական տվյալները',
+        paragraphs: [
+          'Մենք օգտագործում ենք անձնական տվյալները արտադրանքը գործարկելու, օգտատերերին նույնականացնելու, թվային արդյունքներ տրամադրելու, աջակցության հարցումները մշակելու, հուսալիությունը բարելավելու և իրավական պարտավորությունները կատարելու համար։',
+          'Տեխնիկական տվյալները կարող են օգտագործվել նաև անվտանգության մոնիթորինգի, խարդախության կանխման, ծառայության ախտորոշման և համախառն վերլուծության համար։'
+        ]
+      },
+      {
+        title: '4. Տվյալների փոխանցում',
+        paragraphs: [
+          'Մենք կարող ենք սահմանափակ անձնական տվյալներ փոխանցել հոսթինգի, ենթակառուցվածքի, վճարումների, հաղորդակցության և անվտանգության մատակարարներին, եթե դա անհրաժեշտ է ծառայությունը գործարկելու համար։',
+          'Մենք անձնական տվյալներ չենք վաճառում երրորդ կողմերին։'
+        ]
+      },
+      {
+        title: '5. Տվյալների պահպանման ժամկետ',
+        paragraphs: [
+          'Մենք անձնական տվյալները պահում ենք միայն այնքան, որքան ողջամտորեն անհրաժեշտ է ծառայությունը գործարկելու, հաշվի հասանելիությունը պահպանելու, վեճերը լուծելու, հարթակը պաշտպանելու և իրավական կամ հաշվապահական պարտավորությունները կատարելու համար։',
+          'Նույնականացման գրառումները, պատվերի մետատվյալները և աջակցության նամակագրությունը կարող են պահպանվել օպերացիոն կայունության և անվտանգության ստուգման համար։'
+        ]
+      },
+      {
+        title: '6. Ձեր իրավունքները',
+        paragraphs: [
+          'Կիրառելի օրենքից կախված` դուք կարող եք ունենալ ձեր անձնական տվյալների հասանելիության, ուղղման, ջնջման, սահմանափակման կամ առարկելու իրավունքներ։',
+          'Գաղտնիության հետ կապված հարցման համար օգտագործեք Legal Information էջում նշված էլ. փոստը։'
+        ]
+      },
+      {
+        title: '7. Քաղաքականության փոփոխություններ',
+        paragraphs: [
+          'Մենք կարող ենք ժամանակ առ ժամանակ թարմացնել այս Գաղտնիության քաղաքականությունը։ Էական փոփոխությունները կարտացոլվեն այս էջում նոր թարմացման ամսաթվով։'
+        ]
+      }
+    ]
+  }
+};
+
+const TERMS_CONTENT: Record<KefineLocale, Omit<LegalPageContent, 'updatedAt'>> = {
+  en: {
     id: 'terms',
     path: '/terms',
     title: 'Terms of Service',
-    updatedAt: UPDATED_AT,
     intro: [
       'These Terms of Service govern your access to and use of Lefine, including task creation, solver matching, authentication flows, payment flows, and digital result delivery.',
       'By using the service, you agree to these Terms.'
@@ -115,10 +508,10 @@ const EN_CONTENT: Record<LegalPageId, LegalPageContent> = {
         ]
       },
       {
-        title: '4. Refunds',
+        title: '4. Digital Delivery and Fulfillment',
         paragraphs: [
-          'Refund eligibility is described in our Refund Policy and may depend on applicable law, the stage of fulfillment, and whether digital access or delivery has already been provided.',
-          'Where required, refunds will be handled through the relevant payment channel or provider.'
+          'Digital access, task execution, and result delivery may begin shortly after payment or other required confirmation steps are completed.',
+          'Because the product is digital in nature, fulfillment state may affect refund eligibility or cancellation rights where permitted by applicable law.'
         ]
       },
       {
@@ -157,122 +550,10 @@ const EN_CONTENT: Record<LegalPageId, LegalPageContent> = {
       }
     ]
   },
-  refund: {
-    id: 'refund',
-    path: '/refund-policy',
-    title: 'Refund Policy',
-    updatedAt: UPDATED_AT,
-    intro: [
-      'This Refund Policy applies to payments made for Lefine digital services, including access, task execution, and digital delivery.',
-      'Because the product may begin processing or delivering digital outputs shortly after payment, refund eligibility can depend on the fulfillment stage.'
-    ],
-    sections: [
-      {
-        title: '1. General Refund Standard',
-        paragraphs: [
-          'If applicable consumer protection law gives you a right to request a refund, we will honor that right.',
-          'We may also review refund requests on a case-by-case basis when payment was made in error, duplicated, or the service could not be delivered as described.'
-        ]
-      },
-      {
-        title: '2. When Refunds May Be Limited',
-        paragraphs: [
-          'Refunds may be limited or unavailable once digital access has been granted, a task has already been materially processed, or result delivery has already occurred.',
-          'If third-party payment providers or processors are involved, their operational requirements may affect the technical path for issuing a refund.'
-        ]
-      },
-      {
-        title: '3. How to Request a Refund',
-        paragraphs: [
-          `To request a refund, contact ${CONTACT_EMAIL} and include the order identifier, purchase details, and a short explanation of the issue.`,
-          'We may request additional information needed to verify the payment and assess eligibility.'
-        ]
-      },
-      {
-        title: '4. Processing',
-        paragraphs: [
-          'If a refund is approved, it will be returned through the original payment method where possible or through another lawful and practical method.',
-          'Processing times can vary depending on the payment rail, provider, and your financial institution.'
-        ]
-      },
-      {
-        title: '5. Policy Updates',
-        paragraphs: [
-          'We may update this Refund Policy from time to time. The version published on this page governs future purchases from its effective date.'
-        ]
-      }
-    ]
-  }
-};
-
-const RU_CONTENT: Record<LegalPageId, LegalPageContent> = {
-  privacy: {
-    id: 'privacy',
-    path: '/privacy',
-    title: 'Политика конфиденциальности',
-    updatedAt: 'Март 2026',
-    intro: [
-      'Эта Политика конфиденциальности объясняет, как Lefine собирает, использует и защищает персональные данные, когда вы посещаете сайт, создаёте задачи для solver-сети, проходите авторизацию, совершаете оплату или используете связанные цифровые функции доставки результата.',
-      'Политика применяется к продукту Lefine и связанным сервисам, работающим через сайт и crater-инфраструктуру.'
-    ],
-    sections: [
-      {
-        title: '1. Какие данные мы собираем',
-        paragraphs: [
-          'Мы можем собирать данные аккаунта и связи, включая email, username и переписку со службой поддержки.',
-          'Мы можем собирать техническую информацию, такую как IP-адрес, тип браузера, сведения об устройстве, операционная система, метаданные сессии и журналы безопасности.',
-          'Если вы используете passkey или авторизацию через кошелёк, мы можем обрабатывать идентификаторы и проверочные данные, необходимые для работы этих сценариев входа.'
-        ]
-      },
-      {
-        title: '2. Платежи и транзакционные данные',
-        paragraphs: [
-          'Мы можем обрабатывать ограниченный набор данных о заказе и транзакции, необходимых для создания задач, генерации платёжных ссылок, подтверждения доступа, предотвращения злоупотреблений и обработки обращений.',
-          'Платёжные провайдеры или партнёры платёжной инфраструктуры могут обрабатывать биллинговые и платёжные данные на основании собственных условий и политик конфиденциальности.',
-          'Мы не утверждаем, что все платёжные данные хранятся непосредственно в Lefine; часть информации может обрабатываться внешними процессорами или инфраструктурными провайдерами.'
-        ]
-      },
-      {
-        title: '3. Как мы используем персональные данные',
-        paragraphs: [
-          'Мы используем персональные данные для работы продукта, авторизации пользователей, выдачи цифровых результатов, обработки обращений в поддержку, повышения надёжности сервиса и выполнения юридических обязанностей.',
-          'Мы также можем использовать технические данные для мониторинга безопасности, предотвращения мошенничества, диагностики сервиса и агрегированной продуктовой аналитики.'
-        ]
-      },
-      {
-        title: '4. Передача данных',
-        paragraphs: [
-          'Мы можем передавать ограниченные персональные данные провайдерам инфраструктуры, хостинга, платежей, коммуникаций и безопасности, если это необходимо для работы сервиса.',
-          'Мы не продаём персональные данные третьим лицам.'
-        ]
-      },
-      {
-        title: '5. Срок хранения данных',
-        paragraphs: [
-          'Мы храним персональные данные только столько, сколько разумно необходимо для работы сервиса, поддержки доступа к аккаунту, разрешения споров, защиты платформы и выполнения юридических, бухгалтерских или комплаенс-обязанностей.',
-          'Аутентификационные записи, метаданные заказов и обращения в поддержку могут храниться для операционной устойчивости и проверки безопасности.'
-        ]
-      },
-      {
-        title: '6. Ваши права',
-        paragraphs: [
-          'В зависимости от применимого права у вас могут быть права на доступ, исправление, удаление, ограничение обработки или возражение в отношении ваших персональных данных.',
-          `Чтобы направить запрос по персональным данным, напишите нам на ${CONTACT_EMAIL}.`
-        ]
-      },
-      {
-        title: '7. Изменения политики',
-        paragraphs: [
-          'Мы можем время от времени обновлять эту Политику конфиденциальности. Существенные изменения будут отражены на этой странице с новой датой вступления в силу.'
-        ]
-      }
-    ]
-  },
-  terms: {
+  ru: {
     id: 'terms',
     path: '/terms',
     title: 'Условия использования',
-    updatedAt: 'Март 2026',
     intro: [
       'Эти Условия использования регулируют доступ к Lefine и использование сервиса, включая создание задач, матчинг с solver-сетью, сценарии авторизации, оплату и цифровую выдачу результата.',
       'Используя сервис, вы соглашаетесь с этими Условиями.'
@@ -281,7 +562,7 @@ const RU_CONTENT: Record<LegalPageId, LegalPageContent> = {
       {
         title: '1. Описание сервиса',
         paragraphs: [
-          'Lefine — это цифровой продукт, который помогает пользователям создавать задачи, направлять их через solver-процессы, проходить этапы оплаты и доступа и получать цифровые результаты или артефакты доставки.',
+          'Lefine — это цифровой продукт, который помогает пользователям создавать задачи, направлять их через solver-процессы, проходить этапы оплаты и доступа и получать цифровые результаты.',
           'Все результаты сервиса предоставляются в цифровой форме. Физические товары через сервис не поставляются.'
         ]
       },
@@ -301,10 +582,10 @@ const RU_CONTENT: Record<LegalPageId, LegalPageContent> = {
         ]
       },
       {
-        title: '4. Возвраты',
+        title: '4. Цифровая выдача и исполнение',
         paragraphs: [
-          'Право на возврат описано в нашей Политике возвратов и может зависеть от применимого права, стадии исполнения и факта предоставления цифрового доступа или результата.',
-          'Если это требуется, возврат будет обрабатываться через соответствующий платёжный канал или провайдера.'
+          'Цифровой доступ, исполнение задачи и выдача результата могут начаться вскоре после оплаты или иных обязательных подтверждений.',
+          'Поскольку продукт носит цифровой характер, стадия исполнения может влиять на право отмены или возврата там, где это допускается применимым правом.'
         ]
       },
       {
@@ -343,128 +624,96 @@ const RU_CONTENT: Record<LegalPageId, LegalPageContent> = {
       }
     ]
   },
-  refund: {
-    id: 'refund',
-    path: '/refund-policy',
-    title: 'Политика возвратов',
-    updatedAt: 'Март 2026',
+  hy: {
+    id: 'terms',
+    path: '/terms',
+    title: 'Օգտագործման պայմաններ',
     intro: [
-      'Эта Политика возвратов применяется к платежам за цифровые сервисы Lefine, включая доступ, исполнение задач и цифровую выдачу результата.',
-      'Поскольку продукт может начать обработку или выдачу цифровых результатов вскоре после оплаты, право на возврат может зависеть от стадии исполнения.'
+      'Այս Օգտագործման պայմանները կարգավորում են Lefine-ի հասանելիությունն ու օգտագործումը, ներառյալ առաջադրանքների ստեղծումը, solver-ների ընտրությունը, նույնականացման և վճարման փուլերը և թվային արդյունքի տրամադրումը։',
+      'Օգտագործելով ծառայությունը` դուք համաձայնում եք այս Պայմաններին։'
     ],
     sections: [
       {
-        title: '1. Общий стандарт возврата',
+        title: '1. Ծառայության նկարագրություն',
         paragraphs: [
-          'Если применимое законодательство о защите прав потребителей даёт вам право требовать возврат, мы будем соблюдать это право.',
-          'Мы также можем рассматривать запросы на возврат в индивидуальном порядке, если платёж был ошибочным, дублированным или сервис не мог быть предоставлен в заявленном виде.'
+          'Lefine-ը թվային արտադրանք է, որը օգնում է օգտատերերին ստեղծել առաջադրանքներ, ուղարկել դրանք solver հոսքերով, անցնել վճարման և հասանելիության փուլերը և ստանալ թվային արդյունքներ։',
+          'Ծառայության բոլոր արդյունքները տրամադրվում են թվային ձևաչափով։ Ֆիզիկական ապրանքներ չեն տրամադրվում։'
         ]
       },
       {
-        title: '2. Когда возврат может быть ограничен',
+        title: '2. Հաշիվներ և հասանելիություն',
         paragraphs: [
-          'Возврат может быть ограничен или недоступен после предоставления цифрового доступа, существенного начала обработки задачи или фактической выдачи результата.',
-          'Если задействованы сторонние платёжные провайдеры или процессоры, их операционные требования могут влиять на технический путь возврата.'
+          'Որոշ գործառույթների համար կարող է պահանջվել wallet-ի կապում, passkey, email-ով կապ կամ այլ աջակցվող նույնականացման եղանակ։',
+          'Դուք պատասխանատու եք այն սարքերի, հավատարմագրերի և հաշիվների վերահսկման համար, որոնցով մուտք եք գործում ծառայություն։'
         ]
       },
       {
-        title: '3. Как запросить возврат',
+        title: '3. Պատվերներ, գներ և հաշվարկներ',
         paragraphs: [
-          `Чтобы запросить возврат, напишите на ${CONTACT_EMAIL} и укажите идентификатор заказа, данные о покупке и краткое описание проблемы.`,
-          'Мы можем запросить дополнительную информацию, необходимую для проверки платежа и оценки права на возврат.'
+          'Առաջադրանքների գինը, կատարման ժամկետները և վճարման պահանջները կարող են տարբեր լինել solver-ների հասանելիությունից, բարդությունից և առաքման պայմաններից կախված։',
+          'Մենք կարող ենք օգտագործել վճարային մատակարարներ կամ ենթակառուցվածքային գործընկերներ գործարքները մշակելու, վճարման հղումներ ստեղծելու կամ հաշվարկը հաստատելու համար։',
+          'Վճարումից առաջ դուք պարտավոր եք ստուգել կիրառելի գինը և վճարման պայմանները։'
         ]
       },
       {
-        title: '4. Сроки обработки',
+        title: '4. Թվային առաքում և կատարում',
         paragraphs: [
-          'Если возврат одобрен, средства будут возвращены на исходный способ оплаты, когда это возможно, либо иным законным и practically feasible способом.',
-          'Срок обработки зависит от платёжного канала, провайдера и вашего финансового учреждения.'
+          'Թվային հասանելիությունը, առաջադրանքի կատարումը և արդյունքի տրամադրումը կարող են սկսվել վճարումից կամ այլ պարտադիր հաստատումից անմիջապես հետո։',
+          'Քանի որ ծառայությունը թվային բնույթ ունի, կատարման փուլը կարող է ազդել վերադարձի կամ չեղարկման իրավունքների վրա, եթե դա թույլատրվում է կիրառելի օրենքով։'
         ]
       },
       {
-        title: '5. Обновления политики',
+        title: '5. Օգտատիրոջ վարքագիծ',
         paragraphs: [
-          'Мы можем время от времени обновлять эту Политику возвратов. Версия, опубликованная на этой странице, применяется к будущим покупкам с даты её вступления в силу.'
+          'Արգելվում է չարաշահել ծառայությունը, խոչընդոտել դրա աշխատանքին, փորձել չարտոնված հասանելիություն ստանալ, հրապարակել անօրինական բովանդակություն կամ օգտագործել հարթակը կիրառելի օրենքի խախտմամբ։',
+          'Եթե ողջամտորեն կարծում ենք, որ ծառայությունը օգտագործվում է վնասակար կամ չարաշահող ձևով, կարող ենք կասեցնել, սահմանափակել կամ դադարեցնել հասանելիությունը։'
+        ]
+      },
+      {
+        title: '6. Առանց երաշխիքների',
+        paragraphs: [
+          'Ծառայությունը տրամադրվում է as available սկզբունքով։ Մենք չենք երաշխավորում անխափան հասանելիություն, solver-ի կոնկրետ արդյունք կամ կոնկրետ տնտեսական արդյունք։',
+          'Արտադրանքում ցուցադրվող կատարման գնահատականները, վարկանիշները կամ solver-ի ընտրությունը կարող են փոխվել առաջադրանքի ընթացքի ընթացքում։'
+        ]
+      },
+      {
+        title: '7. Պատասխանատվության սահմանափակում',
+        paragraphs: [
+          'Օրենքով թույլատրելի առավելագույն սահմաններում Lefine-ը պատասխանատվություն չի կրում անուղղակի, պատահական, հատուկ, հետևանքային կամ տուգանային վնասների համար, որոնք առաջացել են ծառայության օգտագործումից։',
+          'Այս Պայմաններում ոչինչ չի բացառում այն պատասխանատվությունը, որը չի կարող բացառվել կիրառելի օրենքով։'
+        ]
+      },
+      {
+        title: '8. Մտավոր սեփականություն',
+        paragraphs: [
+          'Կայքը, ինտերֆեյսը, արտադրանքի բովանդակությունը և հարակից նյութերը մնում են Lefine-ի կամ նրա լիցենզավորողների սեփականությունը, եթե այլ բան հստակ նշված չէ։',
+          'Դուք չեք կարող վերարտադրել, վերաբաշխել, reverse engineer անել կամ վերահրապարակել պաշտպանված նյութերը, եթե դա հստակ չի թույլատրվում օրենքով կամ գրավոր թույլտվությամբ։'
+        ]
+      },
+      {
+        title: '9. Պայմանների փոփոխություններ',
+        paragraphs: [
+          'Մենք կարող ենք ժամանակ առ ժամանակ թարմացնել այս Պայմանները։ Թարմացված Պայմանների ուժի մեջ մտնելուց հետո ծառայության շարունակական օգտագործումը նշանակում է նոր տարբերակի ընդունում։'
         ]
       }
     ]
   }
 };
 
-const HY_CONTENT: Record<LegalPageId, LegalPageContent> = {
-  privacy: {
-    ...EN_CONTENT.privacy,
-    title: 'Գաղտնիության քաղաքականություն',
-    updatedAt: 'Մարտ 2026',
-    intro: [
-      'Այս Գաղտնիության քաղաքականությունը բացատրում է, թե ինչպես է Lefine-ը հավաքում, օգտագործում և պաշտպանում անձնական տվյալները, երբ դուք այցելում եք կայք, ստեղծում եք solver առաջադրանքներ, անցնում եք նույնականացում, կատարում եք վճարումներ կամ օգտվում եք թվային առաքման հնարավորություններից։',
-      'Քաղաքականությունը վերաբերում է Lefine արտադրանքին և կայքի ու crater ենթակառուցվածքի միջոցով մատուցվող հարակից ծառայություններին։'
-    ],
-    sections: EN_CONTENT.privacy.sections.map((section, index) => ({
-      ...section,
-      title: [
-        '1. Ինչ տվյալներ ենք հավաքում',
-        '2. Վճարային և գործարքային տվյալներ',
-        '3. Ինչպես ենք օգտագործում անձնական տվյալները',
-        '4. Տվյալների փոխանցում',
-        '5. Տվյալների պահպանման ժամկետ',
-        '6. Ձեր իրավունքները',
-        '7. Քաղաքականության փոփոխություններ'
-      ][index] ?? section.title
-    }))
-  },
-  terms: {
-    ...EN_CONTENT.terms,
-    title: 'Օգտագործման պայմաններ',
-    updatedAt: 'Մարտ 2026',
-    intro: [
-      'Այս Օգտագործման պայմանները կարգավորում են Lefine-ի հասանելիությունն ու օգտագործումը, ներառյալ առաջադրանքների ստեղծումը, solver-ների ընտրությունը, նույնականացման և վճարման փուլերը և թվային արդյունքի տրամադրումը։',
-      'Օգտագործելով ծառայությունը՝ դուք համաձայնում եք այս Պայմաններին։'
-    ],
-    sections: EN_CONTENT.terms.sections.map((section, index) => ({
-      ...section,
-      title: [
-        '1. Ծառայության նկարագրություն',
-        '2. Հաշիվներ և հասանելիություն',
-        '3. Պատվերներ, գներ և հաշվարկներ',
-        '4. Վերադարձներ',
-        '5. Օգտատիրոջ վարքագիծ',
-        '6. Առանց երաշխիքների',
-        '7. Պատասխանատվության սահմանափակում',
-        '8. Մտավոր սեփականություն',
-        '9. Պայմանների փոփոխություններ'
-      ][index] ?? section.title
-    }))
-  },
-  refund: {
-    ...EN_CONTENT.refund,
-    title: 'Վերադարձի քաղաքականություն',
-    updatedAt: 'Մարտ 2026',
-    intro: [
-      'Այս Վերադարձի քաղաքականությունը կիրառվում է Lefine-ի թվային ծառայությունների համար կատարված վճարումների նկատմամբ, ներառյալ հասանելիությունը, առաջադրանքի կատարումը և թվային առաքումը։',
-      'Քանի որ ապրանքը կարող է սկսել մշակումը կամ թվային արդյունքի տրամադրումը վճարումից անմիջապես հետո, վերադարձի իրավունքը կարող է կախված լինել կատարման փուլից։'
-    ],
-    sections: EN_CONTENT.refund.sections.map((section, index) => ({
-      ...section,
-      title: [
-        '1. Վերադարձի ընդհանուր չափանիշ',
-        '2. Երբ վերադարձը կարող է սահմանափակվել',
-        '3. Ինչպես պահանջել վերադարձ',
-        '4. Մշակում',
-        '5. Քաղաքականության թարմացումներ'
-      ][index] ?? section.title
-    }))
-  }
-};
-
-export function getLegalPageContent(locale: KefineLocale, pageId: LegalPageId): LegalPageContent {
-  if (locale === 'ru') {
-    return RU_CONTENT[pageId];
+export function getLegalPageContent(
+  locale: KefineLocale,
+  pageId: LegalPageId,
+  company: KefineCompanyPublicConfig,
+  updatedAt: string
+): LegalPageContent {
+  if (pageId === 'company') {
+    return buildCompanyContent(locale, company, updatedAt);
   }
 
-  if (locale === 'hy') {
-    return HY_CONTENT[pageId];
-  }
-
-  return EN_CONTENT[pageId];
+  const source = pageId === 'privacy' ? PRIVACY_CONTENT : TERMS_CONTENT;
+  const content = source[locale];
+  return {
+    ...content,
+    updatedAt
+  };
 }

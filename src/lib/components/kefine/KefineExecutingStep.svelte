@@ -91,6 +91,7 @@
     return completedIndex >= 0 ? completedIndex : 0;
   });
   const activeGenericStep = $derived(genericSteps[activeGenericStepIndex] ?? null);
+  const orderCompleted = $derived(currentOrder?.status === 'completed' || currentOrder?.status === 'done');
   const showVpnEstimate = $derived(Boolean(isVpnScenario && activeVpnStep?.revealExecutionEstimate));
   const showVpnWidget = $derived(Boolean(isVpnScenario && activeVpnStep?.revealWidget));
   const showResolvedVpnWidget = $derived(Boolean(showVpnWidget && (forceFinalVpnStep || orderCompleted)));
@@ -116,7 +117,6 @@
       ? `Step ${activeGenericStepIndex + 1} of ${Math.max(genericSteps.length, 1)} - ${activeGenericStep.title}`
       : execution.headline
   );
-  const orderCompleted = $derived(currentOrder?.status === 'completed' || currentOrder?.status === 'done');
 
   function formatElapsed(totalSeconds: number) {
     const minutes = Math.floor(totalSeconds / 60);
@@ -270,7 +270,7 @@
       <h2>{currentOrder?.title}</h2>
     {/if}
 
-    {#if currentOrder?.description && currentOrder.description !== currentOrder.title}
+  {#if currentOrder?.description && currentOrder.description !== currentOrder.title}
       <p class="kefine-flow-copy">{currentOrder.description}</p>
     {/if}
   </section>
