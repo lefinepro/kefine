@@ -147,27 +147,36 @@ export async function submitWorkspaceOrder(args: {
   resolveExecutionEstimate: (executionEstimate: string | undefined, title: string, localeText: KefineLocaleText) => string | undefined;
 }): Promise<
   | { kind: 'remote'; order: OrderView }
-  | { kind: 'error' }
+  | { kind: 'error'; message?: string; statusCode?: number }
 > {
   try {
     const requestPayload = buildCreatePayload(args.payload);
     const hasFiles = args.payload.files.length > 0;
+    
     const requestBody = hasFiles
       ? (() => {
           const formData = new FormData();
-          for (const [key, value] of Object.entries(requestPayload)) {
-            if (value === undefined || value === null) {
-              continue;
-            }
-
-            if (Array.isArray(value) || typeof value === 'object') {
-              formData.append(key, JSON.stringify(value));
-              continue;
-            }
-
-            formData.append(key, String(value));
+          // Append scalar fields first
+          formData.append('name', requestPayload.name || '');
+          formData.append('title', requestPayload.title || '');
+          formData.append('content', requestPayload.content || '');
+          formData.append('description', requestPayload.description || '');
+          formData.append('estimatedCost', String(requestPayload.estimatedCost || 0));
+          formData.append('currency', requestPayload.currency || '');
+          if (requestPayload.executionEstimate) {
+            formData.append('executionEstimate', requestPayload.executionEstimate);
+          }
+          if (requestPayload.uiScenario) {
+            formData.append('uiScenario', requestPayload.uiScenario);
+          }
+          if (requestPayload.labels) {
+            formData.append('labels', JSON.stringify(requestPayload.labels));
+          }
+          if (requestPayload.attachment) {
+            formData.append('attachment', JSON.stringify(requestPayload.attachment));
           }
 
+          // Append actual files
           for (const file of args.payload.files) {
             formData.append('files', file, file.name);
           }
@@ -187,8 +196,15 @@ export async function submitWorkspaceOrder(args: {
 
     const responseBody: unknown = await response.json();
     const parsed = response.ok ? readCreateResponse(responseBody) : null;
+    
     if (!response.ok || !parsed) {
-      throw new Error(args.localeText.errors.fallback);
+      const errorData = responseBody as Record<string, unknown> | null;
+      const message = (errorData?.error as string) || args.localeText.errors.fallback;
+      return {
+        kind: 'error',
+        message,
+        statusCode: response.status
+      };
     }
 
     return {
@@ -211,7 +227,8 @@ export async function submitWorkspaceOrder(args: {
         uiScenario: parsed.uiScenario
       }
     };
-  } catch {
-    return { kind: 'error' };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : args.localeText.errors.fallback;
+    return { kind: 'error', message };
   }
 }

@@ -13,23 +13,40 @@ export async function proxyCraterRequest(
   options: ProxyOptions
 ): Promise<Response> {
   try {
-    const body =
-      request.method === 'GET' || request.method === 'HEAD' ? undefined : new Uint8Array(await request.arrayBuffer());
+    const contentType = request.headers.get('content-type');
+    const isMultipart = contentType?.includes('multipart/form-data');
+
+    let body: BodyInit | undefined;
+    let headers: Record<string, string> = {
+      Accept: request.headers.get('accept') ?? 'application/json'
+    };
+
+    if (request.method !== 'GET' && request.method !== 'HEAD') {
+      if (isMultipart) {
+        // For multipart/form-data, forward the body directly to preserve boundary
+        body = request.body;
+        if (contentType) {
+          headers['Content-Type'] = contentType;
+        }
+      } else {
+        // For JSON and other types, read as ArrayBuffer
+        body = new Uint8Array(await request.arrayBuffer());
+        if (contentType) {
+          headers['Content-Type'] = contentType;
+        }
+      }
+    }
+
     const response = await fetchFn(buildCraterApiUrl(pathname), {
       method: request.method,
-      headers: {
-        Accept: request.headers.get('accept') ?? 'application/json',
-        ...(body !== undefined
-          ? { 'Content-Type': request.headers.get('content-type') ?? 'application/json' }
-          : {})
-      },
+      headers,
       body
     });
 
     const payload = await response.text();
-    const contentType = response.headers.get('content-type') ?? 'application/json';
+    const responseContentType = response.headers.get('content-type') ?? 'application/json';
 
-    if (!response.ok && !contentType.toLowerCase().includes('application/json')) {
+    if (!response.ok && !responseContentType.toLowerCase().includes('application/json')) {
       const normalized = payload.replace(/\s+/g, ' ').trim();
       const message = normalized || response.statusText || options.errorMessage;
 
@@ -39,7 +56,7 @@ export async function proxyCraterRequest(
     return new Response(payload, {
       status: response.status,
       headers: {
-        'content-type': contentType
+        'content-type': responseContentType
       }
     });
   } catch (error) {

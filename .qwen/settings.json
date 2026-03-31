@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(day.js.org)",
+      "Bash(rmdir *)",
+      "Bash(bun *)",
+      "Bash(npm run *)"
+    ]
+  },
+  "$version": 3
+}
