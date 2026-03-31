@@ -7,3 +7,6 @@ playwright-report/
 dist/
 .DS_Store
 *.log
+build/
+.vite-cache/
+tmp-view-stages-debug.mjs
