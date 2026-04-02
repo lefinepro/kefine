@@ -34,36 +34,36 @@
 
 <KefineModal open={open} onClose={onClose} closeLabel={closeLabel}>
   <header class="kefine-auth-dialog__header">
-    <div>
+    <lefine-box>
       <h2>{title}</h2>
       <p>{description}</p>
-    </div>
+    </lefine-box>
   </header>
 
   <section class="kefine-auth-dialog__actions">
     <button type="button" class="kefine-auth-tile kefine-auth-tile--wallet" onclick={onWallet}>
-      <div class="kefine-auth-hero kefine-auth-hero--wallet" aria-hidden="true">
+      <lefine-box class="kefine-auth-hero kefine-auth-hero--wallet" aria-hidden="true">
         <KefineWalletProviderGrid />
-      </div>
+      </lefine-box>
       <strong>{walletTitle}</strong>
     </button>
 
     <button type="button" class="kefine-auth-tile kefine-auth-tile--passkey" onclick={onPasskey}>
-      <div class="kefine-auth-hero kefine-auth-hero--passkey" aria-hidden="true">
-        <span class="kefine-auth-icon">
+      <lefine-box class="kefine-auth-hero kefine-auth-hero--passkey" aria-hidden="true">
+        <lefine-text class="kefine-auth-icon">
           <Icon icon="mdi:fingerprint" width="100%" height="100%" aria-hidden="true" />
-        </span>
-      </div>
+        </lefine-text>
+      </lefine-box>
       <strong>{passkeyTitle}</strong>
     </button>
 
     {#if showLocalhost}
       <button type="button" class="kefine-auth-tile kefine-auth-tile--localhost" onclick={onLocalhost}>
-        <div class="kefine-auth-hero kefine-auth-hero--localhost" aria-hidden="true">
-          <span class="kefine-auth-icon">
+        <lefine-box class="kefine-auth-hero kefine-auth-hero--localhost" aria-hidden="true">
+          <lefine-text class="kefine-auth-icon">
             <Icon icon="mdi:laptop" width="100%" height="100%" aria-hidden="true" />
-          </span>
-        </div>
+          </lefine-text>
+        </lefine-box>
         <strong>{localhostTitle}</strong>
       </button>
     {/if}
@@ -109,11 +109,11 @@
     border-radius: 0.95rem;
     padding: 0.9rem;
     background: color-mix(in oklab, var(--kef-bg-card, #fff) 96%, white);
-    color: var(--kef-text, #2e2317);
-    box-shadow: 0 6px 16px color-mix(in oklab, var(--kef-text, #2e2317) 6%, transparent);
+    color: var(--lefine-text, #2e2317);
+    box-shadow: 0 6px 16px color-mix(in oklab, var(--lefine-text, #2e2317) 6%, transparent);
   }
 
-  .kefine-auth-tile span {
+  .kefine-auth-tile lefine-text {
     opacity: 0.72;
   }
 

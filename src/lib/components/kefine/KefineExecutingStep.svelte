@@ -260,9 +260,9 @@
 
 <article class="kefine-card kefine-card--wide kefine-order-flow">
   <section class="kefine-flow-panel kefine-flow-panel--hero">
-    <div class="kefine-flow-topline">
+    <lefine-box class="kefine-flow-topline">
       <button type="button" class="kefine-flow-back" onclick={onCancel} aria-label={labels.cancel}>←</button>
-    </div>
+    </lefine-box>
 
     {#if isHydratingTitle}
       <h2 class="kefine-title-skeleton" aria-label="Loading task title"></h2>
@@ -277,25 +277,25 @@
 
   {#if isVpnScenario && vpnFlow}
     <section class="kefine-flow-panel">
-      <div class="kefine-section-head">
+      <lefine-box class="kefine-section-head">
         <p>{vpnFlow.labels.scenario}</p>
-        <div class="kefine-flow-badges">
-          <span class="kefine-flow-badge kefine-flow-badge--timer">
+        <lefine-box class="kefine-flow-badges">
+          <lefine-text class="kefine-flow-badge kefine-flow-badge--timer">
             {vpnFlow.labels.timer}: {formattedElapsed}
-          </span>
+          </lefine-text>
           {#if showVpnEstimate}
-            <span class="kefine-flow-badge">
+            <lefine-text class="kefine-flow-badge">
               {vpnFlow.labels.executionEstimate}: {currentOrder?.executionEstimate}
-            </span>
+            </lefine-text>
           {/if}
-        </div>
-      </div>
+        </lefine-box>
+      </lefine-box>
 
       <section class="kefine-vpn-progress-panel">
-        <div class="kefine-vpn-progress-meta">
+        <lefine-box class="kefine-vpn-progress-meta">
           <strong>{vpnStepHeadline}</strong>
-          <div class="kefine-vpn-progress-controls">
-            <span>{vpnProgressPercent}%</span>
+          <lefine-box class="kefine-vpn-progress-controls">
+            <lefine-text>{vpnProgressPercent}%</lefine-text>
             <button type="button" class="kefine-vpn-arrow" aria-label="Previous step" onclick={stepBackward} disabled={visibleVpnSteps <= 1}>
               ←
             </button>
@@ -308,29 +308,29 @@
             >
               →
             </button>
-          </div>
-        </div>
-        <div class="kefine-vpn-progress-track" aria-hidden="true">
-          <span class="kefine-vpn-progress-fill" style={`width: ${vpnProgressPercent}%`}></span>
-        </div>
+          </lefine-box>
+        </lefine-box>
+        <lefine-box class="kefine-vpn-progress-track" aria-hidden="true">
+          <lefine-text class="kefine-vpn-progress-fill" style={`width: ${vpnProgressPercent}%`}></lefine-text>
+        </lefine-box>
 
         {#if activeVpnStep}
           {#key activeVpnStep.id}
-            <div class="kefine-vpn-stage-copy" in:mistDissolve out:mistDissolve>
-              <div class="kefine-vpn-stage-meta">
-                <span class="kefine-vpn-stage-label">{vpnFlow.labels.current}</span>
-                <span class="kefine-flow-badge">
+            <lefine-box class="kefine-vpn-stage-copy" in:mistDissolve out:mistDissolve>
+              <lefine-box class="kefine-vpn-stage-meta">
+                <lefine-text class="kefine-vpn-stage-label">{vpnFlow.labels.current}</lefine-text>
+                <lefine-text class="kefine-flow-badge">
                   {vpnFlow.labels.price}: {execution.primaryMetric.value} {execution.primaryMetric.unit}
-                </span>
-              </div>
-              <div class="kefine-vpn-solver-row">
-                <span class="kefine-vpn-solver-avatar" aria-hidden="true">
+                </lefine-text>
+              </lefine-box>
+              <lefine-box class="kefine-vpn-solver-row">
+                <lefine-text class="kefine-vpn-solver-avatar" aria-hidden="true">
                   {getSolverInitial(activeVpnStep.solver.handle, activeVpnStep.solver.name)}
-                </span>
-                <div class="kefine-vpn-solver-copy">
-                  <span class="kefine-vpn-solver-name">
+                </lefine-text>
+                <lefine-box class="kefine-vpn-solver-copy">
+                  <lefine-text class="kefine-vpn-solver-name">
                     <strong>{activeVpnStep.solver.name}</strong>
-                    <span class="kefine-vpn-solver-actions">
+                    <lefine-text class="kefine-vpn-solver-actions">
                       <a
                         class="kefine-vpn-icon-action"
                         href={activeVpnStep.solver.profileUrl}
@@ -355,16 +355,16 @@
                           aria-hidden="true"
                         />
                       </button>
-                    </span>
-                  </span>
-                  <span>{activeVpnStep.solver.handle}</span>
-                </div>
-              </div>
+                    </lefine-text>
+                  </lefine-text>
+                  <lefine-text>{activeVpnStep.solver.handle}</lefine-text>
+                </lefine-box>
+              </lefine-box>
               {#if !showVpnWidget}
                 <h3>{activeVpnStep.title}</h3>
                 <p>{activeVpnStep.detail}</p>
               {/if}
-            </div>
+            </lefine-box>
           {/key}
         {/if}
 
@@ -374,138 +374,138 @@
 
     {#if showVpnWidget}
       <section class="kefine-flow-panel" in:mistDissolve out:mistDissolve data-testid="kefine-vpn-widget-panel">
-        <div class="kefine-vpn-widget-surface">
+        <lefine-box class="kefine-vpn-widget-surface">
           {#if showResolvedVpnWidget}
-            <div class="kefine-vpn-widget-body">
+            <lefine-box class="kefine-vpn-widget-body">
               <strong>{currentOrder?.vpnGuide?.title ?? vpnFlow.widget.title}</strong>
               <p>{currentOrder?.vpnGuide?.summary ?? vpnFlow.widget.summary}</p>
               {#if currentOrder?.vpnGuide}
                 <KefineVpnGuide guide={currentOrder.vpnGuide} />
               {:else}
-                <div class="kefine-vpn-widget-lines" aria-hidden="true">
-                  <span></span>
-                  <span></span>
-                  <span></span>
-                </div>
+                <lefine-box class="kefine-vpn-widget-lines" aria-hidden="true">
+                  <lefine-text></lefine-text>
+                  <lefine-text></lefine-text>
+                  <lefine-text></lefine-text>
+                </lefine-box>
               {/if}
-            </div>
+            </lefine-box>
           {:else}
-            <div class="kefine-vpn-widget-body">
+            <lefine-box class="kefine-vpn-widget-body">
               <strong>{vpnFlow.widget.title}</strong>
               <p>{vpnFlow.widget.summary}</p>
               {#if activeVpnStep?.instructions && activeVpnStep.instructions.length > 0}
-                <div class="kefine-vpn-instruction-list">
+                <lefine-box class="kefine-vpn-instruction-list">
                   {#each activeVpnStep.instructions as instruction}
                     <article class="kefine-vpn-instruction-card">
                       <strong>{instruction.title}</strong>
                       <p>{instruction.detail}</p>
                     </article>
                   {/each}
-                </div>
+                </lefine-box>
               {/if}
-              <div class="kefine-vpn-widget-lines" aria-hidden="true">
-                <span></span>
-                <span></span>
-                <span></span>
-              </div>
-            </div>
-            <div class="kefine-vpn-widget-overlay"></div>
-            <div class="kefine-vpn-widget-gate">
+              <lefine-box class="kefine-vpn-widget-lines" aria-hidden="true">
+                <lefine-text></lefine-text>
+                <lefine-text></lefine-text>
+                <lefine-text></lefine-text>
+              </lefine-box>
+            </lefine-box>
+            <lefine-box class="kefine-vpn-widget-overlay"></lefine-box>
+            <lefine-box class="kefine-vpn-widget-gate">
               {#if vpnResultMode === 'entry'}
-                <span class="kefine-flow-badge kefine-flow-badge--timer">
+                <lefine-text class="kefine-flow-badge kefine-flow-badge--timer">
                   {vpnFlow.labels.price}: {execution.primaryMetric.value} {execution.primaryMetric.unit}
-                </span>
+                </lefine-text>
                 <strong>Open result</strong>
                 <p>Choose how to continue to the solver result.</p>
-                <div class="kefine-vpn-widget-actions kefine-auth-grid">
+                <lefine-box class="kefine-vpn-widget-actions kefine-auth-grid">
                   <button type="button" class="kefine-auth-tile kefine-auth-tile--wallet" onclick={onWalletLogin}>
-                    <div class="kefine-auth-hero kefine-auth-hero--wallet" aria-hidden="true">
+                    <lefine-box class="kefine-auth-hero kefine-auth-hero--wallet" aria-hidden="true">
                       <KefineWalletProviderGrid />
-                    </div>
+                    </lefine-box>
                     <strong>Login</strong>
                   </button>
 
                   <button type="button" class="kefine-auth-tile kefine-auth-tile--anonymous" onclick={openVpnGuestOffer}>
-                    <div class="kefine-auth-hero kefine-auth-hero--guest" aria-hidden="true">
-                      <span class="kefine-test-badge">10 min</span>
-                    </div>
+                    <lefine-box class="kefine-auth-hero kefine-auth-hero--guest" aria-hidden="true">
+                      <lefine-text class="kefine-test-badge">10 min</lefine-text>
+                    </lefine-box>
                     <strong>Test Now</strong>
                   </button>
 
                   <button type="button" class="kefine-auth-tile kefine-auth-tile--passkey" onclick={onPasskeyLogin}>
-                    <div class="kefine-auth-hero kefine-auth-hero--passkey" aria-hidden="true">
-                      <span class="kefine-auth-icon">
+                    <lefine-box class="kefine-auth-hero kefine-auth-hero--passkey" aria-hidden="true">
+                      <lefine-text class="kefine-auth-icon">
                         <Icon icon={KEFINE_AUTH_ICONS.passkey} width="100%" height="100%" aria-hidden="true" />
-                      </span>
-                    </div>
+                      </lefine-text>
+                    </lefine-box>
                     <strong>Passkey</strong>
                   </button>
-                </div>
+                </lefine-box>
               {:else}
-                <span class="kefine-flow-badge kefine-flow-badge--timer">
+                <lefine-text class="kefine-flow-badge kefine-flow-badge--timer">
                   {vpnFlow.labels.price}: {execution.primaryMetric.value} {execution.primaryMetric.unit}
-                </span>
+                </lefine-text>
                 <strong>Guest access ready</strong>
                 <p>The background changed to guest mode. Test the VPN for 10 minutes or pay for permanent access.</p>
-                <div class="kefine-vpn-download-card">
-                  <div class="kefine-vpn-download-actions">
+                <lefine-box class="kefine-vpn-download-card">
+                  <lefine-box class="kefine-vpn-download-actions">
                     <button type="button" class="kefine-flow-badge kefine-flow-badge--button" onclick={onAnonymous}>
                       Test for 10 minutes
                     </button>
                     <button type="button" class="kefine-flow-badge kefine-flow-badge--button" onclick={onWalletLogin}>
                       Pay for permanent access
                     </button>
-                  </div>
-                  <div class="kefine-vpn-download-copy">
+                  </lefine-box>
+                  <lefine-box class="kefine-vpn-download-copy">
                     <strong>Download info</strong>
                     <p>1. Download the VPN profile bundle from the solver result page.</p>
                     <p>2. Import the `.conf` file into WireGuard or your selected VPN client.</p>
                     <p>3. Keep the QR code nearby for mobile import and save the fallback credentials file.</p>
                     <p>4. The guest test stays available for 10 minutes, then the profile expires automatically.</p>
-                  </div>
-                </div>
+                  </lefine-box>
+                </lefine-box>
               {/if}
-            </div>
+            </lefine-box>
           {/if}
-        </div>
+        </lefine-box>
       </section>
     {/if}
   {:else}
     <section class="kefine-flow-panel">
-      <div class="kefine-section-head">
+      <lefine-box class="kefine-section-head">
         <p>{execution.eyebrow}</p>
-        <div class="kefine-flow-badges">
-          <span class="kefine-flow-badge kefine-flow-badge--timer">{labels.timeLeft}: {formattedElapsed}</span>
-          <span class="kefine-flow-badge">{labels.timeLeft}: {execution.secondaryMetric.value} {execution.secondaryMetric.unit}</span>
-          <span class="kefine-flow-badge">{labels.price}: {execution.primaryMetric.value} {execution.primaryMetric.unit}</span>
-        </div>
-      </div>
+        <lefine-box class="kefine-flow-badges">
+          <lefine-text class="kefine-flow-badge kefine-flow-badge--timer">{labels.timeLeft}: {formattedElapsed}</lefine-text>
+          <lefine-text class="kefine-flow-badge">{labels.timeLeft}: {execution.secondaryMetric.value} {execution.secondaryMetric.unit}</lefine-text>
+          <lefine-text class="kefine-flow-badge">{labels.price}: {execution.primaryMetric.value} {execution.primaryMetric.unit}</lefine-text>
+        </lefine-box>
+      </lefine-box>
 
       <section class="kefine-vpn-progress-panel">
-        <div class="kefine-vpn-progress-meta">
+        <lefine-box class="kefine-vpn-progress-meta">
           <strong>{genericStepHeadline}</strong>
-          <span>{genericProgressPercent}%</span>
-        </div>
-        <div class="kefine-vpn-progress-track" aria-hidden="true">
-          <span class="kefine-vpn-progress-fill" style={`width: ${genericProgressPercent}%`}></span>
-        </div>
+          <lefine-text>{genericProgressPercent}%</lefine-text>
+        </lefine-box>
+        <lefine-box class="kefine-vpn-progress-track" aria-hidden="true">
+          <lefine-text class="kefine-vpn-progress-fill" style={`width: ${genericProgressPercent}%`}></lefine-text>
+        </lefine-box>
 
-        <div class="kefine-vpn-stage-copy">
-          <div class="kefine-vpn-stage-meta">
-            <span class="kefine-vpn-stage-label">Now</span>
-            <span class="kefine-flow-badge">{labels.price}: {execution.primaryMetric.value} {execution.primaryMetric.unit}</span>
-          </div>
+        <lefine-box class="kefine-vpn-stage-copy">
+          <lefine-box class="kefine-vpn-stage-meta">
+            <lefine-text class="kefine-vpn-stage-label">Now</lefine-text>
+            <lefine-text class="kefine-flow-badge">{labels.price}: {execution.primaryMetric.value} {execution.primaryMetric.unit}</lefine-text>
+          </lefine-box>
           {#if currentOrder?.solver}
-            <div class="kefine-vpn-solver-row">
-              <span class="kefine-vpn-solver-avatar" aria-hidden="true">
+            <lefine-box class="kefine-vpn-solver-row">
+              <lefine-text class="kefine-vpn-solver-avatar" aria-hidden="true">
                 {getSolverInitial(currentOrder.solver, currentOrder.solver)}
-              </span>
-              <div class="kefine-vpn-solver-copy">
-                <span class="kefine-vpn-solver-name">
+              </lefine-text>
+              <lefine-box class="kefine-vpn-solver-copy">
+                <lefine-text class="kefine-vpn-solver-name">
                   <strong>{currentOrder.solver}</strong>
-                </span>
-              </div>
-            </div>
+                </lefine-text>
+              </lefine-box>
+            </lefine-box>
           {/if}
           {#if activeGenericStep}
             <h3>{activeGenericStep.title}</h3>
@@ -516,27 +516,27 @@
           {/if}
 
           {#if genericSteps.length > 1}
-            <div class="kefine-vpn-instruction-list" data-testid="kefine-subtask-list">
+            <lefine-box class="kefine-vpn-instruction-list" data-testid="kefine-subtask-list">
               {#each genericSteps as stepItem, index}
                 <article class="kefine-vpn-instruction-card" data-state={stepItem.state}>
                   <strong>Step {index + 1}</strong>
                   <p>{stepItem.title}</p>
                 </article>
               {/each}
-            </div>
+            </lefine-box>
           {/if}
-        </div>
+        </lefine-box>
       </section>
     </section>
   {/if}
 
   {#if !isVpnScenario && orderCompleted}
     <section class="kefine-flow-panel">
-      <div class="kefine-section-head">
+      <lefine-box class="kefine-section-head">
         <p>{labels.chooseMethod}</p>
-      </div>
+      </lefine-box>
 
-      <div class="kefine-auth-grid">
+      <lefine-box class="kefine-auth-grid">
         <button
           type="button"
           class="kefine-auth-tile kefine-auth-tile--wallet"
@@ -544,9 +544,9 @@
           data-testid="kefine-wallet-tile"
           onclick={onWalletLogin}
         >
-          <div class="kefine-auth-hero kefine-auth-hero--wallet" aria-hidden="true">
+          <lefine-box class="kefine-auth-hero kefine-auth-hero--wallet" aria-hidden="true">
             <KefineWalletProviderGrid />
-          </div>
+          </lefine-box>
           {#if authDisplay.walletLabel}
             <strong>{authDisplay.walletLabel}</strong>
           {/if}
@@ -562,11 +562,11 @@
           data-testid="kefine-passkey-tile"
           onclick={onPasskeyLogin}
         >
-          <div class="kefine-auth-hero kefine-auth-hero--passkey" aria-hidden="true">
-            <span class="kefine-auth-icon">
+          <lefine-box class="kefine-auth-hero kefine-auth-hero--passkey" aria-hidden="true">
+            <lefine-text class="kefine-auth-icon">
               <Icon icon={KEFINE_AUTH_ICONS.passkey} width="100%" height="100%" aria-hidden="true" />
-            </span>
-          </div>
+            </lefine-text>
+          </lefine-box>
           <strong>{authLabels.passkeyTitle}</strong>
           {#if authDisplay.passkeyLabel}
             <small>{authDisplay.passkeyLabel}</small>
@@ -580,13 +580,13 @@
           data-testid="kefine-anonymous-tile"
           onclick={onAnonymous}
         >
-          <div class="kefine-auth-hero kefine-auth-hero--guest" aria-hidden="true">
-            <span class="kefine-test-badge">10</span>
-          </div>
+          <lefine-box class="kefine-auth-hero kefine-auth-hero--guest" aria-hidden="true">
+            <lefine-text class="kefine-test-badge">10</lefine-text>
+          </lefine-box>
           <strong>{authLabels.anonymousTitle}</strong>
           <small>{authLabels.anonymousDetail}</small>
         </button>
-      </div>
+      </lefine-box>
     </section>
   {/if}
 </article>

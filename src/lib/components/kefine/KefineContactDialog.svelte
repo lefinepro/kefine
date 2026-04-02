@@ -47,10 +47,10 @@
 
 <KefineModal open={open} onClose={onClose} closeLabel={closeLabel} width="min(30rem, calc(100vw - 2rem))">
   <header class="kefine-contact-dialog__header">
-    <div>
+    <lefine-box>
       <h2>{title}</h2>
       <p>{description}</p>
-    </div>
+    </lefine-box>
   </header>
 
   <form
@@ -61,7 +61,7 @@
     }}
   >
     <label class="kefine-contact-dialog__field">
-      <span>{nameLabel}</span>
+      <lefine-text>{nameLabel}</lefine-text>
       <input
         type="text"
         value={nameValue}
@@ -71,7 +71,7 @@
     </label>
 
     <label class="kefine-contact-dialog__field">
-      <span>{emailLabel}</span>
+      <lefine-text>{emailLabel}</lefine-text>
       <input
         type="email"
         value={emailValue}
@@ -81,7 +81,7 @@
     </label>
 
     <label class="kefine-contact-dialog__field">
-      <span>{messageLabel}</span>
+      <lefine-text>{messageLabel}</lefine-text>
       <textarea
         rows="5"
         placeholder={messagePlaceholder}
@@ -125,7 +125,7 @@
     gap: 0.35rem;
   }
 
-  .kefine-contact-dialog__field span {
+  .kefine-contact-dialog__field lefine-text {
     font-size: 0.92rem;
     font-weight: 600;
   }

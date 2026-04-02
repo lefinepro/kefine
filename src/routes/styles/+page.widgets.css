@@ -17,7 +17,7 @@
     border-radius: 999px;
     border: var(--kef-border-width-soft) solid var(--kef-line-primary);
     background: color-mix(in oklab, var(--kef-bg-card) 90%, var(--kef-bg-soft));
-    color: var(--kef-text);
+    color: var(--lefine-text);
     font-size: 0.82rem;
     font-weight: 700;
   }
@@ -53,7 +53,7 @@
   .kefine-actor-meta {
     margin: 0;
     font-size: 0.93rem;
-    color: var(--kef-text-soft);
+    color: var(--lefine-text-soft);
     text-align: center;
   }
 
@@ -80,7 +80,7 @@
   .kefine-login-tile .kefine-carbon-icon {
     width: 1.05rem;
     height: 1.05rem;
-    color: var(--kef-text);
+    color: var(--lefine-text);
     filter: brightness(0.9) saturate(1.1);
   }
 
@@ -170,7 +170,7 @@
   }
 
   .kefine-table th {
-    color: var(--kef-text-soft);
+    color: var(--lefine-text-soft);
     font-weight: 600;
     background: color-mix(in oklab, var(--kef-bg-soft) 70%, transparent);
   }
@@ -192,7 +192,7 @@ task-status {
     border: var(--kef-border-width) solid var(--kef-line);
     text-transform: capitalize;
     font-size: 0.82rem;
-    color: var(--kef-text-soft);
+    color: var(--lefine-text-soft);
     background: var(--kef-bg-soft);
   }
 
@@ -223,7 +223,7 @@ task-status[data-status='queued'] {
   }
 
   .kefine-status {
-    color: var(--kef-text-soft);
+    color: var(--lefine-text-soft);
     margin: 0;
   }
 
@@ -265,7 +265,7 @@ task-status[data-status='queued'] {
     border-radius: 0.3rem;
     border: var(--kef-border-width-soft) solid var(--kef-line-on-primary);
     background: var(--kef-bg-card);
-    color: var(--kef-text);
+    color: var(--lefine-text);
     padding: 0.8rem 0.92rem;
     font-size: 0.96rem;
     outline: none;

@@ -1,5 +1,6 @@
 {
   "ignorePatterns": [
+    ".bun/**",
     "build/**",
     ".svelte-kit/**",
     ".vite-cache/**",
@@ -51,6 +52,29 @@
         "max-params": [
           "warn",
           4
+        ]
+      }
+    },
+    {
+      "files": [
+        "src/lib/components/kefine/KefineWorkspace.svelte"
+      ],
+      "rules": {
+        "max-lines": [
+          "warn",
+          1300
+        ]
+      }
+    },
+    {
+      "files": [
+        "src/lib/components/kefine/kefine-workflow.ts",
+        "src/lib/components/kefine/kefine-workflow-parsers.ts"
+      ],
+      "rules": {
+        "max-lines": [
+          "warn",
+          700
         ]
       }
     }

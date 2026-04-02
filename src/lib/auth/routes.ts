@@ -8,6 +8,8 @@ import type {
 	PublicKeyCredentialRequestOptionsJSON,
 	RegistrationResponseJSON
 } from '@simplewebauthn/types';
+import { getCraterBaseUrl } from '$lib/config/kefine-config';
+import { buildOrderProxyUrl } from '$lib/order-proxy-path';
 
 export interface PasskeyAuthSuccess {
 	verified: true;
@@ -53,11 +55,15 @@ async function postJson<T>(input: RequestInfo | URL, body: unknown): Promise<T> 
 	return payload;
 }
 
+function buildCraterClientUrl(pathname: string): string {
+	return buildOrderProxyUrl(pathname, getCraterBaseUrl());
+}
+
 export async function performRegistration(
 	username: string
 ): Promise<{ transactionId: string; response: RegistrationResponseJSON }> {
 	const payload = await postJson<PasskeyStartResponse<PublicKeyCredentialCreationOptionsJSON>>(
-		'/passkeys/register/start',
+		buildCraterClientUrl('/passkeys/register/start'),
 		{ username }
 	);
 
@@ -73,14 +79,14 @@ export async function finishRegistration(
 	transactionId: string,
 	response: RegistrationResponseJSON
 ): Promise<PasskeyAuthSuccess> {
-	return postJson<PasskeyAuthSuccess>('/passkeys/register/finish', { username, transactionId, response });
+	return postJson<PasskeyAuthSuccess>(buildCraterClientUrl('/passkeys/register/finish'), { username, transactionId, response });
 }
 
 export async function performAuthentication(
 	username?: string
 ): Promise<{ transactionId: string; response: AuthenticationResponseJSON }> {
 	const payload = await postJson<PasskeyStartResponse<PublicKeyCredentialRequestOptionsJSON>>(
-		'/passkeys/authenticate/start',
+		buildCraterClientUrl('/passkeys/authenticate/start'),
 		{ username }
 	);
 
@@ -95,5 +101,5 @@ export async function finishAuthentication(
 	transactionId: string,
 	response: AuthenticationResponseJSON
 ): Promise<PasskeyAuthSuccess> {
-	return postJson<PasskeyAuthSuccess>('/passkeys/authenticate/finish', { transactionId, response });
+	return postJson<PasskeyAuthSuccess>(buildCraterClientUrl('/passkeys/authenticate/finish'), { transactionId, response });
 }

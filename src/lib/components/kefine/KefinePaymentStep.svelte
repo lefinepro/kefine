@@ -519,63 +519,63 @@
 </script>
 
 <article class="kefine-card kefine-card--wide kefine-order-flow" class:kefine-result-mode={paymentStage === 'result-ready'}>
-  <div class="kefine-result-background" aria-hidden={paymentStage === 'result-ready'}>
+  <lefine-box class="kefine-result-background" aria-hidden={paymentStage === 'result-ready'}>
     <section class="kefine-payment-layout kefine-payment-layout--fadein" data-testid="kefine-payment-redesign">
-      <div class="kefine-payment-layout__left">
-        <div class="kefine-payment-panel">
-          <div class="kefine-section-head">
+      <lefine-box class="kefine-payment-layout__left">
+        <lefine-box class="kefine-payment-panel">
+          <lefine-box class="kefine-section-head">
             <p>{paymentRequestLabel}</p>
             {#if paymentQuote?.paymentTokenSymbol}
-              <span class="kefine-payment-chip">{paymentQuote.paymentTokenSymbol} on chain {paymentQuote.paymentChainId}</span>
+              <lefine-text class="kefine-payment-chip">{paymentQuote.paymentTokenSymbol} on chain {paymentQuote.paymentChainId}</lefine-text>
             {/if}
-          </div>
+          </lefine-box>
 
-          <div class="kefine-payment-qr-surface">
+          <lefine-box class="kefine-payment-qr-surface">
             {#if qrImageUrl}
               <img class="kefine-payment-qr-image" src={qrImageUrl} alt="Payment QR code" loading="eager" />
             {:else}
-              <div class="kefine-payment-qr-placeholder">
+              <lefine-box class="kefine-payment-qr-placeholder">
                 <Icon icon="mdi:qrcode" width="72" height="72" aria-hidden="true" />
                 <small>QR will appear when payment details are ready.</small>
-              </div>
+              </lefine-box>
             {/if}
-          </div>
+          </lefine-box>
 
-          <div class="kefine-payment-address-block">
-            <span class="kefine-payment-address-label">EVM address</span>
+          <lefine-box class="kefine-payment-address-block">
+            <lefine-text class="kefine-payment-address-label">EVM address</lefine-text>
             <code>{compactPaymentAddress}</code>
-          </div>
-        </div>
-      </div>
+          </lefine-box>
+        </lefine-box>
+      </lefine-box>
 
-      <div class="kefine-payment-layout__right">
-        <div class="kefine-payment-panel kefine-payment-panel--pricing">
-          <div class="kefine-section-head">
+      <lefine-box class="kefine-payment-layout__right">
+        <lefine-box class="kefine-payment-panel kefine-payment-panel--pricing">
+          <lefine-box class="kefine-section-head">
             <p>{paymentLabels.summaryTitle}</p>
             {#if currentOrder?.id}
-              <span class="kefine-payment-chip">{labels.taskId} {currentOrder.id}</span>
+              <lefine-text class="kefine-payment-chip">{labels.taskId} {currentOrder.id}</lefine-text>
             {/if}
-          </div>
+          </lefine-box>
 
-          <div class="kefine-payment-hero">
+          <lefine-box class="kefine-payment-hero">
             <strong>{currentOrder?.title ?? labels.resultTitle}</strong>
             <p>{currentOrder?.executionEstimate ? `${labels.executionEstimate} ${currentOrder.executionEstimate}` : paymentLabels.payCtaHint}</p>
-          </div>
+          </lefine-box>
 
-          <div class="kefine-payment-price-stack">
+          <lefine-box class="kefine-payment-price-stack">
             {#if paymentQuote?.strikeOriginalPrice}
-              <span class="kefine-payment-price--struck">
+              <lefine-text class="kefine-payment-price--struck">
                 {formatAmount(paymentQuote.originalAmount)} {paymentQuote.currency}
-              </span>
+              </lefine-text>
             {/if}
             <strong class="kefine-payment-price-current">
               {formatAmount(paymentQuote?.effectiveAmount ?? currentOrder?.estimatedCost)} {paymentQuote?.currency ?? currentOrder?.currency}
             </strong>
-          </div>
+          </lefine-box>
 
-          <div class="kefine-promo-block kefine-promo-block--payment">
+          <lefine-box class="kefine-promo-block kefine-promo-block--payment">
             <label class="kefine-promo-label" for="payment-promo-code">{paymentLabels.promoCodeLabel}</label>
-            <div class="kefine-promo-row">
+            <lefine-box class="kefine-promo-row">
               <input
                 id="payment-promo-code"
                 class="kefine-promo-input"
@@ -588,17 +588,17 @@
               <button type="button" data-variant="primary" onclick={applyPromoCode} disabled={promoApplying}>
                 {promoApplying ? 'Applying...' : buttons.apply}
               </button>
-            </div>
+            </lefine-box>
             {#if promoFeedback}
               <p class="kefine-promo-feedback" data-tone={promoFeedbackTone}>{promoFeedback}</p>
             {/if}
-          </div>
+          </lefine-box>
 
           {#if paymentError}
             <p class="kefine-promo-feedback" data-tone="error">{paymentError}</p>
           {/if}
 
-          <div class="kefine-payment-action-row">
+          <lefine-box class="kefine-payment-action-row">
             <button type="button" data-variant="primary" onclick={handlePrimaryPaymentAction} disabled={paySubmitting || (!quoteReady && !paymentError)}>
               {#if paySubmitting}
                 Processing...
@@ -608,99 +608,99 @@
                 {payButtonLabel}
               {/if}
             </button>
-          </div>
+          </lefine-box>
 
-        </div>
-      </div>
+        </lefine-box>
+      </lefine-box>
     </section>
-  </div>
+  </lefine-box>
 
   {#if paymentStage === 'result-ready'}
     <section class="kefine-result-overlay" data-testid="kefine-result-panel">
-      <div
+      <lefine-box
         class="kefine-result-shell"
         class:kefine-result-shell--auth-gate={!showVpnResultWidget && !guestResultAccess && !isAuthenticated}
       >
-        <div class="kefine-result-header">
+        <lefine-box class="kefine-result-header">
           <button type="button" class="kefine-flow-back" aria-label="Back" onclick={onBack}>←</button>
-          <div class="kefine-result-title-block">
+          <lefine-box class="kefine-result-title-block">
             <p>Completed your task: {currentOrder?.title ?? '-'}</p>
-          </div>
-          <div class="kefine-result-actions">
-            <span class="kefine-flow-badge kefine-flow-badge--timer">{guestAccessTimerLabel}</span>
+          </lefine-box>
+          <lefine-box class="kefine-result-actions">
+            <lefine-text class="kefine-flow-badge kefine-flow-badge--timer">{guestAccessTimerLabel}</lefine-text>
             <button type="button" data-variant="ghost" onclick={handlePayAction}>{payButtonLabel}</button>
             <button type="button" data-variant="ghost" onclick={onOpenStages}>View stages</button>
             <button type="button" data-variant="ghost" onclick={onRejectResult}>{buttons.rejectResult}</button>
-          </div>
-        </div>
+          </lefine-box>
+        </lefine-box>
 
-        <div class="kefine-result-summary">
-          <span class="kefine-payment-chip">{labels.executionEstimate} {currentOrder?.executionEstimate ?? '-'}</span>
-        </div>
+        <lefine-box class="kefine-result-summary">
+          <lefine-text class="kefine-payment-chip">{labels.executionEstimate} {currentOrder?.executionEstimate ?? '-'}</lefine-text>
+        </lefine-box>
 
         {#if showVpnResultWidget}
-          <div class="kefine-vpn-widget-surface">
-            <div class="kefine-vpn-widget-body">
+          <lefine-box class="kefine-vpn-widget-surface">
+            <lefine-box class="kefine-vpn-widget-body">
               <strong>{currentOrder?.vpnGuide?.title ?? labels.resultTitle}</strong>
               <p>{currentOrder?.vpnGuide?.summary ?? 'The VPN delivery widget is ready for this completed order.'}</p>
 
               {#if currentOrder?.vpnGuide}
                 <KefineVpnGuide guide={currentOrder.vpnGuide} />
               {:else}
-                <div class="kefine-vpn-widget-lines" aria-hidden="true">
-                  <span></span>
-                  <span></span>
-                  <span></span>
-                </div>
+                <lefine-box class="kefine-vpn-widget-lines" aria-hidden="true">
+                  <lefine-text></lefine-text>
+                  <lefine-text></lefine-text>
+                  <lefine-text></lefine-text>
+                </lefine-box>
               {/if}
-            </div>
-          </div>
+            </lefine-box>
+          </lefine-box>
           {#if !isAuthenticated}
-            <div class="kefine-vpn-guide__fallback">
+            <lefine-box class="kefine-vpn-guide__fallback">
               <p>Sign in is optional for this completed VPN task. The delivery widget is already available.</p>
-            </div>
+            </lefine-box>
           {/if}
         {:else if guestResultAccess && currentOrder?.vpnGuide}
-          <div class="kefine-vpn-guide" class:kefine-vpn-guide--blurred={guestAccessExpired}>
+          <lefine-box class="kefine-vpn-guide" class:kefine-vpn-guide--blurred={guestAccessExpired}>
             <header class="kefine-vpn-guide__header">
               <strong>{currentOrder.vpnGuide.title}</strong>
               <p>{currentOrder.vpnGuide.summary}</p>
             </header>
 
             <KefineVpnGuide guide={currentOrder.vpnGuide} />
-          </div>
+          </lefine-box>
 
           {#if guestAccessExpired}
-            <div class="kefine-vpn-guide__expired-gate">
-              <span class="kefine-flow-badge kefine-flow-badge--timer">Guest access expired</span>
+            <lefine-box class="kefine-vpn-guide__expired-gate">
+              <lefine-text class="kefine-flow-badge kefine-flow-badge--timer">Guest access expired</lefine-text>
               <strong>Continue when you need the package again</strong>
               <p>The 10 minute preview has ended.</p>
-              <div class="kefine-vpn-guide__expired-actions">
+              <lefine-box class="kefine-vpn-guide__expired-actions">
                 <button type="button" data-variant="primary" onclick={handleExpiredAction}>
                   {resolveExpiredActionLabel()}
                 </button>
                 <button type="button" data-variant="ghost" onclick={handlePayAction}>
                   {payButtonLabel}
                 </button>
-              </div>
-            </div>
+              </lefine-box>
+            </lefine-box>
           {/if}
         {:else if !isAuthenticated}
-          <div class="kefine-auth-grid">
+          <lefine-box class="kefine-auth-grid">
             <button type="button" class="kefine-auth-tile kefine-auth-tile--wallet" data-testid="kefine-result-wallet-tile" onclick={onWalletLogin}>
-              <div class="kefine-auth-hero kefine-auth-hero--wallet" aria-hidden="true">
+              <lefine-box class="kefine-auth-hero kefine-auth-hero--wallet" aria-hidden="true">
                 <KefineWalletProviderGrid />
-              </div>
+              </lefine-box>
               <strong>{authDisplay.walletLabel ?? authLabels.walletTitle}</strong>
               <small>{authLabels.walletAccount}</small>
             </button>
 
             <button type="button" class="kefine-auth-tile kefine-auth-tile--passkey" data-testid="kefine-result-passkey-tile" onclick={onPasskeyLogin}>
-              <div class="kefine-auth-hero kefine-auth-hero--passkey" aria-hidden="true">
-                <span class="kefine-auth-icon">
+              <lefine-box class="kefine-auth-hero kefine-auth-hero--passkey" aria-hidden="true">
+                <lefine-text class="kefine-auth-icon">
                   <Icon icon={KEFINE_AUTH_ICONS.passkey} width="100%" height="100%" aria-hidden="true" />
-                </span>
-              </div>
+                </lefine-text>
+              </lefine-box>
               <strong>{authLabels.passkeyTitle}</strong>
               {#if authDisplay.passkeyLabel}
                 <small>{authDisplay.passkeyLabel}</small>
@@ -708,21 +708,21 @@
             </button>
 
             <button type="button" class="kefine-auth-tile kefine-auth-tile--anonymous" data-testid="kefine-result-anonymous-tile" onclick={onAnonymousLogin}>
-              <div class="kefine-auth-hero kefine-auth-hero--guest" aria-hidden="true">
-                <span class="kefine-test-badge">10</span>
-              </div>
+              <lefine-box class="kefine-auth-hero kefine-auth-hero--guest" aria-hidden="true">
+                <lefine-text class="kefine-test-badge">10</lefine-text>
+              </lefine-box>
               <strong>{authLabels.anonymousTitle}</strong>
               <small>{authLabels.anonymousDetail}</small>
             </button>
-          </div>
+          </lefine-box>
         {:else}
-          <div class="kefine-vpn-guide__fallback">
+          <lefine-box class="kefine-vpn-guide__fallback">
             <strong>{labels.resultTitle}</strong>
             <p>The delivery package is ready for this order.</p>
-          </div>
+          </lefine-box>
         {/if}
 
-      </div>
+      </lefine-box>
 
     </section>
   {/if}

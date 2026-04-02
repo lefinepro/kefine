@@ -8,20 +8,20 @@
   } = $props();
 </script>
 
-<div class="kefine-vpn-guide__steps">
+<lefine-box class="kefine-vpn-guide__steps">
   {#each guide.steps as step}
     <article class="kefine-vpn-guide__card" data-step={step.id}>
       <h3>{step.title}</h3>
       <p>{step.summary}</p>
 
       {#if step.apps}
-        <div class="kefine-vpn-guide__apps">
+        <lefine-box class="kefine-vpn-guide__apps">
           {#each step.apps as app}
             <a class="kefine-vpn-guide__pill kefine-vpn-guide__pill--link" href={app.href} target="_blank" rel="noreferrer">
               {app.label}
             </a>
           {/each}
-        </div>
+        </lefine-box>
       {/if}
 
       {#if step.exampleVlessLink}
@@ -41,4 +41,4 @@
       {/if}
     </article>
   {/each}
-</div>
+</lefine-box>

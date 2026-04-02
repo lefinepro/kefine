@@ -10,7 +10,7 @@
   .kefine-steps {
     margin: 0;
     padding-left: 1.15rem;
-    color: var(--kef-text-soft);
+    color: var(--lefine-text-soft);
     display: grid;
     gap: 0.5rem;
   }
@@ -18,7 +18,7 @@
   .kefine-meta {
     display: grid;
     gap: 0.45rem;
-    color: var(--kef-text-soft);
+    color: var(--lefine-text-soft);
     background: var(--kef-bg-soft);
     border-radius: 1rem;
     padding: 0.85rem;
@@ -26,7 +26,7 @@
 
   .kefine-meta strong,
   .kefine-meta p > strong {
-    color: var(--kef-text);
+    color: var(--lefine-text);
   }
 
   .kefine-executing-screen {
@@ -76,7 +76,7 @@
     width: 62%;
     height: 1.25rem;
     border-radius: 999px;
-    background: color-mix(in oklab, var(--kef-text) 8%, transparent);
+    background: color-mix(in oklab, var(--lefine-text) 8%, transparent);
     filter: blur(1px);
   }
 
@@ -128,8 +128,8 @@
     border-radius: 1rem;
     background: color-mix(in oklab, var(--kef-bg-card) 98%, var(--kef-bg-soft));
     box-shadow:
-      0 16px 28px color-mix(in oklab, var(--kef-text) 4%, transparent),
-      0 3px 8px color-mix(in oklab, var(--kef-text) 2%, transparent);
+      0 16px 28px color-mix(in oklab, var(--lefine-text) 4%, transparent),
+      0 3px 8px color-mix(in oklab, var(--lefine-text) 2%, transparent);
     min-width: 0;
     transition:
       transform var(--kef-motion-base) var(--kef-ease-standard),
@@ -191,7 +191,7 @@
     font-weight: 700;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: color-mix(in oklab, var(--kef-text-soft) 70%, #9b8c78);
+    color: color-mix(in oklab, var(--lefine-text-soft) 70%, #9b8c78);
   }
 
   .kefine-afe-intro h3 {
@@ -264,14 +264,14 @@
   }
 
   .kefine-afe-card p {
-    color: var(--kef-text-soft);
+    color: var(--lefine-text-soft);
   }
 
   .kefine-afe-card--executing p {
     max-width: 30ch;
     font-size: 1rem;
     line-height: 1.46;
-    color: color-mix(in oklab, var(--kef-text-soft) 86%, #c6b59c);
+    color: color-mix(in oklab, var(--lefine-text-soft) 86%, #c6b59c);
   }
 
   .kefine-flow-topline {
@@ -288,7 +288,7 @@
     border-radius: 999px;
     border: var(--kef-border-width-soft) solid var(--kef-line);
     background: color-mix(in oklab, var(--kef-bg-card) 90%, transparent);
-    color: var(--kef-text);
+    color: var(--lefine-text);
   }
 
   .kefine-flow-eyebrow {
@@ -296,13 +296,13 @@
     font-size: 0.72rem;
     text-transform: uppercase;
     letter-spacing: 0.12em;
-    color: var(--kef-text-soft);
+    color: var(--lefine-text-soft);
   }
 
   .kefine-flow-copy,
   .kefine-flow-note {
     margin: 0;
-    color: var(--kef-text-soft);
+    color: var(--lefine-text-soft);
   }
 
   .kefine-title-skeleton {
@@ -350,7 +350,7 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    color: var(--kef-text-soft);
+    color: var(--lefine-text-soft);
   }
 
   .kefine-solver-pill,
@@ -361,7 +361,7 @@
     border-radius: 999px;
     border: var(--kef-border-width-soft) solid var(--kef-line-primary);
     background: color-mix(in oklab, var(--kef-bg-card) 96%, var(--kef-bg-soft));
-    color: var(--kef-text);
+    color: var(--lefine-text);
     font-size: 0.82rem;
     font-weight: 700;
   }
@@ -381,7 +381,7 @@
     border-radius: 999px;
     border: var(--kef-border-width-soft) solid var(--kef-line);
     background: color-mix(in oklab, var(--kef-bg-card) 96%, var(--kef-bg-soft));
-    color: var(--kef-text);
+    color: var(--lefine-text);
     font-size: 0.8rem;
     font-weight: 700;
   }
@@ -435,11 +435,11 @@
   }
 
   .kefine-vpn-progress-meta strong {
-    color: var(--kef-text);
+    color: var(--lefine-text);
   }
 
-  .kefine-vpn-progress-meta span {
-    color: var(--kef-text-soft);
+  .kefine-vpn-progress-meta lefine-text {
+    color: var(--lefine-text-soft);
     font-weight: 700;
   }
 
@@ -456,7 +456,7 @@
     border-radius: 999px;
     border: var(--kef-border-width-soft) solid var(--kef-line);
     background: color-mix(in oklab, var(--kef-bg-card) 92%, var(--kef-bg-soft));
-    color: var(--kef-text);
+    color: var(--lefine-text);
     font: inherit;
     font-size: 1rem;
     line-height: 1;
@@ -473,7 +473,7 @@
     border-color: var(--kef-line-primary);
     background: color-mix(in oklab, var(--kef-primary) 6%, var(--kef-bg-card));
     transform: translateY(-1px);
-    box-shadow: 0 10px 18px color-mix(in oklab, var(--kef-text) 7%, transparent);
+    box-shadow: 0 10px 18px color-mix(in oklab, var(--lefine-text) 7%, transparent);
   }
 
   .kefine-vpn-arrow:disabled {
@@ -515,7 +515,7 @@
   }
 
   .kefine-vpn-stage-copy p {
-    color: var(--kef-text-soft);
+    color: var(--lefine-text-soft);
   }
 
   .kefine-vpn-instruction-list {
@@ -542,7 +542,7 @@
   }
 
   .kefine-vpn-instruction-card p {
-    color: var(--kef-text-soft);
+    color: var(--lefine-text-soft);
   }
 
   .kefine-vpn-solver-row {
@@ -561,7 +561,7 @@
     border-radius: 999px;
     border: var(--kef-border-width-soft) solid color-mix(in oklab, var(--kef-line-primary) 68%, var(--kef-line));
     background: color-mix(in oklab, var(--kef-primary) 8%, var(--kef-bg-card));
-    color: var(--kef-text);
+    color: var(--lefine-text);
     font-size: 0.95rem;
     font-weight: 800;
     flex: 0 0 auto;
@@ -585,13 +585,13 @@
   }
 
   .kefine-vpn-solver-copy strong,
-  .kefine-vpn-solver-copy span {
+  .kefine-vpn-solver-copy lefine-text {
     margin: 0;
     overflow-wrap: anywhere;
   }
 
-  .kefine-vpn-solver-copy span {
-    color: var(--kef-text-soft);
+  .kefine-vpn-solver-copy lefine-text {
+    color: var(--lefine-text-soft);
     font-size: 0.82rem;
   }
 
@@ -610,7 +610,7 @@
     border-radius: 999px;
     border: var(--kef-border-width-soft) solid var(--kef-line);
     background: color-mix(in oklab, var(--kef-bg-card) 90%, var(--kef-bg-soft));
-    color: var(--kef-text-soft);
+    color: var(--lefine-text-soft);
     cursor: pointer;
     text-decoration: none;
     transition:
@@ -624,9 +624,9 @@
   .kefine-vpn-icon-action:hover {
     border-color: var(--kef-line-primary);
     background: color-mix(in oklab, var(--kef-primary) 10%, var(--kef-bg-card));
-    color: var(--kef-text);
+    color: var(--lefine-text);
     transform: translateY(-1px);
-    box-shadow: 0 10px 18px color-mix(in oklab, var(--kef-text) 7%, transparent);
+    box-shadow: 0 10px 18px color-mix(in oklab, var(--lefine-text) 7%, transparent);
   }
 
   .kefine-vpn-stage-label {
@@ -653,7 +653,7 @@
   }
 
   .kefine-vpn-next-card strong {
-    color: var(--kef-text);
+    color: var(--lefine-text);
   }
 
   .kefine-vpn-next-card .kefine-vpn-solver-actions {
@@ -671,7 +671,7 @@
   .kefine-stage-item p,
   .kefine-subtask-item p {
     margin: 0.2rem 0 0;
-    color: var(--kef-text-soft);
+    color: var(--lefine-text-soft);
   }
 
   .kefine-stage-bullet,
@@ -697,7 +697,7 @@
     background: var(--kef-success);
   }
 
-  .kefine-vpn-stage-item > div {
+  .kefine-vpn-stage-item > lefine-box {
     display: grid;
     gap: 0.16rem;
   }
@@ -705,7 +705,7 @@
   .kefine-vpn-step-index {
     font-size: 0.75rem;
     font-weight: 800;
-    color: var(--kef-text-soft);
+    color: var(--lefine-text-soft);
   }
 
   .kefine-solver-fallback,
@@ -728,7 +728,7 @@
   .kefine-result-card p,
   .kefine-anonymous-save p {
     margin: 0;
-    color: var(--kef-text-soft);
+    color: var(--lefine-text-soft);
   }
 
   .kefine-metrics-grid {
@@ -777,22 +777,22 @@
     margin-top: 0.35rem;
   }
 
-  .kefine-vpn-widget-lines span {
+  .kefine-vpn-widget-lines lefine-text {
     display: block;
     height: 0.85rem;
     border-radius: 999px;
     background: color-mix(in oklab, var(--kef-primary) 20%, var(--kef-bg));
   }
 
-  .kefine-vpn-widget-lines span:nth-child(1) {
+  .kefine-vpn-widget-lines lefine-text:nth-child(1) {
     width: 88%;
   }
 
-  .kefine-vpn-widget-lines span:nth-child(2) {
+  .kefine-vpn-widget-lines lefine-text:nth-child(2) {
     width: 72%;
   }
 
-  .kefine-vpn-widget-lines span:nth-child(3) {
+  .kefine-vpn-widget-lines lefine-text:nth-child(3) {
     width: 94%;
   }
 
@@ -829,7 +829,7 @@
 
   .kefine-vpn-widget-gate p {
     max-width: 22rem;
-    color: var(--kef-text-soft);
+    color: var(--lefine-text-soft);
   }
 
   .kefine-vpn-widget-actions {
@@ -873,12 +873,12 @@
   }
 
   .kefine-vpn-download-copy p {
-    color: var(--kef-text-soft);
+    color: var(--lefine-text-soft);
   }
 
   .kefine-metric-card p {
     margin: 0;
-    color: var(--kef-text-soft);
+    color: var(--lefine-text-soft);
     text-transform: uppercase;
     letter-spacing: 0.08em;
     font-size: 0.76rem;
@@ -895,9 +895,9 @@
     line-height: 0.95;
   }
 
-  .kefine-metric-value span {
+  .kefine-metric-value lefine-text {
     font-size: 0.92rem;
-    color: var(--kef-text-soft);
+    color: var(--lefine-text-soft);
   }
 
   .kefine-auth-grid {
@@ -917,7 +917,7 @@
     border: var(--kef-border-width-soft) solid var(--kef-line);
     background: color-mix(in oklab, var(--kef-bg-card) 92%, var(--kef-bg-soft));
     text-align: center;
-    color: var(--kef-text);
+    color: var(--lefine-text);
     transition:
       transform var(--kef-motion-base) var(--kef-ease-standard),
       box-shadow var(--kef-motion-base) var(--kef-ease-standard),
@@ -927,7 +927,7 @@
 
   .kefine-auth-tile:hover {
     transform: translateY(-2px);
-    box-shadow: 0 18px 28px color-mix(in oklab, var(--kef-text) 8%, transparent);
+    box-shadow: 0 18px 28px color-mix(in oklab, var(--lefine-text) 8%, transparent);
   }
 
   .kefine-auth-tile--wallet {
@@ -953,7 +953,7 @@
 
   .kefine-auth-tile small {
     margin: 0;
-    color: var(--kef-text-soft);
+    color: var(--lefine-text-soft);
   }
 
   .kefine-auth-hero {
@@ -1030,7 +1030,7 @@
     align-self: stretch;
   }
 
-  .kefine-wallet-grid span,
+  .kefine-wallet-grid lefine-text,
   .kefine-auth-icon {
     display: inline-flex;
     align-items: center;
@@ -1040,7 +1040,7 @@
     font-weight: 700;
   }
 
-  .kefine-wallet-grid span {
+  .kefine-wallet-grid lefine-text {
     display: grid;
     justify-items: center;
     align-content: center;
@@ -1050,7 +1050,7 @@
     border: 0;
     background: transparent;
     padding: 0;
-    color: var(--kef-text);
+    color: var(--lefine-text);
   }
 
   .kefine-wallet-icon {
@@ -1067,21 +1067,21 @@
     height: 100%;
   }
 
-  .kefine-wallet-grid span.is-metamask .kefine-wallet-icon svg {
+  .kefine-wallet-grid lefine-text.is-metamask .kefine-wallet-icon svg {
     width: 90%;
     height: 90%;
   }
 
-  .kefine-wallet-grid span.is-google .kefine-wallet-icon svg {
+  .kefine-wallet-grid lefine-text.is-google .kefine-wallet-icon svg {
     width: 86%;
     height: 86%;
   }
 
-  .kefine-wallet-grid span small {
+  .kefine-wallet-grid lefine-text small {
     margin: 0;
     font-size: 0.44rem;
     line-height: 1.1;
-    color: var(--kef-text-soft);
+    color: var(--lefine-text-soft);
   }
 
   .kefine-auth-icon {
@@ -1126,7 +1126,7 @@
     border-radius: 0.95rem;
     border: var(--kef-border-width-soft) solid var(--kef-line);
     background: color-mix(in oklab, var(--kef-bg-card) 94%, var(--kef-bg));
-    color: var(--kef-text);
+    color: var(--lefine-text);
     font-weight: 700;
   }
 
@@ -1136,7 +1136,7 @@
 
   .kefine-promo-label {
     font-size: 0.88rem;
-    color: var(--kef-text-soft);
+    color: var(--lefine-text-soft);
   }
 
   .kefine-promo-row {
@@ -1151,7 +1151,7 @@
     border-radius: 0.95rem;
     border: var(--kef-border-width-soft) solid var(--kef-line);
     background: color-mix(in oklab, var(--kef-bg) 56%, transparent);
-    color: var(--kef-text);
+    color: var(--lefine-text);
   }
 
   .kefine-promo-feedback {
@@ -1173,7 +1173,7 @@
     border-radius: 0.95rem;
     border: var(--kef-border-width-soft) solid color-mix(in oklab, var(--kef-line-warning) 92%, white);
     background: color-mix(in oklab, var(--kef-warning) 14%, var(--kef-bg-card));
-    color: var(--kef-text);
+    color: var(--lefine-text);
     font-weight: 700;
   }
 
@@ -1183,7 +1183,7 @@
     gap: 0.75rem;
   }
 
-  .kefine-payment-summary div {
+  .kefine-payment-summary lefine-box {
     display: grid;
     gap: 0.2rem;
     padding: 0.85rem 0.9rem;
@@ -1194,12 +1194,12 @@
 
   .kefine-payment-summary small,
   .kefine-payment-meta p {
-    color: var(--kef-text-soft);
+    color: var(--lefine-text-soft);
   }
 
   .kefine-payment-summary strong,
   .kefine-payment-meta strong {
-    color: var(--kef-text);
+    color: var(--lefine-text);
   }
 
   .kefine-payment-meta {
@@ -1213,7 +1213,7 @@
 
   .kefine-deposit-dialog {
     border-style: solid;
-    box-shadow: 0 20px 50px color-mix(in oklab, var(--kef-text) 14%, transparent);
+    box-shadow: 0 20px 50px color-mix(in oklab, var(--lefine-text) 14%, transparent);
   }
 
   .kefine-deposit-options {
@@ -1228,7 +1228,7 @@
     border-radius: 0.95rem;
     border: var(--kef-border-width-soft) solid var(--kef-line);
     background: color-mix(in oklab, var(--kef-bg-card) 94%, var(--kef-bg));
-    color: var(--kef-text);
+    color: var(--lefine-text);
   }
 
   .kefine-result-card iframe {
@@ -1284,8 +1284,8 @@
     border-radius: 1.1rem;
     background: color-mix(in oklab, var(--kef-bg-card) 94%, var(--kef-bg));
     box-shadow:
-      0 24px 48px color-mix(in oklab, var(--kef-text) 8%, transparent),
-      0 6px 16px color-mix(in oklab, var(--kef-text) 3%, transparent);
+      0 24px 48px color-mix(in oklab, var(--lefine-text) 8%, transparent),
+      0 6px 16px color-mix(in oklab, var(--lefine-text) 3%, transparent);
     backdrop-filter: blur(6px);
   }
 
@@ -1327,7 +1327,7 @@
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: var(--kef-text);
+    color: var(--lefine-text);
   }
 
   .kefine-result-actions {
@@ -1340,7 +1340,7 @@
   .kefine-result-shell .kefine-payment-chip {
     border: 0;
     background: color-mix(in oklab, var(--kef-primary) 28%, var(--kef-bg-card));
-    color: color-mix(in oklab, var(--kef-text) 92%, black);
+    color: color-mix(in oklab, var(--lefine-text) 92%, black);
     box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--kef-primary) 34%, transparent);
     font-weight: 800;
   }
@@ -1348,7 +1348,7 @@
   .kefine-result-shell .kefine-auth-tile {
     border: 0;
     background: color-mix(in oklab, var(--kef-bg-card) 97%, white);
-    box-shadow: 0 4px 12px color-mix(in oklab, var(--kef-text) 4%, transparent);
+    box-shadow: 0 4px 12px color-mix(in oklab, var(--lefine-text) 4%, transparent);
   }
 
   .kefine-result-shell .kefine-auth-tile[data-active='true'] {
@@ -1393,7 +1393,7 @@
   .kefine-vpn-guide__note,
   .kefine-vpn-guide__list,
   .kefine-vpn-guide__expired-gate p {
-    color: var(--kef-text-soft);
+    color: var(--lefine-text-soft);
   }
 
   .kefine-vpn-guide__steps {
@@ -1420,7 +1420,7 @@
   .kefine-vpn-guide__card:hover,
   .kefine-vpn-guide__fallback:hover {
     transform: translateY(-2px);
-    box-shadow: 0 16px 28px color-mix(in oklab, var(--kef-text) 6%, transparent);
+    box-shadow: 0 16px 28px color-mix(in oklab, var(--lefine-text) 6%, transparent);
   }
 
   .kefine-vpn-guide__apps {
@@ -1436,7 +1436,7 @@
     padding: 0 0.7rem;
     border-radius: 999px;
     background: color-mix(in oklab, var(--kef-bg-soft) 82%, white);
-    color: var(--kef-text);
+    color: var(--lefine-text);
     font-size: 0.82rem;
     font-weight: 600;
     text-decoration: none;
@@ -1449,7 +1449,7 @@
   .kefine-vpn-guide__pill--link:hover {
     background: color-mix(in oklab, var(--kef-bg-soft) 74%, white);
     transform: translateY(-1px);
-    box-shadow: 0 10px 16px color-mix(in oklab, var(--kef-text) 5%, transparent);
+    box-shadow: 0 10px 16px color-mix(in oklab, var(--lefine-text) 5%, transparent);
   }
 
   .kefine-vpn-guide__code {
@@ -1458,7 +1458,7 @@
     border-radius: 0.85rem;
     padding: 0.8rem;
     background: color-mix(in oklab, var(--kef-bg) 94%, black 2%);
-    color: var(--kef-text);
+    color: var(--lefine-text);
     font-size: 0.78rem;
     line-height: 1.5;
     white-space: pre-wrap;
@@ -1484,7 +1484,7 @@
     transform: translate(-50%, -50%);
     justify-items: start;
     z-index: 1;
-    box-shadow: 0 10px 24px color-mix(in oklab, var(--kef-text) 8%, transparent);
+    box-shadow: 0 10px 24px color-mix(in oklab, var(--lefine-text) 8%, transparent);
   }
 
   .kefine-vpn-guide__expired-actions {
@@ -1519,8 +1519,8 @@
     background: color-mix(in oklab, var(--kef-bg-soft) 72%, transparent);
     box-shadow:
       inset 0 0 0 1px color-mix(in oklab, var(--kef-border) 28%, transparent),
-      0 16px 30px color-mix(in oklab, var(--kef-text) 4%, transparent),
-      0 3px 8px color-mix(in oklab, var(--kef-text) 2%, transparent);
+      0 16px 30px color-mix(in oklab, var(--lefine-text) 4%, transparent),
+      0 3px 8px color-mix(in oklab, var(--lefine-text) 2%, transparent);
     transition:
       transform var(--kef-motion-base) var(--kef-ease-standard),
       box-shadow var(--kef-motion-base) var(--kef-ease-standard),
@@ -1532,8 +1532,8 @@
     transform: translateY(-2px);
     box-shadow:
       inset 0 0 0 1px color-mix(in oklab, var(--kef-border) 28%, transparent),
-      0 20px 36px color-mix(in oklab, var(--kef-text) 6%, transparent),
-      0 5px 12px color-mix(in oklab, var(--kef-text) 3%, transparent);
+      0 20px 36px color-mix(in oklab, var(--lefine-text) 6%, transparent),
+      0 5px 12px color-mix(in oklab, var(--lefine-text) 3%, transparent);
   }
 
   .kefine-payment-panel--pricing {
@@ -1565,7 +1565,7 @@
     gap: 0.7rem;
     width: 100%;
     height: 100%;
-    color: color-mix(in oklab, var(--kef-text) 42%, transparent);
+    color: color-mix(in oklab, var(--lefine-text) 42%, transparent);
     text-align: center;
   }
 
@@ -1584,14 +1584,14 @@
     overflow-wrap: anywhere;
     font-size: 0.88rem;
     line-height: 1.55;
-    color: var(--kef-text-strong);
+    color: var(--lefine-text-strong);
   }
 
   .kefine-payment-address-label {
     font-size: 0.76rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--kef-text-muted);
+    color: var(--lefine-text-muted);
   }
 
   .kefine-payment-hero {
@@ -1602,12 +1602,12 @@
   .kefine-payment-hero strong {
     font-size: clamp(1.5rem, 3vw, 2.3rem);
     line-height: 1.05;
-    color: var(--kef-text-strong);
+    color: var(--lefine-text-strong);
   }
 
   .kefine-payment-hero p {
     margin: 0;
-    color: var(--kef-text-muted);
+    color: var(--lefine-text-muted);
   }
 
   .kefine-payment-price-stack {
@@ -1618,7 +1618,7 @@
 
   .kefine-payment-price--struck {
     font-size: 1.05rem;
-    color: var(--kef-text-muted);
+    color: var(--lefine-text-muted);
     text-decoration: line-through;
     text-decoration-thickness: 2px;
   }
@@ -1626,7 +1626,7 @@
   .kefine-payment-price-current {
     font-size: clamp(2.4rem, 6vw, 4.8rem);
     line-height: 0.95;
-    color: var(--kef-text-strong);
+    color: var(--lefine-text-strong);
   }
 
   .kefine-promo-block--payment {
@@ -1651,13 +1651,13 @@
   .kefine-payment-inline-link {
     display: inline-flex;
     width: fit-content;
-    color: var(--kef-text-muted);
+    color: var(--lefine-text-muted);
     text-decoration: none;
     font-size: 0.88rem;
   }
 
   .kefine-payment-inline-link:hover {
-    color: var(--kef-text);
+    color: var(--lefine-text);
     text-decoration: underline;
   }
 
@@ -1666,13 +1666,13 @@
     padding: 0;
     border: 0;
     background: transparent;
-    color: var(--kef-text-muted);
+    color: var(--lefine-text-muted);
     font-size: 0.88rem;
     text-decoration: none;
   }
 
   .kefine-payment-inline-action:hover {
-    color: var(--kef-text);
+    color: var(--lefine-text);
     text-decoration: underline;
     background: transparent;
   }

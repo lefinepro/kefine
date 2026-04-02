@@ -67,9 +67,9 @@
     </button>
   {/if}
 
-  <div class="kefine-modal-shell__body">
+  <lefine-box class="kefine-modal-shell__body">
     {@render children?.()}
-  </div>
+  </lefine-box>
 </dialog>
 
 <style>
@@ -81,7 +81,7 @@
     margin: auto;
     background: color-mix(in oklab, var(--kef-bg-card, #fff) 96%, white);
     color: inherit;
-    box-shadow: 0 1.25rem 3rem color-mix(in oklab, var(--kef-text, #2e2317) 12%, transparent);
+    box-shadow: 0 1.25rem 3rem color-mix(in oklab, var(--lefine-text, #2e2317) 12%, transparent);
   }
 
   .kefine-modal-shell::backdrop {

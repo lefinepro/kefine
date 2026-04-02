@@ -97,7 +97,7 @@
   const afeIntroCard = $derived(afe.cards[0] ?? null);
   const afeStepCards = $derived(afe.cards.slice(1));
 
-  function resizeTaskInput() {
+  function resizeTaskInput(_description: string) {
     if (!taskTextarea) {
       return;
     }
@@ -171,8 +171,7 @@
   }
 
   $effect(() => {
-    draft.description;
-    resizeTaskInput();
+    resizeTaskInput(draft.description);
   });
 
   $effect(() => {
@@ -349,7 +348,7 @@
           rows="1"
           wrap={isMultilineDraft ? 'soft' : 'off'}
           onkeydown={handleTaskInputKeydown}
-          oninput={resizeTaskInput}
+          oninput={() => resizeTaskInput(draft.description)}
           onfocus={handleTaskInputFocus}
           onblur={handleTaskInputBlur}
           onpointerdown={handleTaskInputPointerDown}
@@ -377,7 +376,7 @@
 
     <kefine-composer-strip aria-label={composerHints}>
       <button type="button" data-part="composer-chip" title={backgroundExecuteAria} onclick={() => fileInput?.click()}>
-        <span>{addFileLabel}</span>
+        <lefine-text>{addFileLabel}</lefine-text>
         {#if draft.files.length > 0}
           <strong>{fileCountLabel(draft.files.length)}</strong>
         {/if}
@@ -389,7 +388,7 @@
         </kefine-price-editor>
       {:else}
         <button type="button" data-part="composer-chip" onclick={() => { priceEditorOpen = true; }}>
-          <span>{addPriceLabel}</span>
+          <lefine-text>{addPriceLabel}</lefine-text>
         </button>
       {/if}
       <input bind:this={fileInput} data-part="file-input" type="file" multiple onchange={handleFileChange} />
@@ -399,7 +398,7 @@
       <kefine-file-list>
         {#each draft.files as file, index (`${file.name}-${file.size}-${index}`)}
           <button type="button" data-part="file-pill" onclick={() => onRemoveFile(index)}>
-            <span>{file.name}</span>
+            <lefine-text>{file.name}</lefine-text>
             <strong>{Math.max(1, Math.round(file.size / 1024))} KB</strong>
           </button>
         {/each}
@@ -460,7 +459,7 @@
 </article>
 
 <section class="kefine-afe-showcase" data-part="below-fold">
-  <div class="kefine-afe-layout">
+  <lefine-box class="kefine-afe-layout">
     {#if afeIntroCard}
       <article class="kefine-afe-intro">
         <p class="kefine-afe-intro__eyebrow">{afeIntroCard.title}</p>
@@ -468,21 +467,21 @@
       </article>
     {/if}
 
-    <div class="kefine-afe-steps">
-      <div class="kefine-section-head">
+    <lefine-box class="kefine-afe-steps">
+      <lefine-box class="kefine-section-head">
         <p>{afe.title}</p>
-      </div>
+      </lefine-box>
 
-      <div class="kefine-afe-grid kefine-afe-grid--executing">
+      <lefine-box class="kefine-afe-grid kefine-afe-grid--executing">
         {#each afeStepCards as card}
           <article class="kefine-afe-card kefine-afe-card--executing">
             <strong>{card.title}</strong>
             <p>{card.detail}</p>
           </article>
         {/each}
-      </div>
-    </div>
-  </div>
+      </lefine-box>
+    </lefine-box>
+  </lefine-box>
 </section>
 
 <style>
@@ -510,7 +509,7 @@
   p[data-part='subtitle'] {
     margin: 0;
     max-width: 42rem;
-    color: var(--kef-text-soft);
+    color: var(--lefine-text-soft);
   }
 
   form[data-part='form'] {
@@ -651,7 +650,7 @@
     border-radius: 999px;
     border: 1px solid color-mix(in oklab, var(--kef-line) 78%, transparent);
     background: color-mix(in oklab, var(--kef-bg-card) 92%, transparent);
-    color: var(--kef-text);
+    color: var(--lefine-text);
     font: inherit;
   }
 
@@ -688,7 +687,7 @@
 
   p[data-part='composer-hints'] {
     margin: 0;
-    color: var(--kef-text-soft);
+    color: var(--lefine-text-soft);
     font-size: 0.85rem;
   }
 
@@ -701,7 +700,7 @@
   kefine-recent-title {
     font-size: 0.95rem;
     font-weight: 650;
-    color: var(--kef-text-soft);
+    color: var(--lefine-text-soft);
     margin: 0;
   }
 

@@ -1,15 +1,32 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <link rel="icon" href="%sveltekit.assets%/favicon.png" />
-    <link rel="apple-touch-icon" href="%sveltekit.assets%/favicon.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="format-detection" content="telephone=no" />
-    <title>Lefine | From task to best-fit solution.</title>
-    %sveltekit.head%
-  </head>
-  <body data-sveltekit-preload-data="hover">
-    <section style="display: contents">%sveltekit.body%</section>
-  </body>
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" href="%sveltekit.assets%/favicon.svg" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="text-scale" content="scale" />
+		<script>
+			(() => {
+				try {
+					const storedTheme = window.localStorage.getItem('kefine-theme');
+					const theme =
+						storedTheme === 'dark' || storedTheme === 'light'
+							? storedTheme
+							: window.matchMedia('(prefers-color-scheme: dark)').matches
+								? 'dark'
+								: 'light';
+					document.documentElement.setAttribute('data-kefine-theme', theme);
+				} catch {
+					document.documentElement.setAttribute(
+						'data-kefine-theme',
+						window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+					);
+				}
+			})();
+		</script>
+		%sveltekit.head%
+	</head>
+	<body data-sveltekit-preload-data="hover">
+		<lefine-box style="display: contents">%sveltekit.body%</lefine-box>
+	</body>
 </html>

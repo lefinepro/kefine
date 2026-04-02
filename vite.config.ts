@@ -9,22 +9,21 @@ export default defineConfig({
       buffer: resolve(__dirname, 'node_modules/buffer')
     }
   },
-  optimizeDeps: {
-    include: ['buffer'],
-    exclude: [
-      '@reown/appkit',
-      '@reown/appkit-adapter-wagmi',
-      '@reown/appkit/networks',
-      'wagmi',
-      'viem'
-    ]
-  },
   server: {
     fs: {
       allow: [resolve(__dirname, '.meta/data/mocks')]
+    },
+    watch: {
+      ignored: ['**/crater/lib/**']
     }
   },
   build: {
     target: 'esnext',
+    chunkSizeWarningLimit: 600,
+    rolldownOptions: {
+      checks: {
+        pluginTimings: false
+      }
+    }
   }
 });

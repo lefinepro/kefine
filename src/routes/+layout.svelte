@@ -33,8 +33,8 @@
   <meta name="twitter:title" content={seo.title} />
   <meta name="twitter:description" content={seo.description} />
   <meta name="twitter:image" content={imageUrl} />
-  <script type="application/ld+json">{@html JSON.stringify(seo.jsonLd)}</script>
-  <script>{@html `window.__KEFINE_PUBLIC_CONFIG__ = ${JSON.stringify(publicConfig).replace(/</g, '\\u003c')};`}</script>
+  <script type="application/ld+json">{JSON.stringify(seo.jsonLd)}</script>
+  <script>{`window.__KEFINE_PUBLIC_CONFIG__ = ${JSON.stringify(publicConfig).replace(/</g, '\\u003c')};`}</script>
 </svelte:head>
 
 {@render children()}
