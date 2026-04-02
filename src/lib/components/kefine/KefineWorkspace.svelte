@@ -1,5 +1,6 @@
 <script lang="ts">
   import { browser } from '$app/environment';
+  import { goto } from '$app/navigation';
   import { page } from '$app/state';
   import { resolvePublicRuntimeConfig } from '$lib/config/public-config';
   import { resolveOrderProxyBasePath } from '$lib/order-proxy-path';
@@ -42,6 +43,7 @@ import { cubicOut } from 'svelte/easing';
     type OrderView,
     type PaymentMethod,
     type PaymentStage,
+    type TaskAccessMode,
     deriveExecutionPresentation,
     resolveExecutionEstimate,
     toNumber
@@ -67,6 +69,19 @@ import { cubicOut } from 'svelte/easing';
   } from '$lib/components/kefine/kefine-workspace-orders';
   import { waitForDelay } from '$lib/utils/helpers';
   import { disconnectAppKit } from '$lib/auth/appkit';
+  import type { Profile } from '$lib/types/user';
+  import {
+    addProfileBonus,
+    buildProfilePath,
+    ensureProfileForSession,
+    getProfileById,
+    normalizeProfileUsername,
+    readProfileFollows,
+    readProfiles,
+    updateStoredProfile
+  } from '$lib/profile/profile-storage';
+
+  const THEME_STORAGE_KEY = 'kefine-theme';
 
   let {
     initialOrderId
@@ -120,12 +135,45 @@ import { cubicOut } from 'svelte/easing';
   let contactEmail = $state('');
   let contactMessage = $state('');
   let isHydratingRoute = $state(Boolean(getNormalizedInitialOrderId()));
+  let currentProfile = $state<Profile | null>(null);
   const activePollTokens = new Map<string, symbol>();
   let pollAbortController = $state<AbortController | null>(null);
 
   const passkeySession = $derived($passkeySessionStore);
   const isPasskeyActive = $derived(passkeySession ? passkeySession.expiresAt.getTime() > Date.now() : false);
   const isAuthenticated = $derived(authState.isConnected || isPasskeyActive);
+  const activeSessionProfileSeed = $derived.by(() => {
+    if (isPasskeyActive && passkeySession) {
+      return {
+        userId: passkeySession.userId,
+        email: authState.email,
+        displayName: passkeySession.username,
+        avatarUrl: walletAvatarUrl,
+        authType: 'passkey' as const,
+        walletAddress: authState.address,
+        walletAlias: null
+      };
+    }
+
+    if (authState.isConnected) {
+      const userId = authState.email?.trim().toLowerCase() || authState.address?.trim() || null;
+      if (!userId) {
+        return null;
+      }
+
+      return {
+        userId,
+        email: authState.email,
+        displayName: authState.email?.split('@')[0] || normalizedWalletLabel || 'user',
+        avatarUrl: walletAvatarUrl,
+        authType: authState.authType,
+        walletAddress: authState.address,
+        walletAlias: null
+      };
+    }
+
+    return null;
+  });
   const walletNetworkLabel = $derived(resolveWalletNetworkLabel(authState.chainId, localeText));
   const walletAvatarUrl = $derived(createGeneratedWalletAvatar(authState.address));
   const normalizedWalletLabel = $derived.by(() => {
@@ -150,6 +198,10 @@ import { cubicOut } from 'svelte/easing';
     return username ? `@${username.replace(/^@+/, '')}` : null;
   });
   const authenticatedLabel = $derived.by(() => {
+    if (currentProfile?.primaryHandle) {
+      return `@${currentProfile.primaryHandle}`;
+    }
+
     if (selectedAuthMethod === 'passkey' && normalizedPasskeyLabel) {
       return normalizedPasskeyLabel;
     }
@@ -166,6 +218,9 @@ import { cubicOut } from 'svelte/easing';
   const hasMoreOrders = $derived(visibleOrdersLimit < createdOrders.length);
   const topbarThemeActionLabel = $derived(
     isDarkTheme ? localeText.topbar.theme.switchToLight : localeText.topbar.theme.switchToDark
+  );
+  const layoutMode = $derived(
+    step === 'create' ? 'create' : step === 'executing' || step === 'payment' || step === 'submitting' ? 'flow' : 'default'
   );
   const matchedOrders = $derived.by(() => {
     const query = draft.description.trim().toLowerCase();
@@ -255,6 +310,18 @@ import { cubicOut } from 'svelte/easing';
     walletLabel: normalizedWalletLabel,
     passkeyLabel: normalizedPasskeyLabel
   });
+  const profileUrl = $derived(
+    currentProfile && browser ? `${window.location.origin}${buildProfilePath(currentProfile.primaryHandle)}` : ''
+  );
+  const completedOwnedOrders = $derived(
+    currentProfile
+      ? createdOrders.filter(
+          (order) =>
+            order.ownerProfileId === currentProfile?.id &&
+            (order.status === 'completed' || order.status === 'done' || order.isClosedCompleted === true)
+        )
+      : []
+  );
 
   const TITLE_FONT_MAX = 2.0;
   const TITLE_FONT_MIN = 1.0;
@@ -316,7 +383,9 @@ import { cubicOut } from 'svelte/easing';
       void openOrderById(routeOrderId, routeState?.view ?? null);
     }
 
-    isDarkTheme = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+    isDarkTheme =
+      storedTheme === 'dark' ? true : storedTheme === 'light' ? false : window.matchMedia('(prefers-color-scheme: dark)').matches;
     document.documentElement.setAttribute('data-kefine-theme', isDarkTheme ? 'dark' : 'light');
     document.documentElement.setAttribute('lang', $kefineLocale);
 
@@ -350,9 +419,32 @@ import { cubicOut } from 'svelte/easing';
     if (browser) {
       const theme = isDarkTheme ? 'dark' : 'light';
       document.documentElement.setAttribute('data-kefine-theme', theme);
+      localStorage.setItem(THEME_STORAGE_KEY, theme);
       document.documentElement.setAttribute('lang', $kefineLocale);
       void syncAppKitTheme(theme);
     }
+  });
+
+  $effect(() => {
+    if (!browser) {
+      return;
+    }
+
+    if (!activeSessionProfileSeed) {
+      currentProfile = null;
+      return;
+    }
+
+    currentProfile = ensureProfileForSession({
+      storage: localStorage,
+      userId: activeSessionProfileSeed.userId,
+      email: activeSessionProfileSeed.email,
+      displayName: activeSessionProfileSeed.displayName,
+      avatarUrl: activeSessionProfileSeed.avatarUrl,
+      authType: activeSessionProfileSeed.authType,
+      walletAddress: activeSessionProfileSeed.walletAddress,
+      walletAlias: activeSessionProfileSeed.walletAlias
+    });
   });
 
   $effect(() => {
@@ -499,7 +591,55 @@ import { cubicOut } from 'svelte/easing';
       authDialogOpen = true;
       return;
     }
+    if (!currentProfile) {
+      return;
+    }
 
+    await goto(buildProfilePath(currentProfile.primaryHandle));
+  }
+
+  async function maybeOpenProfileAfterAuth(args: {
+    userId: string;
+    email?: string | null;
+    displayName?: string | null;
+    authType: 'wallet' | 'email' | 'passkey' | 'localhost' | null;
+    walletAddress?: string | null;
+    walletAlias?: string | null;
+    force?: boolean;
+  }) {
+    if (!browser) {
+      return;
+    }
+
+    const existingProfile = readProfiles(localStorage).find(
+      (profile) =>
+        profile.userId === args.userId ||
+        (args.email && profile.email?.trim().toLowerCase() === args.email.trim().toLowerCase())
+    );
+
+    const ensuredProfile = ensureProfileForSession({
+      storage: localStorage,
+      userId: args.userId,
+      email: args.email,
+      displayName: args.displayName,
+      avatarUrl: walletAvatarUrl,
+      authType: args.authType,
+      walletAddress: args.walletAddress,
+      walletAlias: args.walletAlias
+    });
+
+    currentProfile = ensuredProfile;
+    const shouldOpenProfile =
+      args.force === true ||
+      !existingProfile ||
+      ensuredProfile.metadata?.['profileSetupCompleted'] !== true;
+
+    if (shouldOpenProfile && !draftQueued && !currentOrder) {
+      await goto(buildProfilePath(ensuredProfile.primaryHandle));
+    }
+  }
+
+  async function signOutProfileSession() {
     try {
       await disconnectAppKit();
     } catch {
@@ -511,6 +651,7 @@ import { cubicOut } from 'svelte/easing';
     paymentMethod = null;
     authDialogOpen = false;
     passkeyDialogOpen = false;
+    currentProfile = null;
   }
 
   function selectTopbarLocale(locale: KefineLocale) {
@@ -546,7 +687,12 @@ import { cubicOut } from 'svelte/easing';
   }
 
   function upsertOrder(order: OrderView) {
-    createdOrders = mergeOrdersById(createdOrders, order);
+    const normalizedOrder = {
+      ...order,
+      isClosedCompleted:
+        order.isClosedCompleted === true || order.status === 'completed' || order.status === 'done'
+    };
+    createdOrders = mergeOrdersById(createdOrders, normalizedOrder);
     visibleOrdersLimit = getVisibleOrdersLimit(createdOrders.length, visibleOrdersLimit, ORDER_PAGE_SIZE);
 
     persistOrders();
@@ -744,11 +890,46 @@ import { cubicOut } from 'svelte/easing';
       return false;
     }
 
-    upsertOrder(result.order);
-    startOrderPolling(result.order);
+    const ownerOrder = currentProfile
+      ? {
+          ...result.order,
+          ownerProfileId: currentProfile.id,
+          ownerUsername: currentProfile.primaryHandle,
+          ownerDisplayName: currentProfile.displayName,
+          shareId: result.order.shareId || result.order.id,
+          isClosedCompleted: result.order.status === 'completed' || result.order.status === 'done',
+          isPublicTask: false,
+          accessRules: {
+            view: { enabled: false, priceUsd: 0 },
+            watch: { enabled: false, priceUsd: 0 },
+            join: { enabled: false, priceUsd: 0 }
+          }
+        }
+      : result.order;
+
+    upsertOrder(ownerOrder);
+    startOrderPolling(ownerOrder);
+
+    if (browser && currentProfile) {
+      const follow = readProfileFollows(localStorage).find((item) => item.followerProfileId === currentProfile?.id);
+      if (follow) {
+        const targetProfile = getProfileById(localStorage, follow.targetProfileId);
+        const amount = Number((((ownerOrder.estimatedCost ?? 0) * (targetProfile?.referralPercent ?? 0)) / 100).toFixed(2));
+        if (targetProfile && amount > 0) {
+          addProfileBonus({
+            storage: localStorage,
+            profileId: targetProfile.id,
+            amountUsd: amount,
+            source: 'follower-task',
+            note: `Referral credit from task ${ownerOrder.title}`,
+            orderId: ownerOrder.id
+          });
+        }
+      }
+    }
 
     if (!isBackground) {
-      currentOrder = result.order;
+      currentOrder = ownerOrder;
       resetTransactionState();
       step = 'executing';
     }
@@ -818,6 +999,144 @@ import { cubicOut } from 'svelte/easing';
     step = 'create';
   }
 
+  function saveProfile(payload: {
+    username: string;
+    displayName: string;
+    bio: string;
+    isPublic: boolean;
+    referralPercent: number;
+    socialLinks: Array<{ id: string; label: string; url: string }>;
+  }) {
+    if (!browser || !currentProfile) {
+      return;
+    }
+
+    const profileId = currentProfile.id;
+    const profiles = readProfiles(localStorage).filter((profile) => profile.id !== profileId);
+    const requestedUsername = normalizeProfileUsername(payload.username);
+    const usernameTaken = profiles.some((profile) => (profile.primaryHandle || profile.username) === requestedUsername);
+    const walletLockedHandle =
+      currentProfile.primaryHandleType === 'wallet-address' || currentProfile.primaryHandleType === 'wallet-alias';
+    const nextUsername = walletLockedHandle ? currentProfile.primaryHandle : usernameTaken ? currentProfile.primaryHandle : requestedUsername;
+
+    const updated = updateStoredProfile(localStorage, profileId, (profile) => ({
+      ...profile,
+      username: nextUsername,
+      primaryHandle: nextUsername,
+      displayName: payload.displayName.trim() || nextUsername,
+      bio: payload.bio.trim(),
+      isPublic: payload.isPublic,
+      referralPercent: Math.max(0, Math.min(100, Math.round(payload.referralPercent))),
+      socialLinks: payload.socialLinks
+    }));
+
+    if (updated) {
+      currentProfile = updated;
+      createdOrders = createdOrders.map((order) =>
+        order.ownerProfileId === updated.id
+          ? {
+              ...order,
+              ownerUsername: updated.primaryHandle,
+              ownerDisplayName: updated.displayName
+            }
+          : order
+      );
+      persistOrders();
+    }
+  }
+
+  async function verifyProfileCard(cardNumber: string) {
+    if (!browser || !currentProfile) {
+      return;
+    }
+
+    const digits = cardNumber.replace(/\D+/g, '');
+    if (digits.length < 6) {
+      return;
+    }
+
+    const response = await fetch('/api/profile/bin-lookup', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ cardNumber: digits })
+    }).catch(() => null);
+
+    if (!response) {
+      return;
+    }
+
+    const payload = (await response.json().catch(() => null)) as
+      | {
+          bin?: string;
+          scheme?: string | null;
+          cardType?: string | null;
+          bankName?: string | null;
+          countryAlpha2?: string | null;
+          countryName?: string | null;
+          isArmenianBank?: boolean;
+          bonusEligible?: boolean;
+          error?: string;
+        }
+      | null;
+
+    if (!payload || payload.error) {
+      return;
+    }
+
+    const cardVerification = {
+      status: payload.bonusEligible ? 'verified' : 'rejected',
+      bin: payload.bin ?? digits.slice(0, 8),
+      last4: digits.slice(-4),
+      scheme: payload.scheme ?? undefined,
+      cardType: payload.cardType ?? undefined,
+      bankName: payload.bankName ?? undefined,
+      countryAlpha2: payload.countryAlpha2 ?? undefined,
+      countryName: payload.countryName ?? undefined,
+      isArmenianBank: payload.isArmenianBank === true,
+      verifiedAt: new Date().toISOString(),
+      rejectionReason: payload.bonusEligible ? undefined : 'Card is not tied to an Armenian bank allowlist issuer.'
+    } as const;
+
+    const hadBonus = Boolean(currentProfile.cardVerification?.bonusGrantedAt);
+    let updated = updateStoredProfile(localStorage, currentProfile.id, (profile) => ({
+      ...profile,
+      cardVerification: {
+        ...cardVerification,
+        bonusGrantedAt:
+          payload.bonusEligible && !profile.cardVerification?.bonusGrantedAt
+            ? new Date().toISOString()
+            : profile.cardVerification?.bonusGrantedAt
+      }
+    }));
+
+    if (updated && payload.bonusEligible && !hadBonus) {
+      updated = addProfileBonus({
+        storage: localStorage,
+        profileId: updated.id,
+        amountUsd: 100,
+        source: 'card-verification',
+        note: 'Armenian bank card verification bonus'
+      });
+    }
+
+    if (updated) {
+      currentProfile = updated;
+    }
+  }
+
+  function updateProfileTask(
+    orderId: string,
+    patch: Partial<Pick<OrderView, 'isPublicTask' | 'accessRules'>>
+  ) {
+    createdOrders = createdOrders.map((order) => (order.id === orderId ? { ...order, ...patch } : order));
+    if (currentOrder?.id === orderId) {
+      currentOrder = { ...currentOrder, ...patch };
+    }
+    persistOrders();
+  }
+
   function loginWithPasskey(session: PasskeyAuthSuccess) {
     console.info('[passkey] loginWithPasskey', {
       username: session.username,
@@ -838,6 +1157,15 @@ import { cubicOut } from 'svelte/easing';
       void continueAfterAuth();
       return;
     }
+
+    void maybeOpenProfileAfterAuth({
+      userId: session.userId,
+      email: authState.email,
+      displayName: session.username,
+      authType: 'passkey',
+      walletAddress: authState.address,
+      walletAlias: null
+    });
 
     if (currentOrder && step === 'executing') {
       stagePreviewOpen = false;
@@ -876,6 +1204,16 @@ import { cubicOut } from 'svelte/easing';
       void continueAfterAuth();
       return;
     }
+
+    void maybeOpenProfileAfterAuth({
+      userId: 'localhost',
+      email: 'localhost',
+      displayName: 'localhost',
+      authType: 'localhost',
+      walletAddress: null,
+      walletAlias: null,
+      force: true
+    });
 
     if (currentOrder && step === 'executing') {
       step = 'payment';
@@ -956,7 +1294,7 @@ import { cubicOut } from 'svelte/easing';
   <title>{browserTitle}</title>
 </svelte:head>
 
-<main class="kefine-shell">
+<kefine-shell>
   <KefineTopbar
     brandLabel={localeText.brand.name}
     navigationLabel={localeText.topbar.quickActions}
@@ -992,13 +1330,9 @@ import { cubicOut } from 'svelte/easing';
     onLocale={selectTopbarLocale}
   />
 
-  <section
-    class="kefine-layout"
-    class:kefine-layout--create={step === 'create'}
-    class:kefine-layout--flow={step === 'executing' || step === 'payment' || step === 'submitting'}
-  >
+  <kefine-layout data-mode={layoutMode}>
     {#if step === 'create'}
-      <kefine-screen class="kefine-screen" in:softScreenTransition out:softScreenTransition>
+      <kefine-screen in:softScreenTransition out:softScreenTransition>
         <KefineCreateStep
           draft={draft}
           title={localeText.create.title}
@@ -1044,13 +1378,13 @@ import { cubicOut } from 'svelte/easing';
     {/if}
 
     {#if step === 'submitting'}
-      <kefine-screen class="kefine-screen" in:softScreenTransition out:softScreenTransition>
+      <kefine-screen in:softScreenTransition out:softScreenTransition>
         <KefineSubmittingStep />
       </kefine-screen>
     {/if}
 
     {#if step === 'executing'}
-      <kefine-screen class="kefine-screen" in:softScreenTransition out:softScreenTransition>
+      <kefine-screen in:softScreenTransition out:softScreenTransition>
         <KefineExecutingStep
           currentOrder={currentOrder}
           execution={executionPresentation}
@@ -1091,7 +1425,7 @@ import { cubicOut } from 'svelte/easing';
     {/if}
 
     {#if step === 'payment'}
-      <kefine-screen class="kefine-screen" in:softScreenTransition out:softScreenTransition>
+      <kefine-screen in:softScreenTransition out:softScreenTransition>
         <KefinePaymentStep
           currentOrder={currentOrder}
           remainingAmount={remainingAmount}
@@ -1185,7 +1519,7 @@ import { cubicOut } from 'svelte/easing';
       </kefine-screen>
     {/if}
 
-  </section>
+  </kefine-layout>
 
   <KefineAuthDialog
     open={authDialogOpen}
@@ -1231,4 +1565,67 @@ import { cubicOut } from 'svelte/easing';
     onMessageInput={(value) => { contactMessage = value; }}
     onSubmit={submitContactEmail}
   />
-</main>
+</kefine-shell>
+
+<style>
+  kefine-shell {
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    padding: clamp(0.75rem, 2vw, 1.4rem);
+  }
+
+  kefine-layout {
+    min-height: calc(100vh - clamp(1.5rem, 4vw, 2.8rem));
+    height: auto;
+    display: grid;
+    gap: 1rem;
+    align-items: center;
+    align-content: center;
+    justify-items: center;
+    justify-self: center;
+    width: min(980px, 100%);
+    margin-inline: auto;
+  }
+
+  kefine-layout[data-mode='create'] {
+    min-height: calc(100vh - clamp(1.5rem, 4vw, 2.8rem));
+    width: 100%;
+    max-width: none;
+    align-items: start;
+    align-content: start;
+    padding-top: clamp(4rem, 8vh, 5.75rem);
+    padding-bottom: clamp(2rem, 6vh, 4rem);
+  }
+
+  kefine-layout[data-mode='flow'] {
+    align-items: start;
+    align-content: start;
+    width: min(1100px, 100%);
+    padding-top: clamp(3.5rem, 8vh, 5.5rem);
+  }
+
+  kefine-layout > * {
+    min-width: 0;
+    width: 100%;
+  }
+
+  kefine-screen {
+    display: grid;
+    width: 100%;
+  }
+
+  @media (max-width: 760px) {
+    kefine-shell {
+      grid-template-columns: 1fr;
+      padding: 0.75rem;
+    }
+
+    kefine-layout {
+      min-height: auto;
+      width: min(980px, 100%);
+      padding-top: 4.75rem;
+    }
+  }
+</style>

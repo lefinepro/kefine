@@ -1,100 +1,95 @@
-@import "@fontsource/manrope/400.css";
-@import "@fontsource/manrope/500.css";
-@import "@fontsource/manrope/600.css";
-@import "@fontsource/manrope/700.css";
-
 :root {
-  /* Design tokens — TAC namespace prefix: --okr- */
-  --okr-color-primary: #7a4b2a;
-  --okr-color-primary-hover: #633b20;
-  --okr-color-success: #3e6a4a;
-  --okr-color-warning: #a06f2f;
-  --okr-color-error: #9b3d35;
-  --okr-color-muted: color-mix(in oklab, var(--okr-color-text) 60%, transparent);
-  --okr-color-border: color-mix(in oklab, var(--okr-color-text) 16%, transparent);
-  --okr-color-border-light: color-mix(in oklab, var(--okr-color-text) 9%, transparent);
-  --okr-color-bg: #f3e7cf;
-  --okr-color-bg-soft: #eadcbc;
-  --okr-color-bg-card: #f7ecd6;
-  --okr-color-bg-hover: #e5d5b2;
-  --okr-color-bg-track: #dbc7a2;
-  --okr-color-text: #2e2317;
-  --okr-color-text-label: #4a3a28;
-  --okr-color-text-tertiary: color-mix(in oklab, var(--okr-color-text) 40%, transparent);
-  --okr-color-backdrop: color-mix(in oklab, var(--okr-color-text) 35%, transparent);
-  --okr-color-on-primary: #f7edd8;
-  --okr-color-error-soft: color-mix(in oklab, var(--okr-color-error) 24%, transparent);
-  --okr-color-success-soft: color-mix(in oklab, var(--okr-color-success) 24%, transparent);
-  --okr-color-primary-soft: color-mix(in oklab, var(--okr-color-primary) 20%, transparent);
-  --okr-color-input-focus: color-mix(in oklab, var(--okr-color-primary) 22%, transparent);
-  --okr-border-width: 1px;
-  --okr-border-width-dashed: 1px;
-  --okr-radius-input: var(--okr-radius-md);
+  /* Design tokens — TAC namespace prefix: --kef- */
+  --kef-color-primary: #7a4b2a;
+  --kef-color-primary-hover: #633b20;
+  --kef-color-success: #3e6a4a;
+  --kef-color-warning: #a06f2f;
+  --kef-color-error: #9b3d35;
+  --kef-color-muted: color-mix(in oklab, var(--kef-color-text) 60%, transparent);
+  --kef-color-border: color-mix(in oklab, var(--kef-color-text) 16%, transparent);
+  --kef-color-border-light: color-mix(in oklab, var(--kef-color-text) 9%, transparent);
+  --kef-color-bg: #f3e7cf;
+  --kef-color-bg-soft: #eadcbc;
+  --kef-color-bg-card: #f7ecd6;
+  --kef-color-bg-hover: #e5d5b2;
+  --kef-color-bg-track: #dbc7a2;
+  --kef-color-text: #2e2317;
+  --kef-color-text-label: #4a3a28;
+  --kef-color-text-tertiary: color-mix(in oklab, var(--kef-color-text) 40%, transparent);
+  --kef-color-backdrop: color-mix(in oklab, var(--kef-color-text) 35%, transparent);
+  --kef-color-on-primary: #f7edd8;
+  --kef-color-error-soft: color-mix(in oklab, var(--kef-color-error) 24%, transparent);
+  --kef-color-success-soft: color-mix(in oklab, var(--kef-color-success) 24%, transparent);
+  --kef-color-primary-soft: color-mix(in oklab, var(--kef-color-primary) 20%, transparent);
+  --kef-color-input-focus: color-mix(in oklab, var(--kef-color-primary) 22%, transparent);
+  --kef-border-width: 1px;
+  --kef-border-width-dashed: 1px;
+  --kef-radius-input: var(--kef-radius-md);
 
-  --okr-font-family: "Manrope", system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --okr-font-size-xs: 0.75rem;
-  --okr-font-size-sm: 0.875rem;
-  --okr-font-size-base: 1rem;
-  --okr-font-size-lg: 1.125rem;
-  --okr-font-size-xl: 1.25rem;
-  --okr-font-size-2xl: 1.5rem;
+  --kef-font-family: "Manrope", system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --kef-font-size-xs: 0.75rem;
+  --kef-font-size-sm: 0.875rem;
+  --kef-font-size-base: 1rem;
+  --kef-font-size-lg: 1.125rem;
+  --kef-font-size-xl: 1.25rem;
+  --kef-font-size-2xl: 1.5rem;
 
-  --okr-space-1: 0.25rem;
-  --okr-space-2: 0.5rem;
-  --okr-space-3: 0.75rem;
-  --okr-space-4: 1rem;
-  --okr-space-6: 1.5rem;
-  --okr-space-8: 2rem;
+  --kef-space-1: 0.25rem;
+  --kef-space-2: 0.5rem;
+  --kef-space-3: 0.75rem;
+  --kef-space-4: 1rem;
+  --kef-space-6: 1.5rem;
+  --kef-space-8: 2rem;
 
-  --okr-radius-sm: 0.25rem;
-  --okr-radius-md: 0.375rem;
-  --okr-radius-lg: 0.5rem;
-  --okr-radius-xl: 0.75rem;
-  --okr-radius-full: 9999px;
+  --kef-radius-sm: 0.25rem;
+  --kef-radius-md: 0.375rem;
+  --kef-radius-lg: 0.5rem;
+  --kef-radius-xl: 0.75rem;
+  --kef-radius-full: 9999px;
 
-  --okr-shadow-sm: 0 1px 2px 0 rgb(36 24 13 / 0.12);
-  --okr-shadow-md: 0 4px 10px -2px rgb(36 24 13 / 0.2);
-  --okr-shadow-lg: 0 10px 20px -5px rgb(36 24 13 / 0.24);
+  --kef-shadow-sm: 0 1px 2px 0 rgb(36 24 13 / 0.12);
+  --kef-shadow-md: 0 4px 10px -2px rgb(36 24 13 / 0.2);
+  --kef-shadow-lg: 0 10px 20px -5px rgb(36 24 13 / 0.24);
 }
 
 :root {
-  --w3m-font-family: var(--okr-font-family);
-  --w3m-accent: var(--okr-color-primary);
-  --w3m-color-mix: var(--okr-color-text);
+  --w3m-font-family: var(--kef-font-family);
+  --w3m-accent: var(--kef-color-primary);
+  --w3m-color-mix: var(--kef-color-text);
   --w3m-color-mix-strength: 12;
   --w3m-border-radius-master: 8px;
   --w3m-font-size-master: 9px;
-  --apkt-font-family: var(--okr-font-family);
-  --apkt-accent: var(--okr-color-primary);
-  --apkt-color-mix: var(--okr-color-text);
+  --apkt-font-family: var(--kef-font-family);
+  --apkt-accent: var(--kef-color-primary);
+  --apkt-color-mix: var(--kef-color-text);
   --apkt-color-mix-strength: 12;
   --apkt-border-radius-master: 8px;
   --apkt-font-size-master: 9px;
 }
 
 :root[data-kefine-theme='dark'] {
-  --okr-color-primary: #c89a5a;
-  --okr-color-primary-hover: #b78647;
-  --okr-color-success: #6f9a72;
-  --okr-color-warning: #c49a57;
-  --okr-color-error: #c97a67;
-  --okr-color-muted: color-mix(in oklab, var(--okr-color-text) 62%, transparent);
-  --okr-color-border: color-mix(in oklab, var(--okr-color-text) 18%, transparent);
-  --okr-color-border-light: color-mix(in oklab, var(--okr-color-text) 10%, transparent);
-  --okr-color-bg: #17110d;
-  --okr-color-bg-soft: #221912;
-  --okr-color-bg-card: #1d1510;
-  --okr-color-bg-hover: #2a1f17;
-  --okr-color-bg-track: #34261b;
-  --okr-color-text: #e7d6b7;
-  --okr-color-text-label: #c9b89a;
-  --okr-color-text-tertiary: color-mix(in oklab, var(--okr-color-text) 40%, transparent);
-  --okr-color-backdrop: color-mix(in oklab, var(--okr-color-text) 35%, transparent);
-  --okr-color-on-primary: #1a130e;
-  --okr-color-error-soft: color-mix(in oklab, var(--okr-color-error) 24%, transparent);
-  --okr-color-success-soft: color-mix(in oklab, var(--okr-color-success) 20%, transparent);
-  --okr-color-primary-soft: color-mix(in oklab, var(--okr-color-primary) 20%, transparent);
-  --okr-color-input-focus: color-mix(in oklab, var(--okr-color-primary) 26%, transparent);
+  --kef-color-primary: #c89a5a;
+  --kef-color-primary-hover: #b78647;
+  --kef-color-success: #6f9a72;
+  --kef-color-warning: #c49a57;
+  --kef-color-error: #c97a67;
+  --kef-color-muted: color-mix(in oklab, var(--kef-color-text) 62%, transparent);
+  --kef-color-border: color-mix(in oklab, var(--kef-color-text) 18%, transparent);
+  --kef-color-border-light: color-mix(in oklab, var(--kef-color-text) 10%, transparent);
+  --kef-color-bg: #17110d;
+  --kef-color-bg-soft: #221912;
+  --kef-color-bg-card: #1d1510;
+  --kef-color-bg-hover: #2a1f17;
+  --kef-color-bg-track: #34261b;
+  --kef-color-text: #e7d6b7;
+  --kef-color-text-label: #c9b89a;
+  --kef-color-text-tertiary: color-mix(in oklab, var(--kef-color-text) 40%, transparent);
+  --kef-color-backdrop: color-mix(in oklab, var(--kef-color-text) 35%, transparent);
+  --kef-color-on-primary: #1a130e;
+  --kef-color-error-soft: color-mix(in oklab, var(--kef-color-error) 24%, transparent);
+  --kef-color-success-soft: color-mix(in oklab, var(--kef-color-success) 20%, transparent);
+  --kef-color-primary-soft: color-mix(in oklab, var(--kef-color-primary) 20%, transparent);
+  --kef-color-input-focus: color-mix(in oklab, var(--kef-color-primary) 26%, transparent);
 }
 /* ─── Reset ──────────────────────────────────────────────── */
 *,
@@ -106,7 +101,7 @@
 }
 
 html {
-  font-family: var(--okr-font-family);
+  font-family: var(--kef-font-family);
   font-size: 16px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
@@ -115,12 +110,12 @@ html {
 
 body {
   min-height: 100vh;
-  background-color: var(--okr-color-bg);
-  color: var(--okr-color-text);
+  background-color: var(--kef-color-bg);
+  color: var(--kef-color-text);
 }
 
 a {
-  color: var(--okr-color-primary);
+  color: var(--kef-color-primary);
   text-decoration: none;
 }
 
@@ -164,183 +159,28 @@ ul, ol {
   list-style: none;
 }
 
-/* Custom element display defaults */
-/* Block-level custom elements */
-okr-summary,
-okr-summary-text,
-okr-summary-label,
-okr-summary-value,
-okr-summary-count,
-okr-card-meta,
-okr-quarter,
-okr-status-badge,
-okr-kr-count,
-skeleton-line,
-kr-type-badge,
-kr-title,
-kr-progress-bar,
-kr-progress-fill,
-task-count,
-task-item-content,
-task-item-meta,
-task-priority-dot,
-task-item-title,
-task-status-badge,
-task-due-date,
-task-okr-count,
-task-repo-count,
-task-item-actions,
-task-okr-tags,
-task-okr-tag,
-dashboard-stats,
-dashboard-stat,
-dashboard-stat-body,
-dashboard-stat-label,
-dashboard-stat-value,
-dashboard-stat-sub,
-dashboard-stat-icon,
-activity-body,
-activity-title,
-activity-meta,
-activity-progress,
-activity-dot,
-year-quarter-meta,
-year-quarter-count,
-quarter-obj-bar,
-quarter-obj-fill,
-quarter-obj-title,
-quarter-obj-pct {
-  display: block;
-}
-
-/* Inline custom elements */
-kr-current,
-kr-sep,
-kr-target,
 hint,
 required-mark {
   display: inline;
 }
 
-/* ─── TAC: Tag layer — page structure ────────────────────── */
-
-/* main.okr-dashboard: top-level page container */
-.okr-dashboard {
+lefine-box {
   display: block;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: var(--okr-space-8);
 }
 
-/* header.okr-header: page header */
-.okr-header {
-  display: block;
-  margin-bottom: var(--okr-space-8);
-}
-
-.okr-header h1 {
-  font-size: var(--okr-font-size-2xl);
-  font-weight: 700;
-  color: var(--okr-color-text);
-}
-
-.okr-header p {
-  color: var(--okr-color-muted);
-  margin-top: var(--okr-space-2);
-}
-
-/* nav.okr-page-nav: top-level page view switcher */
-.okr-page-nav {
-  display: flex;
-  gap: var(--okr-space-2);
-  margin-top: var(--okr-space-4);
-}
-
-/* ─── TAC: Shared grid and empty state ───────────────────── */
-
-/* ul.okr-grid: grid of objective cards — used in okr-index and okr-dashboard */
-.okr-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--okr-space-4);
-}
-
-@media (max-width: 1199px) {
-  .okr-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 767px) {
-  .okr-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* section.okr-empty: empty state — used in okr-index and okr-dashboard */
-.okr-empty {
-  display: block;
-  text-align: center;
-  padding: var(--okr-space-8) var(--okr-space-4);
-  background: var(--okr-color-bg-card);
-  border-radius: var(--okr-radius-xl);
-  box-shadow: var(--okr-shadow-sm);
-}
-
-.okr-empty h2 {
-  font-size: var(--okr-font-size-xl);
-  font-weight: 700;
-  color: var(--okr-color-text);
-  margin-bottom: var(--okr-space-2);
-}
-
-.okr-empty p {
-  color: var(--okr-color-muted);
-  margin-bottom: var(--okr-space-4);
-}
-
-/* li.skeleton-card: loading placeholder — used in okr-index and okr-dashboard */
-.skeleton-card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--okr-space-3);
-  background: var(--okr-color-bg-card);
-  border-radius: var(--okr-radius-xl);
-  padding: var(--okr-space-6);
-  box-shadow: var(--okr-shadow-md);
-}
-
-/* skeleton-line: loading line placeholder (custom element) */
-skeleton-line {
-  display: block;
-  height: 1rem;
-  background: var(--okr-color-bg-card);
-  background-size: 100% 100%;
-  border-radius: var(--okr-radius-sm);
-  animation: skeleton-pulse 1.5s infinite;
-  width: 100%;
-}
-
-/* TAC attribute variation: skeleton sizes */
-skeleton-line[data-size="title"] {
-  height: 1.25rem;
-  width: 60%;
-}
-
-@keyframes skeleton-pulse {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+lefine-text {
+  display: inline;
 }
 
 /* ─── TAC: Attribute layer — button variants ─────────────── */
 
 button[data-variant="primary"] {
-  background: var(--okr-color-primary);
-  color: var(--okr-color-on-primary);
+  background: var(--kef-color-primary);
+  color: var(--kef-color-on-primary);
   border: none;
-  border-radius: var(--okr-radius-md);
-  padding: var(--okr-space-2) var(--okr-space-4);
-  font-size: var(--okr-font-size-sm);
+  border-radius: var(--kef-radius-md);
+  padding: var(--kef-space-2) var(--kef-space-4);
+  font-size: var(--kef-font-size-sm);
   font-family: inherit;
   font-weight: 600;
   cursor: pointer;
@@ -349,34 +189,44 @@ button[data-variant="primary"] {
 }
 
 button[data-variant="primary"]:hover {
-  background: var(--okr-color-primary-hover);
+  background: var(--kef-color-primary-hover);
+}
+
+button[data-variant="primary"]:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 button[data-variant="primary"][data-size="lg"] {
-  padding: var(--okr-space-2) var(--okr-space-6);
-  font-size: var(--okr-font-size-base);
+  padding: var(--kef-space-2) var(--kef-space-6);
+  font-size: var(--kef-font-size-base);
 }
 
 button[data-variant="ghost"] {
   background: transparent;
-  color: var(--okr-color-muted);
-  border: var(--okr-border-width) solid var(--okr-color-border);
-  border-radius: var(--okr-radius-md);
-  padding: var(--okr-space-2) var(--okr-space-4);
-  font-size: var(--okr-font-size-sm);
+  color: var(--kef-color-muted);
+  border: var(--kef-border-width) solid var(--kef-color-border);
+  border-radius: var(--kef-radius-md);
+  padding: var(--kef-space-2) var(--kef-space-4);
+  font-size: var(--kef-font-size-sm);
   font-family: inherit;
   cursor: pointer;
   transition: background 150ms;
 }
 
 button[data-variant="ghost"]:hover {
-  background: var(--okr-color-border-light);
+  background: var(--kef-color-border-light);
+}
+
+button[data-variant="ghost"]:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 button[data-variant="link"] {
   background: none;
   border: none;
-  color: var(--okr-color-primary);
+  color: var(--kef-color-primary);
   font-family: inherit;
   font-size: inherit;
   cursor: pointer;
@@ -387,8 +237,8 @@ button[data-variant="link"] {
 button[data-variant="muted"] {
   background: none;
   border: none;
-  font-size: var(--okr-font-size-xs);
-  color: var(--okr-color-muted);
+  font-size: var(--kef-font-size-xs);
+  color: var(--kef-color-muted);
   cursor: pointer;
   font-family: inherit;
   text-decoration: underline;
@@ -397,28 +247,28 @@ button[data-variant="muted"] {
 button[data-variant="action"] {
   background: none;
   border: none;
-  font-size: var(--okr-font-size-xs);
+  font-size: var(--kef-font-size-xs);
   font-family: inherit;
-  color: var(--okr-color-muted);
+  color: var(--kef-color-muted);
   cursor: pointer;
-  padding: var(--okr-space-1) var(--okr-space-2);
-  border-radius: var(--okr-radius-sm);
+  padding: var(--kef-space-1) var(--kef-space-2);
+  border-radius: var(--kef-radius-sm);
   transition: background 150ms, color 150ms;
 }
 
 button[data-variant="action"]:hover {
-  background: var(--okr-color-bg-track);
-  color: var(--okr-color-text);
+  background: var(--kef-color-bg-track);
+  color: var(--kef-color-text);
 }
 
 button[data-variant="action"][data-danger]:hover {
-  background: var(--okr-color-error-soft);
-  color: var(--okr-color-error);
+  background: var(--kef-color-error-soft);
+  color: var(--kef-color-error);
 }
 
 button[data-variant="expand"] {
-  font-size: var(--okr-font-size-xs);
-  color: var(--okr-color-primary);
+  font-size: var(--kef-font-size-xs);
+  color: var(--kef-color-primary);
   background: none;
   border: none;
   cursor: pointer;
@@ -432,45 +282,45 @@ button[data-variant="expand"]:hover {
 }
 
 button[data-variant="add-kr"] {
-  margin-top: var(--okr-space-2);
+  margin-top: var(--kef-space-2);
   width: 100%;
   background: none;
-  border: var(--okr-border-width-dashed) dashed var(--okr-color-border);
-  border-radius: var(--okr-radius-md);
-  padding: var(--okr-space-2);
-  font-size: var(--okr-font-size-sm);
+  border: var(--kef-border-width-dashed) dashed var(--kef-color-border);
+  border-radius: var(--kef-radius-md);
+  padding: var(--kef-space-2);
+  font-size: var(--kef-font-size-sm);
   font-family: inherit;
-  color: var(--okr-color-primary);
+  color: var(--kef-color-primary);
   cursor: pointer;
   transition: background 150ms;
 }
 
 button[data-variant="add-kr"]:hover {
-  background: var(--okr-color-bg-hover);
+  background: var(--kef-color-bg-hover);
 }
 
 button[data-variant="close"] {
   background: none;
   border: none;
-  font-size: var(--okr-font-size-lg);
+  font-size: var(--kef-font-size-lg);
   cursor: pointer;
-  color: var(--okr-color-muted);
+  color: var(--kef-color-muted);
   line-height: 1;
-  padding: var(--okr-space-1);
-  border-radius: var(--okr-radius-sm);
+  padding: var(--kef-space-1);
+  border-radius: var(--kef-radius-sm);
   transition: background 150ms;
 }
 
 button[data-variant="close"]:hover {
-  background: var(--okr-color-border-light);
+  background: var(--kef-color-border-light);
 }
 
 button[data-variant="icon"] {
   background: none;
   border: none;
   padding: 0.15rem 0.25rem;
-  border-radius: var(--okr-radius-sm);
-  font-size: var(--okr-font-size-sm);
+  border-radius: var(--kef-radius-sm);
+  font-size: var(--kef-font-size-sm);
   cursor: pointer;
   opacity: 0.6;
   transition: opacity 150ms;
@@ -483,34 +333,36 @@ button[data-variant="icon"]:hover {
 
 /* ─── TAC: Attribute layer — form elements ───────────────── */
 
+input,
 input[type="text"],
 input[type="number"],
 input[type="search"],
 textarea,
 select {
-  padding: var(--okr-space-2) var(--okr-space-3);
-  border: var(--okr-border-width) solid var(--okr-color-border);
-  border-radius: var(--okr-radius-input);
-  font-size: var(--okr-font-size-sm);
+  padding: var(--kef-space-2) var(--kef-space-3);
+  border: var(--kef-border-width) solid var(--kef-color-border);
+  border-radius: var(--kef-radius-input);
+  font-size: var(--kef-font-size-sm);
   font-family: inherit;
-  background: var(--okr-color-bg-card);
-  color: var(--okr-color-text);
+  background: var(--kef-color-bg-card);
+  color: var(--kef-color-text);
   transition: border-color 150ms;
 }
 
+input:focus,
 input[type="text"]:focus,
 input[type="number"]:focus,
 input[type="search"]:focus,
 textarea:focus,
 select:focus {
   outline: none;
-  border-color: var(--okr-color-primary);
-  box-shadow: 0 0 0 3px var(--okr-color-input-focus);
+  border-color: var(--kef-color-primary);
+  box-shadow: 0 0 0 3px var(--kef-color-input-focus);
 }
 
 input[aria-invalid="true"],
 select[aria-invalid="true"] {
-  border-color: var(--okr-color-error);
+  border-color: var(--kef-color-error);
 }
 
 input[type="search"] {
@@ -520,7 +372,7 @@ input[type="search"] {
 
 input[type="range"] {
   width: 100%;
-  accent-color: var(--okr-color-primary);
+  accent-color: var(--kef-color-primary);
   cursor: pointer;
 }
 
@@ -529,64 +381,26 @@ textarea {
 }
 
 label {
-  font-size: var(--okr-font-size-sm);
+  font-size: var(--kef-font-size-sm);
   font-weight: 600;
-  color: var(--okr-color-text-label);
+  color: var(--kef-color-text-label);
 }
 
 /* hint: inline hint text (custom element) */
 hint {
   display: inline;
   font-weight: 400;
-  color: var(--okr-color-muted);
-  font-size: var(--okr-font-size-xs);
+  color: var(--kef-color-muted);
+  font-size: var(--kef-font-size-xs);
 }
 
 /* required-mark: required field indicator (custom element) */
 required-mark {
   display: inline;
-  color: var(--okr-color-error);
+  color: var(--kef-color-error);
 }
 
 small[role="alert"] {
-  color: var(--okr-color-error);
-  font-size: var(--okr-font-size-xs);
-}
-
-/* ─── Task Section ──────────────────────────────────────── */
-
-/* section.task-section: task panel below OKR index */
-.task-section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--okr-space-4);
-  margin-top: var(--okr-space-8);
-}
-
-.task-section-title {
-  font-size: var(--okr-font-size-xl);
-  font-weight: 700;
-  color: var(--okr-color-text);
-  margin: 0;
-}
-
-/* Custom elements used in TaskList / TaskModal */
-task-content,
-task-badges,
-task-actions,
-task-count,
-task-link-info {
-  display: block;
-}
-
-task-title,
-task-desc,
-task-priority,
-task-link-type,
-task-link-label,
-task-link-parent,
-okr-badge-type,
-okr-badge-label,
-okr-badge-quarter {
-  display: inline;
+  color: var(--kef-color-error);
+  font-size: var(--kef-font-size-xs);
 }

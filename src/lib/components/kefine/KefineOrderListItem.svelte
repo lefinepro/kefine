@@ -78,9 +78,9 @@
         <kefine-order-meta>
           <kefine-order-solver>{order.solver}</kefine-order-solver>
           <kefine-order-estimate data-testid={etaTestId}>
-            <span>{statusLabel} {formatKefineOrderStatus(order.status)}</span>
-            <span>{formatKefineOrderTime(order, timeLeftLabel)}</span>
-            <span>{formatKefineOrderPrice(order, priceLabel)}</span>
+            <lefine-text>{statusLabel} {formatKefineOrderStatus(order.status)}</lefine-text>
+            <lefine-text>{formatKefineOrderTime(order, timeLeftLabel)}</lefine-text>
+            <lefine-text>{formatKefineOrderPrice(order, priceLabel)}</lefine-text>
           </kefine-order-estimate>
         </kefine-order-meta>
       </kefine-order-summary>
@@ -106,7 +106,7 @@
 
   kefine-order-item:hover {
     background: color-mix(in oklab, var(--kef-bg-card) 100%, white);
-    box-shadow: 0 14px 26px color-mix(in oklab, var(--kef-text) 6%, transparent);
+    box-shadow: 0 14px 26px color-mix(in oklab, var(--lefine-text) 6%, transparent);
   }
 
   kefine-order-item[data-status='done'] {
@@ -132,14 +132,14 @@
     margin: 0;
     font-size: 1.02rem;
     line-height: 1.2;
-    color: var(--kef-text);
+    color: var(--lefine-text);
     overflow-wrap: anywhere;
   }
 
   kefine-order-meta {
     display: grid;
     gap: 0.28rem;
-    color: var(--kef-text-soft);
+    color: var(--lefine-text-soft);
     font-size: 0.84rem;
   }
 
@@ -162,7 +162,7 @@
     border-radius: 999px;
     border: 1px solid color-mix(in oklab, var(--kef-line) 78%, transparent);
     background: color-mix(in oklab, var(--kef-bg-card) 96%, transparent);
-    color: var(--kef-text);
+    color: var(--lefine-text);
     padding: 0;
     margin-bottom: 0.35rem;
   }

@@ -47,10 +47,10 @@
           {#if section.facts?.length}
             <dl class="legal-facts">
               {#each section.facts as fact}
-                <div class="legal-fact">
+                <lefine-box class="legal-fact">
                   <dt>{fact.label}</dt>
                   <dd>{fact.value}</dd>
-                </div>
+                </lefine-box>
               {/each}
             </dl>
           {/if}
@@ -126,7 +126,7 @@
   .legal-updated {
     margin: 0;
     font-size: 0.78rem;
-    color: color-mix(in oklab, var(--kef-text-soft, #5d5144) 92%, #8a745d);
+    color: color-mix(in oklab, var(--lefine-text-soft, #5d5144) 92%, #8a745d);
     text-transform: uppercase;
     letter-spacing: 0.12em;
   }
@@ -135,7 +135,7 @@
   .legal-section h2,
   .legal-footer h2 {
     margin: 0;
-    color: var(--kef-text, #30281f);
+    color: var(--lefine-text, #30281f);
   }
 
   .legal-header h1 {
@@ -156,7 +156,7 @@
   .legal-facts dt,
   .legal-bullets li {
     margin: 0;
-    color: color-mix(in oklab, var(--kef-text-soft, #5d5144) 94%, #695949);
+    color: color-mix(in oklab, var(--lefine-text-soft, #5d5144) 94%, #695949);
     line-height: 1.76;
     max-width: 72ch;
   }
@@ -174,7 +174,7 @@
 
   .legal-facts dt {
     font-weight: 700;
-    color: var(--kef-text, #30281f);
+    color: var(--lefine-text, #30281f);
   }
 
   .legal-facts dd {

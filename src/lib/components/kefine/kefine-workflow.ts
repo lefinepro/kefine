@@ -1,5 +1,5 @@
 import { type KefineLocaleText } from '$lib/constants/kefine-locale';
-import vpnFlowMock from '../../../../.meta/data/mocks/vpn-flow.mock.json';
+import { VPN_FLOW_MOCK } from '$lib/components/kefine/kefine-vpn-flow';
 export {
   buildCreatePayload,
   extractStatusPayload,
@@ -21,6 +21,12 @@ export type ExecutionStage =
   | 'awaiting-payment';
 export type PaymentStage = 'payment-method-select' | 'deposit-pending' | 'paid' | 'result-ready';
 export type ProgressState = 'completed' | 'active' | 'upcoming';
+export type TaskAccessMode = 'view' | 'watch' | 'join';
+
+export type TaskAccessRule = {
+  enabled: boolean;
+  priceUsd: number;
+};
 
 export type DraftOrder = {
   title: string;
@@ -46,6 +52,13 @@ export type OrderView = {
   labels?: string[];
   vpnGuide?: VpnDeliveryGuide;
   activitypub?: Record<string, unknown>;
+  ownerProfileId?: string;
+  ownerUsername?: string;
+  ownerDisplayName?: string;
+  shareId?: string;
+  isClosedCompleted?: boolean;
+  isPublicTask?: boolean;
+  accessRules?: Partial<Record<TaskAccessMode, TaskAccessRule>>;
 };
 
 export type PaymentQuote = {
@@ -423,10 +436,19 @@ export function deriveExecutionPresentation(
 
   const vpnFlow = isVpnScenario
     ? {
-        stepDelaysMs: vpnFlowMock.stepDelaysMs,
-        labels: vpnFlowMock.labels,
-        steps: vpnFlowMock.steps as VpnExecutionStep[],
-        widget: vpnFlowMock.widget
+        stepDelaysMs: [...VPN_FLOW_MOCK.stepDelaysMs],
+        labels: { ...VPN_FLOW_MOCK.labels },
+        steps: VPN_FLOW_MOCK.steps.map((step) => {
+          const instructions = 'instructions' in step ? step.instructions : undefined;
+          return {
+            ...step,
+            solver: { ...step.solver },
+            instructions: Array.isArray(instructions)
+              ? instructions.map((instruction: { title: string; detail: string }) => ({ ...instruction }))
+              : undefined
+          };
+        }),
+        widget: { ...VPN_FLOW_MOCK.widget }
       }
     : null;
 

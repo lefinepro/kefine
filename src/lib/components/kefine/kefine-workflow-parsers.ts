@@ -1,5 +1,12 @@
 import type { KefineLocaleText } from '$lib/constants/kefine-locale';
-import type { DraftOrder, OrderView, PaymentQuote, UiScenario, VpnDeliveryGuide } from '$lib/components/kefine/kefine-workflow';
+import type {
+  DraftOrder,
+  OrderView,
+  PaymentQuote,
+  TaskAccessMode,
+  UiScenario,
+  VpnDeliveryGuide
+} from '$lib/components/kefine/kefine-workflow';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
@@ -206,6 +213,32 @@ function toLinkArray(value: unknown): Array<{ label: string; href: string }> | u
   return items.length > 0 ? items : undefined;
 }
 
+function toAccessRules(
+  value: unknown
+): Partial<Record<TaskAccessMode, { enabled: boolean; priceUsd: number }>> | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  const rules = (['view', 'watch', 'join'] as const).reduce<Partial<Record<TaskAccessMode, { enabled: boolean; priceUsd: number }>>>(
+    (result, key) => {
+      const rawRule = toRecord(value[key]);
+      if (!rawRule) {
+        return result;
+      }
+
+      result[key] = {
+        enabled: rawRule['enabled'] === true,
+        priceUsd: toNumber(rawRule['priceUsd']) ?? 0
+      };
+      return result;
+    },
+    {}
+  );
+
+  return Object.keys(rules).length > 0 ? rules : undefined;
+}
+
 function extractVpnGuide(payload: Record<string, unknown>): VpnDeliveryGuide | undefined {
   const attachment = findVpnGuideAttachment(payload);
   const content = toRecord(attachment?.['content']);
@@ -273,7 +306,14 @@ export function parseStoredOrders(raw: string | null, localeText: KefineLocaleTe
         uiScenario: toUiScenario(order['uiScenario']),
         labels: toStringList(order['labels']),
         vpnGuide: extractVpnGuide(order),
-        activitypub: toRecord(order['activitypub']) || undefined
+        activitypub: toRecord(order['activitypub']) || undefined,
+        ownerProfileId: toStringValue(order['ownerProfileId']),
+        ownerUsername: toStringValue(order['ownerUsername']),
+        ownerDisplayName: toStringValue(order['ownerDisplayName']),
+        shareId: toStringValue(order['shareId']),
+        isClosedCompleted: order['isClosedCompleted'] === true,
+        isPublicTask: order['isPublicTask'] === true,
+        accessRules: toAccessRules(order['accessRules'])
       };
     })
     .filter((order) => order.id.length > 0 && !order.id.startsWith('temp-') && !order.id.startsWith('local-'));
@@ -383,7 +423,14 @@ export function extractStatusPayload(
     uiScenario: toUiScenario(source['uiScenario']) || toUiScenario(ticket['uiScenario']),
     labels: toStringList(source['labels']) || toStringList(ticket['labels']),
     vpnGuide,
-    activitypub: rootPayload || undefined
+    activitypub: rootPayload || undefined,
+    ownerProfileId: toStringValue(source['ownerProfileId']) || toStringValue(ticket['ownerProfileId']) || undefined,
+    ownerUsername: toStringValue(source['ownerUsername']) || toStringValue(ticket['ownerUsername']) || undefined,
+    ownerDisplayName: toStringValue(source['ownerDisplayName']) || toStringValue(ticket['ownerDisplayName']) || undefined,
+    shareId: toStringValue(source['shareId']) || toStringValue(ticket['shareId']) || undefined,
+    isClosedCompleted: source['isClosedCompleted'] === true || ticket['isClosedCompleted'] === true,
+    isPublicTask: source['isPublicTask'] === true || ticket['isPublicTask'] === true,
+    accessRules: toAccessRules(source['accessRules']) || toAccessRules(ticket['accessRules'])
   };
 }
 

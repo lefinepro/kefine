@@ -256,7 +256,7 @@
   </header>
 
   <label class="passkey-login__field">
-    <span>Handle or username</span>
+    <lefine-text>Handle or username</lefine-text>
     <input
       type="text"
       bind:value={username}
@@ -267,7 +267,7 @@
     />
   </label>
 
-  <div class="passkey-login__actions">
+  <lefine-box class="passkey-login__actions">
     <button
       type="button"
       class="passkey-login__primary"
@@ -286,7 +286,7 @@
     >
       {status === 'loading' ? 'Creating passkey...' : 'Create passkey'}
     </button>
-  </div>
+  </lefine-box>
 
   {#if hasExistingPasskey && existingSession}
     <p class="passkey-login__hint">Saved locally for @{existingSession.username}</p>
@@ -318,7 +318,7 @@
   }
 
   .passkey-login__header p {
-    color: var(--kef-text-soft, #6f6254);
+    color: var(--lefine-text-soft, #6f6254);
   }
 
   .passkey-login__field {
@@ -326,10 +326,10 @@
     gap: 0.45rem;
   }
 
-  .passkey-login__field span {
+  .passkey-login__field lefine-text {
     font-size: 0.84rem;
     font-weight: 700;
-    color: var(--kef-text-soft, #6f6254);
+    color: var(--lefine-text-soft, #6f6254);
     letter-spacing: 0.01em;
   }
 
@@ -340,12 +340,12 @@
     border-radius: 1rem;
     padding: 0 1rem;
     background: color-mix(in oklab, var(--kef-bg-card, #fff) 98%, white);
-    color: var(--kef-text, #2e2317);
+    color: var(--lefine-text, #2e2317);
     font: inherit;
     font-size: 1rem;
     box-shadow:
       inset 0 0 0 1px color-mix(in oklab, var(--kef-border, #b8a07a) 24%, transparent),
-      0 6px 18px color-mix(in oklab, var(--kef-text, #2e2317) 4%, transparent);
+      0 6px 18px color-mix(in oklab, var(--lefine-text, #2e2317) 4%, transparent);
   }
 
   .passkey-login__field input:focus {
@@ -379,7 +379,7 @@
 
   .passkey-login__secondary {
     background: color-mix(in oklab, var(--kef-bg-soft, #efe7dc) 80%, white);
-    color: var(--kef-text, #2e2317);
+    color: var(--lefine-text, #2e2317);
   }
 
   .passkey-login__primary:disabled,
@@ -397,7 +397,7 @@
 
   .passkey-login__hint,
   .passkey-login__status {
-    color: var(--kef-text-soft, #6f6254);
+    color: var(--lefine-text-soft, #6f6254);
   }
 
   .passkey-login__error {
