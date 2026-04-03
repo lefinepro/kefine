@@ -4,7 +4,18 @@
       "WebFetch(day.js.org)",
       "Bash(rmdir *)",
       "Bash(bun *)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(git config *)",
+      "Bash(cmd *)",
+      "Bash(git remote *)",
+      "Bash(git push *)",
+      "Bash(cmdkey.exe *)",
+      "Bash(findstr *)",
+      "Bash(powershell *)",
+      "Bash(git *)",
+      "Bash(gh *)",
+      "Bash(git-credential-manager-core *)",
+      "Bash(curl *)"
     ]
   },
   "$version": 3
