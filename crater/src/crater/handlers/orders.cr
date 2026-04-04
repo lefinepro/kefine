@@ -184,6 +184,7 @@ module Crater
 
         JSON.parse(raw).as_a.compact_map(&.as_s?)
       rescue
+        return [] of String if raw.nil?
         raw.split(',').map(&.strip).reject(&.empty?)
       end
 
