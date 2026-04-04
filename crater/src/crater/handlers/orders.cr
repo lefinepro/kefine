@@ -150,9 +150,9 @@ module Crater
           media_type = "application/octet-stream" if media_type.nil? || media_type.empty?
           {
             "type" => "Document",
-            "name" => file.filename,
+            "name" => file.filename.to_s,
             "mediaType" => media_type,
-            "size" => file.size,
+            "size" => file.size.to_i64,
           }
         end
 
