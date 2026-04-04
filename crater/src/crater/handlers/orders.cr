@@ -152,7 +152,7 @@ module Crater
             "type" => "Document",
             "name" => file.filename.to_s,
             "mediaType" => media_type,
-            "size" => file.size.to_i64,
+            "size" => file.size.try(&.to_i64) || 0_i64,
           }
         end
 
