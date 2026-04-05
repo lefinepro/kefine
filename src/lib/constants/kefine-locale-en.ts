@@ -280,7 +280,7 @@ export const KEFINE_TEXT_EN = {
       },
       task: {
         title: '1. Describe the task',
-        detail: 'Describe the VPN or DevOps outcome and set a budget cap.'
+        detail: 'Describe the engineering outcome you need and set a budget cap.'
       },
       quote: {
         title: '2. Solver quote',
@@ -404,6 +404,30 @@ export const KEFINE_TEXT_EN = {
     buyJoin: 'Join task',
     ownerTask: 'Your task',
     accessGranted: 'Access granted',
-    profileUnavailable: 'Profile is unavailable'
+    profileUnavailable: 'Profile is unavailable',
+    templates: 'Templates',
+    templatesSubtitle: 'Create reusable task templates and share them as standalone entry points.',
+    noTemplates: 'No templates yet',
+    createTemplate: 'New template',
+    templateTitle: 'Template title',
+    templateDescription: 'Template note',
+    templatePrefillTitle: 'Prefill request title',
+    templatePrefillDescription: 'Prefill request',
+    templatePricingMode: 'Pricing mode',
+    templateFixedMode: 'USD',
+    templatePercentMode: 'Percent',
+    templatePrice: 'Template price',
+    templatePercent: 'Template percent',
+    templateFiles: 'Template files',
+    templateAddFiles: 'Add template files',
+    templatePublish: 'Publish template',
+    templatePublished: 'Published',
+    templateDraft: 'Draft',
+    templateCopyLink: 'Copy template link',
+    templateOpen: 'Open template',
+    templateDelete: 'Delete template',
+    templateFeePreview: 'Author fee',
+    templateNetPreview: 'Order remainder',
+    templateLinkCopied: 'Template link copied'
   }
 } as const;

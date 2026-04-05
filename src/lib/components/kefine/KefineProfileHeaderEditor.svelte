@@ -34,12 +34,11 @@
   } = $props();
 </script>
 
-<article class="profile-hero" data-setup={isSetup} data-embedded={isEmbedded}>
-  <lefine-box class="profile-hero__copy" data-setup={isSetup}>
+<article class="profile-header" data-setup={isSetup} data-embedded={isEmbedded}>
+  <lefine-box class="profile-header__copy" data-setup={isSetup}>
     {#if isOwner}
-      <lefine-box class="profile-hero__identity" data-setup={isSetup}>
-        <label class="profile-hero__field" data-setup={isSetup}>
-          <lefine-text class="sr-only">{firstNameLabel}</lefine-text>
+      <lefine-box class="profile-header__title-row" data-setup={isSetup}>
+        <label class="profile-header__title-field" data-setup={isSetup}>
           <input
             type="text"
             bind:value={firstName}
@@ -49,8 +48,7 @@
             onkeydown={onFieldKeydown}
           />
         </label>
-        <label class="profile-hero__field" data-setup={isSetup}>
-          <lefine-text class="sr-only">{surnameLabel}</lefine-text>
+        <label class="profile-header__title-field" data-setup={isSetup}>
           <input
             type="text"
             bind:value={surname}
@@ -61,12 +59,8 @@
           />
         </label>
       </lefine-box>
-    {:else}
-      <h1>{displayName}</h1>
-    {/if}
 
-    {#if isOwner}
-      <label class="profile-hero__handle" data-setup={isSetup}>
+      <label class="profile-header__handle" data-setup={isSetup}>
         <lefine-text>@</lefine-text>
         <input
           type="text"
@@ -78,35 +72,24 @@
         />
       </label>
     {:else}
+      <h1>{displayName}</h1>
       <p>{canonicalProfilePath}</p>
     {/if}
 
     {#if bio.trim()}
-      <p class="profile-hero__bio">{bio.trim()}</p>
+      <p class="profile-header__bio">{bio.trim()}</p>
     {/if}
   </lefine-box>
 
   {#if !isOwner && followLabel && onFollow}
-    <lefine-box class="profile-hero__actions" data-setup={isSetup}>
+    <lefine-box class="profile-header__actions" data-setup={isSetup}>
       <button type="button" data-variant="primary" onclick={onFollow}>{followLabel}</button>
     </lefine-box>
   {/if}
 </article>
 
 <style>
-  .sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-  }
-
-  .profile-hero {
+  .profile-header {
     position: relative;
     display: flex;
     align-items: center;
@@ -119,7 +102,7 @@
     box-shadow: 0 18px 40px color-mix(in oklab, black 18%, transparent);
   }
 
-  .profile-hero[data-embedded='true'] {
+  .profile-header[data-embedded='true'] {
     padding: 0;
     border: 0;
     border-radius: 0;
@@ -127,37 +110,37 @@
     box-shadow: none;
   }
 
-  .profile-hero[data-setup='true'] {
+  .profile-header[data-setup='true'] {
     justify-content: space-between;
     align-items: flex-start;
   }
 
-  .profile-hero__copy {
+  .profile-header__copy {
     display: grid;
     gap: 0.4rem;
     justify-items: center;
     text-align: center;
+    width: 100%;
   }
 
-  .profile-hero__copy[data-setup='true'] {
+  .profile-header__copy[data-setup='true'] {
     justify-items: start;
     text-align: left;
   }
 
-  .profile-hero__identity {
+  .profile-header__title-row {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.85rem;
     width: min(100%, 34rem);
   }
 
-  .profile-hero__identity[data-setup='true'] {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1rem;
-    width: min(100%, 48rem);
+  .profile-header__title-row[data-setup='true'] {
+    gap: 0.9rem;
+    width: min(100%, 100%);
   }
 
-  .profile-hero__field {
+  .profile-header__title-field {
     display: grid;
     gap: 0.35rem;
     padding: 0.8rem 0.95rem;
@@ -165,48 +148,50 @@
     background: color-mix(in oklab, var(--kef-color-primary) 8%, var(--kef-color-bg-card));
     border: 1px solid color-mix(in oklab, var(--kef-color-primary) 16%, transparent);
     text-align: left;
+    min-width: 0;
   }
 
-  .profile-hero__field input {
+  .profile-header__title-field[data-setup='true'] {
+    padding: 0.95rem 1rem;
+    border-radius: 1.1rem;
+    background: color-mix(in oklab, var(--kef-color-bg) 42%, var(--kef-color-bg-card));
+    border-color: color-mix(in oklab, var(--kef-color-primary) 20%, transparent);
+    box-shadow: inset 0 1px 0 color-mix(in oklab, white 5%, transparent);
+  }
+
+  .profile-header__title-field input {
+    width: 100%;
+    min-width: 0;
     padding: 0;
     border: 0;
     border-radius: 0;
     background: transparent;
     color: var(--kef-color-text);
+    box-shadow: none;
     font-size: clamp(1.25rem, 2vw, 1.7rem);
     line-height: 1.1;
-    box-shadow: none;
   }
 
-  .profile-hero__field input:focus {
+  .profile-header__title-field input:focus {
     outline: none;
     border: 0;
     background: transparent;
     box-shadow: none;
   }
 
-  .profile-hero__field[data-setup='true'] {
-    padding: 0.35rem 0;
-    border-radius: 1.25rem;
-    background: transparent;
-    border: 0;
-  }
-
-  .profile-hero__field[data-setup='true'] input {
-    font-size: clamp(2rem, 4vw, 3.2rem);
-    line-height: 0.94;
-    letter-spacing: -0.05em;
+  .profile-header__title-field[data-setup='true'] input {
+    font-size: clamp(1.8rem, 3.4vw, 2.6rem);
+    line-height: 1;
+    letter-spacing: -0.04em;
     font-weight: 700;
-    border-bottom: 1px solid color-mix(in oklab, var(--kef-color-text) 14%, transparent);
-    padding-bottom: 0.35rem;
   }
 
-  .profile-hero__field[data-setup='true'] input::placeholder {
+  .profile-header__title-field[data-setup='true'] input::placeholder {
     color: color-mix(in oklab, var(--kef-color-text) 54%, transparent);
     opacity: 1;
   }
 
-  .profile-hero__handle {
+  .profile-header__handle {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -217,12 +202,18 @@
     color: var(--kef-color-muted);
   }
 
-  .profile-hero__handle lefine-text {
+  .profile-header__handle[data-setup='true'] {
+    justify-content: flex-start;
+    margin-top: 0.35rem;
+    max-width: 100%;
+  }
+
+  .profile-header__handle lefine-text {
     font-size: 1.45rem;
     line-height: 1;
   }
 
-  .profile-hero__handle input {
+  .profile-header__handle input {
     min-width: 0;
     width: min(100%, 22rem);
     padding: 0;
@@ -235,7 +226,7 @@
     box-shadow: none;
   }
 
-  .profile-hero__handle input:focus {
+  .profile-header__handle input:focus {
     outline: none;
     border: 0;
     background: transparent;
@@ -243,38 +234,27 @@
     color: var(--kef-color-text);
   }
 
-  .profile-hero__handle[data-setup='true'] {
-    justify-content: flex-start;
-    margin-top: 0.35rem;
-    max-width: 100%;
-  }
-
-  .profile-hero__handle[data-setup='true'] input {
-    width: min(100%, 28rem);
-    font-size: 1.2rem;
-  }
-
-  .profile-hero__copy h1,
-  .profile-hero__copy p {
+  .profile-header__copy h1,
+  .profile-header__copy p {
     margin: 0;
   }
 
-  .profile-hero__copy h1 {
+  .profile-header__copy h1 {
     font-size: clamp(2.1rem, 4vw, 3rem);
     line-height: 0.95;
     letter-spacing: -0.05em;
   }
 
-  .profile-hero__copy p {
+  .profile-header__copy p {
     color: var(--kef-color-muted);
   }
 
-  .profile-hero__bio {
+  .profile-header__bio {
     max-width: 44rem;
     color: var(--kef-color-muted);
   }
 
-  .profile-hero__actions {
+  .profile-header__actions {
     display: flex;
     flex-wrap: wrap;
     gap: 0.75rem;
@@ -283,32 +263,33 @@
     right: 1.25rem;
   }
 
-  .profile-hero__actions[data-setup='true'] {
+  .profile-header__actions[data-setup='true'] {
     position: static;
     justify-content: flex-end;
     align-self: flex-start;
   }
 
   @media (max-width: 980px) {
-    .profile-hero {
+    .profile-header {
       flex-direction: column;
       align-items: flex-start;
     }
 
-    .profile-hero__copy {
+    .profile-header__copy {
       justify-items: flex-start;
       text-align: left;
     }
 
-    .profile-hero__identity {
+    .profile-header__title-row {
       grid-template-columns: 1fr;
+      width: 100%;
     }
 
-    .profile-hero__handle {
+    .profile-header__handle {
       justify-content: flex-start;
     }
 
-    .profile-hero__actions {
+    .profile-header__actions {
       position: static;
     }
   }

@@ -22,7 +22,10 @@ module Crater
       payment_token_symbol : String,
       payment_token_decimals : Int32,
       payment_chain_id : Int64,
-      labels : Array(String)
+      labels : Array(String),
+      template_fee_amount : Float64?,
+      template_author_profile_id : String?,
+      template_author_username : String?
 
     @@db : DB::Database? = nil
     @@db_lock = Mutex.new
@@ -83,6 +86,19 @@ module Crater
       free_unlock = false
       promo_message = nil
       labels = order.labels
+      template_fee_amount = nil
+
+      if order.template_pricing_mode && order.template_pricing_value && original_amount > 0
+        if order.template_pricing_mode == "percent"
+          template_fee_amount = (original_amount * order.template_pricing_value.not_nil!) / 100.0
+        elsif order.template_pricing_mode == "fixed"
+          template_fee_amount = order.template_pricing_value
+        end
+
+        if template_fee_amount
+          template_fee_amount = {template_fee_amount.not_nil!, original_amount}.min
+        end
+      end
 
       if normalized_code && !normalized_code.empty?
         outcome = "invalid"
@@ -136,7 +152,10 @@ module Crater
         payment_token_symbol: config.payment_token_symbol,
         payment_token_decimals: config.payment_token_decimals,
         payment_chain_id: config.payment_chain_id,
-        labels: labels
+        labels: labels,
+        template_fee_amount: template_fee_amount,
+        template_author_profile_id: order.template_author_profile_id,
+        template_author_username: order.template_author_username
       )
     end
 
@@ -160,7 +179,13 @@ module Crater
         paymentTokenSymbol: quote.payment_token_symbol,
         paymentTokenDecimals: quote.payment_token_decimals,
         paymentUrl: order.payment_url,
-        labels: quote.labels
+        labels: quote.labels,
+        templateFeeAmount: quote.template_fee_amount,
+        templateAuthorProfileId: quote.template_author_profile_id,
+        templateAuthorUsername: quote.template_author_username,
+        templatePricingMode: order.template_pricing_mode,
+        templatePricingValue: order.template_pricing_value,
+        templateSlug: order.template_slug
       }.to_json
     end
 

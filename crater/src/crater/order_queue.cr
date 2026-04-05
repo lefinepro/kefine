@@ -28,6 +28,13 @@ module Crater
       property payment_url : String?
       property ui_scenario : String?
       property labels : Array(String)
+      property template_id : String?
+      property template_slug : String?
+      property template_author_profile_id : String?
+      property template_author_username : String?
+      property template_author_display_name : String?
+      property template_pricing_mode : String?
+      property template_pricing_value : Float64?
 
       def initialize(
         @id : String,
@@ -42,7 +49,14 @@ module Crater
         @updated_at : String = Time.utc.to_rfc3339,
         @payment_url : String? = nil,
         @ui_scenario : String? = nil,
-        @labels : Array(String) = [] of String
+        @labels : Array(String) = [] of String,
+        @template_id : String? = nil,
+        @template_slug : String? = nil,
+        @template_author_profile_id : String? = nil,
+        @template_author_username : String? = nil,
+        @template_author_display_name : String? = nil,
+        @template_pricing_mode : String? = nil,
+        @template_pricing_value : Float64? = nil
       )
       end
     end
@@ -89,9 +103,24 @@ module Crater
               updated_at TEXT NOT NULL,
               payment_url TEXT,
               ui_scenario TEXT,
-              labels_json TEXT NOT NULL DEFAULT '[]'
+              labels_json TEXT NOT NULL DEFAULT '[]',
+              template_id TEXT,
+              template_slug TEXT,
+              template_author_profile_id TEXT,
+              template_author_username TEXT,
+              template_author_display_name TEXT,
+              template_pricing_mode TEXT,
+              template_pricing_value TEXT
             )
           SQL
+
+          db.exec "ALTER TABLE orders ADD COLUMN IF NOT EXISTS template_id TEXT"
+          db.exec "ALTER TABLE orders ADD COLUMN IF NOT EXISTS template_slug TEXT"
+          db.exec "ALTER TABLE orders ADD COLUMN IF NOT EXISTS template_author_profile_id TEXT"
+          db.exec "ALTER TABLE orders ADD COLUMN IF NOT EXISTS template_author_username TEXT"
+          db.exec "ALTER TABLE orders ADD COLUMN IF NOT EXISTS template_author_display_name TEXT"
+          db.exec "ALTER TABLE orders ADD COLUMN IF NOT EXISTS template_pricing_mode TEXT"
+          db.exec "ALTER TABLE orders ADD COLUMN IF NOT EXISTS template_pricing_value TEXT"
 
           db.exec <<-SQL
             CREATE TABLE IF NOT EXISTS order_activities (
@@ -157,8 +186,10 @@ module Crater
         <<-SQL,
           INSERT INTO orders (
             id, status, solver, title, description, estimated_cost, currency, execution_estimate,
-            created_at, updated_at, payment_url, ui_scenario, labels_json
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+            created_at, updated_at, payment_url, ui_scenario, labels_json,
+            template_id, template_slug, template_author_profile_id, template_author_username,
+            template_author_display_name, template_pricing_mode, template_pricing_value
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
           ON CONFLICT (id) DO UPDATE SET
             status = EXCLUDED.status,
             solver = EXCLUDED.solver,
@@ -171,7 +202,14 @@ module Crater
             updated_at = EXCLUDED.updated_at,
             payment_url = EXCLUDED.payment_url,
             ui_scenario = EXCLUDED.ui_scenario,
-            labels_json = EXCLUDED.labels_json
+            labels_json = EXCLUDED.labels_json,
+            template_id = EXCLUDED.template_id,
+            template_slug = EXCLUDED.template_slug,
+            template_author_profile_id = EXCLUDED.template_author_profile_id,
+            template_author_username = EXCLUDED.template_author_username,
+            template_author_display_name = EXCLUDED.template_author_display_name,
+            template_pricing_mode = EXCLUDED.template_pricing_mode,
+            template_pricing_value = EXCLUDED.template_pricing_value
         SQL
         record.id,
         record.status,
@@ -185,7 +223,14 @@ module Crater
         record.updated_at,
         record.payment_url,
         record.ui_scenario,
-        serialize_labels(record.labels)
+        serialize_labels(record.labels),
+        record.template_id,
+        record.template_slug,
+        record.template_author_profile_id,
+        record.template_author_username,
+        record.template_author_display_name,
+        record.template_pricing_mode,
+        record.template_pricing_value.try(&.to_s)
       )
     end
 
@@ -204,7 +249,7 @@ module Crater
       )
     end
 
-    private def self.hydrate_order(row : {String, String, String, String, String?, String?, String, String?, String, String, String?, String?, String}) : OrderRecord
+    private def self.hydrate_order(row : {String, String, String, String, String?, String?, String, String?, String, String, String?, String?, String, String?, String?, String?, String?, String?, String?, String?}) : OrderRecord
       OrderRecord.new(
         id: row[0],
         status: row[1],
@@ -218,7 +263,14 @@ module Crater
         updated_at: row[9],
         payment_url: row[10],
         ui_scenario: row[11],
-        labels: deserialize_labels(row[12])
+        labels: deserialize_labels(row[12]),
+        template_id: row[13],
+        template_slug: row[14],
+        template_author_profile_id: row[15],
+        template_author_username: row[16],
+        template_author_display_name: row[17],
+        template_pricing_mode: row[18],
+        template_pricing_value: parse_estimated_cost(row[19])
       )
     end
 
@@ -277,6 +329,7 @@ module Crater
       title = to_string(payload["name"]?) || to_string(payload["title"]?) || to_string(source["name"]?) || to_string(source["title"]?) || "Untitled order"
       description = to_string(payload["content"]?) || to_string(payload["description"]?) || to_string(source["content"]?) || to_string(source["description"]?) || ""
       estimated_cost = to_float(payment_link.try(&.["price"]?)) || to_float(payment_link.try(&.["amount"]?)) || to_float(payload["estimatedCost"]?) || to_float(payload["price"]?) || to_float(source["estimatedCost"]?) || to_float(source["price"]?) || 0.0
+      template_pricing_value = to_float(payload["templatePricingValue"]?) || to_float(source["templatePricingValue"]?)
       execution_estimate = to_string(payload["executionEstimate"]?) || to_string(payload["dueDate"]?) || to_string(source["executionEstimate"]?) || to_string(source["dueDate"]?)
       currency = to_string(payment_link.try(&.["currency"]?)) || to_string(payload["currency"]?) || to_string(source["currency"]?) || "USDC"
       payment_url = to_string(payment_link.try(&.["href"]?)) || to_string(payment_link.try(&.["url"]?))
@@ -294,7 +347,14 @@ module Crater
         execution_estimate: is_vpn_order ? "about 25 minutes" : execution_estimate,
         payment_url: is_vpn_order ? "#{config.exchange_url}/pay/#{URI.encode_path(id)}" : payment_url,
         ui_scenario: is_vpn_order ? "vpn-service" : ui_scenario,
-        labels: labels
+        labels: labels,
+        template_id: to_string(payload["templateId"]?) || to_string(source["templateId"]?),
+        template_slug: to_string(payload["templateSlug"]?) || to_string(source["templateSlug"]?),
+        template_author_profile_id: to_string(payload["templateAuthorProfileId"]?) || to_string(source["templateAuthorProfileId"]?),
+        template_author_username: to_string(payload["templateAuthorUsername"]?) || to_string(source["templateAuthorUsername"]?),
+        template_author_display_name: to_string(payload["templateAuthorDisplayName"]?) || to_string(source["templateAuthorDisplayName"]?),
+        template_pricing_mode: to_string(payload["templatePricingMode"]?) || to_string(source["templatePricingMode"]?),
+        template_pricing_value: template_pricing_value
       )
     end
 
@@ -346,7 +406,14 @@ module Crater
         "labels" => order.labels,
         "estimatedCost" => order.estimated_cost,
         "currency" => order.currency,
-        "executionEstimate" => order.execution_estimate
+        "executionEstimate" => order.execution_estimate,
+        "templateId" => order.template_id,
+        "templateSlug" => order.template_slug,
+        "templateAuthorProfileId" => order.template_author_profile_id,
+        "templateAuthorUsername" => order.template_author_username,
+        "templateAuthorDisplayName" => order.template_author_display_name,
+        "templatePricingMode" => order.template_pricing_mode,
+        "templatePricingValue" => order.template_pricing_value
       }
 
       object_payload = {
@@ -368,6 +435,13 @@ module Crater
         "uiScenario" => order.ui_scenario,
         "labels" => order.labels,
         "published" => order.updated_at,
+        "templateId" => order.template_id,
+        "templateSlug" => order.template_slug,
+        "templateAuthorProfileId" => order.template_author_profile_id,
+        "templateAuthorUsername" => order.template_author_username,
+        "templateAuthorDisplayName" => order.template_author_display_name,
+        "templatePricingMode" => order.template_pricing_mode,
+        "templatePricingValue" => order.template_pricing_value,
         "attachment" => payment_links(order, status, config)
       }
 
@@ -479,7 +553,7 @@ module Crater
     def self.find_order(order_id : String, config : Utils::Config = Utils::Config.load) : OrderRecord?
       setup(config)
       row = database(config).query_one?(
-        "SELECT id, status, solver, title, description, estimated_cost, currency, execution_estimate, created_at, updated_at, payment_url, ui_scenario, labels_json FROM orders WHERE id = $1",
+        "SELECT id, status, solver, title, description, estimated_cost, currency, execution_estimate, created_at, updated_at, payment_url, ui_scenario, labels_json, template_id, template_slug, template_author_profile_id, template_author_username, template_author_display_name, template_pricing_mode, template_pricing_value FROM orders WHERE id = $1",
         order_id,
         as: {String, String, String, String, String?, String?, String, String?, String, String, String?, String?, String}
       )

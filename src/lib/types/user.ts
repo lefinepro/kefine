@@ -9,10 +9,55 @@ export interface User {
   metadata?: Record<string, unknown>;
 }
 
+export type ProfileSocialLinkType =
+  | 'website'
+  | 'twitter'
+  | 'telegram'
+  | 'discord'
+  | 'linkedin'
+  | 'github'
+  | 'instagram'
+  | 'youtube'
+  | 'wallet'
+  | 'ens'
+  | 'farcaster'
+  | 'lens'
+  | 'other';
+
 export interface ProfileSocialLink {
   id: string;
-  label: string;
-  url: string;
+  type: ProfileSocialLinkType;
+  value: string;
+  label?: string;
+}
+
+export interface ProfileTemplateFile {
+  id: string;
+  name: string;
+  size?: number;
+  type?: string;
+}
+
+export type ProfileTemplatePricingMode = 'fixed' | 'percent';
+
+export interface ProfileTemplate {
+  id: string;
+  profileId: string;
+  authorHandle?: string;
+  authorDisplayName?: string;
+  slug: string;
+  title: string;
+  description: string;
+  prefillTitle: string;
+  prefillDescription: string;
+  prefillEstimatedCost?: number;
+  prefillCurrency?: string;
+  prefillFiles: ProfileTemplateFile[];
+  pricingMode: ProfileTemplatePricingMode;
+  pricingValue: number;
+  isPublished: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export type ProfileCardVerificationStatus = 'unverified' | 'verified' | 'rejected';
@@ -85,7 +130,7 @@ export interface ProfileBonusLedgerEntry {
   id: string;
   profileId: string;
   amountUsd: number;
-  source: 'card-verification' | 'follower-task';
+  source: 'card-verification' | 'follower-task' | 'template-order';
   createdAt: string;
   note: string;
   orderId?: string;

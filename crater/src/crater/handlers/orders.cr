@@ -40,6 +40,13 @@ module Crater
             uiScenario: record.ui_scenario,
             labels: record.labels,
             paymentUrl: record.payment_url,
+            templateId: record.template_id,
+            templateSlug: record.template_slug,
+            templateAuthorProfileId: record.template_author_profile_id,
+            templateAuthorUsername: record.template_author_username,
+            templateAuthorDisplayName: record.template_author_display_name,
+            templatePricingMode: record.template_pricing_mode,
+            templatePricingValue: record.template_pricing_value,
             createdAt: record.created_at,
             updatedAt: record.updated_at
           }.to_json
@@ -72,6 +79,13 @@ module Crater
             uiScenario: record.ui_scenario,
             labels: record.labels,
             paymentUrl: record.payment_url,
+            templateId: record.template_id,
+            templateSlug: record.template_slug,
+            templateAuthorProfileId: record.template_author_profile_id,
+            templateAuthorUsername: record.template_author_username,
+            templateAuthorDisplayName: record.template_author_display_name,
+            templatePricingMode: record.template_pricing_mode,
+            templatePricingValue: record.template_pricing_value,
             createdAt: record.created_at,
             updatedAt: record.updated_at
           }.to_json

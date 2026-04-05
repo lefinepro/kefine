@@ -3,11 +3,17 @@ import type {
   ProfileBonusLedgerEntry,
   ProfileCardVerification,
   ProfileFollow,
+  ProfileSocialLinkType,
+  ProfileTemplate,
+  ProfileTemplateFile,
+  ProfileTemplatePricingMode,
   ProfileTaskAccessRecord
 } from '$lib/types/user';
 import type { TaskAccessKind } from '$lib/types/user';
+import { normalizeProfileAccount } from '$lib/profile/profile-accounts';
 import {
   buildProfilePath,
+  buildProfileTaskPath,
   deriveProfileUsername,
   deriveWalletProfileHandle,
   normalizeProfileUsername
@@ -15,6 +21,7 @@ import {
 
 export {
   buildProfilePath,
+  buildProfileTaskPath,
   deriveProfileUsername,
   deriveWalletProfileHandle,
   normalizeProfileUsername
@@ -24,6 +31,7 @@ const PROFILE_STORAGE_KEY = 'kefine-profiles-v1';
 const PROFILE_FOLLOW_STORAGE_KEY = 'kefine-profile-follows-v1';
 const PROFILE_TASK_ACCESS_STORAGE_KEY = 'kefine-profile-task-access-v1';
 const PROFILE_BONUS_LEDGER_STORAGE_KEY = 'kefine-profile-bonus-ledger-v1';
+const PROFILE_TEMPLATE_STORAGE_KEY = 'kefine-profile-templates-v1';
 
 const DEFAULT_REFERRAL_PERCENT = 10;
 
@@ -66,6 +74,41 @@ function createId(prefix: string): string {
   return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
+function isUuidLike(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value.trim());
+}
+
+function createTemplateSlug(): string {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID();
+  }
+
+  return `${Math.random().toString(16).slice(2, 10)}-${Math.random().toString(16).slice(2, 6)}-${Math.random().toString(16).slice(2, 6)}-${Math.random().toString(16).slice(2, 6)}-${Math.random().toString(16).slice(2, 14)}`;
+}
+
+function readTemplateFiles(value: unknown): ProfileTemplateFile[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .filter(isRecord)
+    .map<ProfileTemplateFile | null>((item) => {
+      const name = toStringValue(item['name']);
+      if (!name) {
+        return null;
+      }
+
+      return {
+        id: toStringValue(item['id']) || createId('template-file'),
+        name,
+        size: toNumberValue(item['size']),
+        type: toStringValue(item['type'])
+      };
+    })
+    .filter((item): item is ProfileTemplateFile => item !== null);
+}
+
 export function readProfiles(storage: Storage): Profile[] {
   return parseJsonArray(storage, PROFILE_STORAGE_KEY)
     .filter(isRecord)
@@ -76,19 +119,15 @@ export function readProfiles(storage: Storage): Profile[] {
       const socialLinks = Array.isArray(item['socialLinks'])
         ? item['socialLinks']
             .filter(isRecord)
-            .map((link) => {
-              const label = toStringValue(link['label']);
-              const url = toStringValue(link['url']);
-              if (!label || !url) {
-                return null;
-              }
-
-              return {
+            .map((link) =>
+              normalizeProfileAccount({
                 id: toStringValue(link['id']) || createId('social'),
-                label,
-                url
-              };
-            })
+                type: toStringValue(link['type']) as ProfileSocialLinkType | undefined,
+                label: toStringValue(link['label']),
+                value: toStringValue(link['value']),
+                url: toStringValue(link['url'])
+              })
+            )
             .filter((link): link is NonNullable<typeof link> => link !== null)
         : [];
       const cardRaw = isRecord(item['cardVerification']) ? item['cardVerification'] : null;
@@ -215,7 +254,7 @@ export function readProfileBonusLedger(storage: Storage): ProfileBonusLedgerEntr
         !profileId ||
         !note ||
         amountUsd === undefined ||
-        (source !== 'card-verification' && source !== 'follower-task')
+        (source !== 'card-verification' && source !== 'follower-task' && source !== 'template-order')
       ) {
         return null;
       }
@@ -235,6 +274,136 @@ export function readProfileBonusLedger(storage: Storage): ProfileBonusLedgerEntr
 
 export function writeProfileBonusLedger(storage: Storage, entries: ProfileBonusLedgerEntry[]): void {
   storage.setItem(PROFILE_BONUS_LEDGER_STORAGE_KEY, JSON.stringify(entries));
+}
+
+export function readProfileTemplates(storage: Storage): ProfileTemplate[] {
+  const templates = parseJsonArray(storage, PROFILE_TEMPLATE_STORAGE_KEY)
+    .filter(isRecord)
+    .map<ProfileTemplate | null>((item) => {
+      const profileId = toStringValue(item['profileId']);
+      const title = toStringValue(item['title']);
+      if (!profileId || !title) {
+        return null;
+      }
+
+      const createdAt = toStringValue(item['createdAt']) || new Date().toISOString();
+      return {
+        id: toStringValue(item['id']) || createId('template'),
+        profileId,
+        authorHandle: toStringValue(item['authorHandle']) || undefined,
+        authorDisplayName: toStringValue(item['authorDisplayName']) || undefined,
+        slug: (() => {
+          const storedSlug = toStringValue(item['slug']);
+          return storedSlug && isUuidLike(storedSlug) ? storedSlug : createTemplateSlug();
+        })(),
+        title,
+        description: toStringValue(item['description']) || '',
+        prefillTitle: toStringValue(item['prefillTitle']) || '',
+        prefillDescription: toStringValue(item['prefillDescription']) || '',
+        prefillEstimatedCost: toNumberValue(item['prefillEstimatedCost']),
+        prefillCurrency: toStringValue(item['prefillCurrency']) || undefined,
+        prefillFiles: readTemplateFiles(item['prefillFiles']),
+        pricingMode: item['pricingMode'] === 'percent' ? 'percent' : 'fixed',
+        pricingValue: Math.max(0, toNumberValue(item['pricingValue']) ?? 0),
+        isPublished: item['isPublished'] === true,
+        createdAt,
+        updatedAt: toStringValue(item['updatedAt']) || createdAt
+      };
+    })
+    .filter((item): item is ProfileTemplate => item !== null);
+
+  const raw = storage.getItem(PROFILE_TEMPLATE_STORAGE_KEY);
+  if (raw !== JSON.stringify(templates)) {
+    writeProfileTemplates(storage, templates);
+  }
+
+  return templates;
+}
+
+export function writeProfileTemplates(storage: Storage, templates: ProfileTemplate[]): void {
+  storage.setItem(PROFILE_TEMPLATE_STORAGE_KEY, JSON.stringify(templates));
+}
+
+export function getProfileTemplateById(storage: Storage, templateId: string): ProfileTemplate | null {
+  return readProfileTemplates(storage).find((template) => template.id === templateId) ?? null;
+}
+
+export function getProfileTemplateBySlug(storage: Storage, profileId: string, slug: string): ProfileTemplate | null {
+  const normalized = slug.trim();
+  return readProfileTemplates(storage).find((template) => template.profileId === profileId && template.slug === normalized) ?? null;
+}
+
+export function listProfileTemplates(storage: Storage, profileId: string): ProfileTemplate[] {
+  return readProfileTemplates(storage)
+    .filter((template) => template.profileId === profileId)
+    .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+}
+
+export function calculateTemplateAmounts(args: {
+  orderEstimatedCost: number;
+  pricingMode: ProfileTemplatePricingMode;
+  pricingValue: number;
+}): { feeUsd: number; netUsd: number } {
+  const baseAmount = Math.max(0, Number.isFinite(args.orderEstimatedCost) ? args.orderEstimatedCost : 0);
+  const rawFee =
+    args.pricingMode === 'percent'
+      ? (baseAmount * Math.max(0, args.pricingValue)) / 100
+      : Math.max(0, args.pricingValue);
+  const feeUsd = Number(Math.min(baseAmount, rawFee).toFixed(2));
+  return {
+    feeUsd,
+    netUsd: Number(Math.max(0, baseAmount - feeUsd).toFixed(2))
+  };
+}
+
+export function upsertProfileTemplate(args: {
+  storage: Storage;
+  profileId: string;
+  templateId?: string;
+  title: string;
+  description: string;
+  prefillTitle: string;
+  prefillDescription: string;
+  prefillEstimatedCost?: number;
+  prefillCurrency?: string;
+  prefillFiles?: ProfileTemplateFile[];
+  pricingMode: ProfileTemplatePricingMode;
+  pricingValue: number;
+  isPublished: boolean;
+}): ProfileTemplate {
+  const current = readProfileTemplates(args.storage);
+  const existing = args.templateId ? current.find((item) => item.id === args.templateId && item.profileId === args.profileId) : null;
+  const createdAt = existing?.createdAt || new Date().toISOString();
+  const next: ProfileTemplate = {
+    id: existing?.id || createId('template'),
+    profileId: args.profileId,
+    slug: existing?.slug && isUuidLike(existing.slug) ? existing.slug : createTemplateSlug(),
+    title: args.title.trim() || 'Untitled template',
+    description: args.description.trim(),
+    prefillTitle: args.prefillTitle.trim(),
+    prefillDescription: args.prefillDescription.trim(),
+    prefillEstimatedCost:
+      args.prefillEstimatedCost !== undefined && Number.isFinite(args.prefillEstimatedCost) ? Math.max(0, args.prefillEstimatedCost) : undefined,
+    prefillCurrency: args.prefillCurrency?.trim() || undefined,
+    prefillFiles: [...(args.prefillFiles ?? [])],
+    pricingMode: args.pricingMode,
+    pricingValue: Math.max(0, Number(args.pricingValue) || 0),
+    isPublished: args.isPublished,
+    createdAt,
+    updatedAt: new Date().toISOString()
+  };
+
+  writeProfileTemplates(
+    args.storage,
+    existing ? current.map((item) => (item.id === existing.id ? next : item)) : [next, ...current]
+  );
+  return next;
+}
+
+export function deleteProfileTemplate(storage: Storage, profileId: string, templateId: string): ProfileTemplate[] {
+  const next = readProfileTemplates(storage).filter((template) => !(template.profileId === profileId && template.id === templateId));
+  writeProfileTemplates(storage, next);
+  return next;
 }
 
 export function ensureProfileForSession(args: {
@@ -468,7 +637,7 @@ export function addProfileBonus(args: {
   storage: Storage;
   profileId: string;
   amountUsd: number;
-  source: 'card-verification' | 'follower-task';
+  source: 'card-verification' | 'follower-task' | 'template-order';
   note: string;
   orderId?: string;
 }): Profile | null {

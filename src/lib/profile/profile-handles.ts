@@ -20,6 +20,10 @@ export function buildProfilePath(username: string): string {
   return `/@${normalizeProfileUsername(username)}`;
 }
 
+export function buildProfileTaskPath(username: string, shareId: string): string {
+  return `${buildProfilePath(username)}/${encodeURIComponent(shareId)}`;
+}
+
 export function deriveWalletProfileHandle(address: string, alias?: string | null): string {
   const normalizedAlias = sanitizeUsernamePart(alias || '');
   if (normalizedAlias) {

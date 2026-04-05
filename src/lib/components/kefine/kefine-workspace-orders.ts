@@ -1,5 +1,5 @@
 import { buildOrderProxyUrl } from '$lib/order-proxy-path';
-import type { DraftOrder, OrderView } from '$lib/components/kefine/kefine-workflow';
+import type { DraftOrder, OrderView, TemplatePresentation } from '$lib/components/kefine/kefine-workflow';
 import { buildCreatePayload, extractStatusPayload, parseStoredOrders, readCreateResponse } from '$lib/components/kefine/kefine-workflow';
 import type { KefineLocaleText } from '$lib/constants/kefine-locale';
 
@@ -139,6 +139,7 @@ export async function pollWorkspaceOrder(args: {
 
 export async function submitWorkspaceOrder(args: {
   payload: DraftOrder;
+  template?: TemplatePresentation | null;
   isBackground: boolean;
   localeText: KefineLocaleText;
   fetchFn: typeof fetch;
@@ -150,7 +151,7 @@ export async function submitWorkspaceOrder(args: {
   | { kind: 'error'; message?: string; statusCode?: number }
 > {
   try {
-    const requestPayload = buildCreatePayload(args.payload);
+    const requestPayload = buildCreatePayload(args.payload, args.template);
     const hasFiles = args.payload.files.length > 0;
     
     const requestBody = hasFiles
