@@ -127,6 +127,9 @@ export function getPublicRuntimeConfig(): KefinePublicRuntimeConfig {
   const config = getKefineConfig();
   return {
     app: config.app,
-    company: config.company
+    company: config.company,
+    backend: {
+      craterBaseUrl: config.backend.craterBaseUrl
+    }
   };
 }

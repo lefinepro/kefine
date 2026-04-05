@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { DraftOrder, OrderView } from './kefine-workflow';
+  import type { DraftOrder, OrderView, TemplatePresentation } from './kefine-workflow';
   import { scheduleAfter } from '$lib/utils/helpers';
   import KefineOrderListItem from '$lib/components/kefine/KefineOrderListItem.svelte';
 
@@ -10,6 +10,7 @@
 
   let {
     draft,
+    template,
     titleFontSize,
     title,
     subtitle,
@@ -45,6 +46,7 @@
     onCurrencyChange
   }: {
     draft: DraftOrder;
+    template: TemplatePresentation | null;
     titleFontSize: number;
     title: string;
     subtitle: string;
@@ -369,6 +371,19 @@
 </script>
 
 <article class="kefine-card kefine-card--wide" data-kefine-create>
+  {#if template}
+    <section data-part="template-banner">
+      <lefine-box>
+        <strong>{template.title}</strong>
+        <p>{template.description || `Template by @${template.authorHandle}`}</p>
+      </lefine-box>
+      <lefine-box data-part="template-meta">
+        <strong>@{template.authorHandle}</strong>
+        <span>{template.pricingMode === 'percent' ? `${template.pricingValue}%` : `$${template.pricingValue.toFixed(2)}`}</span>
+      </lefine-box>
+    </section>
+  {/if}
+
   <h2>{title}</h2>
   <p data-part="subtitle">{subtitle}</p>
 
@@ -453,6 +468,17 @@
       {/if}
       <input bind:this={fileInput} data-part="file-input" type="file" multiple onchange={handleFileChange} />
     </kefine-composer-strip>
+
+    {#if (draft.templateFiles?.length ?? 0) > 0}
+      <kefine-file-list data-template-files="true">
+        {#each draft.templateFiles ?? [] as file (`template-${file.id}`)}
+          <span data-part="template-file-pill">
+            <lefine-text>{file.name}</lefine-text>
+            <strong>{Math.max(1, Math.round((file.size ?? 1024) / 1024))} KB</strong>
+          </span>
+        {/each}
+      </kefine-file-list>
+    {/if}
 
     {#if draft.files.length > 0}
       <kefine-file-list>
@@ -579,6 +605,30 @@
     margin: 0;
     max-width: 42rem;
     color: var(--lefine-text-soft);
+  }
+
+  section[data-part='template-banner'] {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.9rem;
+    padding: 0.85rem 1rem;
+    border-radius: 0.6rem;
+    background: color-mix(in oklab, var(--kef-primary) 10%, var(--kef-bg-card));
+    border: 1px solid color-mix(in oklab, var(--kef-primary) 28%, transparent);
+  }
+
+  section[data-part='template-banner'] p,
+  section[data-part='template-banner'] strong,
+  [data-part='template-meta'] strong,
+  [data-part='template-meta'] span {
+    margin: 0;
+  }
+
+  [data-part='template-meta'] {
+    display: grid;
+    gap: 0.25rem;
+    justify-items: end;
+    text-align: right;
   }
 
   form[data-part='form'] {
@@ -748,6 +798,10 @@
     gap: 0.5rem;
   }
 
+  kefine-file-list[data-template-files='true'] {
+    opacity: 0.84;
+  }
+
   button[data-part='file-pill'] {
     display: inline-flex;
     align-items: center;
@@ -771,6 +825,17 @@
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+
+  [data-part='template-file-pill'] {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.65rem;
+    min-height: 2.5rem;
+    padding: 0.6rem 0.85rem;
+    border-radius: 999px;
+    border: 1px solid color-mix(in oklab, var(--kef-line) 60%, transparent);
+    background: color-mix(in oklab, var(--kef-bg-soft) 58%, transparent);
   }
 
   p[data-part='composer-hints'] {

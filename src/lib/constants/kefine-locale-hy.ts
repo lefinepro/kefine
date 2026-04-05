@@ -179,7 +179,7 @@ export const KEFINE_TEXT_HY = {
       },
       task: {
         title: '1. Նկարագրեք առաջադրանքը',
-        detail: 'Նկարագրեք ցանկալի VPN կամ DevOps արդյունքը և սահմանեք բյուջեի վերին շեմը։'
+        detail: 'Նկարագրեք ձեզ անհրաժեշտ engineering արդյունքը և սահմանեք բյուջեի վերին շեմը։'
       },
       quote: {
         title: '2. Solver-ի quote',

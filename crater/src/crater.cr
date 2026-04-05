@@ -10,9 +10,11 @@ require "./crater/handlers/orders"
 require "./crater/handlers/payment"
 require "./crater/handlers/passkeys"
 require "./crater/handlers/projects"
+require "./crater/handlers/templates"
 require "./crater/middleware/cors"
 require "./crater/middleware/logger"
 require "./crater/payment_store"
+require "./crater/template_store"
 require "./crater/utils/config"
 
 module Crater
@@ -21,6 +23,7 @@ module Crater
   def self.run
     config = Utils::Config.load
     PaymentStore.setup(config)
+    TemplateStore.setup(config)
 
     # Middleware
     add_handler CorsHandler.new
@@ -40,6 +43,7 @@ module Crater
 
     # ForgeFed project endpoints
     Handlers::Projects.register(config)
+    Handlers::Templates.register(config)
 
     Kemal.config.port = config.port
     Kemal.config.host_binding = config.host

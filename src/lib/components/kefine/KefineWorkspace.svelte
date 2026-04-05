@@ -45,6 +45,7 @@ import { cubicOut } from 'svelte/easing';
     type PaymentMethod,
     type PaymentStage,
     type TaskAccessMode,
+    type TemplatePresentation,
     deriveExecutionPresentation,
     resolveExecutionEstimate,
     toNumber
@@ -70,9 +71,11 @@ import { cubicOut } from 'svelte/easing';
   } from '$lib/components/kefine/kefine-workspace-orders';
   import { waitForDelay } from '$lib/utils/helpers';
   import { disconnectAppKit } from '$lib/auth/appkit';
-  import type { Profile } from '$lib/types/user';
+  import { fetchTemplateByHandleAndSlug } from '$lib/templates/template-api';
+  import type { Profile, ProfileTemplate } from '$lib/types/user';
   import {
     addProfileBonus,
+    calculateTemplateAmounts,
     buildProfilePath,
     ensureProfileForSession,
     getProfileById,
@@ -85,9 +88,13 @@ import { cubicOut } from 'svelte/easing';
   const THEME_STORAGE_KEY = 'kefine-theme';
 
   let {
-    initialOrderId
+    initialOrderId,
+    initialTemplateHandle,
+    initialTemplateSlug
   }: {
     initialOrderId?: string;
+    initialTemplateHandle?: string;
+    initialTemplateSlug?: string;
   } = $props();
   const localeText = $derived(getLocaleText($kefineLocale));
   const runtimeConfig = $derived(resolvePublicRuntimeConfig(page.data.publicConfig));
@@ -96,15 +103,20 @@ import { cubicOut } from 'svelte/easing';
     return initialOrderId?.trim() || null;
   }
 
+  function createEmptyDraft(): DraftOrder {
+    return {
+      title: '',
+      description: '',
+      estimatedCost: '',
+      currency: 'USD',
+      executionEstimate: '',
+      files: [],
+      templateFiles: []
+    };
+  }
+
   let step = $state<FlowStep>(getNormalizedInitialOrderId() ? 'executing' : 'create');
-  let draft = $state<DraftOrder>({
-    title: '',
-    description: '',
-    estimatedCost: '',
-    currency: 'USD',
-    executionEstimate: '',
-    files: []
-  });
+  let draft = $state<DraftOrder>(createEmptyDraft());
   let draftQueued = $state<DraftOrder | null>(null);
   let currentOrder = $state<OrderView | null>(
     getNormalizedInitialOrderId()
@@ -138,6 +150,9 @@ import { cubicOut } from 'svelte/easing';
   let contactMessage = $state('');
   let isHydratingRoute = $state(Boolean(getNormalizedInitialOrderId()));
   let currentProfile = $state<Profile | null>(null);
+  let activeTemplate = $state<ProfileTemplate | null>(null);
+  let templateUnavailable = $state(false);
+  let templateLoadKey = $state('');
   const activePollTokens = new Map<string, symbol>();
   let pollAbortController = $state<AbortController | null>(null);
 
@@ -239,6 +254,24 @@ import { cubicOut } from 'svelte/easing';
         .filter((value): value is string => typeof value === 'string')
         .some((value) => value.toLowerCase().includes(query));
     });
+  });
+  const templatePresentation = $derived.by((): TemplatePresentation | null => {
+    if (!activeTemplate) {
+      return null;
+    }
+
+    return {
+      id: activeTemplate.id,
+      slug: activeTemplate.slug,
+      title: activeTemplate.title,
+      description: activeTemplate.description,
+      authorProfileId: activeTemplate.profileId,
+      authorHandle: activeTemplate.authorHandle ?? initialTemplateHandle ?? '',
+      authorDisplayName: activeTemplate.authorDisplayName ?? activeTemplate.authorHandle ?? initialTemplateHandle ?? '',
+      pricingMode: activeTemplate.pricingMode,
+      pricingValue: activeTemplate.pricingValue,
+      prefillFiles: activeTemplate.prefillFiles
+    };
   });
   const sidebarSocialLinks = $derived([
     {
@@ -417,6 +450,47 @@ import { cubicOut } from 'svelte/easing';
       activePollTokens.clear();
     };
   });
+
+  $effect(() => {
+    if (!browser) {
+      return;
+    }
+
+    const nextTemplateLoadKey = `${initialTemplateHandle ?? ''}|${initialTemplateSlug ?? ''}`;
+    if (templateLoadKey === nextTemplateLoadKey) {
+      return;
+    }
+
+    templateLoadKey = nextTemplateLoadKey;
+    void loadActiveTemplate();
+  });
+
+  async function loadActiveTemplate() {
+    if (!browser || !initialTemplateHandle || !initialTemplateSlug) {
+      activeTemplate = null;
+      templateUnavailable = false;
+      draft.templateFiles = [];
+      return;
+    }
+
+    const template = await fetchTemplateByHandleAndSlug(runtimeConfig.backend.craterBaseUrl, initialTemplateHandle, initialTemplateSlug);
+    if (!template || !template.isPublished) {
+      activeTemplate = null;
+      templateUnavailable = true;
+      return;
+    }
+
+    activeTemplate = template;
+    templateUnavailable = false;
+    draft = {
+      ...createEmptyDraft(),
+      title: template.prefillTitle,
+      description: template.prefillDescription || template.prefillTitle,
+      estimatedCost: template.prefillEstimatedCost !== undefined ? String(template.prefillEstimatedCost) : '',
+      currency: template.prefillCurrency || 'USD',
+      templateFiles: [...template.prefillFiles]
+    };
+  }
   $effect(() => {
     if (browser) {
       const theme = isDarkTheme ? 'dark' : 'light';
@@ -877,6 +951,7 @@ import { cubicOut } from 'svelte/easing';
 
     const result = await submitWorkspaceOrder({
       payload,
+      template: templatePresentation,
       isBackground,
       localeText,
       fetchFn: fetch,
@@ -893,27 +968,62 @@ import { cubicOut } from 'svelte/easing';
       return false;
     }
 
-    const ownerOrder = currentProfile
-      ? {
-          ...result.order,
-          ownerProfileId: currentProfile.id,
-          ownerUsername: currentProfile.primaryHandle,
-          ownerDisplayName: currentProfile.displayName,
-          shareId: result.order.shareId || result.order.id,
-          isClosedCompleted: result.order.status === 'completed' || result.order.status === 'done',
-          isPublicTask: false,
-          accessRules: {
-            view: { enabled: false, priceUsd: 0 },
-            watch: { enabled: false, priceUsd: 0 },
-            join: { enabled: false, priceUsd: 0 }
+    const templateAmounts =
+      activeTemplate
+        ? calculateTemplateAmounts({
+            orderEstimatedCost: result.order.estimatedCost ?? 0,
+            pricingMode: activeTemplate.pricingMode,
+            pricingValue: activeTemplate.pricingValue
+          })
+        : null;
+    const ownerOrder = {
+      ...result.order,
+      ...(currentProfile
+        ? {
+            ownerProfileId: currentProfile.id,
+            ownerUsername: currentProfile.primaryHandle,
+            ownerDisplayName: currentProfile.displayName,
+            shareId: result.order.shareId || result.order.id,
+            isClosedCompleted: result.order.status === 'completed' || result.order.status === 'done',
+            isPublicTask: false,
+            accessRules: {
+              view: { enabled: false, priceUsd: 0 },
+              watch: { enabled: false, priceUsd: 0 },
+              join: { enabled: false, priceUsd: 0 }
+            }
           }
-        }
-      : result.order;
+        : {}),
+      ...(activeTemplate
+        ? {
+            templateId: activeTemplate.id,
+            templateSlug: activeTemplate.slug,
+            templateAuthorProfileId: activeTemplate.profileId,
+            templateAuthorUsername: activeTemplate.authorHandle,
+            templateAuthorDisplayName: activeTemplate.authorDisplayName,
+            templatePricingMode: activeTemplate.pricingMode,
+            templatePricingValue: activeTemplate.pricingValue,
+            templateFeeUsd: templateAmounts?.feeUsd,
+            templateNetUsd: templateAmounts?.netUsd
+          }
+        : {})
+    };
 
     upsertOrder(ownerOrder);
     startOrderPolling(ownerOrder);
 
-    if (browser && currentProfile) {
+    if (browser && activeTemplate && templateAmounts && templateAmounts.feeUsd > 0) {
+      const isSelfTemplate = currentProfile?.id === activeTemplate.profileId;
+      if (!isSelfTemplate) {
+        addProfileBonus({
+          storage: localStorage,
+          profileId: activeTemplate.profileId,
+          amountUsd: templateAmounts.feeUsd,
+          source: 'template-order',
+          note: `Template fee from order ${ownerOrder.title}`,
+          orderId: ownerOrder.id
+        });
+      }
+    } else if (browser && currentProfile) {
       const follow = readProfileFollows(localStorage).find((item) => item.followerProfileId === currentProfile?.id);
       if (follow) {
         const targetProfile = getProfileById(localStorage, follow.targetProfileId);
@@ -945,14 +1055,8 @@ import { cubicOut } from 'svelte/easing';
     const created = await createOrder(normalized, options);
 
     if (created && options?.background) {
-      draft = {
-        title: '',
-        description: '',
-        estimatedCost: '',
-        currency: 'USD',
-        executionEstimate: '',
-        files: []
-      };
+      draft = createEmptyDraft();
+      loadActiveTemplate();
     }
   }
 
@@ -1000,14 +1104,8 @@ import { cubicOut } from 'svelte/easing';
   }
 
   function newOrder() {
-    draft = {
-      title: '',
-      description: '',
-      estimatedCost: '',
-      currency: 'USD',
-      executionEstimate: '',
-      files: []
-    };
+    draft = createEmptyDraft();
+    loadActiveTemplate();
     draftQueued = null;
     currentOrder = null;
     resetTransactionState();
@@ -1020,7 +1118,7 @@ import { cubicOut } from 'svelte/easing';
     bio: string;
     isPublic: boolean;
     referralPercent: number;
-    socialLinks: Array<{ id: string; label: string; url: string }>;
+    socialLinks: Profile['socialLinks'];
   }) {
     if (!browser || !currentProfile) {
       return;
@@ -1345,15 +1443,19 @@ import { cubicOut } from 'svelte/easing';
     onLocale={selectTopbarLocale}
   />
 
-  <section
-    class="kefine-layout"
-    class:kefine-layout--create={step === 'create'}
-    class:kefine-layout--flow={step === 'executing' || step === 'payment' || step === 'submitting' || step === 'error'}
-  >
-    {#if step === 'create'}
+  <kefine-layout data-mode={layoutMode}>
+    {#if templateUnavailable}
+      <kefine-screen in:softScreenTransition out:softScreenTransition>
+        <article class="kefine-card kefine-card--wide kefine-template-unavailable">
+          <h2>{localeText.profile.profileUnavailable}</h2>
+          <p>{localeText.profile.noPublicTasks}</p>
+        </article>
+      </kefine-screen>
+    {:else if step === 'create'}
       <kefine-screen in:softScreenTransition out:softScreenTransition>
         <KefineCreateStep
           draft={draft}
+          template={templatePresentation}
           title={localeText.create.title}
           subtitle={localeText.create.subtitle}
           afe={{
@@ -1554,7 +1656,7 @@ import { cubicOut } from 'svelte/easing';
       </kefine-screen>
     {/if}
 
-  </section>
+  </kefine-layout>
 
   <KefineAuthDialog
     open={authDialogOpen}
@@ -1649,6 +1751,17 @@ import { cubicOut } from 'svelte/easing';
   kefine-screen {
     display: grid;
     width: 100%;
+  }
+
+  .kefine-template-unavailable {
+    justify-self: center;
+    max-width: 42rem;
+    gap: 0.75rem;
+  }
+
+  .kefine-template-unavailable h2,
+  .kefine-template-unavailable p {
+    margin: 0;
   }
 
   @media (max-width: 760px) {

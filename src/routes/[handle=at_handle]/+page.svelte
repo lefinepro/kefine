@@ -2,7 +2,9 @@
   import { browser } from '$app/environment';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
-  import KefineProfileHero from '$lib/components/kefine/KefineProfileHero.svelte';
+  import KefineProfileCardInput from '$lib/components/kefine/KefineProfileCardInput.svelte';
+  import KefineProfileHeaderEditor from '$lib/components/kefine/KefineProfileHeaderEditor.svelte';
+  import KefineProfileSocialLinksCard from '$lib/components/kefine/KefineProfileSocialLinksCard.svelte';
   import KefineProfileSetupDots from '$lib/components/kefine/KefineProfileSetupDots.svelte';
   import KefineTopbar from '$lib/components/kefine/KefineTopbar.svelte';
   import { onMount } from 'svelte';
@@ -11,10 +13,17 @@
   import { clearPasskeySession, loadPasskeySession, passkeySessionStore } from '$lib/auth/passkey-session';
   import { parseStoredOrders, type OrderView, type TaskAccessMode } from '$lib/components/kefine/kefine-workflow';
   import { resolvePublicRuntimeConfig } from '$lib/config/public-config';
+  import {
+    deleteTemplateFromCrater,
+    fetchTemplatesByHandle,
+    saveTemplateToCrater
+  } from '$lib/templates/template-api';
   import { getLocaleText, kefineLocale, setKefineLocale, type KefineLocale } from '$lib/constants/kefine-locale';
   import {
     addProfileBonus,
+    calculateTemplateAmounts,
     buildProfilePath,
+    buildProfileTaskPath,
     deriveWalletProfileHandle,
     ensureProfileForSession,
     followProfile,
@@ -24,7 +33,7 @@
     readProfiles,
     updateStoredProfile
   } from '$lib/profile/profile-storage';
-  import type { Profile, ProfileMetadata } from '$lib/types/user';
+  import type { Profile, ProfileMetadata, ProfileSocialLink, ProfileTemplate, ProfileTemplateFile } from '$lib/types/user';
 
   const localeText = $derived(getLocaleText($kefineLocale));
   const passkeySession = $derived($passkeySessionStore);
@@ -36,14 +45,27 @@
   let publicTasks = $state<OrderView[]>([]);
   let ownerTasks = $state<OrderView[]>([]);
   let copyState = $state<'idle' | 'profile' | 'task'>('idle');
+  let profileTemplates = $state<ProfileTemplate[]>([]);
+  let templateEditorId = $state<string | null>(null);
+  let templateCopyId = $state<string | null>(null);
 
   let displayName = $state('');
   let username = $state('');
   let bio = $state('');
   let isPublic = $state(false);
   let referralPercent = $state(10);
-  let socialLinks = $state<Array<{ id: string; label: string; url: string }>>([]);
+  let socialLinks = $state<ProfileSocialLink[]>([]);
   let cardNumber = $state('');
+  let templateTitle = $state('');
+  let templateDescription = $state('');
+  let templatePrefillTitle = $state('');
+  let templatePrefillDescription = $state('');
+  let templatePrefillEstimatedCost = $state('');
+  let templatePrefillCurrency = $state('USD');
+  let templatePricingMode = $state<'fixed' | 'percent'>('fixed');
+  let templatePricingValue = $state('');
+  let templateIsPublished = $state(false);
+  let templateFiles = $state<ProfileTemplateFile[]>([]);
   let firstName = $state('');
   let surname = $state('');
   let leftNavExpanded = $state(false);
@@ -55,18 +77,23 @@
   const canonicalProfilePath = $derived(profile ? buildProfilePath(profile.primaryHandle) : '');
   const setupMetadata = $derived((profile?.metadata ?? {}) as ProfileMetadata);
   const hasOwnerTasks = $derived((isOwner ? ownerTasks : publicTasks).length > 0);
+  const templatePreviewAmounts = $derived(
+    calculateTemplateAmounts({
+      orderEstimatedCost: Number(templatePrefillEstimatedCost) || 0,
+      pricingMode: templatePricingMode,
+      pricingValue: Number(templatePricingValue) || 0
+    })
+  );
 
-  const hasIdentityStepCompleted = $derived(Boolean(firstName.trim()));
+  const hasIdentityStepCompleted = $derived(
+    Boolean(firstName.trim() || surname.trim() || profile?.displayName.trim() || username.trim())
+  );
   const hasCardStepCompleted = $derived(Boolean(profile?.cardVerification?.verifiedAt));
   const hasSocialStepCompleted = $derived(
-    socialLinks.some((link) => Boolean(link.label.trim() && link.url.trim()))
+    socialLinks.some((link) => Boolean(link.value.trim()))
   );
   const socialsStepHint = $derived(
-    setupMetadata.cardBonusEligible
-      ? hasSocialStepCompleted
-        ? ''
-        : localeText.profile.socialBonusHint
-      : localeText.profile.socialOptionalHint
+    setupMetadata.cardBonusEligible && !hasSocialStepCompleted ? localeText.profile.socialBonusHint : ''
   );
   const profileSetupCompleted = $derived(
     setupMetadata.profileSetupCompleted === true || setupMetadata.profileSetupStep === 'done'
@@ -171,25 +198,74 @@
     };
   }
 
-  $effect(() => {
-    displayName = profile?.displayName ?? '';
-    username = profile?.primaryHandle ?? '';
-    bio = profile?.bio ?? '';
-    isPublic = profile?.isPublic ?? false;
-    referralPercent = profile?.referralPercent ?? 10;
-    socialLinks = profile?.socialLinks.map((link) => ({ ...link })) ?? [];
+  function createEmptySocialLink(): ProfileSocialLink {
+    const id =
+      typeof crypto !== 'undefined' && 'randomUUID' in crypto ? `social-${crypto.randomUUID()}` : `social-${Date.now()}`;
+    return { id, type: 'website', label: 'Website', value: '' };
+  }
+
+  function resetTemplateEditor() {
+    templateEditorId = null;
+    templateTitle = '';
+    templateDescription = '';
+    templatePrefillTitle = '';
+    templatePrefillDescription = '';
+    templatePrefillEstimatedCost = '';
+    templatePrefillCurrency = 'USD';
+    templatePricingMode = 'fixed';
+    templatePricingValue = '';
+    templateIsPublished = false;
+    templateFiles = [];
+  }
+
+  function startTemplateEditor(template?: ProfileTemplate) {
+    templateEditorId = template?.id ?? null;
+    templateTitle = template?.title ?? '';
+    templateDescription = template?.description ?? '';
+    templatePrefillTitle = template?.prefillTitle ?? '';
+    templatePrefillDescription = template?.prefillDescription ?? '';
+    templatePrefillEstimatedCost =
+      template?.prefillEstimatedCost !== undefined ? String(template.prefillEstimatedCost) : '';
+    templatePrefillCurrency = template?.prefillCurrency ?? 'USD';
+    templatePricingMode = template?.pricingMode ?? 'fixed';
+    templatePricingValue = template ? String(template.pricingValue) : '';
+    templateIsPublished = template?.isPublished ?? false;
+    templateFiles = template?.prefillFiles.map((file) => ({ ...file })) ?? [];
+  }
+
+  function getTemplateUrl(template: ProfileTemplate): string {
+    const path = `${buildProfilePath(profile?.primaryHandle || '')}/${template.slug}`;
+    return browser ? `${window.location.origin}${path}` : path;
+  }
+
+  function getTaskUrl(order: OrderView): string {
+    const handle = profile?.primaryHandle || profile?.username || requestedHandle;
+    return buildProfileTaskPath(handle, order.shareId ?? order.id);
+  }
+
+  function syncDraftStateFromProfile(nextProfile: Profile | null) {
+    displayName = nextProfile?.displayName ?? '';
+    username = nextProfile?.primaryHandle ?? '';
+    bio = nextProfile?.bio ?? '';
+    isPublic = nextProfile?.isPublic ?? false;
+    referralPercent = nextProfile?.referralPercent ?? 10;
+    socialLinks = nextProfile?.socialLinks.map((link) => ({ ...link })) ?? [];
+    if (viewerProfile && nextProfile && viewerProfile.id === nextProfile.id && socialLinks.length === 0) {
+      socialLinks = [createEmptySocialLink()];
+    }
     cardNumber = '';
-    const nameParts = readProfileNameParts(profile);
+    const nameParts = readProfileNameParts(nextProfile);
     firstName = nameParts.firstName;
     surname = nameParts.surname;
-  });
+  }
 
+  let profileLoadKey = $state('');
   $effect(() => {
     if (!browser) {
       return;
     }
 
-    const dependencyKey = [
+    const nextProfileLoadKey = [
       requestedHandle,
       authState.email ?? '',
       authState.address ?? '',
@@ -197,10 +273,11 @@
       passkeySession?.userId ?? ''
     ].join('|');
 
-    if (dependencyKey === '__never__') {
+    if (nextProfileLoadKey === '__never__' || nextProfileLoadKey === profileLoadKey) {
       return;
     }
 
+    profileLoadKey = nextProfileLoadKey;
     void loadProfilePageState();
   });
 
@@ -246,6 +323,7 @@
 
     const storedProfile = getProfileByUsername(localStorage, requestedHandle);
     profile = storedProfile;
+    syncDraftStateFromProfile(storedProfile);
 
     if (!storedProfile) {
       unavailable = true;
@@ -268,6 +346,7 @@
         (order.status === 'completed' || order.status === 'done' || order.isClosedCompleted === true)
     );
     publicTasks = ownerTasks.filter((order) => order.isPublicTask === true && order.status !== 'stopped');
+    profileTemplates = await fetchTemplatesByHandle(runtimeConfig.backend.craterBaseUrl, storedProfile.primaryHandle);
 
     if (buildProfilePath(storedProfile.primaryHandle) !== buildProfilePath(requestedHandle)) {
       await goto(buildProfilePath(storedProfile.primaryHandle), { replaceState: true });
@@ -275,13 +354,34 @@
   }
 
   function addSocialLink() {
-    const id =
-      typeof crypto !== 'undefined' && 'randomUUID' in crypto ? `social-${crypto.randomUUID()}` : `social-${Date.now()}`;
-    socialLinks = [...socialLinks, { id, label: '', url: '' }];
+    socialLinks = [...socialLinks, createEmptySocialLink()];
   }
 
   function removeSocialLink(id: string) {
     socialLinks = socialLinks.filter((link) => link.id !== id);
+  }
+
+  function addTemplateFiles(event: Event) {
+    const target = event.currentTarget as HTMLInputElement | null;
+    if (!target?.files || target.files.length === 0) {
+      return;
+    }
+
+    const appended = Array.from(target.files).map((file, index) => ({
+      id:
+        typeof crypto !== 'undefined' && 'randomUUID' in crypto
+          ? `template-file-${crypto.randomUUID()}`
+          : `template-file-${Date.now()}-${index}`,
+      name: file.name,
+      size: file.size,
+      type: file.type || undefined
+    }));
+    templateFiles = [...templateFiles, ...appended];
+    target.value = '';
+  }
+
+  function removeTemplateFile(fileId: string) {
+    templateFiles = templateFiles.filter((file) => file.id !== fileId);
   }
 
   async function copyLink(value: string, kind: 'profile' | 'task') {
@@ -294,6 +394,20 @@
     window.setTimeout(() => {
       if (copyState === kind) {
         copyState = 'idle';
+      }
+    }, 1400);
+  }
+
+  async function copyTemplateLink(template: ProfileTemplate) {
+    if (!browser || !navigator.clipboard) {
+      return;
+    }
+
+    await navigator.clipboard.writeText(getTemplateUrl(template));
+    templateCopyId = template.id;
+    window.setTimeout(() => {
+      if (templateCopyId === template.id) {
+        templateCopyId = null;
       }
     }, 1400);
   }
@@ -338,10 +452,10 @@
       socialLinks: socialLinks
         .map((link) => ({
           ...link,
-          label: link.label.trim(),
-          url: link.url.trim()
+          label: link.label?.trim() || undefined,
+          value: link.value.trim()
         }))
-        .filter((link) => link.label && link.url),
+        .filter((link) => link.value),
       metadata: nextMetadata(current, {
         firstName: firstName.trim(),
         surname: surname.trim()
@@ -356,13 +470,126 @@
     }
   }
 
-  async function saveIdentityStep() {
-    if (!browser || !profile || !isOwner || !firstName.trim()) {
+  async function saveTemplate() {
+    if (!browser || !profile || !isOwner) {
       return;
     }
 
+    const saved = await saveTemplateToCrater(runtimeConfig.backend.craterBaseUrl, {
+      id: templateEditorId ?? undefined,
+      authorHandle: profile.primaryHandle,
+      authorProfileId: profile.id,
+      authorDisplayName: profile.displayName,
+      slug: profileTemplates.find((item) => item.id === templateEditorId)?.slug,
+      title: templateTitle,
+      description: templateDescription,
+      prefillTitle: templatePrefillTitle,
+      prefillDescription: templatePrefillDescription,
+      prefillEstimatedCost: templatePrefillEstimatedCost.trim() ? Number(templatePrefillEstimatedCost) : undefined,
+      prefillCurrency: templatePrefillCurrency,
+      prefillFiles: templateFiles,
+      pricingMode: templatePricingMode,
+      pricingValue: Number(templatePricingValue) || 0,
+      isPublished: templateIsPublished
+    });
+
+    if (!saved) {
+      return;
+    }
+
+    profileTemplates = await fetchTemplatesByHandle(runtimeConfig.backend.craterBaseUrl, profile.primaryHandle);
+    resetTemplateEditor();
+  }
+
+  async function createTemplate() {
+    if (!browser || !profile || !isOwner) {
+      return;
+    }
+
+    const created = await saveTemplateToCrater(runtimeConfig.backend.craterBaseUrl, {
+      authorHandle: profile.primaryHandle,
+      authorProfileId: profile.id,
+      authorDisplayName: profile.displayName,
+      title: localeText.profile.createTemplate,
+      description: '',
+      prefillTitle: '',
+      prefillDescription: '',
+      prefillEstimatedCost: undefined,
+      prefillCurrency: 'USD',
+      prefillFiles: [],
+      pricingMode: 'fixed',
+      pricingValue: 0,
+      isPublished: false
+    });
+
+    if (!created) {
+      return;
+    }
+
+    profileTemplates = await fetchTemplatesByHandle(runtimeConfig.backend.craterBaseUrl, profile.primaryHandle);
+    startTemplateEditor(created);
+  }
+
+  function editTemplate(template: ProfileTemplate) {
+    startTemplateEditor(template);
+  }
+
+  async function removeTemplate(templateId: string) {
+    if (!browser || !profile || !isOwner) {
+      return;
+    }
+
+    const deleted = await deleteTemplateFromCrater(runtimeConfig.backend.craterBaseUrl, templateId);
+    if (!deleted) {
+      return;
+    }
+
+    profileTemplates = await fetchTemplatesByHandle(runtimeConfig.backend.craterBaseUrl, profile.primaryHandle);
+    if (templateEditorId === templateId) {
+      resetTemplateEditor();
+    }
+  }
+
+  async function toggleTemplatePublish(template: ProfileTemplate) {
+    if (!browser || !profile || !isOwner) {
+      return;
+    }
+
+    const saved = await saveTemplateToCrater(runtimeConfig.backend.craterBaseUrl, {
+      id: template.id,
+      authorHandle: profile.primaryHandle,
+      authorProfileId: profile.id,
+      authorDisplayName: profile.displayName,
+      slug: template.slug,
+      title: template.title,
+      description: template.description,
+      prefillTitle: template.prefillTitle,
+      prefillDescription: template.prefillDescription,
+      prefillEstimatedCost: template.prefillEstimatedCost,
+      prefillCurrency: template.prefillCurrency,
+      prefillFiles: template.prefillFiles,
+      pricingMode: template.pricingMode,
+      pricingValue: template.pricingValue,
+      isPublished: !template.isPublished
+    });
+
+    if (!saved) {
+      return;
+    }
+
+    profileTemplates = await fetchTemplatesByHandle(runtimeConfig.backend.craterBaseUrl, profile.primaryHandle);
+  }
+
+  async function saveIdentityStep() {
+    if (!browser || !profile || !isOwner) {
+      return;
+    }
+
+    const displayNameParts = profile.displayName.trim().split(/\s+/).filter(Boolean);
+    const normalizedFirstName = firstName.trim() || displayNameParts[0] || username.trim() || 'User';
+    const normalizedSurname = surname.trim() || displayNameParts.slice(1).join(' ');
     const nextHandle = resolveNextUsername(profile);
-    const fullName = `${firstName.trim()} ${surname.trim()}`.trim();
+    const fullName = `${normalizedFirstName} ${normalizedSurname}`.trim();
     const updated = updateStoredProfile(localStorage, profile.id, (current) => ({
       ...current,
       username: nextHandle,
@@ -370,8 +597,8 @@
       displayName: fullName,
       bio: bio.trim(),
       metadata: nextMetadata(current, {
-        firstName: firstName.trim(),
-        surname: surname.trim(),
+        firstName: normalizedFirstName,
+        surname: normalizedSurname,
         profileSetupStep: 'card',
         profileSetupCompleted: false
       })
@@ -380,6 +607,8 @@
     if (updated) {
       syncOwnedOrderHandles(updated.id, updated.primaryHandle);
       profile = updated;
+      firstName = normalizedFirstName;
+      surname = normalizedSurname;
       username = updated.primaryHandle;
       displayName = updated.displayName;
       await navigateToProfileHandle(updated.primaryHandle);
@@ -518,10 +747,10 @@
     const nextSocialLinks = socialLinks
       .map((link) => ({
         ...link,
-        label: link.label.trim(),
-        url: link.url.trim()
+        label: link.label?.trim() || undefined,
+        value: link.value.trim()
       }))
-      .filter((link) => link.label && link.url);
+      .filter((link) => link.value);
 
     let updated = updateStoredProfile(localStorage, profile.id, (current) => ({
       ...current,
@@ -709,12 +938,12 @@
     />
 
     {#if !(isOwner && onboardingStep)}
-      <KefineProfileHero
+      <KefineProfileHeaderEditor
         bind:firstName
         bind:surname
         bind:username
         isOwner={isOwner}
-        isSetup={false}
+        isSetup={isOwner}
         displayName={profile.displayName}
         canonicalProfilePath={canonicalProfilePath}
         bio={bio}
@@ -732,7 +961,7 @@
         {#if isOwner && onboardingStep}
           {#if onboardingStep === 'identity'}
             <section class="profile-surface profile-step-surface profile-step-surface--identity">
-              <KefineProfileHero
+              <KefineProfileHeaderEditor
                 bind:firstName
                 bind:surname
                 bind:username
@@ -764,6 +993,7 @@
                   disabled={!hasIdentityStepCompleted}
                   onclick={saveIdentityStep}
                 >
+                  <span>{localeText.profile.continueToCard}</span>
                   <svg viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M7 12h10m-4-4 4 4-4 4" />
                   </svg>
@@ -772,7 +1002,7 @@
             </section>
           {:else if onboardingStep === 'card'}
             <section class="profile-surface profile-step-surface profile-step-surface--card">
-              <KefineProfileHero
+              <KefineProfileHeaderEditor
                 bind:firstName
                 bind:surname
                 bind:username
@@ -798,41 +1028,23 @@
                 </article>
 
                 <article class="profile-card-form">
-                  <label class="profile-payment-card profile-payment-card--editable">
-                    <small>Bank card</small>
-                    <input
-                      class="profile-payment-card__number"
-                      type="text"
-                      bind:value={cardNumber}
-                      inputmode="numeric"
-                      maxlength="19"
-                      placeholder="0000 0000 0000 0000"
-                    />
-                    <lefine-text>{cardHolderPreview}</lefine-text>
-                  </label>
-                  <lefine-box class="profile-card-actions">
-                    <button type="button" data-variant="ghost" onclick={skipCardStep}>
-                      {localeText.profile.skipCard}
-                    </button>
-                    <button type="button" data-variant="primary" onclick={verifyProfileCard}>
-                      {localeText.profile.verifyCard}
-                    </button>
-                  </lefine-box>
-                  {#if profile.cardVerification}
-                    <lefine-box class="profile-card-status" data-status={profile.cardVerification.status}>
-                      <strong>{profile.cardVerification.bankName ?? 'Unknown bank'}</strong>
-                      <lefine-text>{profile.cardVerification.countryName ?? 'Unknown country'} · BIN {profile.cardVerification.bin}</lefine-text>
-                      {#if profile.cardVerification.rejectionReason}
-                        <small>{profile.cardVerification.rejectionReason}</small>
-                      {/if}
-                    </lefine-box>
-                  {/if}
+                  <KefineProfileCardInput
+                    bind:cardNumber
+                    title={localeText.profile.bonusTitle}
+                    description={localeText.profile.bonusText}
+                    holderName={cardHolderPreview}
+                    verifyLabel={localeText.profile.verifyCard}
+                    skipLabel={localeText.profile.skipCard}
+                    status={profile.cardVerification}
+                    onVerify={verifyProfileCard}
+                    onSkip={skipCardStep}
+                  />
                 </article>
               </lefine-box>
             </section>
           {:else if onboardingStep === 'socials'}
             <section class="profile-surface profile-step-surface">
-              <KefineProfileHero
+              <KefineProfileHeaderEditor
                 bind:firstName
                 bind:surname
                 bind:username
@@ -848,22 +1060,18 @@
                 onFieldKeydown={blockStepSubmitOnEnter}
               />
               <KefineProfileSetupDots currentStep={3} onSelect={goToOnboardingStep} />
-              <lefine-box class="profile-section__head">
-                <lefine-box>
-                  <strong>{localeText.profile.socialLinks}</strong>
-                  <p>{localeText.profile.onboardingSubtitle}</p>
-                </lefine-box>
-                <button type="button" data-variant="ghost" onclick={addSocialLink}>{localeText.profile.addLink}</button>
+              <lefine-box class="profile-links-head">
+                <button type="button" class="profile-links-add" aria-label={localeText.profile.addLink} onclick={addSocialLink}>+</button>
+                <strong>{localeText.profile.socialLinks}</strong>
               </lefine-box>
-                <lefine-box class="profile-links">
-                  {#each socialLinks as link (link.id)}
-                    <lefine-box class="profile-links__row">
-                    <input class="profile-onboarding-input" bind:value={link.label} placeholder={localeText.profile.socialLabel} />
-                    <input class="profile-onboarding-input" bind:value={link.url} placeholder={localeText.profile.socialUrl} />
-                    <button type="button" data-variant="ghost" onclick={() => removeSocialLink(link.id)}>×</button>
-                  </lefine-box>
-                {/each}
-              </lefine-box>
+              <KefineProfileSocialLinksCard
+                bind:links={socialLinks}
+                bind:cardNumber
+                title={localeText.profile.socialLinks}
+                valuePlaceholder={localeText.profile.socialUrl}
+                emptyText={localeText.profile.onboardingSubtitle}
+                isOwner={true}
+              />
               {#if socialsStepHint}
                 <small role="alert">{socialsStepHint}</small>
               {/if}
@@ -911,14 +1119,6 @@
                 </lefine-box>
               {/if}
               <label class="profile-field">
-                <lefine-text>{localeText.profile.displayName}</lefine-text>
-                {#if isOwner}
-                  <input type="text" bind:value={displayName} maxlength="64" />
-                {:else}
-                  <input type="text" value={profile.displayName} disabled />
-                {/if}
-              </label>
-              <label class="profile-field">
                 <lefine-text>{localeText.profile.bio}</lefine-text>
                 {#if isOwner}
                   <textarea bind:value={bio} rows="5"></textarea>
@@ -926,70 +1126,39 @@
                   <textarea value={profile.bio || localeText.profile.subtitle} rows="5" disabled></textarea>
                 {/if}
               </label>
-              <lefine-box class="profile-grid-two">
-                <label class="profile-field">
-                  <lefine-text>{localeText.profile.firstName}</lefine-text>
-                  <input type="text" bind:value={firstName} disabled={!isOwner} />
-                </label>
-                <label class="profile-field">
-                  <lefine-text>{localeText.profile.surname}</lefine-text>
-                  <input type="text" bind:value={surname} disabled={!isOwner} />
-                </label>
-              </lefine-box>
-              <lefine-box class="profile-grid-two">
-                <label class="profile-field">
-                  <lefine-text>{localeText.profile.referralPercent}</lefine-text>
-                  {#if isOwner}
-                    <input bind:value={referralPercent} min="0" max="100" step="1" type="number" />
-                  {:else}
-                    <input value={profile.referralPercent} disabled />
-                  {/if}
-                </label>
-                <lefine-box class="profile-field">
-                  <lefine-text>{localeText.profile.publicToggle}</lefine-text>
-                  <input type="text" value={isPublic ? localeText.profile.publicStatus : localeText.profile.privateStatus} disabled />
-                </lefine-box>
-              </lefine-box>
             </lefine-box>
 
             <lefine-box class="profile-grid-two">
-              <section class="profile-section">
-                <lefine-box class="profile-section__head">
+              <lefine-box class="profile-links-column">
+                <lefine-box class="profile-links-head">
+                  <button type="button" class="profile-links-add" aria-label={localeText.profile.addLink} onclick={addSocialLink}>+</button>
                   <strong>{localeText.profile.socialLinks}</strong>
-                  {#if isOwner}
-                    <button type="button" data-variant="ghost" onclick={addSocialLink}>{localeText.profile.addLink}</button>
-                  {/if}
                 </lefine-box>
+              <KefineProfileSocialLinksCard
+                bind:links={socialLinks}
+                bind:cardNumber
+                title={localeText.profile.socialLinks}
+                valuePlaceholder={localeText.profile.socialUrl}
+                emptyText=""
+                {isOwner}
+              />
+              </lefine-box>
 
-                {#if isOwner}
-                  <lefine-box class="profile-links">
-                    {#each socialLinks as link (link.id)}
-                      <lefine-box class="profile-links__row">
-                        <input bind:value={link.label} placeholder={localeText.profile.socialLabel} />
-                        <input bind:value={link.url} placeholder={localeText.profile.socialUrl} />
-                        <button type="button" data-variant="ghost" onclick={() => removeSocialLink(link.id)}>×</button>
-                      </lefine-box>
-                    {/each}
+              <section class="profile-section profile-section--bonus">
+                <small>Armenian banks</small>
+                <strong>$100 bonus</strong>
+                <p>{localeText.profile.cardHint}</p>
+                {#if profile.cardVerification}
+                  <lefine-box class="profile-card-verification-note" data-status={profile.cardVerification.status}>
+                    <strong>{profile.cardVerification.bankName ?? 'Unknown bank'}</strong>
+                    <lefine-text>
+                      {profile.cardVerification.countryName ?? 'Unknown country'} · BIN {profile.cardVerification.bin}
+                    </lefine-text>
+                    {#if profile.cardVerification.rejectionReason}
+                      <small>{profile.cardVerification.rejectionReason}</small>
+                    {/if}
                   </lefine-box>
-                {:else if profile.socialLinks.length > 0}
-                  <lefine-box class="profile-links-list">
-                    {#each profile.socialLinks as link (link.id)}
-                      <a href={link.url} rel="noreferrer" target="_blank">{link.label}</a>
-                    {/each}
-                  </lefine-box>
-                {:else}
-                  <p>{localeText.profile.noPublicTasks}</p>
                 {/if}
-              </section>
-
-              <section class="profile-section">
-                <small>{localeText.profile.cardStepTitle}</small>
-                <strong>{localeText.profile.bonusTitle}</strong>
-                <p>{localeText.profile.bonusText}</p>
-                <lefine-box class="profile-balance">
-                  <strong>{localeText.profile.bonusBalance}</strong>
-                  <lefine-text>${profile.bonusBalanceUsd.toFixed(2)}</lefine-text>
-                </lefine-box>
               </section>
             </lefine-box>
 
@@ -997,6 +1166,130 @@
               <footer class="profile-details__footer">
                 <button type="button" data-variant="primary" onclick={saveProfile}>{localeText.profile.save}</button>
               </footer>
+            {/if}
+          </article>
+
+          <article class="profile-surface profile-templates">
+            <lefine-box class="profile-section__head">
+              <lefine-box>
+                <strong>{localeText.profile.templates}</strong>
+                <p>{localeText.profile.templatesSubtitle}</p>
+              </lefine-box>
+              {#if isOwner}
+                <button type="button" data-variant="ghost" onclick={createTemplate}>
+                  {localeText.profile.createTemplate}
+                </button>
+              {/if}
+            </lefine-box>
+
+            <lefine-box class="profile-template-list">
+              {#each (isOwner ? profileTemplates : profileTemplates.filter((item) => item.isPublished)) as template (template.id)}
+                <article class="profile-template-card">
+                  <lefine-box class="profile-template-card__head">
+                    <lefine-box>
+                      <strong>{template.title}</strong>
+                      <p>{template.description || template.prefillTitle || template.prefillDescription}</p>
+                    </lefine-box>
+                    <lefine-box class="profile-template-badges">
+                      <span>{template.pricingMode === 'percent' ? `${template.pricingValue}%` : `$${template.pricingValue.toFixed(2)}`}</span>
+                      <span>{template.isPublished ? localeText.profile.templatePublished : localeText.profile.templateDraft}</span>
+                    </lefine-box>
+                  </lefine-box>
+
+                  <lefine-box class="profile-template-card__actions">
+                    <a href={`${buildProfilePath(profile.primaryHandle)}/${template.slug}`}>{localeText.profile.templateOpen}</a>
+                    <button type="button" data-variant="ghost" onclick={() => copyTemplateLink(template)}>
+                      {templateCopyId === template.id ? localeText.profile.templateLinkCopied : localeText.profile.templateCopyLink}
+                    </button>
+                    {#if isOwner}
+                      <button type="button" data-variant="ghost" onclick={() => editTemplate(template)}>{localeText.profile.save}</button>
+                      <button type="button" data-variant="ghost" onclick={() => toggleTemplatePublish(template)}>
+                        {template.isPublished ? localeText.profile.templateDraft : localeText.profile.templatePublish}
+                      </button>
+                      <button type="button" data-variant="ghost" onclick={() => removeTemplate(template.id)}>
+                        {localeText.profile.templateDelete}
+                      </button>
+                    {/if}
+                  </lefine-box>
+                </article>
+              {:else}
+                <p>{localeText.profile.noTemplates}</p>
+              {/each}
+            </lefine-box>
+
+            {#if isOwner}
+              <section class="profile-template-editor">
+                <label class="profile-field">
+                  <lefine-text>{localeText.profile.templateTitle}</lefine-text>
+                  <input bind:value={templateTitle} maxlength="80" />
+                </label>
+                <label class="profile-field">
+                  <lefine-text>{localeText.profile.templateDescription}</lefine-text>
+                  <textarea bind:value={templateDescription} rows="3"></textarea>
+                </label>
+                <label class="profile-field">
+                  <lefine-text>{localeText.profile.templatePrefillTitle}</lefine-text>
+                  <input bind:value={templatePrefillTitle} maxlength="120" />
+                </label>
+                <label class="profile-field">
+                  <lefine-text>{localeText.profile.templatePrefillDescription}</lefine-text>
+                  <textarea bind:value={templatePrefillDescription} rows="5"></textarea>
+                </label>
+
+                <lefine-box class="profile-template-grid">
+                  <label class="profile-field">
+                    <lefine-text>{localeText.profile.templatePricingMode}</lefine-text>
+                    <select bind:value={templatePricingMode}>
+                      <option value="fixed">{localeText.profile.templateFixedMode}</option>
+                      <option value="percent">{localeText.profile.templatePercentMode}</option>
+                    </select>
+                  </label>
+                  <label class="profile-field">
+                    <lefine-text>
+                      {templatePricingMode === 'percent' ? localeText.profile.templatePercent : localeText.profile.templatePrice}
+                    </lefine-text>
+                    <input bind:value={templatePricingValue} min="0" step="0.01" type="number" />
+                  </label>
+                  <label class="profile-field">
+                    <lefine-text>{localeText.labels.price}</lefine-text>
+                    <input bind:value={templatePrefillEstimatedCost} min="0" step="0.01" type="number" />
+                  </label>
+                  <label class="profile-field">
+                    <lefine-text>{localeText.labels.amount}</lefine-text>
+                    <input bind:value={templatePrefillCurrency} maxlength="8" />
+                  </label>
+                </lefine-box>
+
+                <lefine-box class="profile-template-preview">
+                  <strong>{localeText.profile.templateFeePreview}: ${templatePreviewAmounts.feeUsd.toFixed(2)}</strong>
+                  <span>{localeText.profile.templateNetPreview}: ${templatePreviewAmounts.netUsd.toFixed(2)}</span>
+                </lefine-box>
+
+                <label class="profile-field">
+                  <lefine-text>{localeText.profile.templateFiles}</lefine-text>
+                  <input type="file" multiple onchange={addTemplateFiles} />
+                </label>
+
+                {#if templateFiles.length > 0}
+                  <lefine-box class="profile-template-files">
+                    {#each templateFiles as file (file.id)}
+                      <button type="button" data-variant="ghost" onclick={() => removeTemplateFile(file.id)}>
+                        {file.name}
+                      </button>
+                    {/each}
+                  </lefine-box>
+                {/if}
+
+                <label class="profile-toggle">
+                  <input bind:checked={templateIsPublished} type="checkbox" />
+                  <lefine-text>{localeText.profile.templatePublish}</lefine-text>
+                </label>
+
+                <footer class="profile-details__footer">
+                  <button type="button" data-variant="ghost" onclick={resetTemplateEditor}>{localeText.buttons.cancel}</button>
+                  <button type="button" data-variant="primary" onclick={saveTemplate}>{localeText.profile.save}</button>
+                </footer>
+              </section>
             {/if}
           </article>
         {/if}
@@ -1017,15 +1310,15 @@
                       <p>{order.solver}</p>
                     </lefine-box>
                     <lefine-box class="profile-task__actions">
-                      <a href={`/shared/tasks/${order.shareId ?? encodeURIComponent(order.id)}`}>{localeText.profile.openTask}</a>
+                      <a href={getTaskUrl(order)}>{localeText.profile.openTask}</a>
                       <button
                         type="button"
                         data-variant="ghost"
                         onclick={() =>
                           copyLink(
                             browser
-                              ? `${window.location.origin}/shared/tasks/${order.shareId ?? encodeURIComponent(order.id)}`
-                              : `/shared/tasks/${order.shareId ?? encodeURIComponent(order.id)}`,
+                              ? `${window.location.origin}${getTaskUrl(order)}`
+                              : getTaskUrl(order),
                             'task'
                           )}
                       >
@@ -1108,9 +1401,7 @@
   .profile-side,
   .profile-surface,
   .profile-section,
-  .profile-task,
-  .profile-balance,
-  .profile-card-status {
+  .profile-task {
     display: grid;
     gap: 0.9rem;
   }
@@ -1127,10 +1418,8 @@
   .profile-section__head,
   .profile-task__head,
   .profile-task__actions,
-  .profile-links__row,
   .profile-rules__row,
   .profile-toggle,
-  .profile-links-list,
   .profile-details__footer {
     display: flex;
     gap: 0.75rem;
@@ -1216,10 +1505,34 @@
   .profile-details,
   .profile-tasks,
   .profile-task-list,
-  .profile-links,
+  .profile-links-column,
+  .profile-grid-two,
   .profile-rules {
     display: grid;
     gap: 1rem;
+  }
+
+  .profile-links-head {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .profile-links-add {
+    width: 2rem;
+    height: 2rem;
+    border: 1px solid color-mix(in oklab, var(--kef-color-text) 10%, transparent);
+    border-radius: 999px;
+    background: color-mix(in oklab, var(--kef-color-bg) 45%, var(--kef-color-bg-card));
+    color: var(--kef-color-text);
+    cursor: pointer;
+    font-size: 1.15rem;
+    line-height: 1;
+  }
+
+  .profile-grid-two {
+    grid-template-columns: minmax(0, 1.08fr) minmax(18rem, 0.92fr);
+    align-items: start;
   }
 
   .profile-main--setup {
@@ -1289,8 +1602,9 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 4rem;
-    height: 4rem;
+    gap: 0.7rem;
+    min-height: 4rem;
+    padding: 0 1.25rem 0 1.5rem;
     border: 0;
     border-radius: 999px;
     background:
@@ -1300,6 +1614,13 @@
       inset 0 1px 0 color-mix(in oklab, white 22%, transparent),
       0 12px 24px color-mix(in oklab, var(--kef-color-primary) 26%, transparent);
     cursor: pointer;
+  }
+
+  .profile-setup__arrow span {
+    font-size: 0.95rem;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
   }
 
   .profile-setup__arrow svg {
@@ -1323,35 +1644,19 @@
     gap: 0.4rem;
   }
 
-  .profile-onboarding-field {
-    padding: 0.4rem 0;
-    border-bottom: 1px solid color-mix(in oklab, var(--kef-color-text) 12%, transparent);
-  }
-
-  .profile-onboarding-field lefine-text {
-    color: var(--kef-color-muted);
-    font-size: 0.78rem;
-    text-transform: uppercase;
-    letter-spacing: 0.14em;
-  }
-
   .profile-field lefine-text,
   .profile-section__head strong,
   .profile-task__head strong {
     font-size: 0.94rem;
   }
 
-  .profile-field input,
   .profile-field textarea,
-  .profile-links__row input,
-  .profile-rules__row input[type='number'],
-  .profile-card-form input {
+  .profile-rules__row input[type='number'] {
     width: 100%;
   }
 
   .profile-bonus-copy,
   .profile-card-form,
-  .profile-links__row,
   .profile-rules__row {
     padding: 1rem;
     border-radius: 1rem;
@@ -1364,17 +1669,6 @@
     gap: 1rem;
   }
 
-  .profile-card-actions {
-    display: flex;
-    justify-content: space-between;
-    gap: 0.75rem;
-    align-items: center;
-  }
-
-  .profile-card-actions > button {
-    flex: 1 1 0;
-  }
-
   .profile-step-surface--card .profile-bonus-copy {
     align-content: center;
   }
@@ -1384,99 +1678,36 @@
     margin: 0;
   }
 
-  .profile-payment-card {
-    display: grid;
-    gap: 0.7rem;
-    padding: 1.2rem 1.3rem;
-    border-radius: 1.2rem;
-    background:
-      linear-gradient(
-        135deg,
-        color-mix(in oklab, var(--kef-color-primary) 18%, var(--kef-color-bg-card)),
-        color-mix(in oklab, var(--kef-color-bg-card) 92%, var(--kef-color-bg))
-      );
-    border: 1px solid color-mix(in oklab, var(--kef-color-primary) 18%, transparent);
-    box-shadow:
-      inset 0 1px 0 color-mix(in oklab, white 8%, transparent),
-      0 18px 34px color-mix(in oklab, black 12%, transparent);
+  .profile-section--bonus {
+    align-content: start;
   }
 
-  .profile-payment-card small,
-  .profile-payment-card lefine-text {
+  .profile-section--bonus strong,
+  .profile-section--bonus p {
+    margin: 0;
+  }
+
+  .profile-section--bonus small {
     color: var(--kef-color-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 0;
   }
 
-  .profile-payment-card strong,
-  .profile-payment-card__number {
-    font-size: clamp(1.5rem, 3vw, 2rem);
-    letter-spacing: 0.12em;
-    font-weight: 600;
-  }
-
-  .profile-payment-card--editable {
-    cursor: text;
-  }
-
-  .profile-payment-card__number {
-    width: 100%;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    color: var(--kef-color-text);
-    box-shadow: none;
-    font-family: inherit;
-    line-height: 1.12;
-  }
-
-  .profile-payment-card__number::placeholder {
-    color: color-mix(in oklab, var(--kef-color-text) 92%, transparent);
-    opacity: 1;
-  }
-
-  .profile-payment-card__number:focus {
-    outline: none;
-    border: 0;
-    background: transparent;
-    box-shadow: none;
-  }
-
-  .profile-card-form .profile-field input,
-  .profile-onboarding-input {
-    padding: 0;
-    border: 0;
-    border-radius: 0;
-    background: transparent;
-    color: var(--kef-color-text);
-    font-size: clamp(1.2rem, 2vw, 1.7rem);
-    line-height: 1.15;
-    box-shadow: none;
-  }
-
-  .profile-card-form .profile-field input::placeholder,
-  .profile-onboarding-input::placeholder {
-    color: color-mix(in oklab, var(--kef-color-text) 54%, transparent);
-    opacity: 1;
-  }
-
-  .profile-card-form .profile-field input:focus,
-  .profile-onboarding-input:focus {
-    outline: none;
-    border: 0;
-    background: transparent;
-    box-shadow: none;
-  }
-
-  .profile-balance {
+  .profile-card-verification-note {
+    display: grid;
+    gap: 0.35rem;
     padding: 0.9rem 1rem;
     border-radius: 1rem;
-    background: color-mix(in oklab, var(--kef-color-primary) 10%, var(--kef-color-bg-card));
+    background: color-mix(in oklab, var(--kef-color-bg) 45%, var(--kef-color-bg-card));
+    border: 1px solid color-mix(in oklab, var(--kef-color-text) 8%, transparent);
   }
 
-  .profile-card-status[data-status='verified'] {
+  .profile-card-verification-note[data-status='verified'] {
     background: color-mix(in oklab, var(--kef-color-success) 16%, var(--kef-color-bg-card));
   }
 
-  .profile-card-status[data-status='rejected'] {
+  .profile-card-verification-note[data-status='rejected'] {
     background: color-mix(in oklab, var(--kef-color-error) 12%, var(--kef-color-bg-card));
   }
 
@@ -1503,12 +1734,64 @@
     flex-wrap: wrap;
   }
 
-  .profile-rules__row .profile-toggle {
-    flex: 1 1 auto;
+  .profile-templates,
+  .profile-template-list,
+  .profile-template-editor,
+  .profile-template-card,
+  .profile-template-grid,
+  .profile-template-files {
+    display: grid;
+    gap: 0.9rem;
   }
 
-  .profile-links-list {
+  .profile-template-card,
+  .profile-template-editor,
+  .profile-template-preview {
+    padding: 1rem;
+    border-radius: 1rem;
+    background: color-mix(in oklab, var(--kef-color-bg) 45%, var(--kef-color-bg-card));
+    border: 1px solid color-mix(in oklab, var(--kef-color-text) 8%, transparent);
+  }
+
+  .profile-template-card__head,
+  .profile-template-card__actions,
+  .profile-template-badges,
+  .profile-template-preview {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    justify-content: space-between;
     flex-wrap: wrap;
+  }
+
+  .profile-template-card__head p,
+  .profile-template-card__head strong,
+  .profile-template-preview strong,
+  .profile-template-preview span {
+    margin: 0;
+  }
+
+  .profile-template-badges span,
+  .profile-template-files button {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.2rem;
+    padding: 0.45rem 0.7rem;
+    border-radius: 999px;
+    background: color-mix(in oklab, var(--kef-color-bg-card) 92%, transparent);
+    border: 1px solid color-mix(in oklab, var(--kef-color-text) 8%, transparent);
+  }
+
+  .profile-template-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .profile-template-editor select {
+    width: 100%;
+  }
+
+  .profile-rules__row .profile-toggle {
+    flex: 1 1 auto;
   }
 
   .profile-surface a,
@@ -1520,7 +1803,7 @@
     .profile-layout,
     .profile-layout--single,
     .profile-grid-two,
-    .profile-grid-two--card {
+    .profile-template-grid {
       grid-template-columns: 1fr;
     }
 
@@ -1560,10 +1843,6 @@
 
     .profile-card-stage {
       grid-template-columns: 1fr;
-    }
-
-    .profile-card-actions {
-      flex-direction: column;
     }
 
   }

@@ -1,6 +1,8 @@
 <script lang="ts">
   import { browser } from '$app/environment';
   import KefineModal from '$lib/components/kefine/KefineModal.svelte';
+  import KefineProfileSocialLinksCard from '$lib/components/kefine/KefineProfileSocialLinksCard.svelte';
+  import type { ProfileSocialLink } from '$lib/types/user';
   import type { OrderView, TaskAccessMode } from '$lib/components/kefine/kefine-workflow';
   import type { Profile } from '$lib/types/user';
 
@@ -61,7 +63,7 @@
       bio: string;
       isPublic: boolean;
       referralPercent: number;
-      socialLinks: Array<{ id: string; label: string; url: string }>;
+      socialLinks: ProfileSocialLink[];
     }) => void;
     onSignOut: () => void;
     onVerifyCard: (cardNumber: string) => Promise<void> | void;
@@ -76,7 +78,7 @@
   let bio = $state('');
   let isPublic = $state(false);
   let referralPercent = $state(10);
-  let socialLinks = $state<Array<{ id: string; label: string; url: string }>>([]);
+  let socialLinks = $state<ProfileSocialLink[]>([]);
   let cardNumber = $state('');
   let copyStatus = $state<'idle' | 'profile' | 'task'>('idle');
 
@@ -91,7 +93,7 @@
   });
 
   function addSocialLink() {
-    socialLinks = [...socialLinks, { id: `social-${crypto.randomUUID()}`, label: '', url: '' }];
+    socialLinks = [...socialLinks, { id: `social-${crypto.randomUUID()}`, type: 'website', label: 'Website', value: '' }];
   }
 
   function removeSocialLink(id: string) {
@@ -136,10 +138,10 @@
       socialLinks: socialLinks
         .map((link) => ({
           ...link,
-          label: link.label.trim(),
-          url: link.url.trim()
+          label: link.label?.trim() || undefined,
+          value: link.value.trim()
         }))
-        .filter((link) => link.label && link.url)
+        .filter((link) => link.value)
     });
   }
 </script>
@@ -167,8 +169,7 @@
             <input bind:value={username} maxlength="32" />
           </label>
           <label>
-            <lefine-text>{labels.displayName}</lefine-text>
-            <input bind:value={displayName} maxlength="64" />
+            <input bind:value={displayName} maxlength="64" aria-label={labels.displayName} />
           </label>
           <label>
             <lefine-text>{labels.bio}</lefine-text>
@@ -189,19 +190,13 @@
         </kefine-profile-card>
 
         <kefine-profile-card>
-          <kefine-profile-card-head>
-            <strong>{labels.socialLinks}</strong>
-            <button type="button" data-variant="ghost" onclick={addSocialLink}>{labels.addLink}</button>
-          </kefine-profile-card-head>
-          <kefine-profile-links>
-            {#each socialLinks as link (link.id)}
-              <kefine-profile-links-row>
-                <input bind:value={link.label} placeholder={labels.socialLabel} />
-                <input bind:value={link.url} placeholder={labels.socialUrl} />
-                <button type="button" data-variant="ghost" onclick={() => removeSocialLink(link.id)}>×</button>
-              </kefine-profile-links-row>
-            {/each}
-          </kefine-profile-links>
+          <KefineProfileSocialLinksCard
+            bind:links={socialLinks}
+            title={labels.socialLinks}
+            valuePlaceholder={labels.socialUrl}
+            emptyText=""
+            isOwner={true}
+          />
         </kefine-profile-card>
 
         <kefine-profile-card>
@@ -313,7 +308,6 @@
   kefine-profile-task-head,
   kefine-profile-task-actions,
   kefine-profile-verify,
-  kefine-profile-links-row,
   kefine-profile-rules-row,
   kefine-profile-toggle {
     display: flex;
@@ -334,8 +328,7 @@
   }
 
   kefine-profile-grid,
-  kefine-profile-tasks,
-  kefine-profile-links {
+  kefine-profile-tasks {
     display: grid;
     gap: 0.9rem;
   }
@@ -367,13 +360,11 @@
     background: color-mix(in oklab, var(--kef-primary) 8%, var(--kef-bg-card));
   }
 
-  kefine-profile-links-row,
   kefine-profile-verify,
   kefine-profile-rules-row {
     align-items: stretch;
   }
 
-  kefine-profile-links-row input,
   kefine-profile-verify input,
   kefine-profile-rules-row input[type='number'] {
     width: 100%;

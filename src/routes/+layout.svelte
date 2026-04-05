@@ -11,8 +11,9 @@
 	}
 
 	const { children, data }: Props = $props();
-  const publicConfig = $derived(resolvePublicRuntimeConfig(data.publicConfig));
-  const seo = $derived(getSeoMeta(page.url, publicConfig));
+  const runtimePublicConfig = $derived(resolvePublicRuntimeConfig(data.publicConfig));
+  const publicConfigScript = $derived(JSON.stringify(runtimePublicConfig).replace(/</g, '\\u003c'));
+  const seo = $derived(getSeoMeta(page.url, runtimePublicConfig));
   const canonicalUrl = $derived(`${page.url.origin}${seo.canonicalPath}`);
   const imageUrl = $derived(`${page.url.origin}${seo.imagePath}`);
 </script>
@@ -34,7 +35,7 @@
   <meta name="twitter:description" content={seo.description} />
   <meta name="twitter:image" content={imageUrl} />
   <script type="application/ld+json">{JSON.stringify(seo.jsonLd)}</script>
-  <script>{`window.__KEFINE_PUBLIC_CONFIG__ = ${JSON.stringify(publicConfig).replace(/</g, '\\u003c')};`}</script>
+  <script>{`window.__KEFINE_PUBLIC_CONFIG__ = ${publicConfigScript};`}</script>
 </svelte:head>
 
 {@render children()}

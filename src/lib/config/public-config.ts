@@ -31,6 +31,9 @@ export type KefineCompanyPublicConfig = {
 export type KefinePublicRuntimeConfig = {
   app: KefinePublicAppConfig;
   company: KefineCompanyPublicConfig;
+  backend: {
+    craterBaseUrl: string;
+  };
 };
 
 export const DEFAULT_PUBLIC_RUNTIME_CONFIG: KefinePublicRuntimeConfig = {
@@ -64,6 +67,9 @@ export const DEFAULT_PUBLIC_RUNTIME_CONFIG: KefinePublicRuntimeConfig = {
     taxId: '',
     soleProprietor: '',
     legalDisclaimer: ''
+  },
+  backend: {
+    craterBaseUrl: 'http://localhost:3001'
   }
 };
 
@@ -116,6 +122,9 @@ export function resolvePublicRuntimeConfig(value: unknown): KefinePublicRuntimeC
       taxId: normalizeText(company.taxId),
       soleProprietor: normalizeText(company.soleProprietor),
       legalDisclaimer: normalizeText(company.legalDisclaimer)
+    },
+    backend: {
+      craterBaseUrl: normalizeText((value as { backend?: { craterBaseUrl?: string } }).backend?.craterBaseUrl, DEFAULT_PUBLIC_RUNTIME_CONFIG.backend.craterBaseUrl)
     }
   };
 }

@@ -281,7 +281,7 @@ export const KEFINE_TEXT_RU = {
       },
       task: {
         title: '1. Опишите задачу',
-        detail: 'Опишите нужный VPN или DevOps-результат и задайте верхнюю границу бюджета.'
+        detail: 'Опишите нужный инженерный результат и задайте верхнюю границу бюджета.'
       },
       quote: {
         title: '2. Квота от solver’а',
@@ -405,6 +405,30 @@ export const KEFINE_TEXT_RU = {
     buyJoin: 'Присоединиться к задаче',
     ownerTask: 'Ваша задача',
     accessGranted: 'Доступ открыт',
-    profileUnavailable: 'Профиль недоступен'
+    profileUnavailable: 'Профиль недоступен',
+    templates: 'Шаблоны',
+    templatesSubtitle: 'Создавайте переиспользуемые шаблоны задач и делитесь ими как отдельными точками входа.',
+    noTemplates: 'Шаблонов пока нет',
+    createTemplate: 'Новый шаблон',
+    templateTitle: 'Название шаблона',
+    templateDescription: 'Описание шаблона',
+    templatePrefillTitle: 'Заголовок запроса',
+    templatePrefillDescription: 'Текст запроса',
+    templatePricingMode: 'Режим монетизации',
+    templateFixedMode: 'USD',
+    templatePercentMode: 'Процент',
+    templatePrice: 'Цена шаблона',
+    templatePercent: 'Процент шаблона',
+    templateFiles: 'Файлы шаблона',
+    templateAddFiles: 'Добавить файлы шаблона',
+    templatePublish: 'Опубликовать шаблон',
+    templatePublished: 'Опубликован',
+    templateDraft: 'Черновик',
+    templateCopyLink: 'Скопировать ссылку шаблона',
+    templateOpen: 'Открыть шаблон',
+    templateDelete: 'Удалить шаблон',
+    templateFeePreview: 'Комиссия автора',
+    templateNetPreview: 'Остаток заказа',
+    templateLinkCopied: 'Ссылка шаблона скопирована'
   }
 } as const;

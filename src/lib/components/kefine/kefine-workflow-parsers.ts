@@ -4,6 +4,7 @@ import type {
   OrderView,
   PaymentQuote,
   TaskAccessMode,
+  TemplatePresentation,
   UiScenario,
   VpnDeliveryGuide
 } from '$lib/components/kefine/kefine-workflow';
@@ -40,6 +41,10 @@ function detectVpnScenario(payload: DraftOrder): boolean {
 
 function toUiScenario(value: unknown): Exclude<UiScenario, 'default'> | undefined {
   return value === 'vpn-service' ? value : undefined;
+}
+
+function toTemplatePricingMode(value: unknown): 'fixed' | 'percent' | undefined {
+  return value === 'percent' ? 'percent' : value === 'fixed' ? 'fixed' : undefined;
 }
 
 function inferExecutionEstimate(title: string, localeText: KefineLocaleText): string | undefined {
@@ -313,7 +318,15 @@ export function parseStoredOrders(raw: string | null, localeText: KefineLocaleTe
         shareId: toStringValue(order['shareId']),
         isClosedCompleted: order['isClosedCompleted'] === true,
         isPublicTask: order['isPublicTask'] === true,
-        accessRules: toAccessRules(order['accessRules'])
+        accessRules: toAccessRules(order['accessRules']),
+        templateId: toStringValue(order['templateId']),
+        templateSlug: toStringValue(order['templateSlug']),
+        templateAuthorProfileId: toStringValue(order['templateAuthorProfileId']),
+        templateAuthorUsername: toStringValue(order['templateAuthorUsername']),
+        templatePricingMode: toTemplatePricingMode(order['templatePricingMode']),
+        templatePricingValue: toNumber(order['templatePricingValue']),
+        templateFeeUsd: toNumber(order['templateFeeUsd']),
+        templateNetUsd: toNumber(order['templateNetUsd'])
       };
     })
     .filter((order) => order.id.length > 0 && !order.id.startsWith('temp-') && !order.id.startsWith('local-'));
@@ -430,7 +443,17 @@ export function extractStatusPayload(
     shareId: toStringValue(source['shareId']) || toStringValue(ticket['shareId']) || undefined,
     isClosedCompleted: source['isClosedCompleted'] === true || ticket['isClosedCompleted'] === true,
     isPublicTask: source['isPublicTask'] === true || ticket['isPublicTask'] === true,
-    accessRules: toAccessRules(source['accessRules']) || toAccessRules(ticket['accessRules'])
+    accessRules: toAccessRules(source['accessRules']) || toAccessRules(ticket['accessRules']),
+    templateId: toStringValue(source['templateId']) || toStringValue(ticket['templateId']) || undefined,
+    templateSlug: toStringValue(source['templateSlug']) || toStringValue(ticket['templateSlug']) || undefined,
+    templateAuthorProfileId:
+      toStringValue(source['templateAuthorProfileId']) || toStringValue(ticket['templateAuthorProfileId']) || undefined,
+    templateAuthorUsername:
+      toStringValue(source['templateAuthorUsername']) || toStringValue(ticket['templateAuthorUsername']) || undefined,
+    templatePricingMode: toTemplatePricingMode(source['templatePricingMode']) || toTemplatePricingMode(ticket['templatePricingMode']),
+    templatePricingValue: toNumber(source['templatePricingValue']) ?? toNumber(ticket['templatePricingValue']) ?? undefined,
+    templateFeeUsd: toNumber(source['templateFeeUsd']) ?? toNumber(ticket['templateFeeUsd']) ?? undefined,
+    templateNetUsd: toNumber(source['templateNetUsd']) ?? toNumber(ticket['templateNetUsd']) ?? undefined
   };
 }
 
@@ -487,7 +510,7 @@ export function readPaymentQuote(body: unknown): PaymentQuote | null {
   };
 }
 
-export function buildCreatePayload(payload: DraftOrder) {
+export function buildCreatePayload(payload: DraftOrder, template?: TemplatePresentation | null) {
   const isVpnScenario = detectVpnScenario(payload);
   const fileAttachments = payload.files.map((file) => ({
     type: 'Document',
@@ -506,6 +529,13 @@ export function buildCreatePayload(payload: DraftOrder) {
     executionEstimate: payload.executionEstimate || undefined,
     uiScenario: isVpnScenario ? 'vpn-service' : undefined,
     labels: isVpnScenario ? ['vpn'] : undefined,
-    attachment: fileAttachments.length > 0 ? fileAttachments : undefined
+    attachment: fileAttachments.length > 0 ? fileAttachments : undefined,
+    templateId: template?.id,
+    templateSlug: template?.slug,
+    templateAuthorProfileId: template?.authorProfileId,
+    templateAuthorUsername: template?.authorHandle,
+    templateAuthorDisplayName: template?.authorDisplayName,
+    templatePricingMode: template?.pricingMode,
+    templatePricingValue: template?.pricingValue
   };
 }

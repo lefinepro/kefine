@@ -1,5 +1,6 @@
 import { type KefineLocaleText } from '$lib/constants/kefine-locale';
 import { VPN_FLOW_MOCK } from '$lib/components/kefine/kefine-vpn-flow';
+import type { ProfileTemplateFile, ProfileTemplatePricingMode } from '$lib/types/user';
 export {
   buildCreatePayload,
   extractStatusPayload,
@@ -35,6 +36,7 @@ export type DraftOrder = {
   currency: string;
   executionEstimate: string;
   files: File[];
+  templateFiles?: ProfileTemplateFile[];
 };
 
 export type OrderView = {
@@ -59,6 +61,27 @@ export type OrderView = {
   isClosedCompleted?: boolean;
   isPublicTask?: boolean;
   accessRules?: Partial<Record<TaskAccessMode, TaskAccessRule>>;
+  templateId?: string;
+  templateSlug?: string;
+  templateAuthorProfileId?: string;
+  templateAuthorUsername?: string;
+  templatePricingMode?: ProfileTemplatePricingMode;
+  templatePricingValue?: number;
+  templateFeeUsd?: number;
+  templateNetUsd?: number;
+};
+
+export type TemplatePresentation = {
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
+  authorProfileId?: string;
+  authorHandle: string;
+  authorDisplayName: string;
+  pricingMode: ProfileTemplatePricingMode;
+  pricingValue: number;
+  prefillFiles: ProfileTemplateFile[];
 };
 
 export type PaymentQuote = {

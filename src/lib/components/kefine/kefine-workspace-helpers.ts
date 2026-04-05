@@ -190,7 +190,8 @@ export function normalizeDraftOrder(
     estimatedCost,
     currency,
     executionEstimate: form.executionEstimate.trim(),
-    files: [...form.files]
+    files: [...form.files],
+    templateFiles: [...(form.templateFiles ?? [])]
   };
 
   if (!normalized.title) {
