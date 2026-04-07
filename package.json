@@ -12,8 +12,8 @@
 		"lint:fix": "oxlint . --fix",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-		"test": "bun test",
-		"test:integration": "bun test --test-name-pattern integration",
+		"test": "bun test --pass-with-no-tests --path-ignore-patterns e2e",
+		"test:integration": "bun test --pass-with-no-tests --path-ignore-patterns e2e --test-name-pattern integration",
 		"test:e2e": "bunx playwright test"
 	},
 	"devDependencies": {
