@@ -222,11 +222,12 @@
       return;
     }
 
+    event.preventDefault();
+
     if (event.shiftKey) {
+      void onQueueTask();
       return;
     }
-
-    event.preventDefault();
 
     if (event.altKey) {
       void onQueueTask();

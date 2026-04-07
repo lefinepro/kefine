@@ -128,7 +128,7 @@ test('Shift+Enter adds optimistic item, keeps create screen, and opens by ETA cl
   await expect(realRow.getByTestId('kefine-order-eta-order-1')).toContainText('about 2 hours');
 
   await realRow.getByTestId('kefine-open-order-order-1').click();
-  await expect(page).toHaveURL(/\/task\/order-1$/);
+  await expect(page).toHaveURL(/#\/orders\/order-1$/);
 });
 
 test('reloading a temp order route keeps the order screen stable', async ({ page }) => {
@@ -149,7 +149,7 @@ test('reloading a temp order route keeps the order screen stable', async ({ page
   await page.goto(`/task/${optimisticOrderId}`);
   await page.reload();
 
-  await expect(page).toHaveURL(new RegExp(`/task/${optimisticOrderId}`));
+  await expect(page).toHaveURL(new RegExp(`/orders/${optimisticOrderId}`));
   await expect(page.getByTestId('kefine-wallet-tile')).toBeVisible();
   await expect(page.getByTestId('kefine-price-metric')).toBeVisible();
 });
@@ -161,11 +161,11 @@ test('reloading a persisted order route keeps the executing component mounted', 
 
   await page.getByTestId('kefine-task-input').fill('Persisted route order');
   await page.getByTestId('kefine-submit-task').click();
-  await expect(page).toHaveURL(/\/task\/order-1$/);
+  await expect(page).toHaveURL(/#\/orders\/order-1$/);
 
   await page.reload();
 
-  await expect(page).toHaveURL(/\/task\/order-1$/);
+  await expect(page).toHaveURL(/#\/orders\/order-1$/);
   await expect(page.getByRole('heading', { name: 'Persisted route order' })).toBeVisible();
   await expect(page.getByTestId('kefine-wallet-tile')).toBeVisible();
 });
@@ -178,7 +178,7 @@ test('Enter adds item to shared list and opens executing flow', async ({ page })
   await page.getByTestId('kefine-task-input').fill('Deploy my production app');
   await page.getByTestId('kefine-submit-task').click();
 
-  await expect(page).toHaveURL(/\/task\/order-1$/);
+  await expect(page).toHaveURL(/#\/orders\/order-1$/);
   await expect(page.getByRole('heading', { name: 'Deploy my production app' })).toBeVisible();
   await expect(page.getByTestId('kefine-subtask-list')).toBeVisible();
   await expect(page.getByTestId('kefine-price-metric')).toContainText('42');
@@ -195,7 +195,7 @@ test('executing screen keeps solver fallback and no standalone promo block', asy
   await page.getByTestId('kefine-task-input').fill('Need access to Telegram');
   await page.getByTestId('kefine-submit-task').click();
 
-  await expect(page).toHaveURL(/\/task\/order-1$/);
+  await expect(page).toHaveURL(/#\/orders\/order-1$/);
   await expect(page.getByTestId('kefine-solver-fallback')).toBeVisible();
   await expect(page.getByTestId('kefine-promo-toggle')).toHaveCount(0);
   await expect(page.getByTestId('kefine-promo-input')).toHaveCount(0);
@@ -208,7 +208,7 @@ test('anonymous payment path opens deposit dialog and reveals result panel', asy
   await page.getByTestId('kefine-task-input').fill('Optimize an algorithm');
   await page.getByTestId('kefine-submit-task').click();
 
-  await expect(page).toHaveURL(/\/task\/order-1$/);
+  await expect(page).toHaveURL(/#\/orders\/order-1$/);
   await page.getByTestId('kefine-anonymous-tile').click();
   await expect(page.getByTestId('kefine-anonymous-payment')).toBeVisible();
   await page.getByTestId('kefine-open-deposit-dialog').click();
@@ -227,7 +227,7 @@ test('View stages opens the execution flow from the result panel', async ({ page
   await page.getByTestId('kefine-task-input').fill('Deploy private VPN for the team');
   await page.getByTestId('kefine-submit-task').click();
 
-  await expect(page).toHaveURL(/\/task\/order-1$/);
+  await expect(page).toHaveURL(/#\/orders\/order-1$/);
   await page.getByTestId('kefine-anonymous-tile').click();
   await expect(page.getByTestId('kefine-anonymous-payment')).toBeVisible();
   await page.getByRole('button', { name: 'Continue to result' }).click();
@@ -235,7 +235,7 @@ test('View stages opens the execution flow from the result panel', async ({ page
   await expect(page.getByTestId('kefine-result-panel')).toBeVisible();
   await page.getByRole('button', { name: 'View stages' }).click();
 
-  await expect(page).toHaveURL(/\/task\/order-1\/stages$/);
+  await expect(page).toHaveURL(/#\/orders\/order-1\/stages$/);
   await expect(page.getByTestId('kefine-subtask-list')).toBeVisible();
   await expect(page.getByTestId('kefine-result-panel')).toHaveCount(0);
 });
