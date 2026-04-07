@@ -24,7 +24,7 @@ export async function proxyCraterRequest(
     if (request.method !== 'GET' && request.method !== 'HEAD') {
       if (isMultipart) {
         // For multipart/form-data, forward the body directly to preserve boundary
-        body = request.body;
+        body = request.body ?? undefined;
         if (contentType) {
           headers['Content-Type'] = contentType;
         }

@@ -78,7 +78,7 @@
     stopTaskLabel: string;
     onSubmit: () => void;
     onQueueTask: () => Promise<void> | void;
-    onAttachFiles: (files: FileList) => void;
+    onAttachFiles: (files: File[]) => void;
     onRemoveFile: (index: number) => void;
     onStopOrder: (order: OrderView, event: Event) => void;
     onOpenOrder: (order: OrderView) => void;
@@ -222,11 +222,12 @@
       return;
     }
 
+    event.preventDefault();
+
     if (event.shiftKey) {
+      void onQueueTask();
       return;
     }
-
-    event.preventDefault();
 
     if (event.altKey) {
       void onQueueTask();
@@ -379,7 +380,7 @@
       </lefine-box>
       <lefine-box data-part="template-meta">
         <strong>@{template.authorHandle}</strong>
-        <span>{template.pricingMode === 'percent' ? `${template.pricingValue}%` : `$${template.pricingValue.toFixed(2)}`}</span>
+        <lefine-text>{template.pricingMode === 'percent' ? `${template.pricingValue}%` : `$${template.pricingValue.toFixed(2)}`}</lefine-text>
       </lefine-box>
     </section>
   {/if}
@@ -472,10 +473,10 @@
     {#if (draft.templateFiles?.length ?? 0) > 0}
       <kefine-file-list data-template-files="true">
         {#each draft.templateFiles ?? [] as file (`template-${file.id}`)}
-          <span data-part="template-file-pill">
+          <lefine-box data-part="template-file-pill">
             <lefine-text>{file.name}</lefine-text>
             <strong>{Math.max(1, Math.round((file.size ?? 1024) / 1024))} KB</strong>
-          </span>
+          </lefine-box>
         {/each}
       </kefine-file-list>
     {/if}
@@ -485,15 +486,15 @@
         {#each draft.files as file, index (`${file.name}-${file.size}-${index}`)}
           <button type="button" data-part="file-pill" onclick={() => onRemoveFile(index)}>
             {#if isImageFile(file) && filePreviews.has(index)}
-              <div data-part="file-preview-wrapper">
+              <lefine-box data-part="file-preview-wrapper">
                 <img
                   src={filePreviews.get(index)}
                   alt={file.name}
                   data-part="file-preview"
                 />
-              </div>
+              </lefine-box>
             {/if}
-            <span>{file.name}</span>
+            <lefine-text>{file.name}</lefine-text>
             <strong>{Math.max(1, Math.round(file.size / 1024))} KB</strong>
           </button>
         {/each}
@@ -620,7 +621,7 @@
   section[data-part='template-banner'] p,
   section[data-part='template-banner'] strong,
   [data-part='template-meta'] strong,
-  [data-part='template-meta'] span {
+  [data-part='template-meta'] lefine-text {
     margin: 0;
   }
 
@@ -815,7 +816,7 @@
     display: block;
   }
 
-  div[data-part='file-preview-wrapper'] {
+  lefine-box[data-part='file-preview-wrapper'] {
     width: 2rem;
     height: 2rem;
     border-radius: 0.3rem;
