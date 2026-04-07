@@ -993,7 +993,7 @@
                   disabled={!hasIdentityStepCompleted}
                   onclick={saveIdentityStep}
                 >
-                  <span>{localeText.profile.continueToCard}</span>
+                  <lefine-text>{localeText.profile.continueToCard}</lefine-text>
                   <svg viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M7 12h10m-4-4 4 4-4 4" />
                   </svg>
@@ -1191,8 +1191,8 @@
                       <p>{template.description || template.prefillTitle || template.prefillDescription}</p>
                     </lefine-box>
                     <lefine-box class="profile-template-badges">
-                      <span>{template.pricingMode === 'percent' ? `${template.pricingValue}%` : `$${template.pricingValue.toFixed(2)}`}</span>
-                      <span>{template.isPublished ? localeText.profile.templatePublished : localeText.profile.templateDraft}</span>
+                      <lefine-text>{template.pricingMode === 'percent' ? `${template.pricingValue}%` : `$${template.pricingValue.toFixed(2)}`}</lefine-text>
+                      <lefine-text>{template.isPublished ? localeText.profile.templatePublished : localeText.profile.templateDraft}</lefine-text>
                     </lefine-box>
                   </lefine-box>
 
@@ -1262,7 +1262,7 @@
 
                 <lefine-box class="profile-template-preview">
                   <strong>{localeText.profile.templateFeePreview}: ${templatePreviewAmounts.feeUsd.toFixed(2)}</strong>
-                  <span>{localeText.profile.templateNetPreview}: ${templatePreviewAmounts.netUsd.toFixed(2)}</span>
+                  <lefine-text>{localeText.profile.templateNetPreview}: ${templatePreviewAmounts.netUsd.toFixed(2)}</lefine-text>
                 </lefine-box>
 
                 <label class="profile-field">
@@ -1616,7 +1616,7 @@
     cursor: pointer;
   }
 
-  .profile-setup__arrow span {
+  .profile-setup__arrow lefine-text {
     font-size: 0.95rem;
     font-weight: 600;
     line-height: 1;
@@ -1767,11 +1767,11 @@
   .profile-template-card__head p,
   .profile-template-card__head strong,
   .profile-template-preview strong,
-  .profile-template-preview span {
+  .profile-template-preview lefine-text {
     margin: 0;
   }
 
-  .profile-template-badges span,
+  .profile-template-badges lefine-text,
   .profile-template-files button {
     display: inline-flex;
     align-items: center;

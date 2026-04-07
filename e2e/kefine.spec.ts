@@ -107,7 +107,7 @@ async function gotoAndWaitForReady(page: import('@playwright/test').Page) {
     window.localStorage.clear();
   });
   await page.reload();
-  await expect(page.getByTestId('kefine-task-input')).toHaveAttribute('placeholder', /.+/);
+  await expect(page.getByTestId('kefine-task-input')).toBeVisible();
 }
 
 test('Shift+Enter adds optimistic item, keeps create screen, and opens by ETA click', async ({ page }) => {

@@ -1077,8 +1077,8 @@ import { cubicOut } from 'svelte/easing';
     await submitDraft(draft, { background: true });
   }
 
-  function attachFiles(files: FileList) {
-    draft.files = [...draft.files, ...Array.from(files)];
+  function attachFiles(files: File[]) {
+    draft.files = [...draft.files, ...files];
   }
 
   function removeAttachedFile(index: number) {
