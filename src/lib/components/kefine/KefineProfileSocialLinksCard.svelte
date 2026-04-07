@@ -97,13 +97,13 @@
             {:else}
               <Icon icon={account.icon} width="16" height="16" aria-hidden="true" />
             {/if}
-            <span>{link.value}</span>
+            <lefine-text>{link.value}</lefine-text>
           </a>
         {:else}
-          <span class="profile-social-card__chip">
+          <lefine-box class="profile-social-card__chip">
             <Icon icon={account.icon} width="16" height="16" aria-hidden="true" />
-            <span>{link.value}</span>
-          </span>
+            <lefine-text>{link.value}</lefine-text>
+          </lefine-box>
         {/if}
       {/each}
     </lefine-box>

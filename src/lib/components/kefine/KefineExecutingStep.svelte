@@ -477,7 +477,7 @@
         <lefine-box class="kefine-flow-badges">
           <lefine-text class="kefine-flow-badge kefine-flow-badge--timer">{labels.timeLeft}: {formattedElapsed}</lefine-text>
           <lefine-text class="kefine-flow-badge">{labels.timeLeft}: {execution.secondaryMetric.value} {execution.secondaryMetric.unit}</lefine-text>
-          <lefine-text class="kefine-flow-badge">{labels.price}: {execution.primaryMetric.value} {execution.primaryMetric.unit}</lefine-text>
+          <lefine-text class="kefine-flow-badge" data-testid="kefine-price-metric">{labels.price}: {execution.primaryMetric.value} {execution.primaryMetric.unit}</lefine-text>
         </lefine-box>
       </lefine-box>
 
@@ -496,7 +496,7 @@
             <lefine-text class="kefine-flow-badge">{labels.price}: {execution.primaryMetric.value} {execution.primaryMetric.unit}</lefine-text>
           </lefine-box>
           {#if currentOrder?.solver}
-            <lefine-box class="kefine-vpn-solver-row">
+            <lefine-box class="kefine-vpn-solver-row" data-testid="kefine-solver-fallback">
               <lefine-text class="kefine-vpn-solver-avatar" aria-hidden="true">
                 {getSolverInitial(currentOrder.solver, currentOrder.solver)}
               </lefine-text>
@@ -530,7 +530,7 @@
     </section>
   {/if}
 
-  {#if !isVpnScenario && orderCompleted}
+  {#if !isVpnScenario}
     <section class="kefine-flow-panel">
       <lefine-box class="kefine-section-head">
         <p>{labels.chooseMethod}</p>
