@@ -518,7 +518,7 @@
   });
 </script>
 
-<article class="kefine-card kefine-card--wide kefine-order-flow" class:kefine-result-mode={paymentStage === 'result-ready'}>
+<article class="kefine-card kefine-card--wide kefine-order-flow" class:kefine-result-mode={paymentStage === 'result-ready'} data-testid={selectedAuthMethod === 'anonymous' ? 'kefine-anonymous-payment' : undefined}>
   <lefine-box class="kefine-result-background" aria-hidden={paymentStage === 'result-ready'}>
     <section class="kefine-payment-layout kefine-payment-layout--fadein" data-testid="kefine-payment-redesign">
       <lefine-box class="kefine-payment-layout__left">
