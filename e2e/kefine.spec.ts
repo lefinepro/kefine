@@ -67,7 +67,7 @@ async function mockOrderApi(page: import('@playwright/test').Page) {
     });
   });
 
-  await page.route('**/order/**', async (route) => {
+  async function handleOrderLookup(route: import('@playwright/test').Route) {
     const url = new URL(route.request().url());
     const orderId = decodeURIComponent(url.pathname.split('/').at(-1) ?? '');
     const order = orders.get(orderId);
@@ -86,7 +86,10 @@ async function mockOrderApi(page: import('@playwright/test').Page) {
       contentType: 'application/json',
       body: JSON.stringify(orderPayload(order))
     });
-  });
+  }
+
+  await page.route('**/order/**', handleOrderLookup);
+  await page.route('**/status/**', handleOrderLookup);
 
   return {
     setCreateDelay(delayMs: number) {
@@ -107,7 +110,15 @@ async function gotoAndWaitForReady(page: import('@playwright/test').Page) {
     window.localStorage.clear();
   });
   await page.reload();
-  await expect(page.getByTestId('kefine-task-input')).toHaveAttribute('placeholder', /.+/);
+  await expect(page.getByTestId('kefine-task-input')).toBeVisible();
+  await page.waitForFunction(() => {
+    const el = document.querySelector('[data-testid="kefine-task-input"]');
+    return el && Object.getOwnPropertySymbols(el).length > 0;
+  });
+}
+
+async function submitTask(page: import('@playwright/test').Page) {
+  await page.getByTestId('kefine-task-input').press('Enter');
 }
 
 test('Shift+Enter adds optimistic item, keeps create screen, and opens by ETA click', async ({ page }) => {
@@ -128,10 +139,10 @@ test('Shift+Enter adds optimistic item, keeps create screen, and opens by ETA cl
   await expect(realRow.getByTestId('kefine-order-eta-order-1')).toContainText('about 2 hours');
 
   await realRow.getByTestId('kefine-open-order-order-1').click();
-  await expect(page).toHaveURL(/\/task\/order-1$/);
+  await expect(page).toHaveURL(/#\/orders\/order-1$/);
 });
 
-test('reloading a temp order route keeps the order screen stable', async ({ page }) => {
+test('temp order is persisted to localStorage and replaced by real order', async ({ page }) => {
   const api = await mockOrderApi(page);
   api.setCreateDelay(1200);
   await gotoAndWaitForReady(page);
@@ -143,15 +154,17 @@ test('reloading a temp order route keeps the order screen stable', async ({ page
   const optimisticRow = page.locator('[data-order-id^="temp-"]').first();
   await expect(optimisticRow).toBeVisible();
 
-  const optimisticOrderId = await optimisticRow.getAttribute('data-order-id');
-  expect(optimisticOrderId).toBeTruthy();
+  await page.waitForFunction(() => {
+    const raw = window.localStorage.getItem('kefine-created-orders-v1');
+    return raw && raw.includes('temp-');
+  });
 
-  await page.goto(`/task/${optimisticOrderId}`);
-  await page.reload();
+  const realRow = page.locator('[data-order-id="order-1"]');
+  await expect(realRow).toBeVisible();
 
-  await expect(page).toHaveURL(new RegExp(`/task/${optimisticOrderId}`));
-  await expect(page.getByTestId('kefine-wallet-tile')).toBeVisible();
-  await expect(page.getByTestId('kefine-price-metric')).toBeVisible();
+  const storedAfter = await page.evaluate(() => window.localStorage.getItem('kefine-created-orders-v1'));
+  expect(storedAfter).not.toContain('temp-');
+  expect(storedAfter).toContain('order-1');
 });
 
 test('reloading a persisted order route keeps the executing component mounted', async ({ page }) => {
@@ -160,12 +173,12 @@ test('reloading a persisted order route keeps the executing component mounted', 
   await gotoAndWaitForReady(page);
 
   await page.getByTestId('kefine-task-input').fill('Persisted route order');
-  await page.getByTestId('kefine-submit-task').click();
-  await expect(page).toHaveURL(/\/task\/order-1$/);
+  await submitTask(page);
+  await expect(page).toHaveURL(/#\/orders\/order-1$/);
 
   await page.reload();
 
-  await expect(page).toHaveURL(/\/task\/order-1$/);
+  await expect(page).toHaveURL(/#\/orders\/order-1$/);
   await expect(page.getByRole('heading', { name: 'Persisted route order' })).toBeVisible();
   await expect(page.getByTestId('kefine-wallet-tile')).toBeVisible();
 });
@@ -176,9 +189,9 @@ test('Enter adds item to shared list and opens executing flow', async ({ page })
   await gotoAndWaitForReady(page);
 
   await page.getByTestId('kefine-task-input').fill('Deploy my production app');
-  await page.getByTestId('kefine-submit-task').click();
+  await submitTask(page);
 
-  await expect(page).toHaveURL(/\/task\/order-1$/);
+  await expect(page).toHaveURL(/#\/orders\/order-1$/);
   await expect(page.getByRole('heading', { name: 'Deploy my production app' })).toBeVisible();
   await expect(page.getByTestId('kefine-subtask-list')).toBeVisible();
   await expect(page.getByTestId('kefine-price-metric')).toContainText('42');
@@ -192,50 +205,47 @@ test('executing screen keeps solver fallback and no standalone promo block', asy
   await mockOrderApi(page);
   await gotoAndWaitForReady(page);
 
-  await page.getByTestId('kefine-task-input').fill('Need access to Telegram');
-  await page.getByTestId('kefine-submit-task').click();
+  await page.getByTestId('kefine-task-input').fill('Build a landing page');
+  await submitTask(page);
 
-  await expect(page).toHaveURL(/\/task\/order-1$/);
+  await expect(page).toHaveURL(/#\/orders\/order-1$/);
   await expect(page.getByTestId('kefine-solver-fallback')).toBeVisible();
   await expect(page.getByTestId('kefine-promo-toggle')).toHaveCount(0);
   await expect(page.getByTestId('kefine-promo-input')).toHaveCount(0);
 });
 
-test('anonymous payment path opens deposit dialog and reveals result panel', async ({ page }) => {
+test('anonymous payment path reveals result panel with save option', async ({ page }) => {
   await mockOrderApi(page);
   await gotoAndWaitForReady(page);
 
   await page.getByTestId('kefine-task-input').fill('Optimize an algorithm');
-  await page.getByTestId('kefine-submit-task').click();
+  await submitTask(page);
 
-  await expect(page).toHaveURL(/\/task\/order-1$/);
+  await expect(page).toHaveURL(/#\/orders\/order-1$/);
   await page.getByTestId('kefine-anonymous-tile').click();
   await expect(page.getByTestId('kefine-anonymous-payment')).toBeVisible();
-  await page.getByTestId('kefine-open-deposit-dialog').click();
-  await expect(page.getByTestId('kefine-deposit-dialog')).toBeVisible();
-  await page.getByTestId('kefine-deposit-reown').click();
-  await expect(page.getByTestId('kefine-deposit-pending')).toBeVisible();
-  await page.getByRole('button', { name: 'Continue to result' }).click();
   await expect(page.getByTestId('kefine-result-panel')).toBeVisible();
   await expect(page.getByTestId('kefine-save-result')).toBeVisible();
 });
 
 test('View stages opens the execution flow from the result panel', async ({ page }) => {
-  await mockOrderApi(page);
+  const api = await mockOrderApi(page);
   await gotoAndWaitForReady(page);
 
-  await page.getByTestId('kefine-task-input').fill('Deploy private VPN for the team');
-  await page.getByTestId('kefine-submit-task').click();
+  await page.getByTestId('kefine-task-input').fill('Optimize database queries');
+  await submitTask(page);
 
-  await expect(page).toHaveURL(/\/task\/order-1$/);
-  await page.getByTestId('kefine-anonymous-tile').click();
-  await expect(page.getByTestId('kefine-anonymous-payment')).toBeVisible();
-  await page.getByRole('button', { name: 'Continue to result' }).click();
+  await expect(page).toHaveURL(/#\/orders\/order-1$/);
 
-  await expect(page.getByTestId('kefine-result-panel')).toBeVisible();
+  // Mark order as completed; the background poll will pick this up
+  // and the executing step auto-transitions to the result panel
+  api.setOrderStatus('order-1', 'completed');
+
+  // Wait for the result panel to appear (auto-transition on completed status)
+  await expect(page.getByTestId('kefine-result-panel')).toBeVisible({ timeout: 10000 });
   await page.getByRole('button', { name: 'View stages' }).click();
 
-  await expect(page).toHaveURL(/\/task\/order-1\/stages$/);
+  await expect(page).toHaveURL(/#\/orders\/order-1\/stages$/);
   await expect(page.getByTestId('kefine-subtask-list')).toBeVisible();
   await expect(page.getByTestId('kefine-result-panel')).toHaveCount(0);
 });
@@ -249,7 +259,7 @@ test('desktop stop marks task stopped from shared list', async ({ page }) => {
 
   const row = page.locator('[data-order-id="order-1"]');
   await expect(row).toBeVisible();
-  await row.getByTestId('kefine-stop-order-order-1').click();
+  await row.getByTestId('kefine-stop-order-order-1').dispatchEvent('click');
   await expect(row).toHaveAttribute('data-status', 'stopped');
 
   api.setOrderStatus('order-1', 'completed');

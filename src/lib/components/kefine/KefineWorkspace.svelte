@@ -949,6 +949,21 @@ import { cubicOut } from 'svelte/easing';
       step = 'submitting';
     }
 
+    let tempOrderId: string | undefined;
+    if (isBackground) {
+      tempOrderId = `temp-${crypto.randomUUID()}`;
+      const tempOrder: OrderView = {
+        id: tempOrderId,
+        title: payload.title || payload.description,
+        description: payload.description,
+        status: 'queued',
+        solver: localeText.labels?.solver ?? '',
+        currency: payload.currency || 'USDC',
+        createdAt: new Date().toISOString()
+      };
+      upsertOrder(tempOrder);
+    }
+
     const result = await submitWorkspaceOrder({
       payload,
       template: templatePresentation,
@@ -959,6 +974,11 @@ import { cubicOut } from 'svelte/easing';
       toNumber,
       resolveExecutionEstimate
     });
+
+    if (tempOrderId) {
+      createdOrders = createdOrders.filter((o) => o.id !== tempOrderId);
+      persistOrders();
+    }
 
     if (result.kind === 'error') {
       if (!isBackground) {
@@ -1077,8 +1097,8 @@ import { cubicOut } from 'svelte/easing';
     await submitDraft(draft, { background: true });
   }
 
-  function attachFiles(files: FileList) {
-    draft.files = [...draft.files, ...Array.from(files)];
+  function attachFiles(files: File[]) {
+    draft.files = [...draft.files, ...files];
   }
 
   function removeAttachedFile(index: number) {

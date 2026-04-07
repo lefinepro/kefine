@@ -11,13 +11,19 @@
 		"lint": "oxlint . && node scripts/no-div-span.mjs",
 		"lint:fix": "oxlint . --fix",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch"
+		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+		"test": "bun test --pass-with-no-tests --path-ignore-patterns e2e",
+		"test:integration": "bun test --pass-with-no-tests --path-ignore-patterns e2e --test-name-pattern integration",
+		"test:e2e": "bunx playwright test"
 	},
 	"devDependencies": {
 		"@fontsource/fira-mono": "^5.2.7",
 		"@neoconfetti/svelte": "^2.2.2",
+		"@playwright/test": "^1.52.0",
+		"@simplewebauthn/types": "^12.0.0",
 		"@sveltejs/kit": "^2.55.0",
 		"@sveltejs/vite-plugin-svelte": "^7.0.0",
+		"@types/node": "^25.5.2",
 		"oxlint": "latest",
 		"svelte": "^5.54.0",
 		"svelte-adapter-bun": "^1.0.1",
