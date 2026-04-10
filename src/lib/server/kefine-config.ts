@@ -5,12 +5,14 @@ import {
   normalizeText,
   resolvePublicRuntimeConfig,
   type KefineCompanyPublicConfig,
+  type KefinePinnedServiceConfig,
   type KefinePublicRuntimeConfig
 } from '$lib/config/public-config';
 
 type KefineFullConfig = {
   app: KefinePublicRuntimeConfig['app'];
   company: KefineCompanyPublicConfig;
+  services: KefinePinnedServiceConfig[];
   origins: {
     primary: string;
     legal: string;
@@ -37,6 +39,7 @@ type KefineFullConfig = {
 const DEFAULT_CONFIG: KefineFullConfig = {
   app: DEFAULT_PUBLIC_RUNTIME_CONFIG.app,
   company: DEFAULT_PUBLIC_RUNTIME_CONFIG.company,
+  services: DEFAULT_PUBLIC_RUNTIME_CONFIG.services,
   origins: {
     primary: 'https://lefine.pro',
     legal: 'https://lefine.pro',
@@ -88,7 +91,8 @@ export function getKefineConfig(): KefineFullConfig {
   const objectSource = source && typeof source === 'object' ? (source as Record<string, unknown>) : {};
   const publicConfig = resolvePublicRuntimeConfig({
     app: objectSource.app,
-    company: objectSource.company
+    company: objectSource.company,
+    services: objectSource.services
   });
   const origins = (objectSource.origins ?? {}) as Record<string, unknown>;
   const backend = (objectSource.backend ?? {}) as Record<string, unknown>;
@@ -97,6 +101,7 @@ export function getKefineConfig(): KefineFullConfig {
   cachedConfig = {
     app: publicConfig.app,
     company: publicConfig.company,
+    services: publicConfig.services,
     origins: {
       primary: normalizeText(origins.primary, DEFAULT_CONFIG.origins.primary),
       legal: normalizeText(origins.legal, DEFAULT_CONFIG.origins.legal),
@@ -128,6 +133,7 @@ export function getPublicRuntimeConfig(): KefinePublicRuntimeConfig {
   return {
     app: config.app,
     company: config.company,
+    services: config.services,
     backend: {
       craterBaseUrl: config.backend.craterBaseUrl
     }

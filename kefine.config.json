@@ -17,13 +17,13 @@
     }
   },
   "origins": {
-    "primary": "https://lefine.pro",
-    "legal": "https://lefine.pro",
-    "task": "https://lefine.pro"
+    "primary": "https://dev-proxy.col.pub",
+    "legal": "https://dev-proxy.col.pub",
+    "task": "https://dev-proxy.col.pub"
   },
   "backend": {
-    "craterBaseUrl": "http://localhost:3001",
-    "exchangeBaseUrl": "http://localhost:3001",
+    "craterBaseUrl": "https://dev-proxy.col.pub",
+    "exchangeBaseUrl": "https://dev-proxy.col.pub",
     "port": 3001,
     "host": "0.0.0.0",
     "environment": "development",
@@ -50,5 +50,12 @@
     "taxId": "",
     "soleProprietor": "",
     "legalDisclaimer": ""
-  }
+  },
+  "services": [
+    {
+      "handle": "temporary-account",
+      "slug": "vpn-service",
+      "isPinned": true
+    }
+  ]
 }

@@ -28,9 +28,16 @@ export type KefineCompanyPublicConfig = {
   legalDisclaimer: string;
 };
 
+export type KefinePinnedServiceConfig = {
+  handle: string;
+  slug: string;
+  isPinned: boolean;
+};
+
 export type KefinePublicRuntimeConfig = {
   app: KefinePublicAppConfig;
   company: KefineCompanyPublicConfig;
+  services: KefinePinnedServiceConfig[];
   backend: {
     craterBaseUrl: string;
   };
@@ -68,6 +75,7 @@ export const DEFAULT_PUBLIC_RUNTIME_CONFIG: KefinePublicRuntimeConfig = {
     soleProprietor: '',
     legalDisclaimer: ''
   },
+  services: [],
   backend: {
     craterBaseUrl: 'http://localhost:3001'
   }
@@ -85,11 +93,22 @@ export function resolvePublicRuntimeConfig(value: unknown): KefinePublicRuntimeC
   const source = value as {
     app?: Partial<KefinePublicAppConfig>;
     company?: Partial<KefineCompanyPublicConfig>;
+    services?: unknown;
   };
   const app: Partial<KefinePublicAppConfig> = source.app ?? {};
   const company: Partial<KefineCompanyPublicConfig> = source.company ?? {};
   const socialLinks: Partial<Record<KefineSocialLinkId, string>> = app.socialLinks ?? {};
   const legalUpdatedAt: Partial<KefineLegalUpdatedAt> = app.legalUpdatedAt ?? {};
+  const services = Array.isArray(source.services)
+    ? source.services
+        .filter((item): item is Record<string, unknown> => typeof item === 'object' && item !== null)
+        .map((item) => ({
+          handle: normalizeText(item.handle),
+          slug: normalizeText(item.slug),
+          isPinned: item.isPinned === true
+        }))
+        .filter((item) => item.handle && item.slug)
+    : DEFAULT_PUBLIC_RUNTIME_CONFIG.services;
 
   return {
     app: {
@@ -123,22 +142,19 @@ export function resolvePublicRuntimeConfig(value: unknown): KefinePublicRuntimeC
       soleProprietor: normalizeText(company.soleProprietor),
       legalDisclaimer: normalizeText(company.legalDisclaimer)
     },
+    services,
     backend: {
       craterBaseUrl: normalizeText((value as { backend?: { craterBaseUrl?: string } }).backend?.craterBaseUrl, DEFAULT_PUBLIC_RUNTIME_CONFIG.backend.craterBaseUrl)
     }
   };
 }
 
-declare global {
-  interface Window {
-    __KEFINE_PUBLIC_CONFIG__?: KefinePublicRuntimeConfig;
-  }
+let browserPublicRuntimeConfig: KefinePublicRuntimeConfig | null = null;
+
+export function setBrowserPublicRuntimeConfig(value: unknown): void {
+  browserPublicRuntimeConfig = resolvePublicRuntimeConfig(value);
 }
 
 export function readBrowserPublicRuntimeConfig(): KefinePublicRuntimeConfig {
-  if (typeof window === 'undefined') {
-    return DEFAULT_PUBLIC_RUNTIME_CONFIG;
-  }
-
-  return resolvePublicRuntimeConfig(window.__KEFINE_PUBLIC_CONFIG__);
+  return browserPublicRuntimeConfig ?? DEFAULT_PUBLIC_RUNTIME_CONFIG;
 }

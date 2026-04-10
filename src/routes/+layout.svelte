@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import type { Snippet } from 'svelte';
-  import { resolvePublicRuntimeConfig } from '$lib/config/public-config';
+  import { resolvePublicRuntimeConfig, setBrowserPublicRuntimeConfig } from '$lib/config/public-config';
   import { getSeoMeta } from '$lib/seo';
   import type { LayoutData } from './$types';
 
@@ -12,10 +12,13 @@
 
 	const { children, data }: Props = $props();
   const runtimePublicConfig = $derived(resolvePublicRuntimeConfig(data.publicConfig));
-  const publicConfigScript = $derived(JSON.stringify(runtimePublicConfig).replace(/</g, '\\u003c'));
   const seo = $derived(getSeoMeta(page.url, runtimePublicConfig));
   const canonicalUrl = $derived(`${page.url.origin}${seo.canonicalPath}`);
   const imageUrl = $derived(`${page.url.origin}${seo.imagePath}`);
+
+  $effect(() => {
+    setBrowserPublicRuntimeConfig(runtimePublicConfig);
+  });
 </script>
 
 <svelte:head>
@@ -35,7 +38,6 @@
   <meta name="twitter:description" content={seo.description} />
   <meta name="twitter:image" content={imageUrl} />
   <script type="application/ld+json">{JSON.stringify(seo.jsonLd)}</script>
-  <script>{`window.__KEFINE_PUBLIC_CONFIG__ = ${publicConfigScript};`}</script>
 </svelte:head>
 
 {@render children()}
