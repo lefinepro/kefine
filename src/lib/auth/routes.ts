@@ -19,6 +19,18 @@ export interface PasskeyAuthSuccess {
 	expiresAt: string;
 }
 
+export interface PrivateKeyAuthSuccess {
+	verified: true;
+	token: string;
+	userId: string;
+	username: string;
+	displayName: string;
+	handle: string;
+	email: string;
+	authType: 'privatekey';
+	expiresAt: string;
+}
+
 interface PasskeyStartResponse<T> {
 	options: T;
 	transactionId: string;
@@ -102,4 +114,10 @@ export async function finishAuthentication(
 	response: AuthenticationResponseJSON
 ): Promise<PasskeyAuthSuccess> {
 	return postJson<PasskeyAuthSuccess>(buildCraterClientUrl('/passkeys/authenticate/finish'), { transactionId, response });
+}
+
+export async function loginWithPrivateKey(privateKey?: string): Promise<PrivateKeyAuthSuccess> {
+	return postJson<PrivateKeyAuthSuccess>(buildCraterClientUrl('/auth/privatekey'), {
+		privateKey: typeof privateKey === 'string' ? privateKey : ''
+	});
 }

@@ -18,7 +18,7 @@ module Crater
             "id"                => config.actor_id,
             "type"              => "Application",
             "preferredUsername" => config.actor_username,
-            "name"              => "Crater Proxy",
+            "name"              => config.actor_display_name,
             "summary"           => "Kefine ForgeFed/ActivityPub proxy service",
             "inbox"             => config.actor_inbox,
             "outbox"            => config.actor_outbox,

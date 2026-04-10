@@ -178,7 +178,7 @@ export const KEFINE_TEXT_EN = {
     walletTitle: 'Wallet / Social',
     walletDetail: 'Use MetaMask, WalletConnect, Email, or Google to claim the paying account.',
     passkeyTitle: 'Passkey',
-    temporaryAccountTitle: 'Temporary account',
+    privateKeyTitle: 'Private key',
     passkeyDetail: 'Use your platform account, or continue with email if no passkey profile exists.',
     anonymousTitle: '10 min test',
     anonymousDetail: 'Test now',

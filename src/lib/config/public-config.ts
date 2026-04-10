@@ -34,10 +34,16 @@ export type KefinePinnedServiceConfig = {
   isPinned: boolean;
 };
 
+export type KefineDefaultActorPublicConfig = {
+  handle: string;
+  displayName: string;
+};
+
 export type KefinePublicRuntimeConfig = {
   app: KefinePublicAppConfig;
   company: KefineCompanyPublicConfig;
   services: KefinePinnedServiceConfig[];
+  defaultActor: KefineDefaultActorPublicConfig;
   backend: {
     craterBaseUrl: string;
   };
@@ -76,6 +82,10 @@ export const DEFAULT_PUBLIC_RUNTIME_CONFIG: KefinePublicRuntimeConfig = {
     legalDisclaimer: ''
   },
   services: [],
+  defaultActor: {
+    handle: 'api',
+    displayName: 'API'
+  },
   backend: {
     craterBaseUrl: 'http://localhost:3001'
   }
@@ -94,9 +104,11 @@ export function resolvePublicRuntimeConfig(value: unknown): KefinePublicRuntimeC
     app?: Partial<KefinePublicAppConfig>;
     company?: Partial<KefineCompanyPublicConfig>;
     services?: unknown;
+    defaultActor?: Partial<KefineDefaultActorPublicConfig>;
   };
   const app: Partial<KefinePublicAppConfig> = source.app ?? {};
   const company: Partial<KefineCompanyPublicConfig> = source.company ?? {};
+  const defaultActor: Partial<KefineDefaultActorPublicConfig> = source.defaultActor ?? {};
   const socialLinks: Partial<Record<KefineSocialLinkId, string>> = app.socialLinks ?? {};
   const legalUpdatedAt: Partial<KefineLegalUpdatedAt> = app.legalUpdatedAt ?? {};
   const services = Array.isArray(source.services)
@@ -143,6 +155,10 @@ export function resolvePublicRuntimeConfig(value: unknown): KefinePublicRuntimeC
       legalDisclaimer: normalizeText(company.legalDisclaimer)
     },
     services,
+    defaultActor: {
+      handle: normalizeText(defaultActor.handle, DEFAULT_PUBLIC_RUNTIME_CONFIG.defaultActor.handle),
+      displayName: normalizeText(defaultActor.displayName, DEFAULT_PUBLIC_RUNTIME_CONFIG.defaultActor.displayName)
+    },
     backend: {
       craterBaseUrl: normalizeText((value as { backend?: { craterBaseUrl?: string } }).backend?.craterBaseUrl, DEFAULT_PUBLIC_RUNTIME_CONFIG.backend.craterBaseUrl)
     }
