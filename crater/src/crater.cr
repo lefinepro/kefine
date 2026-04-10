@@ -9,6 +9,7 @@ require "./crater/handlers/outbox"
 require "./crater/handlers/orders"
 require "./crater/handlers/payment"
 require "./crater/handlers/passkeys"
+require "./crater/handlers/privatekey_auth"
 require "./crater/handlers/projects"
 require "./crater/handlers/templates"
 require "./crater/middleware/cors"
@@ -40,6 +41,7 @@ module Crater
     Handlers::Orders.register(config)
     Handlers::Payment.register(config)
     Handlers::Passkeys.register(config)
+    Handlers::PrivatekeyAuth.register(config)
 
     # ForgeFed project endpoints
     Handlers::Projects.register(config)

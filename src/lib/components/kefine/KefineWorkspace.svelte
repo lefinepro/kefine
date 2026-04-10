@@ -3,7 +3,7 @@
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
   import { resolvePublicRuntimeConfig } from '$lib/config/public-config';
-  import { isSpecialRuntimeOrigin, resolveTemporaryAccountIdentity } from '$lib/config/special-runtime';
+  import { isSpecialRuntimeOrigin } from '$lib/config/special-runtime';
   import { resolveOrderProxyBasePath } from '$lib/order-proxy-path';
   import { onMount } from 'svelte';
 import { cubicOut } from 'svelte/easing';
@@ -16,6 +16,7 @@ import { cubicOut } from 'svelte/easing';
   } from '$lib/auth/passkey-session';
   import { readReownAccountState, subscribeToAppKitAccount, syncAppKitTheme } from '$lib/auth/appkit';
   import {
+    loginWithPrivateKey,
     performAuthentication,
     finishAuthentication,
     type PasskeyAuthSuccess
@@ -31,6 +32,7 @@ import { cubicOut } from 'svelte/easing';
   import KefineAuthDialog from '$lib/components/kefine/KefineAuthDialog.svelte';
   import KefineContactDialog from '$lib/components/kefine/KefineContactDialog.svelte';
   import KefinePasskeyDialog from '$lib/components/kefine/KefinePasskeyDialog.svelte';
+  import KefinePrivateKeyDialog from '$lib/components/kefine/KefinePrivateKeyDialog.svelte';
   import KefineSubmittingStep from '$lib/components/kefine/KefineSubmittingStep.svelte';
   import KefineErrorStep from '$lib/components/kefine/KefineErrorStep.svelte';
   import KefineExecutingStep from '$lib/components/kefine/KefineExecutingStep.svelte';
@@ -77,9 +79,9 @@ import { cubicOut } from 'svelte/easing';
   import type { Profile, ProfileTemplate } from '$lib/types/user';
   import {
     addProfileBonus,
+    buildCanonicalServicePath,
     calculateTemplateAmounts,
     buildProfilePath,
-    buildProfileServicePath,
     ensureProfileForSession,
     getProfileById,
     normalizeProfileUsername,
@@ -160,7 +162,9 @@ import { cubicOut } from 'svelte/easing';
   let authDialogOpen = $state(false);
   let contactDialogOpen = $state(false);
   let passkeyDialogOpen = $state(false);
+  let privateKeyDialogOpen = $state(false);
   let stagePreviewOpen = $state(false);
+  let privateKeyInput = $state('');
   let contactName = $state('');
   let contactEmail = $state('');
   let contactMessage = $state('');
@@ -312,7 +316,7 @@ import { cubicOut } from 'svelte/easing';
         if (!template || !template.authorHandle) {
           return [{
             id: `config:${entry.handle}:${entry.slug}`,
-            href: buildProfileServicePath(entry.handle, entry.slug),
+            href: buildCanonicalServicePath(entry.handle, entry.slug, runtimeConfig.defaultActor.handle),
             imageDataUrl: undefined,
             title: formatPinnedServiceTitle(entry.slug),
             description: `Open service @${entry.handle}/${entry.slug}`,
@@ -323,7 +327,7 @@ import { cubicOut } from 'svelte/easing';
         const localized = resolveTemplateLocalizedContent(template, $kefineLocale);
         return [{
           id: template.id,
-          href: buildProfileServicePath(template.authorHandle, template.slug),
+          href: buildCanonicalServicePath(template.authorHandle, template.slug, runtimeConfig.defaultActor.handle),
           imageDataUrl: template.imageDataUrl,
           title: localized.title,
           description: localized.description || localized.promptTemplate,
@@ -784,7 +788,7 @@ import { cubicOut } from 'svelte/easing';
     userId: string;
     email?: string | null;
     displayName?: string | null;
-    authType: 'wallet' | 'email' | 'passkey' | 'temporary-account' | null;
+    authType: 'wallet' | 'email' | 'passkey' | 'privatekey' | null;
     walletAddress?: string | null;
     walletAlias?: string | null;
     force?: boolean;
@@ -833,6 +837,7 @@ import { cubicOut } from 'svelte/easing';
     paymentMethod = null;
     authDialogOpen = false;
     passkeyDialogOpen = false;
+    privateKeyDialogOpen = false;
     currentProfile = null;
   }
 
@@ -1461,45 +1466,50 @@ import { cubicOut } from 'svelte/easing';
     void openSocialAuth();
   }
 
-  function chooseTemporaryAccountMethod() {
+  function openPrivateKeyDialog() {
     closeAuthDialog();
     stagePreviewOpen = false;
+    privateKeyDialogOpen = true;
+  }
+
+  async function choosePrivateKeyMethod() {
+    privateKeyDialogOpen = false;
     selectedAuthMethod = 'wallet';
     paymentMethod = 'wallet';
-    const temporaryAccount = browser
-      ? resolveTemporaryAccountIdentity(window.location.origin)
-      : {
-          email: 'temporary-account',
-          userId: 'temporary-account',
-          displayName: 'temporary-account'
-        };
+    try {
+      const privateKeySession = await loginWithPrivateKey(privateKeyInput);
 
-    updateAuthState({
-      isConnected: true,
-      address: null,
-      chainId: null,
-      email: temporaryAccount.email,
-      authType: 'temporary-account',
-      status: 'connected'
-    });
+      updateAuthState({
+        isConnected: true,
+        address: null,
+        chainId: null,
+        email: privateKeySession.email,
+        authType: 'privatekey',
+        status: 'connected'
+      });
 
-    if (draftQueued) {
-      void continueAfterAuth();
-      return;
-    }
+      if (draftQueued) {
+        void continueAfterAuth();
+        return;
+      }
 
-    void maybeOpenProfileAfterAuth({
-      userId: temporaryAccount.userId,
-      email: temporaryAccount.email,
-      displayName: temporaryAccount.displayName,
-      authType: 'temporary-account',
-      walletAddress: null,
-      walletAlias: null,
-      force: true
-    });
+      void maybeOpenProfileAfterAuth({
+        userId: privateKeySession.userId,
+        email: privateKeySession.email,
+        displayName: privateKeySession.displayName,
+        authType: 'privatekey',
+        walletAddress: null,
+        walletAlias: null,
+        force: true
+      });
 
-    if (currentOrder && step === 'executing') {
-      step = 'payment';
+      if (currentOrder && step === 'executing') {
+        step = 'payment';
+      }
+      privateKeyInput = '';
+    } catch (error) {
+      console.error('[privatekey] choosePrivateKeyMethod', error);
+      privateKeyDialogOpen = true;
     }
   }
 
@@ -1839,13 +1849,13 @@ import { cubicOut } from 'svelte/easing';
     description={localeText.executionFlow['awaiting-auth'].detail}
     walletTitle={localeText.auth.walletTitle}
     passkeyTitle={localeText.auth.passkeyTitle}
-    temporaryAccountTitle={localeText.auth.temporaryAccountTitle}
-    showTemporaryAccount={isSpecialRuntime}
+    privateKeyTitle={localeText.auth.privateKeyTitle}
+    showPrivateKey={isSpecialRuntime}
     closeLabel={localeText.buttons.closeDialog}
     onClose={() => { authDialogOpen = false; }}
     onWallet={chooseWalletMethod}
     onPasskey={choosePasskeyMethod}
-    onTemporaryAccount={chooseTemporaryAccountMethod}
+    onPrivateKey={openPrivateKeyDialog}
   />
 
   <KefinePasskeyDialog
@@ -1854,6 +1864,19 @@ import { cubicOut } from 'svelte/easing';
     onClose={() => { passkeyDialogOpen = false; }}
     onSuccess={loginWithPasskey}
     onError={handlePasskeyError}
+  />
+
+  <KefinePrivateKeyDialog
+    open={privateKeyDialogOpen}
+    title={localeText.auth.privateKeyTitle}
+    description="Paste the private key and continue as the privatekey actor."
+    value={privateKeyInput}
+    placeholder="Paste private key"
+    submitLabel={localeText.auth.privateKeyTitle}
+    closeLabel={localeText.buttons.closeDialog}
+    onClose={() => { privateKeyDialogOpen = false; }}
+    onInput={(value) => { privateKeyInput = value; }}
+    onSubmit={choosePrivateKeyMethod}
   />
 
   <KefineContactDialog

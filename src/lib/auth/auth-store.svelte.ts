@@ -6,7 +6,7 @@ export interface AuthState {
 	address: string | null;
 	chainId: number | null;
 	email: string | null;
-	authType: 'wallet' | 'email' | 'localhost' | null;
+	authType: 'wallet' | 'email' | 'privatekey' | null;
 	status: 'connected' | 'disconnected' | 'connecting' | 'reconnecting' | null;
 }
 

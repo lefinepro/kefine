@@ -5,7 +5,8 @@
   import KefineChipRow from '$lib/components/kefine/KefineChipRow.svelte';
   import KefineSolverCohortDialog from '$lib/components/kefine/KefineSolverCohortDialog.svelte';
   import { getLocaleText, kefineLocale } from '$lib/constants/kefine-locale';
-  import { buildProfilePath, buildProfileServicePath, normalizeProfileResourceSlug } from '$lib/profile/profile-storage';
+  import { buildCanonicalServicePath, buildProfilePath, normalizeProfileResourceSlug } from '$lib/profile/profile-storage';
+  import { readBrowserPublicRuntimeConfig } from '$lib/config/public-config';
   import {
     buildAutoTemplateTranslations,
     resolveTemplateLocalizedContent,
@@ -97,8 +98,9 @@
   const isEditing = $derived(Boolean(service));
   const normalizedSlug = $derived(normalizeProfileResourceSlug(slugInput));
   const canonicalServiceSlug = $derived(normalizedSlug || service?.slug || '');
+  const runtimeConfig = $derived(readBrowserPublicRuntimeConfig());
   const canonicalServicePath = $derived(
-    canonicalServiceSlug ? buildProfileServicePath(profile.primaryHandle, canonicalServiceSlug) : ''
+    canonicalServiceSlug ? buildCanonicalServicePath(profile.primaryHandle, canonicalServiceSlug, runtimeConfig.defaultActor.handle) : ''
   );
 
   function addFiles(event: Event) {
@@ -232,7 +234,7 @@
       return;
     }
 
-    await goto(buildProfileServicePath(profile.primaryHandle, saved.slug), { replaceState: true });
+    await goto(buildCanonicalServicePath(profile.primaryHandle, saved.slug, runtimeConfig.defaultActor.handle), { replaceState: true });
   }
 
   async function deleteService() {

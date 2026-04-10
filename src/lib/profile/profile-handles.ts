@@ -43,6 +43,21 @@ export function buildProfileServicePath(username: string, slug: string): string 
   return `${buildProfilePath(username)}/${encodeURIComponent(slug.trim())}`;
 }
 
+export function isDefaultActorHandle(username: string, defaultActorHandle?: string | null): boolean {
+  const normalizedUsername = normalizeProfileUsername(username);
+  const normalizedDefaultActorHandle = normalizeProfileUsername(defaultActorHandle || 'api');
+  return normalizedUsername === normalizedDefaultActorHandle;
+}
+
+export function buildCanonicalServicePath(username: string, slug: string, defaultActorHandle?: string | null): string {
+  const normalizedSlug = slug.trim();
+  if (isDefaultActorHandle(username, defaultActorHandle)) {
+    return `/${encodeURIComponent(normalizedSlug)}`;
+  }
+
+  return buildProfileServicePath(username, normalizedSlug);
+}
+
 export function deriveWalletProfileHandle(address: string, alias?: string | null): string {
   const normalizedAlias = sanitizeUsernamePart(alias || '');
   if (normalizedAlias) {
