@@ -18,10 +18,10 @@
     fetchTemplatesByHandle,
     saveTemplateToCrater
   } from '$lib/templates/template-api';
+  import { resolveTemplateLocalizedContent } from '$lib/templates/template-content';
   import { getLocaleText, kefineLocale, setKefineLocale, type KefineLocale } from '$lib/constants/kefine-locale';
   import {
     addProfileBonus,
-    calculateTemplateAmounts,
     buildProfilePath,
     buildProfileTaskPath,
     deriveWalletProfileHandle,
@@ -33,7 +33,12 @@
     readProfiles,
     updateStoredProfile
   } from '$lib/profile/profile-storage';
-  import type { Profile, ProfileMetadata, ProfileSocialLink, ProfileTemplate, ProfileTemplateFile } from '$lib/types/user';
+  import type {
+    Profile,
+    ProfileMetadata,
+    ProfileSocialLink,
+    ProfileTemplate
+  } from '$lib/types/user';
 
   const localeText = $derived(getLocaleText($kefineLocale));
   const passkeySession = $derived($passkeySessionStore);
@@ -46,7 +51,6 @@
   let ownerTasks = $state<OrderView[]>([]);
   let copyState = $state<'idle' | 'profile' | 'task'>('idle');
   let profileTemplates = $state<ProfileTemplate[]>([]);
-  let templateEditorId = $state<string | null>(null);
   let templateCopyId = $state<string | null>(null);
 
   let displayName = $state('');
@@ -56,16 +60,6 @@
   let referralPercent = $state(10);
   let socialLinks = $state<ProfileSocialLink[]>([]);
   let cardNumber = $state('');
-  let templateTitle = $state('');
-  let templateDescription = $state('');
-  let templatePrefillTitle = $state('');
-  let templatePrefillDescription = $state('');
-  let templatePrefillEstimatedCost = $state('');
-  let templatePrefillCurrency = $state('USD');
-  let templatePricingMode = $state<'fixed' | 'percent'>('fixed');
-  let templatePricingValue = $state('');
-  let templateIsPublished = $state(false);
-  let templateFiles = $state<ProfileTemplateFile[]>([]);
   let firstName = $state('');
   let surname = $state('');
   let leftNavExpanded = $state(false);
@@ -77,12 +71,8 @@
   const canonicalProfilePath = $derived(profile ? buildProfilePath(profile.primaryHandle) : '');
   const setupMetadata = $derived((profile?.metadata ?? {}) as ProfileMetadata);
   const hasOwnerTasks = $derived((isOwner ? ownerTasks : publicTasks).length > 0);
-  const templatePreviewAmounts = $derived(
-    calculateTemplateAmounts({
-      orderEstimatedCost: Number(templatePrefillEstimatedCost) || 0,
-      pricingMode: templatePricingMode,
-      pricingValue: Number(templatePricingValue) || 0
-    })
+  const visibleProfileTemplates = $derived(
+    isOwner ? profileTemplates : profileTemplates.filter((item) => item.visibility === 'public' || item.isPublished === true)
   );
 
   const hasIdentityStepCompleted = $derived(
@@ -202,35 +192,6 @@
     const id =
       typeof crypto !== 'undefined' && 'randomUUID' in crypto ? `social-${crypto.randomUUID()}` : `social-${Date.now()}`;
     return { id, type: 'website', label: 'Website', value: '' };
-  }
-
-  function resetTemplateEditor() {
-    templateEditorId = null;
-    templateTitle = '';
-    templateDescription = '';
-    templatePrefillTitle = '';
-    templatePrefillDescription = '';
-    templatePrefillEstimatedCost = '';
-    templatePrefillCurrency = 'USD';
-    templatePricingMode = 'fixed';
-    templatePricingValue = '';
-    templateIsPublished = false;
-    templateFiles = [];
-  }
-
-  function startTemplateEditor(template?: ProfileTemplate) {
-    templateEditorId = template?.id ?? null;
-    templateTitle = template?.title ?? '';
-    templateDescription = template?.description ?? '';
-    templatePrefillTitle = template?.prefillTitle ?? '';
-    templatePrefillDescription = template?.prefillDescription ?? '';
-    templatePrefillEstimatedCost =
-      template?.prefillEstimatedCost !== undefined ? String(template.prefillEstimatedCost) : '';
-    templatePrefillCurrency = template?.prefillCurrency ?? 'USD';
-    templatePricingMode = template?.pricingMode ?? 'fixed';
-    templatePricingValue = template ? String(template.pricingValue) : '';
-    templateIsPublished = template?.isPublished ?? false;
-    templateFiles = template?.prefillFiles.map((file) => ({ ...file })) ?? [];
   }
 
   function getTemplateUrl(template: ProfileTemplate): string {
@@ -361,29 +322,6 @@
     socialLinks = socialLinks.filter((link) => link.id !== id);
   }
 
-  function addTemplateFiles(event: Event) {
-    const target = event.currentTarget as HTMLInputElement | null;
-    if (!target?.files || target.files.length === 0) {
-      return;
-    }
-
-    const appended = Array.from(target.files).map((file, index) => ({
-      id:
-        typeof crypto !== 'undefined' && 'randomUUID' in crypto
-          ? `template-file-${crypto.randomUUID()}`
-          : `template-file-${Date.now()}-${index}`,
-      name: file.name,
-      size: file.size,
-      type: file.type || undefined
-    }));
-    templateFiles = [...templateFiles, ...appended];
-    target.value = '';
-  }
-
-  function removeTemplateFile(fileId: string) {
-    templateFiles = templateFiles.filter((file) => file.id !== fileId);
-  }
-
   async function copyLink(value: string, kind: 'profile' | 'task') {
     if (!browser || !navigator.clipboard) {
       return;
@@ -470,68 +408,20 @@
     }
   }
 
-  async function saveTemplate() {
-    if (!browser || !profile || !isOwner) {
-      return;
-    }
-
-    const saved = await saveTemplateToCrater(runtimeConfig.backend.craterBaseUrl, {
-      id: templateEditorId ?? undefined,
-      authorHandle: profile.primaryHandle,
-      authorProfileId: profile.id,
-      authorDisplayName: profile.displayName,
-      slug: profileTemplates.find((item) => item.id === templateEditorId)?.slug,
-      title: templateTitle,
-      description: templateDescription,
-      prefillTitle: templatePrefillTitle,
-      prefillDescription: templatePrefillDescription,
-      prefillEstimatedCost: templatePrefillEstimatedCost.trim() ? Number(templatePrefillEstimatedCost) : undefined,
-      prefillCurrency: templatePrefillCurrency,
-      prefillFiles: templateFiles,
-      pricingMode: templatePricingMode,
-      pricingValue: Number(templatePricingValue) || 0,
-      isPublished: templateIsPublished
-    });
-
-    if (!saved) {
-      return;
-    }
-
-    profileTemplates = await fetchTemplatesByHandle(runtimeConfig.backend.craterBaseUrl, profile.primaryHandle);
-    resetTemplateEditor();
-  }
-
   async function createTemplate() {
     if (!browser || !profile || !isOwner) {
       return;
     }
 
-    const created = await saveTemplateToCrater(runtimeConfig.backend.craterBaseUrl, {
-      authorHandle: profile.primaryHandle,
-      authorProfileId: profile.id,
-      authorDisplayName: profile.displayName,
-      title: localeText.profile.createTemplate,
-      description: '',
-      prefillTitle: '',
-      prefillDescription: '',
-      prefillEstimatedCost: undefined,
-      prefillCurrency: 'USD',
-      prefillFiles: [],
-      pricingMode: 'fixed',
-      pricingValue: 0,
-      isPublished: false
-    });
+    await goto(`${buildProfilePath(profile.primaryHandle)}/services/new`);
+  }
 
-    if (!created) {
+  async function editTemplate(template: ProfileTemplate) {
+    if (!browser || !profile || !isOwner) {
       return;
     }
 
-    profileTemplates = await fetchTemplatesByHandle(runtimeConfig.backend.craterBaseUrl, profile.primaryHandle);
-    startTemplateEditor(created);
-  }
-
-  function editTemplate(template: ProfileTemplate) {
-    startTemplateEditor(template);
+    await goto(`${buildProfilePath(profile.primaryHandle)}/services/${encodeURIComponent(template.slug)}`);
   }
 
   async function removeTemplate(templateId: string) {
@@ -545,9 +435,6 @@
     }
 
     profileTemplates = await fetchTemplatesByHandle(runtimeConfig.backend.craterBaseUrl, profile.primaryHandle);
-    if (templateEditorId === templateId) {
-      resetTemplateEditor();
-    }
   }
 
   async function toggleTemplatePublish(template: ProfileTemplate) {
@@ -563,14 +450,24 @@
       slug: template.slug,
       title: template.title,
       description: template.description,
+      imageDataUrl: template.imageDataUrl,
+      baseLocale: template.baseLocale,
+      promptTemplate: template.promptTemplate,
+      promptVariables: template.promptVariables,
+      translations: template.translations,
       prefillTitle: template.prefillTitle,
       prefillDescription: template.prefillDescription,
       prefillEstimatedCost: template.prefillEstimatedCost,
       prefillCurrency: template.prefillCurrency,
       prefillFiles: template.prefillFiles,
+      tags: template.tags,
       pricingMode: template.pricingMode,
       pricingValue: template.pricingValue,
-      isPublished: !template.isPublished
+      visibility: (template.visibility ?? (template.isPublished ? 'public' : 'private')) === 'public' ? 'private' : 'public',
+      isPublished: (template.visibility ?? (template.isPublished ? 'public' : 'private')) !== 'public',
+      bonusEnabled: template.bonusEnabled ?? false,
+      bonusMode: template.bonusMode ?? 'fixed',
+      bonusValue: template.bonusValue ?? 0
     });
 
     if (!saved) {
@@ -881,9 +778,11 @@
 
 {#if unavailable}
   <section class="profile-page">
-    <article class="profile-surface">
+    <article class="profile-unavailable">
+      <lefine-text class="profile-unavailable__code">404</lefine-text>
       <h1>{localeText.profile.profileUnavailable}</h1>
       <p>{localeText.profile.hidden}</p>
+      <a class="profile-unavailable__action" href="/">{localeText.emptyStates.backToApp}</a>
     </article>
   </section>
 {:else if profile}
@@ -1169,7 +1068,7 @@
             {/if}
           </article>
 
-          <article class="profile-surface profile-templates">
+          <article class="profile-surface profile-services">
             <lefine-box class="profile-section__head">
               <lefine-box>
                 <strong>{localeText.profile.templates}</strong>
@@ -1182,114 +1081,55 @@
               {/if}
             </lefine-box>
 
-            <lefine-box class="profile-template-list">
-              {#each (isOwner ? profileTemplates : profileTemplates.filter((item) => item.isPublished)) as template (template.id)}
-                <article class="profile-template-card">
-                  <lefine-box class="profile-template-card__head">
-                    <lefine-box>
-                      <strong>{template.title}</strong>
-                      <p>{template.description || template.prefillTitle || template.prefillDescription}</p>
+            {#if isOwner && profileTemplates.length === 0}
+              <button type="button" class="profile-service-cta" onclick={createTemplate}>
+                <strong>{localeText.profile.templateCreateCtaTitle}</strong>
+                <p>{localeText.profile.templateCreateCtaDetail}</p>
+                <lefine-text>{localeText.profile.templateOpenEditor}</lefine-text>
+              </button>
+            {/if}
+
+            {#if visibleProfileTemplates.length > 0}
+              <lefine-box class="profile-template-list">
+                {#each visibleProfileTemplates as template (template.id)}
+                  <article class="profile-template-card">
+                    <lefine-box class="profile-template-card__head">
+                      {#if template.imageDataUrl}
+                        <img class="profile-template-card__image" src={template.imageDataUrl} alt="" />
+                      {/if}
+                      <lefine-box>
+                        <strong>{resolveTemplateLocalizedContent(template, $kefineLocale).title}</strong>
+                        <p>{resolveTemplateLocalizedContent(template, $kefineLocale).description || resolveTemplateLocalizedContent(template, $kefineLocale).promptTemplate}</p>
+                      </lefine-box>
+                      <lefine-box class="profile-template-badges">
+                        <lefine-text>{template.pricingMode === 'percent' ? `${template.pricingValue}%` : `$${template.pricingValue.toFixed(2)}`}</lefine-text>
+                        <lefine-text>{(template.visibility ?? (template.isPublished ? 'public' : 'private')) === 'public' ? localeText.profile.templatePublic : localeText.profile.templatePrivate}</lefine-text>
+                        {#if template.bonusEnabled}
+                          <lefine-text>{template.bonusMode === 'percent' ? `${template.bonusValue}% bonus` : `$${template.bonusValue.toFixed(2)} bonus`}</lefine-text>
+                        {/if}
+                      </lefine-box>
                     </lefine-box>
-                    <lefine-box class="profile-template-badges">
-                      <lefine-text>{template.pricingMode === 'percent' ? `${template.pricingValue}%` : `$${template.pricingValue.toFixed(2)}`}</lefine-text>
-                      <lefine-text>{template.isPublished ? localeText.profile.templatePublished : localeText.profile.templateDraft}</lefine-text>
+
+                    <lefine-box class="profile-template-card__actions">
+                      <a href={`${buildProfilePath(profile.primaryHandle)}/${template.slug}`}>{localeText.profile.templateOpen}</a>
+                      <button type="button" data-variant="ghost" onclick={() => copyTemplateLink(template)}>
+                        {templateCopyId === template.id ? localeText.profile.templateLinkCopied : localeText.profile.templateCopyLink}
+                      </button>
+                      {#if isOwner}
+                        <button type="button" data-variant="ghost" onclick={() => editTemplate(template)}>{localeText.profile.templateOpenEditor}</button>
+                        <button type="button" data-variant="ghost" onclick={() => toggleTemplatePublish(template)}>
+                          {(template.visibility ?? (template.isPublished ? 'public' : 'private')) === 'public' ? localeText.profile.templatePrivate : localeText.profile.templatePublic}
+                        </button>
+                        <button type="button" data-variant="ghost" onclick={() => removeTemplate(template.id)}>
+                          {localeText.profile.templateDelete}
+                        </button>
+                      {/if}
                     </lefine-box>
-                  </lefine-box>
-
-                  <lefine-box class="profile-template-card__actions">
-                    <a href={`${buildProfilePath(profile.primaryHandle)}/${template.slug}`}>{localeText.profile.templateOpen}</a>
-                    <button type="button" data-variant="ghost" onclick={() => copyTemplateLink(template)}>
-                      {templateCopyId === template.id ? localeText.profile.templateLinkCopied : localeText.profile.templateCopyLink}
-                    </button>
-                    {#if isOwner}
-                      <button type="button" data-variant="ghost" onclick={() => editTemplate(template)}>{localeText.profile.save}</button>
-                      <button type="button" data-variant="ghost" onclick={() => toggleTemplatePublish(template)}>
-                        {template.isPublished ? localeText.profile.templateDraft : localeText.profile.templatePublish}
-                      </button>
-                      <button type="button" data-variant="ghost" onclick={() => removeTemplate(template.id)}>
-                        {localeText.profile.templateDelete}
-                      </button>
-                    {/if}
-                  </lefine-box>
-                </article>
-              {:else}
-                <p>{localeText.profile.noTemplates}</p>
-              {/each}
-            </lefine-box>
-
-            {#if isOwner}
-              <section class="profile-template-editor">
-                <label class="profile-field">
-                  <lefine-text>{localeText.profile.templateTitle}</lefine-text>
-                  <input bind:value={templateTitle} maxlength="80" />
-                </label>
-                <label class="profile-field">
-                  <lefine-text>{localeText.profile.templateDescription}</lefine-text>
-                  <textarea bind:value={templateDescription} rows="3"></textarea>
-                </label>
-                <label class="profile-field">
-                  <lefine-text>{localeText.profile.templatePrefillTitle}</lefine-text>
-                  <input bind:value={templatePrefillTitle} maxlength="120" />
-                </label>
-                <label class="profile-field">
-                  <lefine-text>{localeText.profile.templatePrefillDescription}</lefine-text>
-                  <textarea bind:value={templatePrefillDescription} rows="5"></textarea>
-                </label>
-
-                <lefine-box class="profile-template-grid">
-                  <label class="profile-field">
-                    <lefine-text>{localeText.profile.templatePricingMode}</lefine-text>
-                    <select bind:value={templatePricingMode}>
-                      <option value="fixed">{localeText.profile.templateFixedMode}</option>
-                      <option value="percent">{localeText.profile.templatePercentMode}</option>
-                    </select>
-                  </label>
-                  <label class="profile-field">
-                    <lefine-text>
-                      {templatePricingMode === 'percent' ? localeText.profile.templatePercent : localeText.profile.templatePrice}
-                    </lefine-text>
-                    <input bind:value={templatePricingValue} min="0" step="0.01" type="number" />
-                  </label>
-                  <label class="profile-field">
-                    <lefine-text>{localeText.labels.price}</lefine-text>
-                    <input bind:value={templatePrefillEstimatedCost} min="0" step="0.01" type="number" />
-                  </label>
-                  <label class="profile-field">
-                    <lefine-text>{localeText.labels.amount}</lefine-text>
-                    <input bind:value={templatePrefillCurrency} maxlength="8" />
-                  </label>
-                </lefine-box>
-
-                <lefine-box class="profile-template-preview">
-                  <strong>{localeText.profile.templateFeePreview}: ${templatePreviewAmounts.feeUsd.toFixed(2)}</strong>
-                  <lefine-text>{localeText.profile.templateNetPreview}: ${templatePreviewAmounts.netUsd.toFixed(2)}</lefine-text>
-                </lefine-box>
-
-                <label class="profile-field">
-                  <lefine-text>{localeText.profile.templateFiles}</lefine-text>
-                  <input type="file" multiple onchange={addTemplateFiles} />
-                </label>
-
-                {#if templateFiles.length > 0}
-                  <lefine-box class="profile-template-files">
-                    {#each templateFiles as file (file.id)}
-                      <button type="button" data-variant="ghost" onclick={() => removeTemplateFile(file.id)}>
-                        {file.name}
-                      </button>
-                    {/each}
-                  </lefine-box>
-                {/if}
-
-                <label class="profile-toggle">
-                  <input bind:checked={templateIsPublished} type="checkbox" />
-                  <lefine-text>{localeText.profile.templatePublish}</lefine-text>
-                </label>
-
-                <footer class="profile-details__footer">
-                  <button type="button" data-variant="ghost" onclick={resetTemplateEditor}>{localeText.buttons.cancel}</button>
-                  <button type="button" data-variant="primary" onclick={saveTemplate}>{localeText.profile.save}</button>
-                </footer>
-              </section>
+                  </article>
+                {/each}
+              </lefine-box>
+            {:else if !isOwner}
+              <p>{localeText.profile.noTemplates}</p>
             {/if}
           </article>
         {/if}
@@ -1399,6 +1239,7 @@
 
   .profile-main,
   .profile-side,
+  .profile-unavailable,
   .profile-surface,
   .profile-section,
   .profile-task {
@@ -1413,6 +1254,90 @@
     background: color-mix(in oklab, var(--kef-color-bg-card) 97%, var(--kef-color-bg));
     border: 1px solid color-mix(in oklab, var(--kef-color-text) 8%, transparent);
     box-shadow: 0 18px 40px color-mix(in oklab, black 18%, transparent);
+  }
+
+  .profile-unavailable {
+    position: relative;
+    overflow: hidden;
+    justify-items: start;
+    gap: 1rem;
+    min-height: min(34rem, calc(100vh - 10rem));
+    padding: clamp(1.5rem, 4vw, 3rem);
+    border-radius: 1.6rem;
+    border: 1px solid color-mix(in oklab, var(--kef-color-primary) 22%, transparent);
+    background:
+      radial-gradient(circle at top left, color-mix(in oklab, var(--kef-color-primary) 18%, transparent), transparent 34%),
+      radial-gradient(circle at right 18%, color-mix(in oklab, white 8%, transparent), transparent 22%),
+      linear-gradient(180deg, color-mix(in oklab, var(--kef-color-bg-card) 94%, black 6%), color-mix(in oklab, var(--kef-color-bg) 48%, var(--kef-color-bg-card)));
+    box-shadow:
+      inset 0 1px 0 color-mix(in oklab, white 8%, transparent),
+      0 24px 60px color-mix(in oklab, black 22%, transparent);
+  }
+
+  .profile-unavailable::before {
+    content: '';
+    position: absolute;
+    inset: auto -10% -28% auto;
+    width: clamp(14rem, 28vw, 22rem);
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: radial-gradient(circle, color-mix(in oklab, var(--kef-color-primary) 18%, transparent), transparent 68%);
+    pointer-events: none;
+  }
+
+  .profile-unavailable__code {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2rem;
+    padding: 0.4rem 0.75rem;
+    border-radius: 999px;
+    border: 1px solid color-mix(in oklab, var(--kef-color-primary) 24%, transparent);
+    background: color-mix(in oklab, var(--kef-color-primary) 12%, transparent);
+    color: color-mix(in oklab, white 72%, var(--kef-color-primary));
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .profile-unavailable h1,
+  .profile-unavailable p {
+    margin: 0;
+    max-width: 36rem;
+  }
+
+  .profile-unavailable h1 {
+    font-size: clamp(2rem, 5vw, 4.25rem);
+    line-height: 0.94;
+    letter-spacing: -0.05em;
+  }
+
+  .profile-unavailable p {
+    color: var(--kef-color-muted);
+    font-size: clamp(1rem, 1.6vw, 1.1rem);
+    line-height: 1.6;
+  }
+
+  .profile-unavailable__action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.9rem;
+    padding: 0.75rem 1.1rem;
+    border-radius: 999px;
+    border: 1px solid color-mix(in oklab, var(--kef-color-primary) 22%, transparent);
+    background: color-mix(in oklab, var(--kef-color-bg) 36%, var(--kef-color-bg-card));
+    box-shadow: inset 0 1px 0 color-mix(in oklab, white 8%, transparent);
+    color: var(--kef-color-text);
+    text-decoration: none;
+    transition:
+      transform 160ms ease,
+      border-color 160ms ease,
+      background-color 160ms ease;
+  }
+
+  .profile-unavailable__action:hover {
+    transform: translateY(-1px);
+    border-color: color-mix(in oklab, var(--kef-color-primary) 34%, transparent);
+    background: color-mix(in oklab, var(--kef-color-primary) 10%, var(--kef-color-bg-card));
   }
 
   .profile-section__head,
@@ -1734,29 +1659,23 @@
     flex-wrap: wrap;
   }
 
-  .profile-templates,
+  .profile-services,
   .profile-template-list,
-  .profile-template-editor,
-  .profile-template-card,
-  .profile-template-grid,
-  .profile-template-files {
+  .profile-template-card {
     display: grid;
     gap: 0.9rem;
   }
 
-  .profile-template-card,
-  .profile-template-editor,
-  .profile-template-preview {
-    padding: 1rem;
-    border-radius: 1rem;
-    background: color-mix(in oklab, var(--kef-color-bg) 45%, var(--kef-color-bg-card));
-    border: 1px solid color-mix(in oklab, var(--kef-color-text) 8%, transparent);
+  .profile-template-card {
+    padding: 1rem 0;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
   }
 
   .profile-template-card__head,
   .profile-template-card__actions,
-  .profile-template-badges,
-  .profile-template-preview {
+  .profile-template-badges {
     display: flex;
     gap: 0.75rem;
     align-items: center;
@@ -1765,29 +1684,107 @@
   }
 
   .profile-template-card__head p,
-  .profile-template-card__head strong,
-  .profile-template-preview strong,
-  .profile-template-preview lefine-text {
+  .profile-template-card__head strong {
     margin: 0;
   }
 
-  .profile-template-badges lefine-text,
-  .profile-template-files button {
+  .profile-template-card__image {
+    width: 3.5rem;
+    height: 3.5rem;
+    border-radius: 1rem;
+    object-fit: cover;
+    flex: 0 0 auto;
+  }
+
+  .profile-template-badges lefine-text {
     display: inline-flex;
     align-items: center;
     min-height: 2.2rem;
     padding: 0.45rem 0.7rem;
     border-radius: 999px;
-    background: color-mix(in oklab, var(--kef-color-bg-card) 92%, transparent);
-    border: 1px solid color-mix(in oklab, var(--kef-color-text) 8%, transparent);
+    background: color-mix(in oklab, var(--kef-color-bg-card) 82%, transparent);
+    border: 0;
   }
 
-  .profile-template-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .profile-service-cta {
+    display: grid;
+    gap: 0.65rem;
+    position: relative;
+    overflow: hidden;
+    text-align: left;
+    padding: 1.55rem 1.4rem;
+    border-radius: 1.6rem;
+    border: 1px solid transparent;
+    background:
+      linear-gradient(180deg, color-mix(in oklab, var(--kef-color-bg-card) 92%, black 8%), color-mix(in oklab, var(--kef-color-bg-card) 84%, black 16%)) padding-box,
+      linear-gradient(
+        135deg,
+        color-mix(in oklab, var(--kef-color-primary) 42%, white 20%),
+        color-mix(in oklab, var(--kef-color-primary) 18%, transparent) 28%,
+        color-mix(in oklab, white 26%, var(--kef-color-primary) 20%) 52%,
+        color-mix(in oklab, var(--kef-color-primary) 48%, black 6%)
+      ) border-box;
+    color: inherit;
+    cursor: pointer;
+    box-shadow:
+      inset 0 1px 0 color-mix(in oklab, white 10%, transparent),
+      inset 0 0 0 1px color-mix(in oklab, var(--kef-color-primary) 14%, transparent),
+      0 18px 40px color-mix(in oklab, black 42%, transparent);
+    transition:
+      transform 160ms ease,
+      box-shadow 160ms ease,
+      border-color 160ms ease;
   }
 
-  .profile-template-editor select {
-    width: 100%;
+  .profile-service-cta::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background:
+      radial-gradient(circle at top left, color-mix(in oklab, var(--kef-color-primary) 26%, transparent), transparent 42%),
+      radial-gradient(circle at right center, color-mix(in oklab, white 10%, transparent), transparent 32%);
+    opacity: 0.9;
+  }
+
+  .profile-service-cta:hover {
+    transform: translateY(-1px);
+    box-shadow:
+      inset 0 1px 0 color-mix(in oklab, white 12%, transparent),
+      inset 0 0 0 1px color-mix(in oklab, var(--kef-color-primary) 18%, transparent),
+      0 24px 54px color-mix(in oklab, black 48%, transparent);
+  }
+
+  .profile-service-cta:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 3px color-mix(in oklab, var(--kef-color-primary) 24%, transparent),
+      inset 0 1px 0 color-mix(in oklab, white 12%, transparent),
+      inset 0 0 0 1px color-mix(in oklab, var(--kef-color-primary) 22%, transparent),
+      0 24px 54px color-mix(in oklab, black 48%, transparent);
+  }
+
+  .profile-service-cta strong {
+    font-size: clamp(1.45rem, 3vw, 2.25rem);
+    line-height: 0.98;
+    letter-spacing: -0.04em;
+    font-weight: 700;
+    color: color-mix(in oklab, var(--kef-color-text) 82%, transparent);
+  }
+
+  .profile-service-cta strong,
+  .profile-service-cta p,
+  .profile-service-cta lefine-text {
+    margin: 0;
+  }
+
+  .profile-service-cta p {
+    color: var(--kef-color-muted);
+  }
+
+  .profile-service-cta lefine-text {
+    color: color-mix(in oklab, white 75%, var(--kef-color-primary));
   }
 
   .profile-rules__row .profile-toggle {
@@ -1802,8 +1799,7 @@
   @media (max-width: 980px) {
     .profile-layout,
     .profile-layout--single,
-    .profile-grid-two,
-    .profile-template-grid {
+    .profile-grid-two {
       grid-template-columns: 1fr;
     }
 
