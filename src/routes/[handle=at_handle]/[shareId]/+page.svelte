@@ -4,6 +4,8 @@
   import { page } from '$app/state';
   import { onMount } from 'svelte';
   import { authState, hydrateAuthStateFromSession } from '$lib/auth/auth-store.svelte.js';
+  import { loadPasskeySession, passkeySessionStore } from '$lib/auth/passkey-session';
+  import KefineServiceEditorPage from '$lib/components/kefine/KefineServiceEditorPage.svelte';
   import { KEFINE_TEXT_EN } from '$lib/constants/kefine-locale-en';
   import { KEFINE_TEXT_RU } from '$lib/constants/kefine-locale-ru';
   import { readBrowserPublicRuntimeConfig } from '$lib/config/public-config';
@@ -21,6 +23,7 @@
 
   const localeText =
     typeof document !== 'undefined' && document.documentElement.lang === 'ru' ? KEFINE_TEXT_RU : KEFINE_TEXT_EN;
+  const passkeySession = $derived($passkeySessionStore);
 
   let order = $state<OrderView | null>(null);
   let ownerProfile = $state<Profile | null>(null);
@@ -29,6 +32,9 @@
   let grantedKinds = $state<TaskAccessMode[]>([]);
   let unavailable = $state(false);
   let redirectingTemplate = $state(false);
+  let loadKey = $state('');
+  const runtimeConfig = $derived(readBrowserPublicRuntimeConfig());
+  const isOwnerTemplateView = $derived(Boolean(template && ownerProfile && viewerProfile && ownerProfile.id === viewerProfile.id));
   const canSeeFullTask = $derived(
     order
       ? viewerProfile?.id === order.ownerProfileId ||
@@ -61,65 +67,91 @@
 
   onMount(() => {
     async function init() {
-    if (!browser) {
+      if (!browser) {
+        return;
+      }
+
+      hydrateAuthStateFromSession();
+      loadPasskeySession();
+      unavailable = false;
+      redirectingTemplate = false;
+      order = null;
+      template = null;
+      grantedKinds = [];
+      ownerProfile = getProfileByUsername(localStorage, page.params.handle ?? '');
+      if (!ownerProfile) {
+        unavailable = true;
+        return;
+      }
+
+      const walletAddress = authState.address?.trim() || null;
+      const userId = passkeySession?.userId || authState.email?.trim().toLowerCase() || walletAddress;
+      viewerProfile = userId
+        ? ensureProfileForSession({
+            storage: localStorage,
+            userId,
+            email: authState.email,
+            displayName: passkeySession?.username || authState.email?.split('@')[0] || authState.address || 'user',
+            avatarUrl: undefined,
+            authType: passkeySession ? 'passkey' : authState.authType,
+            walletAddress: authState.address,
+            walletAlias: null
+          })
+        : null;
+
+      template = await fetchTemplateByHandleAndSlug(runtimeConfig.backend.craterBaseUrl, ownerProfile.primaryHandle, page.params.shareId ?? '');
+      if (template && viewerProfile?.id === ownerProfile.id) {
+        return;
+      }
+
+      if (template && (template.visibility ?? (template.isPublished ? 'public' : 'private')) === 'public') {
+        redirectingTemplate = true;
+        void goto(
+          `/?templateHandle=${encodeURIComponent(ownerProfile.primaryHandle)}&templateSlug=${encodeURIComponent(template.slug)}`,
+          { replaceState: true }
+        );
+        return;
+      }
+
+      const ownerProfileId = ownerProfile.id;
+      const storedOrders = parseStoredOrders(localStorage.getItem('kefine-created-orders-v1'), localeText);
+      const sharedOrder =
+        storedOrders.find(
+          (item) => matchesTaskSegment(item, page.params.shareId ?? '', ownerProfileId)
+        ) ?? null;
+
+      if (!sharedOrder) {
+        unavailable = true;
+        return;
+      }
+
+      order = sharedOrder;
+      if (!userId || !sharedOrder.ownerProfileId || !viewerProfile) {
+        return;
+      }
+
+      grantedKinds = getGrantedTaskAccessKinds({
+        storage: localStorage,
+        orderId: sharedOrder.id,
+        ownerProfileId: sharedOrder.ownerProfileId,
+        buyerProfileId: viewerProfile.id
+      });
+    }
+
+    const nextLoadKey = [
+      page.params.handle ?? '',
+      page.params.shareId ?? '',
+      authState.email ?? '',
+      authState.address ?? '',
+      authState.authType ?? '',
+      passkeySession?.userId ?? ''
+    ].join('|');
+
+    if (nextLoadKey === loadKey) {
       return;
     }
 
-    hydrateAuthStateFromSession();
-    ownerProfile = getProfileByUsername(localStorage, page.params.handle ?? '');
-    if (!ownerProfile) {
-      unavailable = true;
-      return;
-    }
-
-    const runtimeConfig = readBrowserPublicRuntimeConfig();
-    template = await fetchTemplateByHandleAndSlug(runtimeConfig.backend.craterBaseUrl, ownerProfile.primaryHandle, page.params.shareId ?? '');
-    if (template?.isPublished) {
-      redirectingTemplate = true;
-      void goto(
-        `/?templateHandle=${encodeURIComponent(ownerProfile.primaryHandle)}&templateSlug=${encodeURIComponent(template.slug)}`,
-        { replaceState: true }
-      );
-      return;
-    }
-
-    const ownerProfileId = ownerProfile.id;
-    const storedOrders = parseStoredOrders(localStorage.getItem('kefine-created-orders-v1'), localeText);
-    const sharedOrder =
-      storedOrders.find(
-        (item) => matchesTaskSegment(item, page.params.shareId ?? '', ownerProfileId)
-      ) ?? null;
-
-    if (!sharedOrder) {
-      unavailable = true;
-      return;
-    }
-
-    order = sharedOrder;
-
-    const userId = authState.email?.trim().toLowerCase() || authState.address?.trim();
-    if (!userId || !sharedOrder.ownerProfileId) {
-      return;
-    }
-
-    viewerProfile = ensureProfileForSession({
-      storage: localStorage,
-      userId,
-      email: authState.email,
-      displayName: authState.email?.split('@')[0] || authState.address || 'user',
-      avatarUrl: undefined,
-      authType: authState.authType,
-      walletAddress: authState.address,
-      walletAlias: null
-    });
-    grantedKinds = getGrantedTaskAccessKinds({
-      storage: localStorage,
-      orderId: sharedOrder.id,
-      ownerProfileId: sharedOrder.ownerProfileId,
-      buyerProfileId: viewerProfile.id
-    });
-    }
-
+    loadKey = nextLoadKey;
     void init();
   });
 
@@ -150,10 +182,12 @@
   <title>{template ? `${template.title} | Lefine` : order ? `${order.title} | Lefine` : 'Task | Lefine'}</title>
 </svelte:head>
 
-{#if redirectingTemplate}
+{#if isOwnerTemplateView && template && ownerProfile}
+  <KefineServiceEditorPage profile={ownerProfile} craterBaseUrl={runtimeConfig.backend.craterBaseUrl} service={template} />
+{:else if redirectingTemplate}
   <section class="shared-task-page">
     <article class="shared-task-card">
-      <h1>{template?.title ?? 'Template'}</h1>
+      <h1>{template?.title ?? 'Service'}</h1>
       <p>Redirecting to Lefine…</p>
     </article>
   </section>

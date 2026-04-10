@@ -23,6 +23,7 @@
   import {
     addProfileBonus,
     buildProfilePath,
+    buildProfileServicePath,
     buildProfileTaskPath,
     deriveWalletProfileHandle,
     ensureProfileForSession,
@@ -195,13 +196,29 @@
   }
 
   function getTemplateUrl(template: ProfileTemplate): string {
-    const path = `${buildProfilePath(profile?.primaryHandle || '')}/${template.slug}`;
+    const path = buildProfileServicePath(profile?.primaryHandle || '', template.slug);
     return browser ? `${window.location.origin}${path}` : path;
   }
 
   function getTaskUrl(order: OrderView): string {
     const handle = profile?.primaryHandle || profile?.username || requestedHandle;
     return buildProfileTaskPath(handle, order.shareId ?? order.id);
+  }
+
+  function getServiceInitial(title: string): string {
+    const normalized = title.trim();
+    if (!normalized) {
+      return 'S';
+    }
+
+    const match = normalized.match(/[A-Za-zА-Яа-яԱ-Ֆա-ֆ0-9]/u);
+    return (match?.[0] ?? normalized[0] ?? 'S').toUpperCase();
+  }
+
+  function getServiceAccent(title: string): string {
+    const seed = Array.from(title.trim()).reduce((sum, char) => sum + char.charCodeAt(0), 0);
+    const hue = seed % 360;
+    return `hsl(${hue} 70% 54%)`;
   }
 
   function syncDraftStateFromProfile(nextProfile: Profile | null) {
@@ -421,7 +438,7 @@
       return;
     }
 
-    await goto(`${buildProfilePath(profile.primaryHandle)}/services/${encodeURIComponent(template.slug)}`);
+    await goto(buildProfileServicePath(profile.primaryHandle, template.slug));
   }
 
   async function removeTemplate(templateId: string) {
@@ -1068,70 +1085,6 @@
             {/if}
           </article>
 
-          <article class="profile-surface profile-services">
-            <lefine-box class="profile-section__head">
-              <lefine-box>
-                <strong>{localeText.profile.templates}</strong>
-                <p>{localeText.profile.templatesSubtitle}</p>
-              </lefine-box>
-              {#if isOwner}
-                <button type="button" data-variant="ghost" onclick={createTemplate}>
-                  {localeText.profile.createTemplate}
-                </button>
-              {/if}
-            </lefine-box>
-
-            {#if isOwner && profileTemplates.length === 0}
-              <button type="button" class="profile-service-cta" onclick={createTemplate}>
-                <strong>{localeText.profile.templateCreateCtaTitle}</strong>
-                <p>{localeText.profile.templateCreateCtaDetail}</p>
-                <lefine-text>{localeText.profile.templateOpenEditor}</lefine-text>
-              </button>
-            {/if}
-
-            {#if visibleProfileTemplates.length > 0}
-              <lefine-box class="profile-template-list">
-                {#each visibleProfileTemplates as template (template.id)}
-                  <article class="profile-template-card">
-                    <lefine-box class="profile-template-card__head">
-                      {#if template.imageDataUrl}
-                        <img class="profile-template-card__image" src={template.imageDataUrl} alt="" />
-                      {/if}
-                      <lefine-box>
-                        <strong>{resolveTemplateLocalizedContent(template, $kefineLocale).title}</strong>
-                        <p>{resolveTemplateLocalizedContent(template, $kefineLocale).description || resolveTemplateLocalizedContent(template, $kefineLocale).promptTemplate}</p>
-                      </lefine-box>
-                      <lefine-box class="profile-template-badges">
-                        <lefine-text>{template.pricingMode === 'percent' ? `${template.pricingValue}%` : `$${template.pricingValue.toFixed(2)}`}</lefine-text>
-                        <lefine-text>{(template.visibility ?? (template.isPublished ? 'public' : 'private')) === 'public' ? localeText.profile.templatePublic : localeText.profile.templatePrivate}</lefine-text>
-                        {#if template.bonusEnabled}
-                          <lefine-text>{template.bonusMode === 'percent' ? `${template.bonusValue}% bonus` : `$${template.bonusValue.toFixed(2)} bonus`}</lefine-text>
-                        {/if}
-                      </lefine-box>
-                    </lefine-box>
-
-                    <lefine-box class="profile-template-card__actions">
-                      <a href={`${buildProfilePath(profile.primaryHandle)}/${template.slug}`}>{localeText.profile.templateOpen}</a>
-                      <button type="button" data-variant="ghost" onclick={() => copyTemplateLink(template)}>
-                        {templateCopyId === template.id ? localeText.profile.templateLinkCopied : localeText.profile.templateCopyLink}
-                      </button>
-                      {#if isOwner}
-                        <button type="button" data-variant="ghost" onclick={() => editTemplate(template)}>{localeText.profile.templateOpenEditor}</button>
-                        <button type="button" data-variant="ghost" onclick={() => toggleTemplatePublish(template)}>
-                          {(template.visibility ?? (template.isPublished ? 'public' : 'private')) === 'public' ? localeText.profile.templatePrivate : localeText.profile.templatePublic}
-                        </button>
-                        <button type="button" data-variant="ghost" onclick={() => removeTemplate(template.id)}>
-                          {localeText.profile.templateDelete}
-                        </button>
-                      {/if}
-                    </lefine-box>
-                  </article>
-                {/each}
-              </lefine-box>
-            {:else if !isOwner}
-              <p>{localeText.profile.noTemplates}</p>
-            {/if}
-          </article>
         {/if}
       </lefine-box>
 
@@ -1214,6 +1167,81 @@
         </aside>
       {/if}
     </lefine-box>
+
+    <article class="profile-surface profile-services">
+      <lefine-box class="profile-section__head">
+        <lefine-box>
+          <strong>{localeText.profile.templates}</strong>
+          <p>{localeText.profile.templatesSubtitle}</p>
+        </lefine-box>
+        {#if isOwner}
+          <button type="button" data-variant="ghost" onclick={createTemplate}>
+            {localeText.profile.createTemplate}
+          </button>
+        {/if}
+      </lefine-box>
+
+      {#if isOwner && profileTemplates.length === 0}
+        <button type="button" class="profile-service-cta" onclick={createTemplate}>
+          <strong>{localeText.profile.templateCreateCtaTitle}</strong>
+          <p>{localeText.profile.templateCreateCtaDetail}</p>
+          <lefine-text>{localeText.profile.templateOpenEditor}</lefine-text>
+        </button>
+      {/if}
+
+      {#if visibleProfileTemplates.length > 0}
+        <lefine-box class="profile-template-list">
+          {#each visibleProfileTemplates as template (template.id)}
+            {@const localized = resolveTemplateLocalizedContent(template, $kefineLocale)}
+            {@const title = localized.title}
+            {@const description = localized.description || localized.promptTemplate}
+            {@const visibility = template.visibility ?? (template.isPublished ? 'public' : 'private')}
+            <article class="profile-template-card">
+              <lefine-box class="profile-template-card__body">
+                {#if template.imageDataUrl}
+                  <img class="profile-template-card__image" src={template.imageDataUrl} alt="" />
+                {:else}
+                  <lefine-box
+                    class="profile-template-card__icon"
+                    style={`--service-accent: ${getServiceAccent(title)};`}
+                    aria-hidden="true"
+                  >
+                    <span>{getServiceInitial(title)}</span>
+                  </lefine-box>
+                {/if}
+
+                <lefine-box class="profile-template-card__copy">
+                  <strong>{title}</strong>
+                  <p>{description}</p>
+                </lefine-box>
+
+                <a class="profile-template-card__link" href={buildProfileServicePath(profile.primaryHandle, template.slug)}>
+                  {localeText.profile.templateOpen}
+                </a>
+              </lefine-box>
+
+              {#if isOwner}
+                <lefine-box class="profile-template-card__actions">
+                  <lefine-text>{visibility === 'public' ? localeText.profile.templatePublic : localeText.profile.templatePrivate}</lefine-text>
+                  <button type="button" data-variant="ghost" onclick={() => copyTemplateLink(template)}>
+                    {templateCopyId === template.id ? localeText.profile.templateLinkCopied : localeText.profile.templateCopyLink}
+                  </button>
+                  <button type="button" data-variant="ghost" onclick={() => editTemplate(template)}>{localeText.profile.templateOpenEditor}</button>
+                  <button type="button" data-variant="ghost" onclick={() => toggleTemplatePublish(template)}>
+                    {visibility === 'public' ? localeText.profile.templatePrivate : localeText.profile.templatePublic}
+                  </button>
+                  <button type="button" data-variant="ghost" onclick={() => removeTemplate(template.id)}>
+                    {localeText.profile.templateDelete}
+                  </button>
+                </lefine-box>
+              {/if}
+            </article>
+          {/each}
+        </lefine-box>
+      {:else if !isOwner}
+        <p>{localeText.profile.noTemplates}</p>
+      {/if}
+    </article>
   </section>
 {/if}
 
@@ -1661,49 +1689,107 @@
 
   .profile-services,
   .profile-template-list,
-  .profile-template-card {
+  .profile-template-card,
+  .profile-template-card__body,
+  .profile-template-card__copy {
     display: grid;
     gap: 0.9rem;
   }
 
-  .profile-template-card {
-    padding: 1rem 0;
-    background: transparent;
-    border: 0;
-    border-radius: 0;
+  .profile-services {
+    margin-top: 0.25rem;
   }
 
-  .profile-template-card__head,
-  .profile-template-card__actions,
-  .profile-template-badges {
+  .profile-template-card {
+    padding: 1rem;
+    border-radius: 1rem;
+    background: color-mix(in oklab, var(--kef-color-bg) 45%, var(--kef-color-bg-card));
+    border: 1px solid color-mix(in oklab, var(--kef-color-text) 8%, transparent);
+  }
+
+  .profile-template-card__body,
+  .profile-template-card__actions {
     display: flex;
     gap: 0.75rem;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
     flex-wrap: wrap;
   }
 
-  .profile-template-card__head p,
-  .profile-template-card__head strong {
+  .profile-template-card__copy {
+    flex: 1 1 14rem;
+    min-width: 0;
+    align-content: center;
+  }
+
+  .profile-template-card__copy p,
+  .profile-template-card__copy strong {
     margin: 0;
   }
 
+  .profile-template-card__copy p {
+    color: var(--kef-color-muted);
+    line-height: 1.5;
+    line-clamp: 2;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
   .profile-template-card__image {
-    width: 3.5rem;
-    height: 3.5rem;
+    width: 3rem;
+    height: 3rem;
     border-radius: 1rem;
     object-fit: cover;
     flex: 0 0 auto;
   }
 
-  .profile-template-badges lefine-text {
+  .profile-template-card__icon {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 1rem;
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    background:
+      radial-gradient(circle at top left, color-mix(in oklab, white 20%, var(--service-accent)), transparent 62%),
+      linear-gradient(180deg, color-mix(in oklab, var(--service-accent) 92%, black 8%), color-mix(in oklab, var(--service-accent) 72%, black 28%));
+    color: white;
+    box-shadow: inset 0 1px 0 color-mix(in oklab, white 18%, transparent);
+  }
+
+  .profile-template-card__icon span {
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .profile-template-card__link,
+  .profile-template-card__actions lefine-text {
     display: inline-flex;
     align-items: center;
-    min-height: 2.2rem;
+    min-height: 2.5rem;
     padding: 0.45rem 0.7rem;
     border-radius: 999px;
     background: color-mix(in oklab, var(--kef-color-bg-card) 82%, transparent);
-    border: 0;
+    border: 1px solid color-mix(in oklab, var(--kef-color-text) 8%, transparent);
+    text-decoration: none;
+    flex: 0 0 auto;
+  }
+
+  .profile-template-card__link {
+    align-self: center;
+    font-weight: 600;
+  }
+
+  .profile-template-card__actions {
+    padding-top: 0.1rem;
+    border-top: 1px solid color-mix(in oklab, var(--kef-color-text) 8%, transparent);
+  }
+
+  .profile-template-card__actions lefine-text {
+    color: var(--kef-color-muted);
   }
 
   .profile-service-cta {
@@ -1839,6 +1925,15 @@
 
     .profile-card-stage {
       grid-template-columns: 1fr;
+    }
+
+    .profile-template-card__body {
+      align-items: flex-start;
+    }
+
+    .profile-template-card__link {
+      width: 100%;
+      justify-content: center;
     }
 
   }

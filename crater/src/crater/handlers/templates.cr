@@ -7,6 +7,13 @@ module Crater
   module Handlers
     module Templates
       def self.register(config : Utils::Config)
+        get "/templates" do |env|
+          env.response.content_type = "application/json"
+          limit = env.params.query["limit"]?.try(&.to_i?) || 24
+          normalized_limit = limit.clamp(1, 48)
+          TemplateStore.list_public(config, normalized_limit).map { |item| JSON.parse(TemplateStore.to_json(item)) }.to_json
+        end
+
         get "/templates/:handle" do |env|
           env.response.content_type = "application/json"
           handle = env.params.url["handle"]?.to_s

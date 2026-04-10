@@ -11,6 +11,9 @@
   let {
     draft,
     template,
+    pinnedServices,
+    pinnedServicesTitle,
+    pinnedServicesSubtitle,
     titleFontSize,
     title,
     subtitle,
@@ -42,11 +45,23 @@
     onOpenOrder,
     onLoadMoreOrders,
     onDescriptionChange,
+    onTemplateVariableChange,
+    onTagsChange,
     onCostChange,
     onCurrencyChange
   }: {
     draft: DraftOrder;
     template: TemplatePresentation | null;
+    pinnedServices: Array<{
+      id: string;
+      href: string;
+      imageDataUrl?: string;
+      title: string;
+      description: string;
+      authorHandle: string;
+    }>;
+    pinnedServicesTitle: string;
+    pinnedServicesSubtitle: string;
     titleFontSize: number;
     title: string;
     subtitle: string;
@@ -84,6 +99,8 @@
     onOpenOrder: (order: OrderView) => void;
     onLoadMoreOrders: () => void;
     onDescriptionChange?: (value: string) => void;
+    onTemplateVariableChange?: (key: string, value: string) => void;
+    onTagsChange?: (tags: string[]) => void;
     onCostChange?: (value: string) => void;
     onCurrencyChange?: (value: string) => void;
   } = $props();
@@ -93,6 +110,8 @@
   let placeholderFocused = $state(false);
   let isLoadingMore = $state(false);
   let priceEditorOpen = $state(false);
+  let tagEditorOpen = $state(false);
+  let tagInputValue = $state('');
   let taskTextarea = $state<HTMLTextAreaElement | null>(null);
   let fileInput = $state<HTMLInputElement | null>(null);
   let filePreviews = $state<Map<number, string>>(new Map());
@@ -105,6 +124,22 @@
   const isMultilineDraft = $derived(draft.description.includes('\n'));
   const afeIntroCard = $derived(afe.cards[0] ?? null);
   const afeStepCards = $derived(afe.cards.slice(1));
+
+  function getServiceInitial(title: string): string {
+    const normalized = title.trim();
+    if (!normalized) {
+      return 'S';
+    }
+
+    const match = normalized.match(/[A-Za-zА-Яа-яԱ-Ֆա-ֆ0-9]/u);
+    return (match?.[0] ?? normalized[0] ?? 'S').toUpperCase();
+  }
+
+  function getServiceAccent(title: string): string {
+    const seed = Array.from(title.trim()).reduce((sum, char) => sum + char.charCodeAt(0), 0);
+    const hue = seed % 360;
+    return `hsl(${hue} 70% 54%)`;
+  }
 
   function resizeTaskInput(_description: string) {
     if (!taskTextarea) {
@@ -369,6 +404,46 @@
     stopPlaceholderAnimation({ hide: true });
   }
 
+  function normalizeTag(value: string): string {
+    return value.trim().replace(/^#+/, '').toLowerCase();
+  }
+
+  function commitTag(rawValue: string) {
+    const normalizedTag = normalizeTag(rawValue);
+    if (!normalizedTag) {
+      tagInputValue = '';
+      return;
+    }
+
+    const nextTags = Array.from(new Set([...(draft.tags ?? []), normalizedTag]));
+    onTagsChange?.(nextTags);
+    tagInputValue = '';
+    tagEditorOpen = false;
+  }
+
+  function removeTag(tag: string) {
+    onTagsChange?.((draft.tags ?? []).filter((item) => item !== tag));
+  }
+
+  function handleTagInputKeydown(event: KeyboardEvent) {
+    if (event.key === 'Enter' || event.key === ',' || event.key === 'Tab') {
+      event.preventDefault();
+      commitTag(tagInputValue);
+      return;
+    }
+
+    if (event.key === 'Backspace' && !tagInputValue && (draft.tags?.length ?? 0) > 0) {
+      event.preventDefault();
+      removeTag(draft.tags[draft.tags.length - 1] ?? '');
+      return;
+    }
+
+    if (event.key === 'Escape') {
+      tagInputValue = '';
+      tagEditorOpen = false;
+    }
+  }
+
 </script>
 
 <article class="kefine-card kefine-card--wide" data-kefine-create>
@@ -382,6 +457,21 @@
         <strong>@{template.authorHandle}</strong>
         <lefine-text>{template.pricingMode === 'percent' ? `${template.pricingValue}%` : `$${template.pricingValue.toFixed(2)}`}</lefine-text>
       </lefine-box>
+    </section>
+  {/if}
+
+  {#if template && (draft.templateVariables?.length ?? 0) > 0}
+    <section data-part="template-variables">
+      {#each draft.templateVariables ?? [] as variable (`template-var-${variable.key}`)}
+        <label data-part="template-variable-field">
+          <lefine-text>:{variable.key}</lefine-text>
+          <input
+            value={draft.templateVariableValues?.[variable.key] ?? variable.defaultValue ?? ''}
+            placeholder={`:${variable.key}`}
+            oninput={(event) => onTemplateVariableChange?.(variable.key, (event.currentTarget as HTMLInputElement).value)}
+          />
+        </label>
+      {/each}
     </section>
   {/if}
 
@@ -404,6 +494,7 @@
           data-part="task-input"
           data-empty={!draft.description.trim()}
           data-multiline={isMultilineDraft}
+          readonly={Boolean(template && draft.templatePromptTemplate)}
           data-testid="kefine-task-input"
           style={`--kef-task-font-size: ${titleFontSize}rem;`}
           placeholder=""
@@ -467,8 +558,39 @@
           <lefine-text>{addPriceLabel}</lefine-text>
         </button>
       {/if}
+      {#if tagEditorOpen}
+        <input
+          bind:value={tagInputValue}
+          data-part="tag-input"
+          placeholder="tag"
+          maxlength="32"
+          autofocus
+          onkeydown={handleTagInputKeydown}
+          onblur={() => {
+            if (tagInputValue.trim()) {
+              commitTag(tagInputValue);
+              return;
+            }
+
+            tagEditorOpen = false;
+          }}
+        />
+      {:else}
+        <button type="button" data-part="composer-chip" data-part-tag="true" onclick={() => { tagEditorOpen = true; }}>
+          <lefine-text>+ tag</lefine-text>
+        </button>
+      {/if}
       <input bind:this={fileInput} data-part="file-input" type="file" multiple onchange={handleFileChange} />
     </kefine-composer-strip>
+
+    <kefine-tag-strip data-has-tags={(draft.tags?.length ?? 0) > 0}>
+      {#each draft.tags ?? [] as tag (`tag-${tag}`)}
+        <button type="button" data-part="tag-pill" onclick={() => removeTag(tag)} aria-label={`Remove ${tag} tag`}>
+          <lefine-text>#{tag}</lefine-text>
+          <strong>×</strong>
+        </button>
+      {/each}
+    </kefine-tag-strip>
 
     {#if (draft.templateFiles?.length ?? 0) > 0}
       <kefine-file-list data-template-files="true">
@@ -554,6 +676,39 @@
   {/if}
 </article>
 
+{#if pinnedServices.length > 0}
+  <section class="kefine-services-showcase" data-part="pinned-services">
+    <lefine-box class="kefine-services-head">
+      <strong>{pinnedServicesTitle}</strong>
+      <p>{pinnedServicesSubtitle}</p>
+    </lefine-box>
+
+    <lefine-box class="kefine-services-list">
+      {#each pinnedServices as service (service.id)}
+        <a class="kefine-service-card" href={service.href}>
+          {#if service.imageDataUrl}
+            <img class="kefine-service-card__image" src={service.imageDataUrl} alt="" />
+          {:else}
+            <lefine-box
+              class="kefine-service-card__icon"
+              style={`--service-accent: ${getServiceAccent(service.title)};`}
+              aria-hidden="true"
+            >
+              <span>{getServiceInitial(service.title)}</span>
+            </lefine-box>
+          {/if}
+
+          <lefine-box class="kefine-service-card__copy">
+            <strong>{service.title}</strong>
+            <p>{service.description}</p>
+            <lefine-text>@{service.authorHandle}</lefine-text>
+          </lefine-box>
+        </a>
+      {/each}
+    </lefine-box>
+  </section>
+{/if}
+
 <section class="kefine-afe-showcase" data-part="below-fold">
   <lefine-box class="kefine-afe-layout">
     {#if afeIntroCard}
@@ -597,6 +752,128 @@
     margin-inline: auto;
   }
 
+  .kefine-services-showcase {
+    width: min(100%, calc(100vw - 7rem));
+    max-width: 64rem;
+    justify-self: center;
+    margin-inline: auto;
+    display: grid;
+    gap: 0.7rem;
+    padding: 0.95rem 1rem 1rem;
+    border-radius: var(--kef-radius-ui);
+    background: color-mix(in oklab, var(--kef-bg-card) 90%, var(--kef-bg-soft) 10%);
+    border: 1px solid color-mix(in oklab, var(--kef-line-strong) 82%, transparent);
+    box-shadow: none;
+  }
+
+  .kefine-services-head,
+  .kefine-services-list,
+  .kefine-service-card,
+  .kefine-service-card__copy {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .kefine-services-head {
+    gap: 0.28rem;
+  }
+
+  .kefine-services-head strong {
+    font-size: clamp(0.98rem, 1.3vw, 1.1rem);
+    letter-spacing: -0.02em;
+  }
+
+  .kefine-services-head p,
+  .kefine-services-head strong,
+  .kefine-service-card__copy p,
+  .kefine-service-card__copy strong,
+  .kefine-service-card__copy lefine-text {
+    margin: 0;
+  }
+
+  .kefine-services-head p,
+  .kefine-service-card__copy p,
+  .kefine-service-card__copy lefine-text {
+    color: var(--lefine-text-soft);
+  }
+
+  .kefine-services-head p {
+    max-width: 28rem;
+    font-size: 0.8rem;
+  }
+
+  .kefine-services-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.8rem;
+    justify-items: start;
+  }
+
+  .kefine-service-card {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    gap: 0.6rem;
+    width: min(100%, 18rem);
+    min-height: 7.4rem;
+    padding: 0.85rem 0.9rem;
+    border-radius: var(--kef-radius-ui);
+    background: color-mix(in oklab, var(--kef-bg-card) 94%, var(--kef-bg) 6%);
+    border: 1px solid color-mix(in oklab, var(--kef-line-strong) 72%, transparent);
+    box-shadow: none;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .kefine-service-card__image,
+  .kefine-service-card__icon {
+    width: 2.1rem;
+    height: 2.1rem;
+    border-radius: var(--kef-radius-ui);
+    flex: 0 0 auto;
+  }
+
+  .kefine-service-card__image {
+    object-fit: cover;
+  }
+
+  .kefine-service-card__icon {
+    display: grid;
+    place-items: center;
+    background:
+      linear-gradient(180deg, color-mix(in oklab, var(--service-accent) 72%, var(--kef-bg-soft)), color-mix(in oklab, var(--service-accent) 84%, black 16%));
+    color: color-mix(in oklab, white 88%, var(--kef-bg-card));
+    border: 1px solid color-mix(in oklab, var(--service-accent) 34%, transparent);
+  }
+
+  .kefine-service-card__icon span {
+    font-size: 0.8rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .kefine-service-card__copy {
+    min-width: 0;
+  }
+
+  .kefine-service-card__copy strong {
+    font-size: 0.92rem;
+    letter-spacing: -0.01em;
+  }
+
+  .kefine-service-card__copy p {
+    line-height: 1.35;
+    font-size: 0.82rem;
+    line-clamp: 2;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .kefine-service-card:hover {
+    border-color: color-mix(in oklab, var(--kef-primary) 22%, transparent);
+    background: color-mix(in oklab, var(--kef-bg-card) 88%, var(--kef-bg-soft));
+  }
+
   [data-kefine-create] h2 {
     font-size: clamp(1.35rem, 2vw, 1.75rem);
     margin: 0;
@@ -616,6 +893,87 @@
     border-radius: 0.6rem;
     background: color-mix(in oklab, var(--kef-primary) 10%, var(--kef-bg-card));
     border: 1px solid color-mix(in oklab, var(--kef-primary) 28%, transparent);
+  }
+
+  section[data-part='template-variables'] {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  }
+
+  label[data-part='template-variable-field'] {
+    display: grid;
+    gap: 0.35rem;
+  }
+
+  label[data-part='template-variable-field'] lefine-text {
+    color: var(--lefine-text-soft);
+  }
+
+  label[data-part='template-variable-field'] input {
+    width: 100%;
+    min-height: 2.6rem;
+    padding: 0.55rem 0.8rem;
+    border-radius: 0.55rem;
+    border: 1px solid color-mix(in oklab, var(--kef-border) 78%, transparent);
+    background: color-mix(in oklab, var(--kef-bg-card) 94%, white 6%);
+    color: var(--lefine-text);
+  }
+
+  kefine-tag-strip {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 0.55rem;
+    align-items: center;
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+    padding-bottom: 0.15rem;
+    scrollbar-width: thin;
+  }
+
+  button[data-part='tag-add'],
+  button[data-part='tag-pill'] {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-height: 2rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    border: 1px solid color-mix(in oklab, var(--kef-border) 80%, transparent);
+    background: color-mix(in oklab, var(--kef-bg-card) 92%, white 8%);
+    color: var(--lefine-text);
+    flex: 0 0 auto;
+  }
+
+  button[data-part='tag-add'] {
+    border-style: dashed;
+    color: var(--lefine-text-soft);
+  }
+
+  button[data-part='composer-chip'][data-part-tag='true'] {
+    border-style: dashed;
+  }
+
+  button[data-part='tag-pill'] strong {
+    font-size: 0.95rem;
+    line-height: 1;
+  }
+
+  input[data-part='tag-input'] {
+    width: 8rem;
+    min-height: 2rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    border: 1px dashed color-mix(in oklab, var(--kef-primary) 45%, transparent);
+    background: color-mix(in oklab, var(--kef-bg-card) 94%, white 6%);
+    color: var(--lefine-text);
+    flex: 0 0 auto;
+  }
+
+  input[data-part='tag-input']:focus {
+    outline: none;
+    border-color: color-mix(in oklab, var(--kef-primary) 80%, transparent);
   }
 
   section[data-part='template-banner'] p,
@@ -755,23 +1113,31 @@
   kefine-composer-strip {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.55rem;
+    gap: 0.5rem;
     align-items: center;
-    padding: 0.1rem 0;
-    border-bottom: 1px dashed color-mix(in oklab, var(--kef-line) 72%, transparent);
+    padding: 0.05rem 0 0.2rem;
+    border-bottom: 1px dashed color-mix(in oklab, var(--kef-line) 52%, transparent);
   }
 
   button[data-part='composer-chip'],
   input[data-part='price-input'],
   input[data-part='currency-input'],
   button[data-part='file-pill'] {
-    min-height: 2.5rem;
-    padding: 0.6rem 0.85rem;
+    min-height: 2.35rem;
+    padding: 0.5rem 0.95rem;
     border-radius: 999px;
-    border: 1px solid color-mix(in oklab, var(--kef-line) 78%, transparent);
-    background: color-mix(in oklab, var(--kef-bg-card) 92%, transparent);
+    border: 1px solid color-mix(in oklab, var(--kef-on-primary) 10%, transparent);
+    background: color-mix(in oklab, var(--kef-bg) 76%, black 24%);
     color: var(--lefine-text);
     font: inherit;
+    box-shadow: inset 0 1px 0 color-mix(in oklab, white 3%, transparent);
+  }
+
+  button[data-part='composer-chip'] {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    letter-spacing: -0.01em;
   }
 
   kefine-price-editor {
@@ -787,6 +1153,11 @@
   input[data-part='currency-input'] {
     width: 5.5rem;
     text-transform: uppercase;
+  }
+
+  input[data-part='price-input'],
+  input[data-part='currency-input'] {
+    background: color-mix(in oklab, var(--kef-bg-card) 70%, black 30%);
   }
 
   input[data-part='file-input'] {
@@ -880,8 +1251,9 @@
     background: transparent;
   }
 
+  .kefine-services-showcase,
   section[data-part='below-fold'] {
-    margin-top: clamp(0.7rem, 2vh, 1.05rem);
+    margin-top: var(--kef-space-3);
   }
 
   @media (min-width: 960px) {
@@ -890,6 +1262,10 @@
     }
 
     .kefine-afe-showcase {
+      width: min(64rem, calc(100vw - 8rem));
+    }
+
+    .kefine-services-showcase {
       width: min(64rem, calc(100vw - 8rem));
     }
 
@@ -930,6 +1306,14 @@
       width: min(100%, calc(100vw - 2rem));
     }
 
+    .kefine-services-showcase {
+      width: min(100%, calc(100vw - 2rem));
+    }
+
+    .kefine-services-list {
+      grid-template-columns: 1fr;
+    }
+
     fieldset[data-part='exec-row'] {
       grid-template-columns: minmax(0, 1fr);
     }
@@ -944,6 +1328,11 @@
 
     p[data-part='composer-hints'] {
       display: none;
+    }
+
+    .kefine-service-card {
+      width: 100%;
+      min-height: 0;
     }
   }
 </style>
