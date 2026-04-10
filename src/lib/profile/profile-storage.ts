@@ -1,29 +1,39 @@
+import type { KefineLocale } from '$lib/constants/kefine-locale';
 import type {
   Profile,
+  ProfileTemplateBonusMode,
   ProfileBonusLedgerEntry,
   ProfileCardVerification,
   ProfileFollow,
   ProfileSocialLinkType,
   ProfileTemplate,
   ProfileTemplateFile,
+  ProfileTemplateLocalizedContent,
   ProfileTemplatePricingMode,
+  ProfileTemplateVariable,
+  ProfileTemplateVisibility,
   ProfileTaskAccessRecord
 } from '$lib/types/user';
 import type { TaskAccessKind } from '$lib/types/user';
 import { normalizeProfileAccount } from '$lib/profile/profile-accounts';
+import { syncPromptVariables } from '$lib/templates/template-content';
 import {
   buildProfilePath,
+  buildProfileServicePath,
   buildProfileTaskPath,
   deriveProfileUsername,
   deriveWalletProfileHandle,
+  normalizeProfileResourceSlug,
   normalizeProfileUsername
 } from '$lib/profile/profile-handles';
 
 export {
   buildProfilePath,
+  buildProfileServicePath,
   buildProfileTaskPath,
   deriveProfileUsername,
   deriveWalletProfileHandle,
+  normalizeProfileResourceSlug,
   normalizeProfileUsername
 } from '$lib/profile/profile-handles';
 
@@ -107,6 +117,65 @@ function readTemplateFiles(value: unknown): ProfileTemplateFile[] {
       };
     })
     .filter((item): item is ProfileTemplateFile => item !== null);
+}
+
+function readTemplateVisibility(value: unknown, isPublished: boolean): ProfileTemplateVisibility {
+  return value === 'public' || (value !== 'private' && isPublished) ? 'public' : 'private';
+}
+
+function readTemplateBonusMode(value: unknown): ProfileTemplateBonusMode {
+  return value === 'percent' ? 'percent' : 'fixed';
+}
+
+function readTemplateLocale(value: unknown): KefineLocale {
+  return value === 'ru' || value === 'hy' ? value : 'en';
+}
+
+function readTemplateTranslations(value: unknown): Partial<Record<KefineLocale, ProfileTemplateLocalizedContent>> | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  const entries = Object.entries(value)
+    .filter(([locale]) => locale === 'en' || locale === 'ru' || locale === 'hy')
+    .map(([locale, item]) => {
+      if (!isRecord(item)) {
+        return null;
+      }
+
+      return [
+        locale,
+        {
+          title: toStringValue(item['title']) || '',
+          description: toStringValue(item['description']) || '',
+          promptTemplate: toStringValue(item['promptTemplate']) || ''
+        }
+      ] as const;
+    })
+    .filter((item): item is readonly [string, ProfileTemplateLocalizedContent] => item !== null);
+
+  return entries.length > 0 ? (Object.fromEntries(entries) as Partial<Record<KefineLocale, ProfileTemplateLocalizedContent>>) : undefined;
+}
+
+function readTemplateVariables(value: unknown): ProfileTemplateVariable[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .filter(isRecord)
+    .map<ProfileTemplateVariable | null>((item) => {
+      const key = toStringValue(item['key']);
+      if (!key) {
+        return null;
+      }
+
+      return {
+        key,
+        defaultValue: toStringValue(item['defaultValue']) || ''
+      };
+    })
+    .filter((item): item is ProfileTemplateVariable => item !== null);
 }
 
 export function readProfiles(storage: Storage): Profile[] {
@@ -254,7 +323,10 @@ export function readProfileBonusLedger(storage: Storage): ProfileBonusLedgerEntr
         !profileId ||
         !note ||
         amountUsd === undefined ||
-        (source !== 'card-verification' && source !== 'follower-task' && source !== 'template-order')
+        (source !== 'card-verification' &&
+          source !== 'follower-task' &&
+          source !== 'template-order' &&
+          source !== 'service-bonus')
       ) {
         return null;
       }
@@ -287,6 +359,7 @@ export function readProfileTemplates(storage: Storage): ProfileTemplate[] {
       }
 
       const createdAt = toStringValue(item['createdAt']) || new Date().toISOString();
+      const promptTemplate = toStringValue(item['promptTemplate']) || toStringValue(item['prefillDescription']) || toStringValue(item['prefillTitle']) || '';
       return {
         id: toStringValue(item['id']) || createId('template'),
         profileId,
@@ -298,6 +371,10 @@ export function readProfileTemplates(storage: Storage): ProfileTemplate[] {
         })(),
         title,
         description: toStringValue(item['description']) || '',
+        baseLocale: readTemplateLocale(item['baseLocale']),
+        promptTemplate,
+        promptVariables: syncPromptVariables(promptTemplate, readTemplateVariables(item['promptVariables'])),
+        translations: readTemplateTranslations(item['translations']),
         prefillTitle: toStringValue(item['prefillTitle']) || '',
         prefillDescription: toStringValue(item['prefillDescription']) || '',
         prefillEstimatedCost: toNumberValue(item['prefillEstimatedCost']),
@@ -305,7 +382,11 @@ export function readProfileTemplates(storage: Storage): ProfileTemplate[] {
         prefillFiles: readTemplateFiles(item['prefillFiles']),
         pricingMode: item['pricingMode'] === 'percent' ? 'percent' : 'fixed',
         pricingValue: Math.max(0, toNumberValue(item['pricingValue']) ?? 0),
+        visibility: readTemplateVisibility(item['visibility'], item['isPublished'] === true),
         isPublished: item['isPublished'] === true,
+        bonusEnabled: item['bonusEnabled'] === true,
+        bonusMode: readTemplateBonusMode(item['bonusMode']),
+        bonusValue: Math.max(0, toNumberValue(item['bonusValue']) ?? 0),
         createdAt,
         updatedAt: toStringValue(item['updatedAt']) || createdAt
       };
@@ -362,6 +443,10 @@ export function upsertProfileTemplate(args: {
   templateId?: string;
   title: string;
   description: string;
+  baseLocale: KefineLocale;
+  promptTemplate: string;
+  promptVariables: ProfileTemplateVariable[];
+  translations?: Partial<Record<KefineLocale, ProfileTemplateLocalizedContent>>;
   prefillTitle: string;
   prefillDescription: string;
   prefillEstimatedCost?: number;
@@ -369,7 +454,10 @@ export function upsertProfileTemplate(args: {
   prefillFiles?: ProfileTemplateFile[];
   pricingMode: ProfileTemplatePricingMode;
   pricingValue: number;
-  isPublished: boolean;
+  visibility: ProfileTemplateVisibility;
+  bonusEnabled: boolean;
+  bonusMode: ProfileTemplateBonusMode;
+  bonusValue: number;
 }): ProfileTemplate {
   const current = readProfileTemplates(args.storage);
   const existing = args.templateId ? current.find((item) => item.id === args.templateId && item.profileId === args.profileId) : null;
@@ -380,6 +468,10 @@ export function upsertProfileTemplate(args: {
     slug: existing?.slug && isUuidLike(existing.slug) ? existing.slug : createTemplateSlug(),
     title: args.title.trim() || 'Untitled template',
     description: args.description.trim(),
+    baseLocale: args.baseLocale,
+    promptTemplate: args.promptTemplate.trim(),
+    promptVariables: [...args.promptVariables],
+    translations: args.translations,
     prefillTitle: args.prefillTitle.trim(),
     prefillDescription: args.prefillDescription.trim(),
     prefillEstimatedCost:
@@ -388,7 +480,11 @@ export function upsertProfileTemplate(args: {
     prefillFiles: [...(args.prefillFiles ?? [])],
     pricingMode: args.pricingMode,
     pricingValue: Math.max(0, Number(args.pricingValue) || 0),
-    isPublished: args.isPublished,
+    visibility: args.visibility,
+    isPublished: args.visibility === 'public',
+    bonusEnabled: args.bonusEnabled,
+    bonusMode: args.bonusMode,
+    bonusValue: Math.max(0, Number(args.bonusValue) || 0),
     createdAt,
     updatedAt: new Date().toISOString()
   };
@@ -412,7 +508,7 @@ export function ensureProfileForSession(args: {
   email?: string | null;
   displayName?: string | null;
   avatarUrl?: string | null;
-  authType?: 'wallet' | 'email' | 'passkey' | 'localhost' | null;
+  authType?: 'wallet' | 'email' | 'passkey' | 'temporary-account' | null;
   walletAddress?: string | null;
   walletAlias?: string | null;
 }): Profile {
@@ -637,7 +733,7 @@ export function addProfileBonus(args: {
   storage: Storage;
   profileId: string;
   amountUsd: number;
-  source: 'card-verification' | 'follower-task' | 'template-order';
+  source: 'card-verification' | 'follower-task' | 'template-order' | 'service-bonus';
   note: string;
   orderId?: string;
 }): Profile | null {

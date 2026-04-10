@@ -54,6 +54,8 @@ export const KEFINE_TEXT_HY = {
     addPrice: '+ գին',
     fileCount: (count: number) => `${count} ֆայլ`,
     composerHints: 'Enter-ը ուղարկում է, Alt+Enter-ը ուղարկում է ֆոնում, Shift+Enter-ը նոր տող է ավելացնում',
+    pinnedServicesTitle: 'Ամրացված ծառայություններ',
+    pinnedServicesSubtitle: 'Սկսեք կարգավորված service entry point-երից, ապա միայն գրեք ազատ ձևի առաջադրանք։',
     recentTasks: 'Վերջին առաջադրանքներ',
     noRecentTasks: 'Պահված առաջադրանքներ դեռ չկան',
     matchedTasks: 'Գտնված ավարտված առաջադրանքներ',
@@ -175,7 +177,7 @@ export const KEFINE_TEXT_HY = {
       afe: {
         title: 'Ի՞նչ է Lefine-ը',
         detail:
-          'Lefine-ը Automated Freelance Exchange (AFE) է։ Դուք պարզապես նկարագրում եք առաջադրանքը, իսկ մենք ընտրում ենք այն լուծումը, որը լավագույնս համապատասխանում է դրան։'
+          'Lefine-ը Automated Freelance Marketplace (AFM) է։ Դուք պարզապես նկարագրում եք առաջադրանքը, իսկ մենք ընտրում ենք այն լուծումը, որը լավագույնս համապատասխանում է դրան։'
       },
       task: {
         title: '1. Նկարագրեք առաջադրանքը',

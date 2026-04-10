@@ -3,6 +3,7 @@
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
   import { resolvePublicRuntimeConfig } from '$lib/config/public-config';
+  import { isSpecialRuntimeOrigin, resolveTemporaryAccountIdentity } from '$lib/config/special-runtime';
   import { resolveOrderProxyBasePath } from '$lib/order-proxy-path';
   import { onMount } from 'svelte';
 import { cubicOut } from 'svelte/easing';
@@ -71,12 +72,14 @@ import { cubicOut } from 'svelte/easing';
   } from '$lib/components/kefine/kefine-workspace-orders';
   import { waitForDelay } from '$lib/utils/helpers';
   import { disconnectAppKit } from '$lib/auth/appkit';
-  import { fetchTemplateByHandleAndSlug } from '$lib/templates/template-api';
+  import { renderPromptTemplate, resolveTemplateLocalizedContent, syncPromptVariables } from '$lib/templates/template-content';
+  import { fetchPublicTemplates, fetchTemplateByHandleAndSlug } from '$lib/templates/template-api';
   import type { Profile, ProfileTemplate } from '$lib/types/user';
   import {
     addProfileBonus,
     calculateTemplateAmounts,
     buildProfilePath,
+    buildProfileServicePath,
     ensureProfileForSession,
     getProfileById,
     normalizeProfileUsername,
@@ -107,12 +110,25 @@ import { cubicOut } from 'svelte/easing';
     return {
       title: '',
       description: '',
+      tags: [],
       estimatedCost: '',
       currency: 'USD',
       executionEstimate: '',
       files: [],
-      templateFiles: []
+      templateFiles: [],
+      templatePromptTemplate: '',
+      templateVariables: [],
+      templateVariableValues: {}
     };
+  }
+
+  function formatPinnedServiceTitle(slug: string): string {
+    const normalized = slug.trim().replace(/[-_]+/g, ' ');
+    if (!normalized) {
+      return 'Service';
+    }
+
+    return normalized.replace(/\b\w/g, (char) => char.toUpperCase());
   }
 
   let step = $state<FlowStep>(getNormalizedInitialOrderId() ? 'executing' : 'create');
@@ -133,7 +149,7 @@ import { cubicOut } from 'svelte/easing';
   );
   let createdOrders = $state<OrderView[]>([]);
   let leftNavExpanded = $state(false);
-  let isLocalhostRuntime = $state(false);
+  let isSpecialRuntime = $state(false);
   let errorMessage = $state('');
 
   let isDarkTheme = $state(false);
@@ -151,8 +167,11 @@ import { cubicOut } from 'svelte/easing';
   let isHydratingRoute = $state(Boolean(getNormalizedInitialOrderId()));
   let currentProfile = $state<Profile | null>(null);
   let activeTemplate = $state<ProfileTemplate | null>(null);
+  let publicTemplates = $state<ProfileTemplate[]>([]);
   let templateUnavailable = $state(false);
   let templateLoadKey = $state('');
+  let publicTemplateLoadKey = $state('');
+  let profileRedirectKey = $state('');
   const activePollTokens = new Map<string, symbol>();
   let pollAbortController = $state<AbortController | null>(null);
 
@@ -263,15 +282,54 @@ import { cubicOut } from 'svelte/easing';
     return {
       id: activeTemplate.id,
       slug: activeTemplate.slug,
-      title: activeTemplate.title,
-      description: activeTemplate.description,
+      title: resolveTemplateLocalizedContent(activeTemplate, $kefineLocale).title,
+      description: resolveTemplateLocalizedContent(activeTemplate, $kefineLocale).description,
       authorProfileId: activeTemplate.profileId,
       authorHandle: activeTemplate.authorHandle ?? initialTemplateHandle ?? '',
       authorDisplayName: activeTemplate.authorDisplayName ?? activeTemplate.authorHandle ?? initialTemplateHandle ?? '',
       pricingMode: activeTemplate.pricingMode,
       pricingValue: activeTemplate.pricingValue,
-      prefillFiles: activeTemplate.prefillFiles
+      prefillFiles: activeTemplate.prefillFiles,
+      promptTemplate: resolveTemplateLocalizedContent(activeTemplate, $kefineLocale).promptTemplate,
+      promptVariables: syncPromptVariables(
+        resolveTemplateLocalizedContent(activeTemplate, $kefineLocale).promptTemplate,
+        activeTemplate.promptVariables ?? []
+      )
     };
+  });
+  const pinnedCreateServices = $derived.by(() => {
+    const pinnedEntries = runtimeConfig.services.filter((item) => item.isPinned);
+    if (pinnedEntries.length === 0) {
+      return [];
+    }
+
+    const templatesByKey = new Map(
+      publicTemplates.map((item) => [`${(item.authorHandle ?? '').trim().toLowerCase()}::${item.slug.trim().toLowerCase()}`, item] as const)
+    );
+
+    return pinnedEntries.flatMap((entry) => {
+        const template = templatesByKey.get(`${entry.handle.trim().toLowerCase()}::${entry.slug.trim().toLowerCase()}`);
+        if (!template || !template.authorHandle) {
+          return [{
+            id: `config:${entry.handle}:${entry.slug}`,
+            href: buildProfileServicePath(entry.handle, entry.slug),
+            imageDataUrl: undefined,
+            title: formatPinnedServiceTitle(entry.slug),
+            description: `Open service @${entry.handle}/${entry.slug}`,
+            authorHandle: entry.handle
+          }];
+        }
+
+        const localized = resolveTemplateLocalizedContent(template, $kefineLocale);
+        return [{
+          id: template.id,
+          href: buildProfileServicePath(template.authorHandle, template.slug),
+          imageDataUrl: template.imageDataUrl,
+          title: localized.title,
+          description: localized.description || localized.promptTemplate,
+          authorHandle: template.authorHandle
+        }];
+      });
   });
   const sidebarSocialLinks = $derived([
     {
@@ -409,7 +467,7 @@ import { cubicOut } from 'svelte/easing';
     hydrateAuthStateFromSession();
     loadPasskeySession();
     loadCreatedOrders();
-    isLocalhostRuntime = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
+    isSpecialRuntime = isSpecialRuntimeOrigin(window.location.origin);
 
     const routeState = readTaskRouteState();
     const routeOrderId = routeState?.orderId || getNormalizedInitialOrderId();
@@ -456,13 +514,33 @@ import { cubicOut } from 'svelte/easing';
       return;
     }
 
-    const nextTemplateLoadKey = `${initialTemplateHandle ?? ''}|${initialTemplateSlug ?? ''}`;
+    const nextTemplateLoadKey = `${initialTemplateHandle ?? ''}|${initialTemplateSlug ?? ''}|${$kefineLocale}`;
     if (templateLoadKey === nextTemplateLoadKey) {
       return;
     }
 
     templateLoadKey = nextTemplateLoadKey;
     void loadActiveTemplate();
+  });
+
+  $effect(() => {
+    const pinnedEntries = runtimeConfig.services.filter((item) => item.isPinned);
+    const nextPublicTemplateLoadKey = `${runtimeConfig.backend.craterBaseUrl}|${pinnedEntries.map((item) => `${item.handle}:${item.slug}`).join('|')}`;
+
+    if (publicTemplateLoadKey === nextPublicTemplateLoadKey) {
+      return;
+    }
+
+    publicTemplateLoadKey = nextPublicTemplateLoadKey;
+
+    if (!browser || pinnedEntries.length === 0) {
+      publicTemplates = [];
+      return;
+    }
+
+    void (async () => {
+      publicTemplates = await fetchPublicTemplates(runtimeConfig.backend.craterBaseUrl, 48);
+    })();
   });
 
   async function loadActiveTemplate() {
@@ -474,7 +552,7 @@ import { cubicOut } from 'svelte/easing';
     }
 
     const template = await fetchTemplateByHandleAndSlug(runtimeConfig.backend.craterBaseUrl, initialTemplateHandle, initialTemplateSlug);
-    if (!template || !template.isPublished) {
+    if (!template || (template.visibility ?? (template.isPublished ? 'public' : 'private')) !== 'public') {
       activeTemplate = null;
       templateUnavailable = true;
       return;
@@ -482,13 +560,21 @@ import { cubicOut } from 'svelte/easing';
 
     activeTemplate = template;
     templateUnavailable = false;
+    const localized = resolveTemplateLocalizedContent(template, $kefineLocale);
+    const promptVariables = syncPromptVariables(localized.promptTemplate, template.promptVariables ?? []);
+    const templateVariableValues = Object.fromEntries(
+      promptVariables.map((item) => [item.key, item.defaultValue ?? ''])
+    );
     draft = {
       ...createEmptyDraft(),
-      title: template.prefillTitle,
-      description: template.prefillDescription || template.prefillTitle,
+      title: localized.title,
+      description: renderPromptTemplate(localized.promptTemplate, templateVariableValues),
       estimatedCost: template.prefillEstimatedCost !== undefined ? String(template.prefillEstimatedCost) : '',
       currency: template.prefillCurrency || 'USD',
-      templateFiles: [...template.prefillFiles]
+      templateFiles: [...template.prefillFiles],
+      templatePromptTemplate: localized.promptTemplate,
+      templateVariables: promptVariables,
+      templateVariableValues
     };
   }
   $effect(() => {
@@ -521,6 +607,26 @@ import { cubicOut } from 'svelte/easing';
       walletAddress: activeSessionProfileSeed.walletAddress,
       walletAlias: activeSessionProfileSeed.walletAlias
     });
+  });
+
+  $effect(() => {
+    if (!browser || !currentProfile) {
+      return;
+    }
+
+    if (draftQueued || currentOrder) {
+      return;
+    }
+
+    const targetPath = buildProfilePath(currentProfile.primaryHandle);
+    const nextRedirectKey = `${activeSessionProfileSeed?.userId ?? ''}|${targetPath}`;
+
+    if (profileRedirectKey === nextRedirectKey || page.url.pathname === targetPath) {
+      return;
+    }
+
+    profileRedirectKey = nextRedirectKey;
+    void goto(targetPath, { replaceState: true });
   });
 
   $effect(() => {
@@ -678,7 +784,7 @@ import { cubicOut } from 'svelte/easing';
     userId: string;
     email?: string | null;
     displayName?: string | null;
-    authType: 'wallet' | 'email' | 'passkey' | 'localhost' | null;
+    authType: 'wallet' | 'email' | 'passkey' | 'temporary-account' | null;
     walletAddress?: string | null;
     walletAlias?: string | null;
     force?: boolean;
@@ -882,7 +988,7 @@ import { cubicOut } from 'svelte/easing';
   }
 
   function orderApiBaseUrl(): string {
-    if (browser && isLocalhostRuntime) {
+    if (browser && isSpecialRuntime) {
       return resolveOrderProxyBasePath('https://lefine.pro');
     }
 
@@ -891,7 +997,7 @@ import { cubicOut } from 'svelte/easing';
 
   function craterBaseUrl(): string {
     if (!browser) return '';
-    return isLocalhostRuntime ? 'https://lefine.pro' : window.location.origin;
+    return isSpecialRuntime ? 'https://lefine.pro' : window.location.origin;
   }
 
   async function requestOrderFromStatus(
@@ -959,7 +1065,8 @@ import { cubicOut } from 'svelte/easing';
         status: 'queued',
         solver: localeText.labels?.solver ?? '',
         currency: payload.currency || 'USDC',
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        labels: payload.tags
       };
       upsertOrder(tempOrder);
     }
@@ -1043,6 +1150,24 @@ import { cubicOut } from 'svelte/easing';
           orderId: ownerOrder.id
         });
       }
+    }
+
+    if (browser && activeTemplate && currentProfile && activeTemplate.bonusEnabled) {
+      const bonusAmount =
+        activeTemplate.bonusMode === 'percent'
+          ? Number((((ownerOrder.estimatedCost ?? 0) * activeTemplate.bonusValue) / 100).toFixed(2))
+          : Number(activeTemplate.bonusValue.toFixed(2));
+
+      if (bonusAmount > 0) {
+        addProfileBonus({
+          storage: localStorage,
+          profileId: currentProfile.id,
+          amountUsd: bonusAmount,
+          source: 'service-bonus',
+          note: `Service bonus from ${activeTemplate.title}`,
+          orderId: ownerOrder.id
+        });
+      }
     } else if (browser && currentProfile) {
       const follow = readProfileFollows(localStorage).find((item) => item.followerProfileId === currentProfile?.id);
       if (follow) {
@@ -1107,6 +1232,23 @@ import { cubicOut } from 'svelte/easing';
 
   function updateDescription(value: string) {
     draft.description = value;
+  }
+
+  function updateTemplateVariableValue(key: string, value: string) {
+    const nextValues = {
+      ...(draft.templateVariableValues ?? {}),
+      [key]: value
+    };
+
+    draft = {
+      ...draft,
+      templateVariableValues: nextValues,
+      description: renderPromptTemplate(draft.templatePromptTemplate ?? '', nextValues)
+    };
+  }
+
+  function updateTags(tags: string[]) {
+    draft.tags = tags;
   }
 
   function updateCost(value: string) {
@@ -1319,17 +1461,25 @@ import { cubicOut } from 'svelte/easing';
     void openSocialAuth();
   }
 
-  function chooseLocalhostMethod() {
+  function chooseTemporaryAccountMethod() {
     closeAuthDialog();
     stagePreviewOpen = false;
     selectedAuthMethod = 'wallet';
     paymentMethod = 'wallet';
+    const temporaryAccount = browser
+      ? resolveTemporaryAccountIdentity(window.location.origin)
+      : {
+          email: 'temporary-account',
+          userId: 'temporary-account',
+          displayName: 'temporary-account'
+        };
+
     updateAuthState({
       isConnected: true,
       address: null,
       chainId: null,
-      email: 'localhost',
-      authType: 'localhost',
+      email: temporaryAccount.email,
+      authType: 'temporary-account',
       status: 'connected'
     });
 
@@ -1339,10 +1489,10 @@ import { cubicOut } from 'svelte/easing';
     }
 
     void maybeOpenProfileAfterAuth({
-      userId: 'localhost',
-      email: 'localhost',
-      displayName: 'localhost',
-      authType: 'localhost',
+      userId: temporaryAccount.userId,
+      email: temporaryAccount.email,
+      displayName: temporaryAccount.displayName,
+      authType: 'temporary-account',
       walletAddress: null,
       walletAlias: null,
       force: true
@@ -1478,6 +1628,9 @@ import { cubicOut } from 'svelte/easing';
           template={templatePresentation}
           title={localeText.create.title}
           subtitle={localeText.create.subtitle}
+          pinnedServices={pinnedCreateServices}
+          pinnedServicesTitle={localeText.profile.templates}
+          pinnedServicesSubtitle={localeText.create.pinnedServicesSubtitle}
           afe={{
             title: localeText.afe.title,
             cards: [
@@ -1515,6 +1668,8 @@ import { cubicOut } from 'svelte/easing';
           onStopOrder={handleStopOrder}
           onOpenOrder={openOrder}
           onDescriptionChange={updateDescription}
+          onTemplateVariableChange={updateTemplateVariableValue}
+          onTagsChange={updateTags}
           onCostChange={updateCost}
           onCurrencyChange={updateCurrency}
         />
@@ -1684,13 +1839,13 @@ import { cubicOut } from 'svelte/easing';
     description={localeText.executionFlow['awaiting-auth'].detail}
     walletTitle={localeText.auth.walletTitle}
     passkeyTitle={localeText.auth.passkeyTitle}
-    localhostTitle={localeText.auth.localhostTitle}
-    showLocalhost={isLocalhostRuntime}
+    temporaryAccountTitle={localeText.auth.temporaryAccountTitle}
+    showTemporaryAccount={isSpecialRuntime}
     closeLabel={localeText.buttons.closeDialog}
     onClose={() => { authDialogOpen = false; }}
     onWallet={chooseWalletMethod}
     onPasskey={choosePasskeyMethod}
-    onLocalhost={chooseLocalhostMethod}
+    onTemporaryAccount={chooseTemporaryAccountMethod}
   />
 
   <KefinePasskeyDialog

@@ -11,6 +11,17 @@ function sanitizeUsernamePart(value: string): string {
     .slice(0, 32);
 }
 
+function sanitizeProfileResourcePart(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/^@+/, '')
+    .replace(/[^a-z0-9._-]+/g, '-')
+    .replace(/-{2,}/g, '-')
+    .replace(/^[._-]+|[._-]+$/g, '')
+    .slice(0, 64);
+}
+
 export function normalizeProfileUsername(value: string): string {
   const normalized = sanitizeUsernamePart(value);
   return normalized || 'user';
@@ -22,6 +33,14 @@ export function buildProfilePath(username: string): string {
 
 export function buildProfileTaskPath(username: string, shareId: string): string {
   return `${buildProfilePath(username)}/${encodeURIComponent(shareId)}`;
+}
+
+export function normalizeProfileResourceSlug(value: string): string {
+  return sanitizeProfileResourcePart(value);
+}
+
+export function buildProfileServicePath(username: string, slug: string): string {
+  return `${buildProfilePath(username)}/${encodeURIComponent(slug.trim())}`;
 }
 
 export function deriveWalletProfileHandle(address: string, alias?: string | null): string {
