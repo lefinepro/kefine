@@ -16,6 +16,9 @@ module Crater
       getter payment_token_symbol : String
       getter payment_token_decimals : Int32
       getter log_level : String
+      getter actor_handle : String
+      getter actor_display_name : String
+      getter actor_private_key_pem : String
 
       def initialize(
         @port : Int32,
@@ -29,7 +32,10 @@ module Crater
         @payment_token_address : String,
         @payment_token_symbol : String,
         @payment_token_decimals : Int32,
-        @log_level : String
+        @log_level : String,
+        @actor_handle : String,
+        @actor_display_name : String,
+        @actor_private_key_pem : String
       )
       end
 
@@ -37,9 +43,10 @@ module Crater
         raw = load_json_config
         backend = raw["backend"]?.try(&.as_h) || Hash(String, JSON::Any).new
         payment = raw["payment"]?.try(&.as_h) || Hash(String, JSON::Any).new
+        default_actor = raw["defaultActor"]?.try(&.as_h) || Hash(String, JSON::Any).new
 
-        crater_url = normalize_url(read_string(backend, "craterBaseUrl", "http://localhost:3001"))
-        exchange_url = normalize_url(read_string(backend, "exchangeBaseUrl", crater_url))
+        crater_url = normalize_url(read_env_or_string("CRATER_BASE_URL", backend, "craterBaseUrl", "http://localhost:3001"))
+        exchange_url = normalize_url(read_env_or_string("EXCHANGE_BASE_URL", backend, "exchangeBaseUrl", crater_url))
 
         new(
           port: read_int(backend, "port", 3001),
@@ -47,13 +54,16 @@ module Crater
           env: read_string(backend, "environment", "development"),
           crater_url: crater_url,
           exchange_url: exchange_url,
-          database_url: read_string(backend, "databaseUrl", "postgresql://kefine:kefine@localhost:5432/kefine"),
+          database_url: read_env_or_string("DATABASE_URL", backend, "databaseUrl", "postgresql://kefine:kefine@localhost:5432/kefine"),
           payment_evm_address: read_string(payment, "evmAddress", ""),
           payment_chain_id: read_i64(payment, "chainId", 43114_i64),
           payment_token_address: read_string(payment, "tokenAddress", "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E"),
           payment_token_symbol: read_string(payment, "tokenSymbol", "USDC"),
           payment_token_decimals: read_int(payment, "tokenDecimals", 6),
-          log_level: read_string(backend, "logLevel", "info")
+          log_level: read_string(backend, "logLevel", "info"),
+          actor_handle: read_string(default_actor, "handle", "api"),
+          actor_display_name: read_string(default_actor, "displayName", "API"),
+          actor_private_key_pem: read_string(default_actor, "privateKeyPem", "")
         )
       end
 
@@ -67,6 +77,13 @@ module Crater
 
         normalized = value.strip
         normalized.empty? ? fallback : normalized
+      end
+
+      private def self.read_env_or_string(env_key : String, source : Hash(String, JSON::Any), key : String, fallback : String) : String
+        value = ENV[env_key]?.try(&.strip)
+        return value.not_nil! unless value.nil? || value.empty?
+
+        read_string(source, key, fallback)
       end
 
       private def self.read_int(source : Hash(String, JSON::Any), key : String, fallback : Int32) : Int32
@@ -100,7 +117,8 @@ module Crater
       end
 
       def actor_username : String
-        "crater"
+        normalized = actor_handle.downcase.gsub(/[^a-z0-9._-]+/, "-").gsub(/^[._-]+|[._-]+$/, "")
+        normalized.empty? ? "api" : normalized
       end
 
       def domain : String

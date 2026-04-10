@@ -5,6 +5,7 @@ import {
   normalizeText,
   resolvePublicRuntimeConfig,
   type KefineCompanyPublicConfig,
+  type KefineDefaultActorPublicConfig,
   type KefinePinnedServiceConfig,
   type KefinePublicRuntimeConfig
 } from '$lib/config/public-config';
@@ -13,6 +14,9 @@ type KefineFullConfig = {
   app: KefinePublicRuntimeConfig['app'];
   company: KefineCompanyPublicConfig;
   services: KefinePinnedServiceConfig[];
+  defaultActor: KefineDefaultActorPublicConfig & {
+    privateKeyPem: string;
+  };
   origins: {
     primary: string;
     legal: string;
@@ -40,6 +44,10 @@ const DEFAULT_CONFIG: KefineFullConfig = {
   app: DEFAULT_PUBLIC_RUNTIME_CONFIG.app,
   company: DEFAULT_PUBLIC_RUNTIME_CONFIG.company,
   services: DEFAULT_PUBLIC_RUNTIME_CONFIG.services,
+  defaultActor: {
+    ...DEFAULT_PUBLIC_RUNTIME_CONFIG.defaultActor,
+    privateKeyPem: ''
+  },
   origins: {
     primary: 'https://lefine.pro',
     legal: 'https://lefine.pro',
@@ -92,8 +100,10 @@ export function getKefineConfig(): KefineFullConfig {
   const publicConfig = resolvePublicRuntimeConfig({
     app: objectSource.app,
     company: objectSource.company,
-    services: objectSource.services
+    services: objectSource.services,
+    defaultActor: objectSource.defaultActor
   });
+  const defaultActor = (objectSource.defaultActor ?? {}) as Record<string, unknown>;
   const origins = (objectSource.origins ?? {}) as Record<string, unknown>;
   const backend = (objectSource.backend ?? {}) as Record<string, unknown>;
   const payment = (objectSource.payment ?? {}) as Record<string, unknown>;
@@ -102,6 +112,11 @@ export function getKefineConfig(): KefineFullConfig {
     app: publicConfig.app,
     company: publicConfig.company,
     services: publicConfig.services,
+    defaultActor: {
+      handle: publicConfig.defaultActor.handle,
+      displayName: publicConfig.defaultActor.displayName,
+      privateKeyPem: normalizeText(defaultActor.privateKeyPem, DEFAULT_CONFIG.defaultActor.privateKeyPem)
+    },
     origins: {
       primary: normalizeText(origins.primary, DEFAULT_CONFIG.origins.primary),
       legal: normalizeText(origins.legal, DEFAULT_CONFIG.origins.legal),
@@ -134,6 +149,10 @@ export function getPublicRuntimeConfig(): KefinePublicRuntimeConfig {
     app: config.app,
     company: config.company,
     services: config.services,
+    defaultActor: {
+      handle: config.defaultActor.handle,
+      displayName: config.defaultActor.displayName
+    },
     backend: {
       craterBaseUrl: config.backend.craterBaseUrl
     }

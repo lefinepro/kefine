@@ -22,8 +22,8 @@
   import { getLocaleText, kefineLocale, setKefineLocale, type KefineLocale } from '$lib/constants/kefine-locale';
   import {
     addProfileBonus,
+    buildCanonicalServicePath,
     buildProfilePath,
-    buildProfileServicePath,
     buildProfileTaskPath,
     deriveWalletProfileHandle,
     ensureProfileForSession,
@@ -196,7 +196,7 @@
   }
 
   function getTemplateUrl(template: ProfileTemplate): string {
-    const path = buildProfileServicePath(profile?.primaryHandle || '', template.slug);
+    const path = buildCanonicalServicePath(profile?.primaryHandle || '', template.slug, runtimeConfig.defaultActor.handle);
     return browser ? `${window.location.origin}${path}` : path;
   }
 
@@ -438,7 +438,7 @@
       return;
     }
 
-    await goto(buildProfileServicePath(profile.primaryHandle, template.slug));
+    await goto(buildCanonicalServicePath(profile.primaryHandle, template.slug, runtimeConfig.defaultActor.handle));
   }
 
   async function removeTemplate(templateId: string) {
@@ -1215,7 +1215,7 @@
                   <p>{description}</p>
                 </lefine-box>
 
-                <a class="profile-template-card__link" href={buildProfileServicePath(profile.primaryHandle, template.slug)}>
+                <a class="profile-template-card__link" href={buildCanonicalServicePath(profile.primaryHandle, template.slug, runtimeConfig.defaultActor.handle)}>
                   {localeText.profile.templateOpen}
                 </a>
               </lefine-box>

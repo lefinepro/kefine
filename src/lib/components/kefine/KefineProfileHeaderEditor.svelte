@@ -66,7 +66,7 @@
           type="text"
           bind:value={username}
           maxlength="48"
-          placeholder="localhost"
+          placeholder="default"
           aria-label={usernameLabel}
           onkeydown={onFieldKeydown}
         />

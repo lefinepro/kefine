@@ -1,3 +1,5 @@
+import type { KefineLocale } from '$lib/constants/kefine-locale';
+
 export interface User {
   id: string;
   username: string;
@@ -38,7 +40,20 @@ export interface ProfileTemplateFile {
   type?: string;
 }
 
+export interface ProfileTemplateVariable {
+  key: string;
+  defaultValue?: string;
+}
+
+export interface ProfileTemplateLocalizedContent {
+  title: string;
+  description: string;
+  promptTemplate: string;
+}
+
 export type ProfileTemplatePricingMode = 'fixed' | 'percent';
+export type ProfileTemplateVisibility = 'private' | 'public';
+export type ProfileTemplateBonusMode = 'fixed' | 'percent';
 
 export interface ProfileTemplate {
   id: string;
@@ -48,14 +63,24 @@ export interface ProfileTemplate {
   slug: string;
   title: string;
   description: string;
+  imageDataUrl?: string;
+  baseLocale: KefineLocale;
+  promptTemplate: string;
+  promptVariables: ProfileTemplateVariable[];
+  translations?: Partial<Record<KefineLocale, ProfileTemplateLocalizedContent>>;
   prefillTitle: string;
   prefillDescription: string;
   prefillEstimatedCost?: number;
   prefillCurrency?: string;
   prefillFiles: ProfileTemplateFile[];
+  tags?: string[];
   pricingMode: ProfileTemplatePricingMode;
   pricingValue: number;
-  isPublished: boolean;
+  visibility: ProfileTemplateVisibility;
+  isPublished?: boolean;
+  bonusEnabled: boolean;
+  bonusMode: ProfileTemplateBonusMode;
+  bonusValue: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -90,7 +115,7 @@ export interface Profile {
   userId: string;
   username: string;
   primaryHandle: string;
-  primaryHandleType: 'wallet-address' | 'wallet-alias' | 'email' | 'passkey';
+  primaryHandleType: 'wallet-address' | 'wallet-alias' | 'email' | 'passkey' | 'privatekey';
   displayName: string;
   email?: string;
   avatarUrl?: string;
@@ -130,7 +155,7 @@ export interface ProfileBonusLedgerEntry {
   id: string;
   profileId: string;
   amountUsd: number;
-  source: 'card-verification' | 'follower-task' | 'template-order';
+  source: 'card-verification' | 'follower-task' | 'template-order' | 'service-bonus';
   createdAt: string;
   note: string;
   orderId?: string;

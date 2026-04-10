@@ -19,20 +19,24 @@ import { normalizeProfileAccount } from '$lib/profile/profile-accounts';
 import { syncPromptVariables } from '$lib/templates/template-content';
 import {
   buildProfilePath,
+  buildCanonicalServicePath,
   buildProfileServicePath,
   buildProfileTaskPath,
   deriveProfileUsername,
   deriveWalletProfileHandle,
+  isDefaultActorHandle,
   normalizeProfileResourceSlug,
   normalizeProfileUsername
 } from '$lib/profile/profile-handles';
 
 export {
   buildProfilePath,
+  buildCanonicalServicePath,
   buildProfileServicePath,
   buildProfileTaskPath,
   deriveProfileUsername,
   deriveWalletProfileHandle,
+  isDefaultActorHandle,
   normalizeProfileResourceSlug,
   normalizeProfileUsername
 } from '$lib/profile/profile-handles';
@@ -508,7 +512,7 @@ export function ensureProfileForSession(args: {
   email?: string | null;
   displayName?: string | null;
   avatarUrl?: string | null;
-  authType?: 'wallet' | 'email' | 'passkey' | 'temporary-account' | null;
+  authType?: 'wallet' | 'email' | 'passkey' | 'privatekey' | null;
   walletAddress?: string | null;
   walletAlias?: string | null;
 }): Profile {
@@ -556,7 +560,13 @@ export function ensureProfileForSession(args: {
   });
   const username = createUniqueUsername(walletFirstHandle || baseUsername, profiles);
   const primaryHandleType =
-    walletFirstHandle ? (args.walletAlias ? 'wallet-alias' : 'wallet-address') : args.authType === 'passkey' ? 'passkey' : 'email';
+    walletFirstHandle
+      ? (args.walletAlias ? 'wallet-alias' : 'wallet-address')
+      : args.authType === 'passkey'
+        ? 'passkey'
+        : args.authType === 'privatekey'
+          ? 'privatekey'
+          : 'email';
   const profile: Profile = {
     id: createId('profile'),
     userId: args.userId,

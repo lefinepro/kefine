@@ -51,9 +51,14 @@
     "soleProprietor": "",
     "legalDisclaimer": ""
   },
+  "defaultActor": {
+    "handle": "api",
+    "displayName": "API",
+    "privateKeyPem": "dev-private-key"
+  },
   "services": [
     {
-      "handle": "temporary-account",
+      "handle": "api",
       "slug": "vpn-service",
       "isPinned": true
     }

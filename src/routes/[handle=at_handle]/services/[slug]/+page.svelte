@@ -5,7 +5,7 @@
   import { authState, hydrateAuthStateFromSession } from '$lib/auth/auth-store.svelte.js';
   import { loadPasskeySession, passkeySessionStore } from '$lib/auth/passkey-session';
   import { readBrowserPublicRuntimeConfig } from '$lib/config/public-config';
-  import { buildProfileServicePath, deriveWalletProfileHandle, ensureProfileForSession, getProfileByUsername } from '$lib/profile/profile-storage';
+  import { buildCanonicalServicePath, deriveWalletProfileHandle, ensureProfileForSession, getProfileByUsername } from '$lib/profile/profile-storage';
   import { fetchTemplateByHandleAndSlug } from '$lib/templates/template-api';
   import type { Profile } from '$lib/types/user';
 
@@ -52,7 +52,7 @@
       }
 
       profile = storedProfile;
-      void goto(buildProfileServicePath(storedProfile.primaryHandle, loaded.slug), { replaceState: true });
+      void goto(buildCanonicalServicePath(storedProfile.primaryHandle, loaded.slug, runtimeConfig.defaultActor.handle), { replaceState: true });
     }
 
     if (!browser) {

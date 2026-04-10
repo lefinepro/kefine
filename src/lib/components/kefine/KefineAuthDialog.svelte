@@ -8,26 +8,26 @@
     description,
     walletTitle,
     passkeyTitle,
-    localhostTitle,
-    showLocalhost,
+    privateKeyTitle,
+    showPrivateKey,
     closeLabel,
     onClose,
     onWallet,
     onPasskey,
-    onLocalhost
+    onPrivateKey
   }: {
     open: boolean;
     title: string;
     description: string;
     walletTitle: string;
     passkeyTitle: string;
-    localhostTitle: string;
-    showLocalhost: boolean;
+    privateKeyTitle: string;
+    showPrivateKey: boolean;
     closeLabel: string;
     onClose: () => void;
     onWallet: () => void;
     onPasskey: () => void;
-    onLocalhost: () => void;
+    onPrivateKey: () => void;
   } = $props();
 
 </script>
@@ -57,14 +57,14 @@
       <strong>{passkeyTitle}</strong>
     </button>
 
-    {#if showLocalhost}
-      <button type="button" class="kefine-auth-tile kefine-auth-tile--localhost" onclick={onLocalhost}>
-        <lefine-box class="kefine-auth-hero kefine-auth-hero--localhost" aria-hidden="true">
+    {#if showPrivateKey}
+      <button type="button" class="kefine-auth-tile kefine-auth-tile--privatekey" onclick={onPrivateKey}>
+        <lefine-box class="kefine-auth-hero kefine-auth-hero--temporary" aria-hidden="true">
           <lefine-text class="kefine-auth-icon">
-            <Icon icon="mdi:laptop" width="100%" height="100%" aria-hidden="true" />
+            <Icon icon="mdi:key-variant" width="100%" height="100%" aria-hidden="true" />
           </lefine-text>
         </lefine-box>
-        <strong>{localhostTitle}</strong>
+        <strong>{privateKeyTitle}</strong>
       </button>
     {/if}
   </section>
@@ -94,7 +94,7 @@
   .kefine-auth-dialog__actions {
     display: grid;
     gap: 0.85rem;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     padding: 1.25rem;
   }
 

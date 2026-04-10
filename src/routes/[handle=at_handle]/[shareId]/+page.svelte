@@ -15,6 +15,7 @@
   import type { Profile, ProfileTemplate } from '$lib/types/user';
   import {
     buildProfilePath,
+    buildCanonicalServicePath,
     ensureProfileForSession,
     getGrantedTaskAccessKinds,
     getProfileByUsername,
@@ -106,10 +107,7 @@
 
       if (template && (template.visibility ?? (template.isPublished ? 'public' : 'private')) === 'public') {
         redirectingTemplate = true;
-        void goto(
-          `/?templateHandle=${encodeURIComponent(ownerProfile.primaryHandle)}&templateSlug=${encodeURIComponent(template.slug)}`,
-          { replaceState: true }
-        );
+        void goto(buildCanonicalServicePath(ownerProfile.primaryHandle, template.slug, runtimeConfig.defaultActor.handle), { replaceState: true });
         return;
       }
 
