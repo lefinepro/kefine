@@ -29,6 +29,7 @@
     ensureProfileForSession,
     followProfile,
     getProfileByUsername,
+    isDefaultActorHandle,
     isFollowingProfile,
     normalizeProfileUsername,
     readProfiles,
@@ -237,6 +238,32 @@
     surname = nameParts.surname;
   }
 
+  function buildDefaultActorProfile(): Profile | null {
+    const handle = runtimeConfig.defaultActor.handle?.trim();
+    if (!handle || !isDefaultActorHandle(requestedHandle, handle)) {
+      return null;
+    }
+
+    const now = new Date().toISOString();
+    return {
+      id: `default-profile:${handle}`,
+      userId: `default-user:${handle}`,
+      username: handle,
+      primaryHandle: handle,
+      primaryHandleType: 'publickey',
+      displayName: runtimeConfig.defaultActor.displayName?.trim() || handle.toUpperCase(),
+      bio: '',
+      isPublic: true,
+      socialLinks: [],
+      referralPercent: 10,
+      bonusBalanceUsd: 0,
+      followersCount: 0,
+      followingCount: 0,
+      createdAt: now,
+      updatedAt: now
+    };
+  }
+
   let profileLoadKey = $state('');
   $effect(() => {
     if (!browser) {
@@ -275,7 +302,7 @@
     }
 
     const currentPasskeySession = passkeySession;
-    const userId = currentPasskeySession?.userId || authState.email?.trim().toLowerCase() || authState.address?.trim();
+    const userId = currentPasskeySession?.userId || authState.userId?.trim() || authState.email?.trim().toLowerCase() || authState.address?.trim();
     const walletAddress = authState.address?.trim() || null;
     const walletHandle = walletAddress ? deriveWalletProfileHandle(walletAddress) : null;
 
@@ -286,6 +313,8 @@
         email: authState.email,
         displayName:
           currentPasskeySession?.username ||
+          authState.displayName?.trim() ||
+          authState.handle?.trim() ||
           authState.email?.split('@')[0] ||
           walletHandle ||
           authState.address ||
@@ -299,7 +328,7 @@
       viewerProfile = null;
     }
 
-    const storedProfile = getProfileByUsername(localStorage, requestedHandle);
+    const storedProfile = getProfileByUsername(localStorage, requestedHandle) ?? buildDefaultActorProfile();
     profile = storedProfile;
     syncDraftStateFromProfile(storedProfile);
 
@@ -799,7 +828,7 @@
       <lefine-text class="profile-unavailable__code">404</lefine-text>
       <h1>{localeText.profile.profileUnavailable}</h1>
       <p>{localeText.profile.hidden}</p>
-      <a class="profile-unavailable__action" href="/">{localeText.emptyStates.backToApp}</a>
+      <a class="profile-unavailable__action" href="/">{localeText.topbar.legalLinks.backToApp}</a>
     </article>
   </section>
 {:else if profile}

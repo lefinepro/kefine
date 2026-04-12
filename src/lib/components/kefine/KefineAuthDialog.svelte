@@ -41,14 +41,14 @@
   </header>
 
   <section class="kefine-auth-dialog__actions">
-    <button type="button" class="kefine-auth-tile kefine-auth-tile--wallet" onclick={onWallet}>
+    <button type="button" class="kefine-auth-tile kefine-auth-tile--wallet" data-testid="kefine-wallet-auth-tile" onclick={onWallet}>
       <lefine-box class="kefine-auth-hero kefine-auth-hero--wallet" aria-hidden="true">
         <KefineWalletProviderGrid />
       </lefine-box>
       <strong>{walletTitle}</strong>
     </button>
 
-    <button type="button" class="kefine-auth-tile kefine-auth-tile--passkey" onclick={onPasskey}>
+    <button type="button" class="kefine-auth-tile kefine-auth-tile--passkey" data-testid="kefine-passkey-auth-tile" onclick={onPasskey}>
       <lefine-box class="kefine-auth-hero kefine-auth-hero--passkey" aria-hidden="true">
         <lefine-text class="kefine-auth-icon">
           <Icon icon="mdi:fingerprint" width="100%" height="100%" aria-hidden="true" />
@@ -58,7 +58,7 @@
     </button>
 
     {#if showPrivateKey}
-      <button type="button" class="kefine-auth-tile kefine-auth-tile--privatekey" onclick={onPrivateKey}>
+      <button type="button" class="kefine-auth-tile kefine-auth-tile--publickey" data-testid="kefine-publickey-auth-tile" onclick={onPrivateKey}>
         <lefine-box class="kefine-auth-hero kefine-auth-hero--temporary" aria-hidden="true">
           <lefine-text class="kefine-auth-icon">
             <Icon icon="mdi:key-variant" width="100%" height="100%" aria-hidden="true" />

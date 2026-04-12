@@ -232,7 +232,8 @@ export function readProfiles(storage: Storage): Profile[] {
         primaryHandleType:
           item['primaryHandleType'] === 'wallet-address' ||
           item['primaryHandleType'] === 'wallet-alias' ||
-          item['primaryHandleType'] === 'passkey'
+          item['primaryHandleType'] === 'passkey' ||
+          item['primaryHandleType'] === 'publickey'
             ? item['primaryHandleType']
             : 'email',
         displayName: toStringValue(item['displayName']) || username,
@@ -512,7 +513,7 @@ export function ensureProfileForSession(args: {
   email?: string | null;
   displayName?: string | null;
   avatarUrl?: string | null;
-  authType?: 'wallet' | 'email' | 'passkey' | 'privatekey' | null;
+  authType?: 'wallet' | 'email' | 'passkey' | 'publickey' | null;
   walletAddress?: string | null;
   walletAlias?: string | null;
 }): Profile {
@@ -564,8 +565,8 @@ export function ensureProfileForSession(args: {
       ? (args.walletAlias ? 'wallet-alias' : 'wallet-address')
       : args.authType === 'passkey'
         ? 'passkey'
-        : args.authType === 'privatekey'
-          ? 'privatekey'
+        : args.authType === 'publickey'
+          ? 'publickey'
           : 'email';
   const profile: Profile = {
     id: createId('profile'),

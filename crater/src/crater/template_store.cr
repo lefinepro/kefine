@@ -48,7 +48,10 @@ module Crater
 
     def self.setup(config : Utils::Config) : Nil
       db = database(config)
-      return if @@ready
+      if @@ready
+        ensure_default_templates(config)
+        return
+      end
 
       @@db_lock.synchronize do
         unless @@ready
@@ -99,6 +102,8 @@ module Crater
           @@ready = true
         end
       end
+
+      ensure_default_templates(config)
     end
 
     private def self.current_time : String
@@ -107,6 +112,74 @@ module Crater
 
     private def self.to_f64(value : String?) : Float64?
       value.try(&.to_f?)
+    end
+
+    private def self.ensure_default_templates(config : Utils::Config) : Nil
+      normalized_handle = config.actor_username
+      return unless find_by_handle_and_slug(config, normalized_handle, "vpn-service").nil?
+
+      upsert(config, default_vpn_template_payload(config))
+    end
+
+    private def self.default_vpn_template_payload(config : Utils::Config) : JSON::Any
+      handle = config.actor_username
+      display_name = config.actor_display_name.strip.empty? ? handle.upcase : config.actor_display_name
+      prompt_template = <<-PROMPT
+      Create and deliver a VPN access package.
+
+      Need:
+      - region: :region
+      - duration: :duration
+      - protocol: WireGuard or VLESS
+      - include setup steps for mobile and desktop
+      - send a short Telegram-ready summary after delivery
+      PROMPT
+
+      JSON.parse({
+        "id" => "default:#{handle}:vpn-service",
+        "authorProfileId" => "default:#{handle}",
+        "authorHandle" => handle,
+        "authorDisplayName" => display_name,
+        "slug" => "vpn-service",
+        "title" => "VPN Service",
+        "description" => "A ready-to-use service for delivering VPN access with connection instructions.",
+        "baseLocale" => "en",
+        "promptTemplate" => prompt_template,
+        "promptVariables" => [
+          {"key" => "region", "defaultValue" => ""},
+          {"key" => "duration", "defaultValue" => ""},
+        ],
+        "translations" => {
+          "en" => {
+            "title" => "VPN Service",
+            "description" => "A ready-to-use service for delivering VPN access with connection instructions.",
+            "promptTemplate" => prompt_template,
+          },
+          "ru" => {
+            "title" => "VPN сервис",
+            "description" => "Настроенный сервис для выдачи VPN-доступа с инструкцией по подключению.",
+            "promptTemplate" => prompt_template,
+          },
+          "hy" => {
+            "title" => "VPN ծառայություն",
+            "description" => "Պատրաստի ծառայություն VPN հասանելիություն տրամադրելու և միացման քայլերը ուղարկելու համար։",
+            "promptTemplate" => prompt_template,
+          },
+        },
+        "prefillTitle" => "",
+        "prefillDescription" => prompt_template,
+        "prefillEstimatedCost" => 15,
+        "prefillCurrency" => "USD",
+        "prefillFiles" => [] of String,
+        "tags" => ["vpn", "wireguard"],
+        "pricingMode" => "fixed",
+        "pricingValue" => 15,
+        "visibility" => "public",
+        "isPublished" => true,
+        "bonusEnabled" => false,
+        "bonusMode" => "fixed",
+        "bonusValue" => 0,
+      }.to_json)
     end
 
     def self.upsert(config : Utils::Config, payload : JSON::Any) : TemplateRecord

@@ -1,6 +1,6 @@
 import { type KefineLocaleText } from '$lib/constants/kefine-locale';
 import { VPN_FLOW_MOCK } from '$lib/components/kefine/kefine-vpn-flow';
-import type { ProfileTemplateFile, ProfileTemplatePricingMode } from '$lib/types/user';
+import type { ProfileTemplateFile, ProfileTemplatePricingMode, ProfileTemplateVariable } from '$lib/types/user';
 export {
   buildCreatePayload,
   extractStatusPayload,
@@ -10,7 +10,7 @@ export {
 } from '$lib/components/kefine/kefine-workflow-parsers';
 
 export type FlowStep = 'create' | 'auth' | 'submitting' | 'executing' | 'payment' | 'error';
-export type AuthMethod = 'wallet' | 'passkey' | 'anonymous' | null;
+export type AuthMethod = 'wallet' | 'passkey' | 'publickey' | 'anonymous' | null;
 export type PaymentMethod = 'wallet' | 'linked-wallet' | 'promo' | 'reown' | 'other' | 'deposit' | null;
 export type UiScenario = 'default' | 'vpn-service';
 export type ExecutionStage =
@@ -32,11 +32,15 @@ export type TaskAccessRule = {
 export type DraftOrder = {
   title: string;
   description: string;
+  tags: string[];
   estimatedCost: string;
   currency: string;
   executionEstimate: string;
   files: File[];
   templateFiles?: ProfileTemplateFile[];
+  templatePromptTemplate?: string;
+  templateVariables?: ProfileTemplateVariable[];
+  templateVariableValues?: Record<string, string>;
 };
 
 export type OrderView = {
@@ -82,6 +86,8 @@ export type TemplatePresentation = {
   pricingMode: ProfileTemplatePricingMode;
   pricingValue: number;
   prefillFiles: ProfileTemplateFile[];
+  promptTemplate: string;
+  promptVariables: ProfileTemplateVariable[];
 };
 
 export type PaymentQuote = {
