@@ -11,7 +11,6 @@
     type OrderView,
     type ResultSurface
   } from './kefine-workflow';
-  import KefineVpnGuide from '$lib/components/kefine/KefineVpnGuide.svelte';
   type PaymentConfig = {
     paymentAddress: string;
     paymentChainId: number;
@@ -541,7 +540,9 @@
           <strong>{resultSurface.title}</strong>
           <p>{resultSurface.summary}</p>
 
-          {#if resultSurface.type === 'iframe'}
+          {#if resultSurface.type === 'json'}
+            <pre class="kefine-result-json">{resultSurface.content}</pre>
+          {:else if resultSurface.type === 'iframe'}
             <iframe srcdoc={resultSurface.srcdoc} title={resultSurface.title}></iframe>
           {:else if resultSurface.type === 'external-link'}
             <button
@@ -570,3 +571,17 @@
     </section>
   {/if}
 </article>
+
+<style>
+  .kefine-result-json {
+    margin: 0;
+    padding: 1rem;
+    border: 1px solid color-mix(in oklab, var(--kef-color-text) 16%, transparent);
+    border-radius: 1rem;
+    background: color-mix(in oklab, var(--kef-color-bg-card) 88%, transparent);
+    color: var(--kef-color-text);
+    font: 0.9rem/1.5 'SFMono-Regular', 'Cascadia Code', 'Fira Code', monospace;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+</style>

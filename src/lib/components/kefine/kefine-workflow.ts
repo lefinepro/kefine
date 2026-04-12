@@ -199,6 +199,12 @@ export type ResultSurface =
       ctaLabel: string;
     }
   | {
+      type: 'json';
+      title: string;
+      summary: string;
+      content: string;
+    }
+  | {
       type: 'iframe';
       title: string;
       summary: string;
@@ -512,11 +518,25 @@ export function deriveResultSurface(
   fallbackHref: string
 ): ResultSurface {
   if (isVpnOrder(order)) {
+    const mockPayload = {
+      task: order?.title ?? localeText.defaults.taskTitle,
+      protocol: 'vless',
+      region: 'netherlands',
+      host: 'edge.lefine.pro',
+      port: 443,
+      tls: true,
+      transport: 'ws',
+      path: '/vless',
+      clientId: 'f4c73a77-e2db-42e1-917a-05a8804882ff',
+      flow: 'xtls-rprx-vision',
+      package: 'vpn-config.json'
+    };
+
     return {
-      type: 'iframe',
-      title: localeText.result.iframeTitle,
-      summary: localeText.result.iframeSummary,
-      srcdoc: `<html><body style="margin:0;font-family:Manrope,system-ui;background:#f7ecd6;color:#2e2317;display:grid;place-items:center;height:100vh;"><div style="width:min(560px,calc(100vw - 48px));padding:24px;border:1px solid #b8a07a;border-radius:16px;background:#eadcbc;text-align:left;box-sizing:border-box;"><p style="margin:0 0 10px;font-size:12px;letter-spacing:0.12em;text-transform:uppercase;opacity:0.7;">VPN mock package</p><h1 style="margin:0 0 12px;font-size:24px;line-height:1.2;">${order?.title ?? localeText.defaults.taskTitle}</h1><p style="margin:0 0 16px;font-size:14px;opacity:0.8;">${order?.vpnGuide?.summary ?? localeText.result.iframeSummary}</p><div style="display:grid;gap:10px;"><div style="padding:12px;border:1px solid #b8a07a;border-radius:12px;background:#f7ecd6;"><strong style="display:block;margin:0 0 4px;">Region</strong><span>Netherlands</span></div><div style="padding:12px;border:1px solid #b8a07a;border-radius:12px;background:#f7ecd6;"><strong style="display:block;margin:0 0 4px;">Protocol</strong><span>WireGuard</span></div><div style="padding:12px;border:1px solid #b8a07a;border-radius:12px;background:#f7ecd6;"><strong style="display:block;margin:0 0 4px;">Package</strong><span>vpn-config.zip</span></div></div></div></body></html>`
+      type: 'json',
+      title: 'VPN mock result',
+      summary: order?.vpnGuide?.summary ?? 'Mock VLESS package rendered inline as JSON.',
+      content: JSON.stringify(mockPayload, null, 2)
     };
   }
 
