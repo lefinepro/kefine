@@ -124,7 +124,6 @@
   let paySubmitting = $state(false);
   let paymentError = $state('');
   let promoApplying = $state(false);
-  const showVpnResultWidget = $derived(isVpnOrder(currentOrder) && paymentStage === 'result-ready');
   const effectivePaymentAmount = $derived(paymentQuote?.effectiveAmount ?? currentOrder?.estimatedCost ?? 0);
   const effectivePaymentCurrency = $derived(paymentQuote?.currency ?? currentOrder?.currency ?? 'USDC');
   const payButtonLabel = $derived.by(() => {
@@ -538,45 +537,26 @@
           <lefine-text class="kefine-payment-chip">{labels.executionEstimate} {currentOrder?.executionEstimate ?? '-'}</lefine-text>
         </lefine-box>
 
-        {#if showVpnResultWidget}
-          <lefine-box class="kefine-vpn-widget-surface">
-            <lefine-box class="kefine-vpn-widget-body">
-              <strong>{currentOrder?.vpnGuide?.title ?? labels.resultTitle}</strong>
-              <p>{currentOrder?.vpnGuide?.summary ?? 'The VPN delivery widget is ready for this completed order.'}</p>
+        <lefine-box class="kefine-result-card">
+          <strong>{resultSurface.title}</strong>
+          <p>{resultSurface.summary}</p>
 
-              {#if currentOrder?.vpnGuide}
-                <KefineVpnGuide guide={currentOrder.vpnGuide} />
-              {:else}
-                <lefine-box class="kefine-vpn-widget-lines" aria-hidden="true">
-                  <lefine-text></lefine-text>
-                  <lefine-text></lefine-text>
-                  <lefine-text></lefine-text>
-                </lefine-box>
-              {/if}
-            </lefine-box>
-          </lefine-box>
-        {:else}
-          <lefine-box class="kefine-result-card">
-            <strong>{resultSurface.title}</strong>
-            <p>{resultSurface.summary}</p>
-
-            {#if resultSurface.type === 'iframe'}
-              <iframe srcdoc={resultSurface.srcdoc} title={resultSurface.title}></iframe>
-            {:else if resultSurface.type === 'external-link'}
-              <button
-                type="button"
-                data-variant="primary"
-                onclick={() => window.open(resultSurface.href, '_blank', 'noopener,noreferrer')}
-              >
-                {resultSurface.ctaLabel}
-              </button>
-            {:else}
-              <button type="button" data-variant="primary" onclick={onOpenStages}>
-                {resultSurface.ctaLabel}
-              </button>
-            {/if}
-          </lefine-box>
-        {/if}
+          {#if resultSurface.type === 'iframe'}
+            <iframe srcdoc={resultSurface.srcdoc} title={resultSurface.title}></iframe>
+          {:else if resultSurface.type === 'external-link'}
+            <button
+              type="button"
+              data-variant="primary"
+              onclick={() => window.open(resultSurface.href, '_blank', 'noopener,noreferrer')}
+            >
+              {resultSurface.ctaLabel}
+            </button>
+          {:else}
+            <button type="button" data-variant="primary" onclick={onOpenStages}>
+              {resultSurface.ctaLabel}
+            </button>
+          {/if}
+        </lefine-box>
 
       </lefine-box>
 
