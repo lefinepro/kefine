@@ -179,7 +179,7 @@ export const KEFINE_TEXT_RU = {
     walletTitle: 'Wallet / Social',
     walletDetail: 'Используйте MetaMask, WalletConnect, Email или Google, чтобы выбрать аккаунт плательщика.',
     passkeyTitle: 'Passkey',
-    privateKeyTitle: 'Private key',
+    privateKeyTitle: 'Public key',
     passkeyDetail: 'Используйте аккаунт платформы или продолжите через email, если профиля ещё нет.',
     anonymousTitle: 'Гость',
     anonymousDetail: 'Продолжить без профиля и оплатить через депозит.',

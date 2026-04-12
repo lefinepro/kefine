@@ -115,7 +115,7 @@ export interface Profile {
   userId: string;
   username: string;
   primaryHandle: string;
-  primaryHandleType: 'wallet-address' | 'wallet-alias' | 'email' | 'passkey' | 'privatekey';
+  primaryHandleType: 'wallet-address' | 'wallet-alias' | 'email' | 'passkey' | 'publickey';
   displayName: string;
   email?: string;
   avatarUrl?: string;

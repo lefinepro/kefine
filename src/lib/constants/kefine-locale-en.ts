@@ -178,7 +178,7 @@ export const KEFINE_TEXT_EN = {
     walletTitle: 'Wallet / Social',
     walletDetail: 'Use MetaMask, WalletConnect, Email, or Google to claim the paying account.',
     passkeyTitle: 'Passkey',
-    privateKeyTitle: 'Private key',
+    privateKeyTitle: 'Public key',
     passkeyDetail: 'Use your platform account, or continue with email if no passkey profile exists.',
     anonymousTitle: '10 min test',
     anonymousDetail: 'Test now',
@@ -208,7 +208,7 @@ export const KEFINE_TEXT_EN = {
     },
     'awaiting-auth': {
       title: 'Choose how to continue',
-      detail: 'Select a login or continue anonymously before payment.'
+      detail: ''
     },
     'awaiting-payment': {
       title: 'Ready for payment',

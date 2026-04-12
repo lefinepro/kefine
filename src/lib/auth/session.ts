@@ -10,7 +10,10 @@ export interface SessionData {
 	address: string | null;
 	chainId: number | null;
 	email: string | null;
-	authType: 'wallet' | 'email' | 'privatekey' | null;
+	userId?: string | null;
+	handle?: string | null;
+	displayName?: string | null;
+	authType: 'wallet' | 'email' | 'publickey' | null;
 	connectedAt: number;
 }
 
