@@ -717,6 +717,8 @@ import { cubicOut } from 'svelte/easing';
     const privateKeyReady = selectedAuthMethod === 'publickey' && authState.isConnected;
     const passkeyReady = selectedAuthMethod === 'passkey' && isPasskeyActive;
     if (step === 'executing' && !stagePreviewOpen && (walletReady || privateKeyReady || passkeyReady || selectedAuthMethod === 'anonymous')) {
+      // Payment disabled - go directly to result
+      paymentStage = 'result-ready';
       step = 'payment';
     }
   });
@@ -1276,6 +1278,10 @@ import { cubicOut } from 'svelte/easing';
     if (!isBackground) {
       currentOrder = ownerOrder;
       resetTransactionState();
+      // Payment disabled - auto-select anonymous auth to skip auth screen
+      selectedAuthMethod = 'anonymous';
+      paymentMethod = 'promo';
+      paymentStage = 'result-ready';
       step = 'executing';
     }
 

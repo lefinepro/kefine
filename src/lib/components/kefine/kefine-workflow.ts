@@ -46,6 +46,9 @@ export type DraftOrder = {
 export type OrderView = {
   id: string;
   solver: string;
+  solverName?: string;
+  solverHandle?: string;
+  solverProfileUrl?: string;
   status: string;
   title: string;
   description: string;

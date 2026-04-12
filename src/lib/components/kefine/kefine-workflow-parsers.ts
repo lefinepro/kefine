@@ -350,6 +350,9 @@ export function readCreateResponse(body: unknown): {
   return {
     orderId,
     solver: toStringValue(body['solver']) || undefined,
+    solverName: toStringValue(body['solverName']) || undefined,
+    solverHandle: toStringValue(body['solverHandle']) || undefined,
+    solverProfileUrl: toStringValue(body['solverProfileUrl']) || undefined,
     status: toStringValue(body['status']) || 'queued',
     uiScenario: toUiScenario(body['uiScenario'])
   };
@@ -403,6 +406,9 @@ export function extractStatusPayload(
   return {
     id: orderId,
     solver: toStringValue(source['solver']) || linkedSolver || localeText.defaults.solverNetwork,
+    solverName: toStringValue(source['solverName']) || undefined,
+    solverHandle: toStringValue(source['solverHandle']) || undefined,
+    solverProfileUrl: toStringValue(source['solverProfileUrl']) || undefined,
     status: toStringValue(source['status']) || toStringValue(ticket['status']) || 'queued',
     title,
     description:
