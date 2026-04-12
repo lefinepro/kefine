@@ -8,11 +8,10 @@
     type PaymentMethod,
     type PaymentQuote,
     type PaymentStage,
-    type OrderView
+    type OrderView,
+    type ResultSurface
   } from './kefine-workflow';
-  import KefineWalletProviderGrid from '$lib/components/kefine/KefineWalletProviderGrid.svelte';
   import KefineVpnGuide from '$lib/components/kefine/KefineVpnGuide.svelte';
-  import { KEFINE_AUTH_ICONS } from '$lib/components/kefine/kefine-auth-constants';
   type PaymentConfig = {
     paymentAddress: string;
     paymentChainId: number;
@@ -25,6 +24,7 @@
 
   let {
     currentOrder,
+    resultSurface,
     paymentInvoiceFallback,
     selectedAuthMethod,
     paymentStage,
@@ -32,7 +32,6 @@
     labels,
     paymentLabels,
     resultLabels,
-    authLabels,
     authDisplay,
     buttons,
     onBack,
@@ -46,6 +45,7 @@
     onAnonymousLogin
   }: {
     currentOrder: OrderView | null;
+    resultSurface: ResultSurface;
     remainingAmount: number;
     paymentInvoiceFallback: string;
     selectedAuthMethod: AuthMethod;
@@ -86,13 +86,6 @@
     };
     resultLabels: {
       anonymousSaveHint: string;
-    };
-    authLabels: {
-      walletTitle: string;
-      walletAccount: string;
-      passkeyTitle: string;
-      anonymousTitle: string;
-      anonymousDetail: string;
     };
     authDisplay: {
       walletLabel: string | null;
@@ -617,10 +610,7 @@
 
   {#if paymentStage === 'result-ready'}
     <section class="kefine-result-overlay" data-testid="kefine-result-panel">
-      <lefine-box
-        class="kefine-result-shell"
-        class:kefine-result-shell--auth-gate={!showVpnResultWidget && !guestResultAccess && !isAuthenticated}
-      >
+      <lefine-box class="kefine-result-shell">
         <lefine-box class="kefine-result-header">
           <button type="button" class="kefine-flow-back" aria-label="Back" onclick={onBack}>←</button>
           <lefine-box class="kefine-result-title-block">
@@ -685,40 +675,26 @@
               </lefine-box>
             </lefine-box>
           {/if}
-        {:else if !isAuthenticated}
-          <lefine-box class="kefine-auth-grid">
-            <button type="button" class="kefine-auth-tile kefine-auth-tile--wallet" data-testid="kefine-result-wallet-tile" onclick={onWalletLogin}>
-              <lefine-box class="kefine-auth-hero kefine-auth-hero--wallet" aria-hidden="true">
-                <KefineWalletProviderGrid />
-              </lefine-box>
-              <strong>{authDisplay.walletLabel ?? authLabels.walletTitle}</strong>
-              <small>{authLabels.walletAccount}</small>
-            </button>
-
-            <button type="button" class="kefine-auth-tile kefine-auth-tile--passkey" data-testid="kefine-result-passkey-tile" onclick={onPasskeyLogin}>
-              <lefine-box class="kefine-auth-hero kefine-auth-hero--passkey" aria-hidden="true">
-                <lefine-text class="kefine-auth-icon">
-                  <Icon icon={KEFINE_AUTH_ICONS.passkey} width="100%" height="100%" aria-hidden="true" />
-                </lefine-text>
-              </lefine-box>
-              <strong>{authLabels.passkeyTitle}</strong>
-              {#if authDisplay.passkeyLabel}
-                <small>{authDisplay.passkeyLabel}</small>
-              {/if}
-            </button>
-
-            <button type="button" class="kefine-auth-tile kefine-auth-tile--anonymous" data-testid="kefine-result-anonymous-tile" onclick={onAnonymousLogin}>
-              <lefine-box class="kefine-auth-hero kefine-auth-hero--guest" aria-hidden="true">
-                <lefine-text class="kefine-test-badge">10</lefine-text>
-              </lefine-box>
-              <strong>{authLabels.anonymousTitle}</strong>
-              <small>{authLabels.anonymousDetail}</small>
-            </button>
-          </lefine-box>
         {:else}
-          <lefine-box class="kefine-vpn-guide__fallback">
-            <strong>{labels.resultTitle}</strong>
-            <p>The delivery package is ready for this order.</p>
+          <lefine-box class="kefine-result-card">
+            <strong>{resultSurface.title}</strong>
+            <p>{resultSurface.summary}</p>
+
+            {#if resultSurface.type === 'iframe'}
+              <iframe srcdoc={resultSurface.srcdoc} title={resultSurface.title}></iframe>
+            {:else if resultSurface.type === 'external-link'}
+              <button
+                type="button"
+                data-variant="primary"
+                onclick={() => window.open(resultSurface.href, '_blank', 'noopener,noreferrer')}
+              >
+                {resultSurface.ctaLabel}
+              </button>
+            {:else}
+              <button type="button" data-variant="primary" onclick={onOpenStages}>
+                {resultSurface.ctaLabel}
+              </button>
+            {/if}
           </lefine-box>
         {/if}
 
