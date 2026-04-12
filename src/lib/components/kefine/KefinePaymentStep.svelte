@@ -618,7 +618,6 @@
           </lefine-box>
           <lefine-box class="kefine-result-actions">
             <lefine-text class="kefine-flow-badge kefine-flow-badge--timer">{guestAccessTimerLabel}</lefine-text>
-            <button type="button" data-variant="ghost" onclick={handlePayAction}>{payButtonLabel}</button>
             <button type="button" data-variant="ghost" onclick={onOpenStages}>View stages</button>
             <button type="button" data-variant="ghost" onclick={onRejectResult}>{buttons.rejectResult}</button>
           </lefine-box>
@@ -668,9 +667,6 @@
               <lefine-box class="kefine-vpn-guide__expired-actions">
                 <button type="button" data-variant="primary" onclick={handleExpiredAction}>
                   {resolveExpiredActionLabel()}
-                </button>
-                <button type="button" data-variant="ghost" onclick={handlePayAction}>
-                  {payButtonLabel}
                 </button>
               </lefine-box>
             </lefine-box>
