@@ -19,7 +19,8 @@
     ensureProfileForSession,
     getGrantedTaskAccessKinds,
     getProfileByUsername,
-    grantTaskAccess
+    grantTaskAccess,
+    isDefaultActorHandle
   } from '$lib/profile/profile-storage';
 
   const localeText =
@@ -66,6 +67,32 @@
     );
   }
 
+  function buildDefaultActorProfile(): Profile | null {
+    const handle = runtimeConfig.defaultActor.handle?.trim();
+    if (!handle || !isDefaultActorHandle(page.params.handle ?? '', handle)) {
+      return null;
+    }
+
+    const now = new Date().toISOString();
+    return {
+      id: `default-profile:${handle}`,
+      userId: `default-user:${handle}`,
+      username: handle,
+      primaryHandle: handle,
+      primaryHandleType: 'publickey',
+      displayName: runtimeConfig.defaultActor.displayName?.trim() || handle.toUpperCase(),
+      bio: '',
+      isPublic: true,
+      socialLinks: [],
+      referralPercent: 10,
+      bonusBalanceUsd: 0,
+      followersCount: 0,
+      followingCount: 0,
+      createdAt: now,
+      updatedAt: now
+    };
+  }
+
   onMount(() => {
     async function init() {
       if (!browser) {
@@ -79,20 +106,20 @@
       order = null;
       template = null;
       grantedKinds = [];
-      ownerProfile = getProfileByUsername(localStorage, page.params.handle ?? '');
+      ownerProfile = getProfileByUsername(localStorage, page.params.handle ?? '') ?? buildDefaultActorProfile();
       if (!ownerProfile) {
         unavailable = true;
         return;
       }
 
       const walletAddress = authState.address?.trim() || null;
-      const userId = passkeySession?.userId || authState.email?.trim().toLowerCase() || walletAddress;
+      const userId = passkeySession?.userId || authState.userId?.trim() || authState.email?.trim().toLowerCase() || walletAddress;
       viewerProfile = userId
         ? ensureProfileForSession({
             storage: localStorage,
             userId,
             email: authState.email,
-            displayName: passkeySession?.username || authState.email?.split('@')[0] || authState.address || 'user',
+            displayName: passkeySession?.username || authState.displayName?.trim() || authState.handle?.trim() || authState.email?.split('@')[0] || authState.address || 'user',
             avatarUrl: undefined,
             authType: passkeySession ? 'passkey' : authState.authType,
             walletAddress: authState.address,

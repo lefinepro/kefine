@@ -176,12 +176,16 @@ import { cubicOut } from 'svelte/easing';
   let templateLoadKey = $state('');
   let publicTemplateLoadKey = $state('');
   let profileRedirectKey = $state('');
+  let autoTemplateSubmitKey = $state('');
   const activePollTokens = new Map<string, symbol>();
   let pollAbortController = $state<AbortController | null>(null);
 
   const passkeySession = $derived($passkeySessionStore);
   const isPasskeyActive = $derived(passkeySession ? passkeySession.expiresAt.getTime() > Date.now() : false);
   const isAuthenticated = $derived(authState.isConnected || isPasskeyActive);
+  const showPrivateKeyAuth = $derived(
+    isSpecialRuntime || Boolean(runtimeConfig.defaultActor.handle?.trim())
+  );
   const activeSessionProfileSeed = $derived.by(() => {
     if (isPasskeyActive && passkeySession) {
       return {
@@ -196,7 +200,7 @@ import { cubicOut } from 'svelte/easing';
     }
 
     if (authState.isConnected) {
-      const userId = authState.email?.trim().toLowerCase() || authState.address?.trim() || null;
+      const userId = authState.userId?.trim() || authState.email?.trim().toLowerCase() || authState.address?.trim() || null;
       if (!userId) {
         return null;
       }
@@ -204,7 +208,7 @@ import { cubicOut } from 'svelte/easing';
       return {
         userId,
         email: authState.email,
-        displayName: authState.email?.split('@')[0] || normalizedWalletLabel || 'user',
+        displayName: authState.displayName?.trim() || authState.handle?.trim() || authState.email?.split('@')[0] || normalizedWalletLabel || 'user',
         avatarUrl: walletAvatarUrl,
         authType: authState.authType,
         walletAddress: authState.address,
@@ -237,6 +241,10 @@ import { cubicOut } from 'svelte/easing';
     const username = passkeySession?.username?.trim();
     return username ? `@${username.replace(/^@+/, '')}` : null;
   });
+  const normalizedPrivateKeyLabel = $derived.by(() => {
+    const handle = authState.handle?.trim();
+    return handle ? `@${handle.replace(/^@+/, '')}` : null;
+  });
   const authenticatedLabel = $derived.by(() => {
     if (currentProfile?.primaryHandle) {
       return `@${currentProfile.primaryHandle}`;
@@ -250,7 +258,11 @@ import { cubicOut } from 'svelte/easing';
       return normalizedWalletLabel;
     }
 
-    return normalizedPasskeyLabel ?? normalizedWalletLabel;
+    if (selectedAuthMethod === 'publickey' && normalizedPrivateKeyLabel) {
+      return normalizedPrivateKeyLabel;
+    }
+
+    return normalizedPrivateKeyLabel ?? normalizedPasskeyLabel ?? normalizedWalletLabel;
   });
   const ORDER_PAGE_SIZE = 12;
   let visibleOrdersLimit = $state(ORDER_PAGE_SIZE);
@@ -410,6 +422,18 @@ import { cubicOut } from 'svelte/easing';
   const profileUrl = $derived(
     currentProfile && browser ? `${window.location.origin}${buildProfilePath(currentProfile.primaryHandle)}` : ''
   );
+  const activeTemplatePath = $derived.by(() => {
+    if (!initialTemplateHandle || !initialTemplateSlug) {
+      return '/';
+    }
+
+    return buildCanonicalServicePath(initialTemplateHandle, initialTemplateSlug, runtimeConfig.defaultActor.handle);
+  });
+  const isVpnTemplateRoute = $derived.by(() => {
+    const handle = initialTemplateHandle?.trim().toLowerCase();
+    const slug = initialTemplateSlug?.trim().toLowerCase();
+    return Boolean(handle && slug && handle === runtimeConfig.defaultActor.handle.trim().toLowerCase() && slug === 'vpn-service');
+  });
   const completedOwnedOrders = $derived(
     currentProfile
       ? createdOrders.filter(
@@ -493,6 +517,9 @@ import { cubicOut } from 'svelte/easing';
         address: snapshot.address,
         chainId: snapshot.chainId,
         email: snapshot.email,
+        userId: authState.userId,
+        handle: authState.handle,
+        displayName: authState.displayName,
         authType: snapshot.authType,
         status: snapshot.status
       });
@@ -551,6 +578,7 @@ import { cubicOut } from 'svelte/easing';
     if (!browser || !initialTemplateHandle || !initialTemplateSlug) {
       activeTemplate = null;
       templateUnavailable = false;
+      autoTemplateSubmitKey = '';
       draft.templateFiles = [];
       return;
     }
@@ -618,6 +646,10 @@ import { cubicOut } from 'svelte/easing';
       return;
     }
 
+    if (isVpnTemplateRoute) {
+      return;
+    }
+
     if (draftQueued || currentOrder) {
       return;
     }
@@ -634,6 +666,24 @@ import { cubicOut } from 'svelte/easing';
   });
 
   $effect(() => {
+    if (!browser || !isVpnTemplateRoute || !activeTemplate || templateUnavailable) {
+      return;
+    }
+
+    if (step !== 'create' || draftQueued || currentOrder) {
+      return;
+    }
+
+    const nextAutoTemplateSubmitKey = `${activeTemplate.id}|${$kefineLocale}`;
+    if (autoTemplateSubmitKey === nextAutoTemplateSubmitKey) {
+      return;
+    }
+
+    autoTemplateSubmitKey = nextAutoTemplateSubmitKey;
+    void submitDraft(draft);
+  });
+
+  $effect(() => {
     if (isPasskeyActive) {
       if (!selectedAuthMethod || selectedAuthMethod === 'passkey') {
         selectedAuthMethod = 'passkey';
@@ -642,8 +692,8 @@ import { cubicOut } from 'svelte/easing';
     }
 
     if (authState.isConnected) {
-      if (!selectedAuthMethod || selectedAuthMethod === 'wallet') {
-        selectedAuthMethod = 'wallet';
+      if (!selectedAuthMethod || selectedAuthMethod === 'wallet' || selectedAuthMethod === 'publickey') {
+        selectedAuthMethod = authState.authType === 'publickey' ? 'publickey' : 'wallet';
       }
       return;
     }
@@ -651,8 +701,9 @@ import { cubicOut } from 'svelte/easing';
 
   $effect(() => {
     const walletReady = selectedAuthMethod === 'wallet' && authState.isConnected;
+    const privateKeyReady = selectedAuthMethod === 'publickey' && authState.isConnected;
     const passkeyReady = selectedAuthMethod === 'passkey' && isPasskeyActive;
-    if (step === 'executing' && !stagePreviewOpen && (walletReady || passkeyReady || selectedAuthMethod === 'anonymous')) {
+    if (step === 'executing' && !stagePreviewOpen && (walletReady || privateKeyReady || passkeyReady || selectedAuthMethod === 'anonymous')) {
       step = 'payment';
     }
   });
@@ -668,6 +719,10 @@ import { cubicOut } from 'svelte/easing';
 
     if (selectedAuthMethod === 'passkey' && !paymentMethod) {
       paymentMethod = 'linked-wallet';
+    }
+
+    if (selectedAuthMethod === 'publickey' && !paymentMethod) {
+      paymentMethod = 'other';
     }
 
     if (selectedAuthMethod === 'anonymous' && !paymentMethod) {
@@ -696,7 +751,7 @@ import { cubicOut } from 'svelte/easing';
         ? currentOrder.id
         : null;
 
-    nextUrl.pathname = '/';
+    nextUrl.pathname = activeTemplatePath;
     nextUrl.search = '';
     if (!orderId) {
       nextUrl.hash = '';
@@ -788,7 +843,7 @@ import { cubicOut } from 'svelte/easing';
     userId: string;
     email?: string | null;
     displayName?: string | null;
-    authType: 'wallet' | 'email' | 'passkey' | 'privatekey' | null;
+    authType: 'wallet' | 'email' | 'passkey' | 'publickey' | null;
     walletAddress?: string | null;
     walletAlias?: string | null;
     force?: boolean;
@@ -1474,8 +1529,8 @@ import { cubicOut } from 'svelte/easing';
 
   async function choosePrivateKeyMethod() {
     privateKeyDialogOpen = false;
-    selectedAuthMethod = 'wallet';
-    paymentMethod = 'wallet';
+    selectedAuthMethod = 'publickey';
+    paymentMethod = 'other';
     try {
       const privateKeySession = await loginWithPrivateKey(privateKeyInput);
 
@@ -1484,7 +1539,10 @@ import { cubicOut } from 'svelte/easing';
         address: null,
         chainId: null,
         email: privateKeySession.email,
-        authType: 'privatekey',
+        userId: privateKeySession.userId,
+        handle: privateKeySession.handle,
+        displayName: privateKeySession.displayName,
+        authType: 'publickey',
         status: 'connected'
       });
 
@@ -1497,7 +1555,7 @@ import { cubicOut } from 'svelte/easing';
         userId: privateKeySession.userId,
         email: privateKeySession.email,
         displayName: privateKeySession.displayName,
-        authType: 'privatekey',
+        authType: 'publickey',
         walletAddress: null,
         walletAlias: null,
         force: true
@@ -1508,7 +1566,7 @@ import { cubicOut } from 'svelte/easing';
       }
       privateKeyInput = '';
     } catch (error) {
-      console.error('[privatekey] choosePrivateKeyMethod', error);
+      console.error('[publickey] choosePrivateKeyMethod', error);
       privateKeyDialogOpen = true;
     }
   }
@@ -1850,7 +1908,7 @@ import { cubicOut } from 'svelte/easing';
     walletTitle={localeText.auth.walletTitle}
     passkeyTitle={localeText.auth.passkeyTitle}
     privateKeyTitle={localeText.auth.privateKeyTitle}
-    showPrivateKey={isSpecialRuntime}
+    showPrivateKey={showPrivateKeyAuth}
     closeLabel={localeText.buttons.closeDialog}
     onClose={() => { authDialogOpen = false; }}
     onWallet={chooseWalletMethod}
@@ -1869,10 +1927,9 @@ import { cubicOut } from 'svelte/easing';
   <KefinePrivateKeyDialog
     open={privateKeyDialogOpen}
     title={localeText.auth.privateKeyTitle}
-    description="Paste the private key and continue as the privatekey actor."
     value={privateKeyInput}
-    placeholder="Paste private key"
-    submitLabel={localeText.auth.privateKeyTitle}
+    placeholder="pqsk_..."
+    submitLabel="Sign"
     closeLabel={localeText.buttons.closeDialog}
     onClose={() => { privateKeyDialogOpen = false; }}
     onInput={(value) => { privateKeyInput = value; }}

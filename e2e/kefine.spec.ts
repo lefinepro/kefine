@@ -290,3 +290,79 @@ test('mobile long press stops task and list stays narrow without horizontal over
   const clientWidth = await page.locator('body').evaluate((node) => node.clientWidth);
   expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 1);
 });
+
+test('publickey login opens @api profile setup', async ({ page }) => {
+  await page.route('**/auth', async (route) => {
+    const body = route.request().postDataJSON() as { publickey?: { key?: string } };
+    expect(body.publickey?.key).toBe('pqpk_17d978eb5ac4ed2f554df0056');
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        verified: true,
+        token: 'publickey:api:test',
+        userId: 'publickey:api',
+        username: 'api',
+        displayName: 'API',
+        handle: 'api',
+        email: 'api@actor.local',
+        publickey: {
+          key: 'pqpk_testpublickey_for_api',
+          pem: ''
+        },
+        keyId: 'pq1_testactoraddress',
+        actorAddress: 'pq1_testactoraddress',
+        authType: 'publickey',
+        expiresAt: '2026-12-31T00:00:00.000Z'
+      })
+    });
+  });
+
+  await page.route('**/api/kefine/templates/api', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([])
+    });
+  });
+
+  await gotoAndWaitForReady(page);
+
+  await page.locator("button[data-part='auth']").click();
+  await page.getByTestId('kefine-publickey-auth-tile').click();
+  await page.getByTestId('kefine-publickey-input').fill('pqsk_17d978eb5ac4ed2f554df0056');
+  await page.getByTestId('kefine-publickey-submit').click();
+
+  await expect(page).toHaveURL(/\/@api$/);
+  await expect(page.getByTestId('kefine-profile-first-name')).toBeVisible();
+  await expect(page.getByTestId('kefine-profile-surname')).toBeVisible();
+  await expect(page.getByTestId('kefine-profile-handle')).toHaveValue('api');
+});
+
+test('live publickey login opens @api profile setup', async ({ page, request, baseURL }) => {
+  const authProbeUrl = new URL('/auth', baseURL).toString();
+  const liveAuthResponse = await request
+    .post(authProbeUrl, {
+      data: { publickey: { key: 'pqpk_17d978eb5ac4ed2f554df0056' } },
+      timeout: 8000,
+      failOnStatusCode: false
+    })
+    .catch(() => null);
+
+  test.skip(
+    !liveAuthResponse || !liveAuthResponse.ok(),
+    'Live publickey backend is unavailable or returned non-OK response.'
+  );
+
+  await gotoAndWaitForReady(page);
+  await page.locator("button[data-part='auth']").click();
+  await page.getByTestId('kefine-publickey-auth-tile').click();
+  await page.getByTestId('kefine-publickey-input').fill('pqsk_17d978eb5ac4ed2f554df0056');
+  await page.getByTestId('kefine-publickey-submit').click();
+
+  await expect(page).toHaveURL(/\/@api$/);
+  await expect(page.getByTestId('kefine-profile-first-name')).toBeVisible();
+  await expect(page.getByTestId('kefine-profile-surname')).toBeVisible();
+  await expect(page.getByTestId('kefine-profile-handle')).toHaveValue('api');
+});
