@@ -725,8 +725,7 @@ import { cubicOut } from 'svelte/easing';
     const walletReady = selectedAuthMethod === 'wallet' && authState.isConnected;
     const privateKeyReady = selectedAuthMethod === 'publickey' && authState.isConnected;
     const passkeyReady = selectedAuthMethod === 'passkey' && isPasskeyActive;
-    if (step === 'executing' && !stagePreviewOpen && (walletReady || privateKeyReady || passkeyReady || selectedAuthMethod === 'anonymous')) {
-      // Payment disabled - go directly to result
+    if (step === 'executing' && !stagePreviewOpen && (walletReady || privateKeyReady || passkeyReady)) {
       paymentStage = 'result-ready';
       step = 'payment';
     }
