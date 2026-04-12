@@ -125,6 +125,15 @@
   const afeIntroCard = $derived(afe.cards[0] ?? null);
   const afeStepCards = $derived(afe.cards.slice(1));
 
+  function formatTemplateVariableLabel(key: string): string {
+    const normalized = key.trim().replace(/[_-]+/g, ' ');
+    if (!normalized) {
+      return 'Variable';
+    }
+
+    return normalized.replace(/\b\w/g, (char) => char.toUpperCase());
+  }
+
   function getServiceInitial(title: string): string {
     const normalized = title.trim();
     if (!normalized) {
@@ -464,10 +473,10 @@
     <section data-part="template-variables">
       {#each draft.templateVariables ?? [] as variable (`template-var-${variable.key}`)}
         <label data-part="template-variable-field">
-          <lefine-text>:{variable.key}</lefine-text>
+          <lefine-text>{formatTemplateVariableLabel(variable.key)}</lefine-text>
           <input
             value={draft.templateVariableValues?.[variable.key] ?? variable.defaultValue ?? ''}
-            placeholder={`:${variable.key}`}
+            placeholder={formatTemplateVariableLabel(variable.key)}
             oninput={(event) => onTemplateVariableChange?.(variable.key, (event.currentTarget as HTMLInputElement).value)}
           />
         </label>
@@ -694,7 +703,7 @@
               style={`--service-accent: ${getServiceAccent(service.title)};`}
               aria-hidden="true"
             >
-              <span>{getServiceInitial(service.title)}</span>
+              <lefine-text>{getServiceInitial(service.title)}</lefine-text>
             </lefine-box>
           {/if}
 
@@ -932,7 +941,6 @@
     scrollbar-width: thin;
   }
 
-  button[data-part='tag-add'],
   button[data-part='tag-pill'] {
     display: inline-flex;
     align-items: center;
@@ -946,13 +954,9 @@
     flex: 0 0 auto;
   }
 
-  button[data-part='tag-add'] {
-    border-style: dashed;
-    color: var(--lefine-text-soft);
-  }
-
   button[data-part='composer-chip'][data-part-tag='true'] {
     border-style: dashed;
+    color: var(--lefine-text-soft);
   }
 
   button[data-part='tag-pill'] strong {

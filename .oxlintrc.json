@@ -68,6 +68,29 @@
     },
     {
       "files": [
+        "src/lib/profile/profile-storage.ts"
+      ],
+      "rules": {
+        "max-lines": [
+          "warn",
+          800
+        ]
+      }
+    },
+    {
+      "files": [
+        "src/lib/components/kefine/KefineWorkspace.svelte",
+        "src/lib/components/kefine/KefineCreateStep.svelte"
+      ],
+      "rules": {
+        "max-lines": [
+          "warn",
+          1800
+        ]
+      }
+    },
+    {
+      "files": [
         "src/lib/components/kefine/kefine-workflow.ts",
         "src/lib/components/kefine/kefine-workflow-parsers.ts"
       ],

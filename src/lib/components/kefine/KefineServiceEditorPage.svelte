@@ -4,8 +4,8 @@
   import KefineChipEditorRow from '$lib/components/kefine/KefineChipEditorRow.svelte';
   import KefineChipRow from '$lib/components/kefine/KefineChipRow.svelte';
   import KefineSolverCohortDialog from '$lib/components/kefine/KefineSolverCohortDialog.svelte';
-  import { getLocaleText, kefineLocale } from '$lib/constants/kefine-locale';
-  import { buildCanonicalServicePath, buildProfilePath, normalizeProfileResourceSlug } from '$lib/profile/profile-storage';
+  import { getLocaleText, kefineLocale, type KefineLocale } from '$lib/constants/kefine-locale';
+  import { buildCanonicalServicePath, buildProfilePath, buildProfileServicePath, normalizeProfileResourceSlug } from '$lib/profile/profile-storage';
   import { readBrowserPublicRuntimeConfig } from '$lib/config/public-config';
   import {
     buildAutoTemplateTranslations,
@@ -61,6 +61,54 @@
   let imageInput = $state<HTMLInputElement | null>(null);
   let hydratedServiceKey = $state<string>('');
 
+  function formatPromptVariableLabel(key: string): string {
+    const normalized = key.trim().replace(/[_-]+/g, ' ');
+    if (!normalized) {
+      return 'Variable';
+    }
+
+    return normalized.replace(/\b\w/g, (char) => char.toUpperCase());
+  }
+
+  function getDefaultServiceDraft(locale: KefineLocale) {
+    if (locale === 'ru') {
+      return {
+        title: 'VPN сервис',
+        slug: 'vpn-service',
+        description: 'Настроенный сервис для выдачи VPN-доступа с инструкцией по подключению.',
+        promptTemplate:
+          'Create and deliver a VPN access package.\n\nNeed:\n- region: :region\n- protocol: WireGuard or VLESS\n- include setup steps for mobile and desktop',
+        pricingValue: '15',
+        tags: ['vpn', 'wireguard'],
+        solverCohortQuery: 'vpn'
+      };
+    }
+
+    if (locale === 'hy') {
+      return {
+        title: 'VPN ծառայություն',
+        slug: 'vpn-service',
+        description: 'Պատրաստի ծառայություն VPN հասանելիություն տրամադրելու և միացման քայլերը ուղարկելու համար։',
+        promptTemplate:
+          'Create and deliver a VPN access package.\n\nNeed:\n- region: :region\n- protocol: WireGuard or VLESS\n- include setup steps for mobile and desktop',
+        pricingValue: '15',
+        tags: ['vpn', 'wireguard'],
+        solverCohortQuery: 'vpn'
+      };
+    }
+
+    return {
+      title: 'VPN Service',
+      slug: 'vpn-service',
+      description: 'A ready-to-use service for delivering VPN access with connection instructions.',
+      promptTemplate:
+        'Create and deliver a VPN access package.\n\nNeed:\n- region: :region\n- protocol: WireGuard or VLESS\n- include setup steps for mobile and desktop',
+      pricingValue: '15',
+      tags: ['vpn', 'wireguard'],
+      solverCohortQuery: 'vpn'
+    };
+  }
+
   $effect(() => {
     const nextHydratedServiceKey = `${service?.id ?? '__new__'}|${$kefineLocale}`;
     if (hydratedServiceKey === nextHydratedServiceKey) {
@@ -68,27 +116,46 @@
     }
 
     const localized = service ? resolveTemplateLocalizedContent(service, $kefineLocale) : null;
+    const defaultDraft = getDefaultServiceDraft($kefineLocale);
     hydratedServiceKey = nextHydratedServiceKey;
-    title = localized?.title ?? service?.title ?? '';
-    slugInput = service?.slug && !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(service.slug) ? service.slug : '';
-    description = localized?.description ?? service?.description ?? '';
+    title = localized?.title ?? service?.title ?? defaultDraft.title;
+    slugInput =
+      service?.slug && !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(service.slug)
+        ? service.slug
+        : defaultDraft.slug;
+    description = localized?.description ?? service?.description ?? defaultDraft.description;
     imageDataUrl = service?.imageDataUrl;
-    promptTemplate = localized?.promptTemplate ?? service?.promptTemplate ?? service?.prefillDescription ?? service?.prefillTitle ?? '';
+    promptTemplate =
+      localized?.promptTemplate ??
+      service?.promptTemplate ??
+      service?.prefillDescription ??
+      service?.prefillTitle ??
+      defaultDraft.promptTemplate;
     promptVariables = syncPromptVariables(
-      localized?.promptTemplate ?? service?.promptTemplate ?? service?.prefillDescription ?? service?.prefillTitle ?? '',
+      localized?.promptTemplate ??
+        service?.promptTemplate ??
+        service?.prefillDescription ??
+        service?.prefillTitle ??
+        defaultDraft.promptTemplate,
       service?.promptVariables ?? []
     );
     prefillEstimatedCost =
-      service?.prefillEstimatedCost !== undefined ? String(service.prefillEstimatedCost) : service ? String(service.pricingValue) : '';
+      service?.prefillEstimatedCost !== undefined
+        ? String(service.prefillEstimatedCost)
+        : service
+          ? String(service.pricingValue)
+          : defaultDraft.pricingValue;
     prefillCurrency = service?.prefillCurrency ?? 'USD';
     pricingMode = 'fixed';
-    pricingValue = service ? String(service.pricingValue) : '';
+    pricingValue = service ? String(service.pricingValue) : defaultDraft.pricingValue;
     visibility = service?.visibility ?? (service?.isPublished ? 'public' : 'private');
     bonusEnabled = service?.bonusEnabled ?? false;
     bonusMode = service?.bonusMode ?? 'fixed';
     bonusValue = service ? String(service.bonusValue ?? 0) : '';
     files = service?.prefillFiles.map((file) => ({ ...file })) ?? [];
-    tags = service?.tags ? [...service.tags] : [];
+    tags = service?.tags ? [...service.tags] : [...defaultDraft.tags];
+    solverCohortQuery = service ? '' : defaultDraft.solverCohortQuery;
+    preferredSolverIds = [];
     priceEditorOpen = false;
     visibilityEditorOpen = false;
     solverDialogOpen = false;
@@ -234,7 +301,7 @@
       return;
     }
 
-    await goto(buildCanonicalServicePath(profile.primaryHandle, saved.slug, runtimeConfig.defaultActor.handle), { replaceState: true });
+    await goto(buildProfileServicePath(profile.primaryHandle, saved.slug), { replaceState: true });
   }
 
   async function deleteService() {
@@ -254,7 +321,7 @@
 <section class="service-page" data-part="service-page">
   <header class="service-page__head" data-part="head">
     <lefine-text>Create Service</lefine-text>
-    <div class="service-page__headline-row">
+    <service-page-headline-row class="service-page__headline-row">
       <button
         type="button"
         class="service-page__art service-page__art--compact service-page__art-button"
@@ -269,12 +336,12 @@
         {/if}
       </button>
       <label class="service-page__headline-field">
-      <span class="service-page__sr-only">{localeText.profile.templateTitle}</span>
+      <lefine-text class="service-page__sr-only">{localeText.profile.templateTitle}</lefine-text>
       <input bind:value={title} maxlength="80" placeholder={localeText.profile.templateTitle} />
       </label>
-    </div>
+    </service-page-headline-row>
     <label class="service-page__headline-note">
-      <span class="service-page__sr-only">{localeText.profile.templateDescription}</span>
+      <lefine-text class="service-page__sr-only">{localeText.profile.templateDescription}</lefine-text>
       <textarea bind:value={description} rows="2" placeholder={localeText.profile.templatesSubtitle}></textarea>
     </label>
     <label class="service-page__slug-field">
@@ -283,7 +350,7 @@
       <small>
         {localeText.profile.templateSlugHint}
         {#if canonicalServicePath}
-          <span>{canonicalServicePath}</span>
+          <lefine-text>{canonicalServicePath}</lefine-text>
         {/if}
       </small>
     </label>
@@ -305,18 +372,18 @@
       {#if promptVariables.length > 0}
         <section class="service-page__variables" data-part="variables">
           <strong>{localeText.profile.templateVariables}</strong>
-          <div class="service-page__grid">
+          <service-page-grid class="service-page__grid">
             {#each promptVariables as variable (variable.key)}
               <label class="service-page__field">
-                <lefine-text>:{variable.key}</lefine-text>
+                <lefine-text>{formatPromptVariableLabel(variable.key)}</lefine-text>
                 <input
                   value={variable.defaultValue ?? ''}
-                  placeholder={localeText.profile.templateVariableDefault}
+                  placeholder={formatPromptVariableLabel(variable.key)}
                   oninput={(event) => updatePromptVariableDefault(variable.key, (event.currentTarget as HTMLInputElement).value)}
                 />
               </label>
             {/each}
-          </div>
+          </service-page-grid>
         </section>
       {/if}
 
@@ -404,11 +471,11 @@
       </KefineChipRow>
 
       {#if files.length > 0}
-        <div class="service-page__files" data-part="files">
+        <service-page-files class="service-page__files" data-part="files">
           {#each files as file (file.id)}
             <button type="button" data-variant="ghost" onclick={() => removeFile(file.id)}>{file.name}</button>
           {/each}
-        </div>
+        </service-page-files>
       {/if}
       <footer class="service-page__actions">
         <button type="button" data-variant="ghost" onclick={closeEditor}>{localeText.buttons.cancel}</button>

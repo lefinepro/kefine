@@ -91,6 +91,7 @@ import { cubicOut } from 'svelte/easing';
   } from '$lib/profile/profile-storage';
 
   const THEME_STORAGE_KEY = 'kefine-theme';
+  const BRAND_HOME_NAVIGATION_STORAGE_KEY = 'kefine-brand-home-navigation';
 
   let {
     initialOrderId,
@@ -176,6 +177,7 @@ import { cubicOut } from 'svelte/easing';
   let templateLoadKey = $state('');
   let publicTemplateLoadKey = $state('');
   let profileRedirectKey = $state('');
+  let suppressProfileRedirect = $state(false);
   let autoTemplateSubmitKey = $state('');
   const activePollTokens = new Map<string, symbol>();
   let pollAbortController = $state<AbortController | null>(null);
@@ -512,6 +514,11 @@ import { cubicOut } from 'svelte/easing';
 
     const syncReownAuthState = async () => {
       const snapshot = await readReownAccountState();
+
+      if (authState.authType === 'publickey' && authState.isConnected && !snapshot.isConnected) {
+        return;
+      }
+
       replaceAuthState({
         isConnected: snapshot.isConnected,
         address: snapshot.address,
@@ -624,6 +631,8 @@ import { cubicOut } from 'svelte/easing';
       return;
     }
 
+    suppressProfileRedirect = sessionStorage.getItem(BRAND_HOME_NAVIGATION_STORAGE_KEY) === '1';
+
     if (!activeSessionProfileSeed) {
       currentProfile = null;
       return;
@@ -651,6 +660,10 @@ import { cubicOut } from 'svelte/easing';
     }
 
     if (draftQueued || currentOrder) {
+      return;
+    }
+
+    if (suppressProfileRedirect && page.url.pathname === '/') {
       return;
     }
 
@@ -745,6 +758,12 @@ import { cubicOut } from 'svelte/easing';
   $effect(() => {
     if (!browser) return;
     if (isHydratingRoute) return;
+
+    if (page.url.pathname !== '/') {
+      suppressProfileRedirect = false;
+      sessionStorage.removeItem(BRAND_HOME_NAVIGATION_STORAGE_KEY);
+    }
+
     const nextUrl = new URL(window.location.href);
     const orderId =
       (step === 'executing' || step === 'payment') && currentOrder?.id
@@ -816,7 +835,15 @@ import { cubicOut } from 'svelte/easing';
     passkeyDialogOpen = false;
   }
 
+  function markBrandHomeNavigationIntent() {
+    if (!browser) return;
+
+    sessionStorage.setItem(BRAND_HOME_NAVIGATION_STORAGE_KEY, '1');
+  }
+
   function handleTopbarBrandClick() {
+    suppressProfileRedirect = true;
+    markBrandHomeNavigationIntent();
     leftNavExpanded = false;
     newOrder();
   }
@@ -1296,7 +1323,7 @@ import { cubicOut } from 'svelte/easing';
 
   function updateTemplateVariableValue(key: string, value: string) {
     const nextValues = {
-      ...(draft.templateVariableValues ?? {}),
+      ...draft.templateVariableValues,
       [key]: value
     };
 
@@ -1927,6 +1954,7 @@ import { cubicOut } from 'svelte/easing';
   <KefinePrivateKeyDialog
     open={privateKeyDialogOpen}
     title={localeText.auth.privateKeyTitle}
+    description={localeText.auth.privateKeyDescription}
     value={privateKeyInput}
     placeholder="pqsk_..."
     submitLabel="Sign"

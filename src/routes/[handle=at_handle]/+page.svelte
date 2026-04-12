@@ -44,6 +44,7 @@
 
   const localeText = $derived(getLocaleText($kefineLocale));
   const passkeySession = $derived($passkeySessionStore);
+  const BRAND_HOME_NAVIGATION_STORAGE_KEY = 'kefine-brand-home-navigation';
 
   let profile = $state<Profile | null>(null);
   let viewerProfile = $state<Profile | null>(null);
@@ -115,6 +116,15 @@
   const topbarThemeActionLabel = $derived(
     isDarkTheme ? localeText.topbar.theme.switchToLight : localeText.topbar.theme.switchToDark
   );
+
+  function navigateToHomeFromBrand() {
+    if (browser) {
+      sessionStorage.setItem(BRAND_HOME_NAVIGATION_STORAGE_KEY, '1');
+    }
+
+    void goto('/');
+  }
+
   const sidebarSocialLinks = $derived([
     {
       id: 'mastodon' as const,
@@ -860,7 +870,7 @@
       socialLinks={sidebarSocialLinks}
       legalLinks={sidebarLegalLinks}
       onToggleExpand={() => { leftNavExpanded = !leftNavExpanded; }}
-      onBrandClick={() => { void goto('/'); }}
+      onBrandClick={navigateToHomeFromBrand}
       onOpenEmailDraft={() => {
         if (browser) {
           window.location.href = 'mailto:hello@lefine.pro';
@@ -1235,7 +1245,7 @@
                     style={`--service-accent: ${getServiceAccent(title)};`}
                     aria-hidden="true"
                   >
-                    <span>{getServiceInitial(title)}</span>
+                    <lefine-text>{getServiceInitial(title)}</lefine-text>
                   </lefine-box>
                 {/if}
 

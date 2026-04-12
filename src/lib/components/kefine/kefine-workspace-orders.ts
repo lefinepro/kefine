@@ -48,8 +48,9 @@ export async function fetchOrderStatus(args: {
   orderApiBaseUrl: string;
 }): Promise<OrderView | null> {
   try {
+    const statusUrl = buildOrderProxyUrl(`/status/${encodeURIComponent(args.orderId)}`, args.orderApiBaseUrl);
     const response = await args.fetchFn(
-      buildOrderProxyUrl(`/status/${encodeURIComponent(args.orderId)}`, args.orderApiBaseUrl),
+      statusUrl,
       {
         headers: {
           Accept: 'application/json'
@@ -224,6 +225,7 @@ export async function submitWorkspaceOrder(args: {
           args.payload.title,
           args.localeText
         ),
+        labels: args.payload.tags,
         paymentUrl: undefined,
         uiScenario: parsed.uiScenario
       }
