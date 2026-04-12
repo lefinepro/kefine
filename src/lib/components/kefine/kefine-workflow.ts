@@ -513,10 +513,10 @@ export function deriveResultSurface(
 ): ResultSurface {
   if (isVpnOrder(order)) {
     return {
-      type: 'widget',
-      title: localeText.result.widgetTitle,
-      summary: localeText.result.widgetSummary,
-      ctaLabel: localeText.buttons.openResult
+      type: 'iframe',
+      title: localeText.result.iframeTitle,
+      summary: localeText.result.iframeSummary,
+      srcdoc: `<html><body style="margin:0;font-family:Manrope,system-ui;background:#f7ecd6;color:#2e2317;display:grid;place-items:center;height:100vh;"><div style="width:min(560px,calc(100vw - 48px));padding:24px;border:1px solid #b8a07a;border-radius:16px;background:#eadcbc;text-align:left;box-sizing:border-box;"><p style="margin:0 0 10px;font-size:12px;letter-spacing:0.12em;text-transform:uppercase;opacity:0.7;">VPN mock package</p><h1 style="margin:0 0 12px;font-size:24px;line-height:1.2;">${order?.title ?? localeText.defaults.taskTitle}</h1><p style="margin:0 0 16px;font-size:14px;opacity:0.8;">${order?.vpnGuide?.summary ?? localeText.result.iframeSummary}</p><div style="display:grid;gap:10px;"><div style="padding:12px;border:1px solid #b8a07a;border-radius:12px;background:#f7ecd6;"><strong style="display:block;margin:0 0 4px;">Region</strong><span>Netherlands</span></div><div style="padding:12px;border:1px solid #b8a07a;border-radius:12px;background:#f7ecd6;"><strong style="display:block;margin:0 0 4px;">Protocol</strong><span>WireGuard</span></div><div style="padding:12px;border:1px solid #b8a07a;border-radius:12px;background:#f7ecd6;"><strong style="display:block;margin:0 0 4px;">Package</strong><span>vpn-config.zip</span></div></div></div></body></html>`
     };
   }
 
