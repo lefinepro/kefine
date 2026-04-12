@@ -9,15 +9,30 @@ require "uuid"
 require "./activitypub/types"
 require "./forgefed/types"
 require "./utils/config"
+require "./solver_fetcher"
 
 module Crater
   module OrderQueue
     EVENT_PAGE_SIZE = 20
 
+    class SolverRecord
+      property id : String
+      property name : String
+      property handle : String
+      property profile_url : String
+      property type : String
+
+      def initialize(@id : String, @name : String, @handle : String, @profile_url : String, @type : String = "actor")
+      end
+    end
+
     class OrderRecord
       property id : String
       property status : String
       property solver : String
+      property solver_name : String?
+      property solver_handle : String?
+      property solver_profile_url : String?
       property title : String
       property description : String?
       property estimated_cost : Float64?
@@ -56,7 +71,10 @@ module Crater
         @template_author_username : String? = nil,
         @template_author_display_name : String? = nil,
         @template_pricing_mode : String? = nil,
-        @template_pricing_value : Float64? = nil
+        @template_pricing_value : Float64? = nil,
+        @solver_name : String? = nil,
+        @solver_handle : String? = nil,
+        @solver_profile_url : String? = nil
       )
       end
     end
@@ -110,7 +128,10 @@ module Crater
               template_author_username TEXT,
               template_author_display_name TEXT,
               template_pricing_mode TEXT,
-              template_pricing_value TEXT
+              template_pricing_value TEXT,
+              solver_name TEXT,
+              solver_handle TEXT,
+              solver_profile_url TEXT
             )
           SQL
 
@@ -121,6 +142,9 @@ module Crater
           db.exec "ALTER TABLE orders ADD COLUMN IF NOT EXISTS template_author_display_name TEXT"
           db.exec "ALTER TABLE orders ADD COLUMN IF NOT EXISTS template_pricing_mode TEXT"
           db.exec "ALTER TABLE orders ADD COLUMN IF NOT EXISTS template_pricing_value TEXT"
+          db.exec "ALTER TABLE orders ADD COLUMN IF NOT EXISTS solver_name TEXT"
+          db.exec "ALTER TABLE orders ADD COLUMN IF NOT EXISTS solver_handle TEXT"
+          db.exec "ALTER TABLE orders ADD COLUMN IF NOT EXISTS solver_profile_url TEXT"
 
           db.exec <<-SQL
             CREATE TABLE IF NOT EXISTS order_activities (
@@ -150,8 +174,23 @@ module Crater
       Time.utc.to_rfc3339
     end
 
-    private def self.next_solver
-      SOLVERS[Random.rand(SOLVERS.size)]
+    private def self.next_solver(config : Utils::Config, fallback_name : String) : {String, String?, String?, String?}
+      # Try to fetch real solver from Exchange
+      solver_info = SolverFetcher.fetch_available_solver(config)
+      
+      if solver_info
+        return {
+          solver_info.name,
+          solver_info.handle,
+          solver_info.profile_url,
+          solver_info.id
+        }
+      end
+      
+      # Fallback to random solver from hardcoded pool
+      name = SOLVERS[Random.rand(SOLVERS.size)]
+      handle = "@#{name.downcase.gsub(/[^a-z0-9]+/, '-')}"
+      {name, handle, nil, nil}
     end
 
     private def self.to_string(value : JSON::Any?)
@@ -188,8 +227,9 @@ module Crater
             id, status, solver, title, description, estimated_cost, currency, execution_estimate,
             created_at, updated_at, payment_url, ui_scenario, labels_json,
             template_id, template_slug, template_author_profile_id, template_author_username,
-            template_author_display_name, template_pricing_mode, template_pricing_value
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+            template_author_display_name, template_pricing_mode, template_pricing_value,
+            solver_name, solver_handle, solver_profile_url
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
           ON CONFLICT (id) DO UPDATE SET
             status = EXCLUDED.status,
             solver = EXCLUDED.solver,
@@ -209,7 +249,10 @@ module Crater
             template_author_username = EXCLUDED.template_author_username,
             template_author_display_name = EXCLUDED.template_author_display_name,
             template_pricing_mode = EXCLUDED.template_pricing_mode,
-            template_pricing_value = EXCLUDED.template_pricing_value
+            template_pricing_value = EXCLUDED.template_pricing_value,
+            solver_name = EXCLUDED.solver_name,
+            solver_handle = EXCLUDED.solver_handle,
+            solver_profile_url = EXCLUDED.solver_profile_url
         SQL
         record.id,
         record.status,
@@ -230,7 +273,10 @@ module Crater
         record.template_author_username,
         record.template_author_display_name,
         record.template_pricing_mode,
-        record.template_pricing_value.try(&.to_s)
+        record.template_pricing_value.try(&.to_s),
+        record.solver_name,
+        record.solver_handle,
+        record.solver_profile_url
       )
     end
 
@@ -249,7 +295,7 @@ module Crater
       )
     end
 
-    private def self.hydrate_order(row : {String, String, String, String, String?, String?, String, String?, String, String, String?, String?, String, String?, String?, String?, String?, String?, String?, String?}) : OrderRecord
+    private def self.hydrate_order(row : {String, String, String, String, String?, String?, String, String?, String, String, String?, String?, String, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?}) : OrderRecord
       OrderRecord.new(
         id: row[0],
         status: row[1],
@@ -270,7 +316,10 @@ module Crater
         template_author_username: row[16],
         template_author_display_name: row[17],
         template_pricing_mode: row[18],
-        template_pricing_value: parse_estimated_cost(row[19])
+        template_pricing_value: parse_estimated_cost(row[19]),
+        solver_name: row[20],
+        solver_handle: row[21],
+        solver_profile_url: row[22]
       )
     end
 
@@ -336,10 +385,21 @@ module Crater
       is_vpn_order = vpn_service_payload?(title, description, ui_scenario, labels)
       labels = ensure_vpn_label(labels) if is_vpn_order
 
+      if is_vpn_order
+        solver_name = "NordLayer Solver"
+        solver_handle = "@nordlayer-solver"
+        solver_profile_url = nil
+      else
+        solver_result = next_solver(config, title)
+        solver_name = solver_result[0]
+        solver_handle = solver_result[1]
+        solver_profile_url = solver_result[2]
+      end
+
       OrderRecord.new(
         id: id,
         status: status,
-        solver: is_vpn_order ? "NordLayer Solver" : next_solver,
+        solver: solver_name,
         title: title,
         description: description,
         estimated_cost: is_vpn_order ? (estimated_cost > 0 ? estimated_cost : 2.0) : estimated_cost,
@@ -354,7 +414,10 @@ module Crater
         template_author_username: to_string(payload["templateAuthorUsername"]?) || to_string(source["templateAuthorUsername"]?),
         template_author_display_name: to_string(payload["templateAuthorDisplayName"]?) || to_string(source["templateAuthorDisplayName"]?),
         template_pricing_mode: to_string(payload["templatePricingMode"]?) || to_string(source["templatePricingMode"]?),
-        template_pricing_value: template_pricing_value
+        template_pricing_value: template_pricing_value,
+        solver_name: solver_name,
+        solver_handle: solver_handle,
+        solver_profile_url: solver_profile_url
       )
     end
 
@@ -553,7 +616,7 @@ module Crater
     def self.find_order(order_id : String, config : Utils::Config = Utils::Config.load) : OrderRecord?
       setup(config)
       row = database(config).query_one?(
-        "SELECT id, status, solver, title, description, estimated_cost, currency, execution_estimate, created_at, updated_at, payment_url, ui_scenario, labels_json, template_id, template_slug, template_author_profile_id, template_author_username, template_author_display_name, template_pricing_mode, template_pricing_value FROM orders WHERE id = $1",
+        "SELECT id, status, solver, title, description, estimated_cost, currency, execution_estimate, created_at, updated_at, payment_url, ui_scenario, labels_json, template_id, template_slug, template_author_profile_id, template_author_username, template_author_display_name, template_pricing_mode, template_pricing_value, solver_name, solver_handle, solver_profile_url FROM orders WHERE id = $1",
         order_id,
         as: {String, String, String, String, String?, String?, String, String?, String, String, String?, String?, String}
       )

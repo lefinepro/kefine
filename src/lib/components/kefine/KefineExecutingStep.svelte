@@ -498,11 +498,19 @@
           {#if currentOrder?.solver}
             <lefine-box class="kefine-vpn-solver-row" data-testid="kefine-solver-fallback">
               <lefine-text class="kefine-vpn-solver-avatar" aria-hidden="true">
-                {getSolverInitial(currentOrder.solver, currentOrder.solver)}
+                {getSolverInitial(currentOrder.solverName || currentOrder.solver, currentOrder.solver)}
               </lefine-text>
               <lefine-box class="kefine-vpn-solver-copy">
                 <lefine-text class="kefine-vpn-solver-name">
-                  <strong>{currentOrder.solver}</strong>
+                  <strong>{currentOrder.solverName || currentOrder.solver}</strong>
+                  {#if currentOrder.solverHandle}
+                    <lefine-text>{currentOrder.solverHandle}</lefine-text>
+                  {/if}
+                  {#if currentOrder.solverProfileUrl}
+                    <a href={currentOrder.solverProfileUrl} target="_blank" rel="noopener noreferrer" class="kefine-vpn-solver-link">
+                      <Icon icon="mdi:open-in-new" width="14" height="14" />
+                    </a>
+                  {/if}
                 </lefine-text>
               </lefine-box>
             </lefine-box>
