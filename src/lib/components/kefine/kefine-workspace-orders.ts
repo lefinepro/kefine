@@ -10,6 +10,9 @@ type OrderFallback = {
   createdAt: string;
 };
 
+const FREE_ORDER_COST = 0;
+const FREE_ORDER_CURRENCY = 'USD';
+
 export function loadWorkspaceOrders(args: {
   storage: Storage;
   storageKey: string;
@@ -63,7 +66,16 @@ export async function fetchOrderStatus(args: {
     }
 
     const payload: unknown = await response.json();
-    return extractStatusPayload(payload, args.fallbackOrder, args.localeText);
+    const parsed = extractStatusPayload(payload, args.fallbackOrder, args.localeText);
+    if (!parsed) {
+      return null;
+    }
+
+    return {
+      ...parsed,
+      estimatedCost: FREE_ORDER_COST,
+      currency: FREE_ORDER_CURRENCY
+    };
   } catch {
     return null;
   }
@@ -214,12 +226,15 @@ export async function submitWorkspaceOrder(args: {
       order: {
         id: parsed.orderId,
         solver: parsed.solver || args.localeText.defaults.openSolverMarket,
+        solverName: parsed.solverName,
+        solverHandle: parsed.solverHandle,
+        solverProfileUrl: parsed.solverProfileUrl,
         status: parsed.status || 'queued',
         title: args.payload.title || args.localeText.defaults.taskTitle,
         description: args.payload.description || '',
         createdAt: new Date().toISOString(),
-        estimatedCost: args.toNumber(args.payload.estimatedCost) || undefined,
-        currency: args.payload.currency || args.localeText.defaults.defaultCurrency,
+        estimatedCost: FREE_ORDER_COST,
+        currency: FREE_ORDER_CURRENCY,
         executionEstimate: args.resolveExecutionEstimate(
           args.payload.executionEstimate,
           args.payload.title,

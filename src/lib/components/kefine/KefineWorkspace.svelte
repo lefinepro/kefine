@@ -47,9 +47,11 @@ import { cubicOut } from 'svelte/easing';
     type OrderView,
     type PaymentMethod,
     type PaymentStage,
+    type ResultSurface,
     type TaskAccessMode,
     type TemplatePresentation,
     deriveExecutionPresentation,
+    deriveResultSurface,
     resolveExecutionEstimate,
     toNumber
   } from '$lib/components/kefine/kefine-workflow';
@@ -395,6 +397,13 @@ import { cubicOut } from 'svelte/easing';
   const remainingAmount = $derived(currentOrder?.estimatedCost ?? 0);
   const executionPresentation = $derived(
     deriveExecutionPresentation(currentOrder, localeText, selectedAuthMethod, step === 'payment')
+  );
+  const resultSurface = $derived<ResultSurface>(
+    deriveResultSurface(
+      currentOrder,
+      localeText,
+      currentOrder?.paymentUrl ?? `${craterBaseUrl()}/pay/${currentOrder?.id ?? ''}`
+    )
   );
   const browserTitle = $derived.by(() => {
     const title = currentOrder?.title?.trim();
@@ -1278,10 +1287,6 @@ import { cubicOut } from 'svelte/easing';
     if (!isBackground) {
       currentOrder = ownerOrder;
       resetTransactionState();
-      // Payment disabled - auto-select anonymous auth to skip auth screen
-      selectedAuthMethod = 'anonymous';
-      paymentMethod = 'promo';
-      paymentStage = 'result-ready';
       step = 'executing';
     }
 
@@ -1841,6 +1846,7 @@ import { cubicOut } from 'svelte/easing';
       <kefine-screen in:softScreenTransition out:softScreenTransition>
         <KefinePaymentStep
           currentOrder={currentOrder}
+          resultSurface={resultSurface}
           remainingAmount={remainingAmount}
           paymentInvoiceFallback={`${craterBaseUrl()}/pay/${currentOrder?.id ?? ''}`}
           selectedAuthMethod={selectedAuthMethod}
@@ -1907,13 +1913,6 @@ import { cubicOut } from 'svelte/easing';
           }}
           resultLabels={{
             anonymousSaveHint: localeText.result.anonymousSaveHint
-          }}
-          authLabels={{
-            walletTitle: localeText.auth.walletTitle,
-            walletAccount: localeText.auth.walletAccount,
-            passkeyTitle: localeText.auth.passkeyTitle,
-            anonymousTitle: localeText.auth.anonymousTitle,
-            anonymousDetail: localeText.auth.anonymousDetail
           }}
           authDisplay={authDisplay}
           buttons={{

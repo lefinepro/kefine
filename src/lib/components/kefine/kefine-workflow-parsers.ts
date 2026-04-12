@@ -335,6 +335,9 @@ export function parseStoredOrders(raw: string | null, localeText: KefineLocaleTe
 export function readCreateResponse(body: unknown): {
   orderId: string;
   solver?: string;
+  solverName?: string;
+  solverHandle?: string;
+  solverProfileUrl?: string;
   status?: string;
   uiScenario?: Exclude<UiScenario, 'default'>;
 } | null {
