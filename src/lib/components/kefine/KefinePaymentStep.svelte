@@ -28,7 +28,6 @@
     paymentInvoiceFallback,
     selectedAuthMethod,
     paymentStage,
-    isAuthenticated,
     labels,
     paymentLabels,
     resultLabels,
@@ -52,7 +51,6 @@
     paymentMethod: PaymentMethod;
     paymentStage: PaymentStage;
     depositDialogOpen: boolean;
-    isAuthenticated: boolean;
     labels: {
       taskId: string;
       amount: string;
@@ -126,15 +124,7 @@
   let paySubmitting = $state(false);
   let paymentError = $state('');
   let promoApplying = $state(false);
-  let guestAccessStartedAt = $state<number | null>(null);
-  let nowTs = $state(Date.now());
-
-  const VPN_GUEST_ACCESS_MS = 10 * 60 * 1000;
   const showVpnResultWidget = $derived(isVpnOrder(currentOrder) && paymentStage === 'result-ready');
-  const vpnGuideAvailable = $derived(
-    isVpnOrder(currentOrder) && paymentStage === 'result-ready' && Boolean(currentOrder?.vpnGuide)
-  );
-  const guestResultAccess = $derived(vpnGuideAvailable && (isAuthenticated || selectedAuthMethod === 'anonymous'));
   const effectivePaymentAmount = $derived(paymentQuote?.effectiveAmount ?? currentOrder?.estimatedCost ?? 0);
   const effectivePaymentCurrency = $derived(paymentQuote?.currency ?? currentOrder?.currency ?? 'USDC');
   const payButtonLabel = $derived.by(() => {
@@ -142,20 +132,6 @@
     const currency = effectivePaymentCurrency;
     const formattedAmount = Number.isInteger(amount) ? String(amount) : amount.toFixed(2).replace(/\.?0+$/, '');
     return `Pay ${formattedAmount} ${currency}`.trim();
-  });
-  const guestAccessRemainingMs = $derived.by(() => {
-    if (!guestResultAccess || !guestAccessStartedAt) {
-      return VPN_GUEST_ACCESS_MS;
-    }
-
-    return Math.max(0, guestAccessStartedAt + VPN_GUEST_ACCESS_MS - nowTs);
-  });
-  const guestAccessExpired = $derived(guestResultAccess && guestAccessRemainingMs <= 0);
-  const guestAccessTimerLabel = $derived.by(() => {
-    const totalSeconds = Math.ceil(guestAccessRemainingMs / 1000);
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    return `${String(Math.max(0, minutes)).padStart(2, '0')}:${String(Math.max(0, seconds)).padStart(2, '0')}`;
   });
   const quoteReady = $derived(paymentQuote !== null && !paymentLoading);
   const paymentRequestLabel = $derived(paymentQuote?.paymentTokenSymbol ? `EVM ${paymentQuote.paymentTokenSymbol}` : 'EVM payment');
@@ -178,10 +154,6 @@
   function formatAmount(amount: number | undefined) {
     if (amount === undefined) return '0';
     return Number.isInteger(amount) ? String(amount) : amount.toFixed(2).replace(/\.?0+$/, '');
-  }
-
-  function guestAccessStorageKey(orderId: string) {
-    return `kefine-vpn-guest-access:${orderId}`;
   }
 
   function buildPaymentRequest(config: PaymentConfig, amount: number) {
@@ -261,23 +233,6 @@
       paymentTokenSymbol,
       paymentTokenDecimals
     };
-  }
-
-  function resetGuestAccess() {
-    if (!browser || !currentOrder?.id) return;
-
-    const startedAt = Date.now();
-    window.localStorage.setItem(guestAccessStorageKey(currentOrder.id), String(startedAt));
-    guestAccessStartedAt = startedAt;
-    nowTs = startedAt;
-  }
-
-  function resolveExpiredActionLabel() {
-    return 'Request again';
-  }
-
-  function handleExpiredAction() {
-    resetGuestAccess();
   }
 
   async function readJsonOrThrow(response: Response) {
@@ -466,49 +421,6 @@
     void loadPaymentQuote();
   });
 
-  $effect(() => {
-    if (!browser || !guestResultAccess || !currentOrder?.id) {
-      guestAccessStartedAt = null;
-      return;
-    }
-
-    const storageKey = guestAccessStorageKey(currentOrder.id);
-    const raw = window.localStorage.getItem(storageKey);
-    const parsed = raw ? Number(raw) : Number.NaN;
-    const startedAt = Number.isFinite(parsed) ? parsed : Date.now();
-
-    if (!Number.isFinite(parsed)) {
-      window.localStorage.setItem(storageKey, String(startedAt));
-    }
-
-    guestAccessStartedAt = startedAt;
-  });
-
-  $effect(() => {
-    if (!browser || !guestResultAccess) {
-      return;
-    }
-
-    nowTs = Date.now();
-    let frameId = 0;
-    let cancelled = false;
-
-    const tick = () => {
-      if (cancelled) {
-        return;
-      }
-
-      nowTs = Date.now();
-      frameId = window.requestAnimationFrame(tick);
-    };
-
-    frameId = window.requestAnimationFrame(tick);
-
-    return () => {
-      cancelled = true;
-      window.cancelAnimationFrame(frameId);
-    };
-  });
 </script>
 
 <article class="kefine-card kefine-card--wide kefine-order-flow" class:kefine-result-mode={paymentStage === 'result-ready'} data-testid={selectedAuthMethod === 'anonymous' ? 'kefine-anonymous-payment' : undefined}>
@@ -617,7 +529,6 @@
             <p>Completed your task: {currentOrder?.title ?? '-'}</p>
           </lefine-box>
           <lefine-box class="kefine-result-actions">
-            <lefine-text class="kefine-flow-badge kefine-flow-badge--timer">{guestAccessTimerLabel}</lefine-text>
             <button type="button" data-variant="ghost" onclick={onOpenStages}>View stages</button>
             <button type="button" data-variant="ghost" onclick={onRejectResult}>{buttons.rejectResult}</button>
           </lefine-box>
@@ -644,33 +555,6 @@
               {/if}
             </lefine-box>
           </lefine-box>
-          {#if !isAuthenticated}
-            <lefine-box class="kefine-vpn-guide__fallback">
-              <p>Sign in is optional for this completed VPN task. The delivery widget is already available.</p>
-            </lefine-box>
-          {/if}
-        {:else if guestResultAccess && currentOrder?.vpnGuide}
-          <lefine-box class="kefine-vpn-guide" class:kefine-vpn-guide--blurred={guestAccessExpired}>
-            <header class="kefine-vpn-guide__header">
-              <strong>{currentOrder.vpnGuide.title}</strong>
-              <p>{currentOrder.vpnGuide.summary}</p>
-            </header>
-
-            <KefineVpnGuide guide={currentOrder.vpnGuide} />
-          </lefine-box>
-
-          {#if guestAccessExpired}
-            <lefine-box class="kefine-vpn-guide__expired-gate">
-              <lefine-text class="kefine-flow-badge kefine-flow-badge--timer">Guest access expired</lefine-text>
-              <strong>Continue when you need the package again</strong>
-              <p>The 10 minute preview has ended.</p>
-              <lefine-box class="kefine-vpn-guide__expired-actions">
-                <button type="button" data-variant="primary" onclick={handleExpiredAction}>
-                  {resolveExpiredActionLabel()}
-                </button>
-              </lefine-box>
-            </lefine-box>
-          {/if}
         {:else}
           <lefine-box class="kefine-result-card">
             <strong>{resultSurface.title}</strong>
