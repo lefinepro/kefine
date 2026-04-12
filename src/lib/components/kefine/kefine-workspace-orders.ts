@@ -13,6 +13,16 @@ type OrderFallback = {
 const FREE_ORDER_COST = 0;
 const FREE_ORDER_CURRENCY = 'USD';
 
+function normalizeOrderStatusId(orderId: string): string {
+  const normalized = orderId.trim();
+  if (!normalized) {
+    return normalized;
+  }
+
+  const uuidMatch = normalized.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+  return uuidMatch?.[0] ?? normalized;
+}
+
 export function loadWorkspaceOrders(args: {
   storage: Storage;
   storageKey: string;
@@ -51,7 +61,10 @@ export async function fetchOrderStatus(args: {
   orderApiBaseUrl: string;
 }): Promise<OrderView | null> {
   try {
-    const statusUrl = buildOrderProxyUrl(`/status/${encodeURIComponent(args.orderId)}`, args.orderApiBaseUrl);
+    const statusUrl = buildOrderProxyUrl(
+      `/status/${encodeURIComponent(normalizeOrderStatusId(args.orderId))}`,
+      args.orderApiBaseUrl
+    );
     const response = await args.fetchFn(
       statusUrl,
       {

@@ -34,6 +34,16 @@ export function resolveOrderIdFromRouteValue(routeValue: string, knownOrders: Or
     return normalized;
   }
 
+  const uuid = extractOrderUuid(normalized);
+  if (uuid) {
+    const uuidMatch = knownOrders.find((item) => extractOrderUuid(item.id) === uuid);
+    if (uuidMatch) {
+      return uuidMatch.id;
+    }
+
+    return uuid;
+  }
+
   const directMatch = knownOrders.find((item) => item.id === normalized);
   if (directMatch) {
     return directMatch.id;
@@ -59,13 +69,14 @@ export function resolveOrderIdCandidates(routeValue: string, knownOrders: OrderV
 
   const resolved = resolveOrderIdFromRouteValue(normalized, knownOrders);
   const candidates = [resolved];
+  const uuid = extractOrderUuid(normalized);
 
   const suffixMatch = knownOrders.find((item) => item.id.endsWith(`/${normalized}`));
   if (suffixMatch && !candidates.includes(suffixMatch.id)) {
     candidates.unshift(suffixMatch.id);
   }
 
-  if (!normalized.startsWith('http://') && !normalized.startsWith('https://')) {
+  if (!uuid && !normalized.startsWith('http://') && !normalized.startsWith('https://')) {
     const globalCandidate = `https://lefine.pro/actor/orders/${normalized}`;
     const legacyCandidate = `http://localhost:3001/actor/orders/${normalized}`;
 
