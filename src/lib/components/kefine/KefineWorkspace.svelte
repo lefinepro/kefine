@@ -693,7 +693,7 @@ import { cubicOut } from 'svelte/easing';
       return;
     }
 
-    if (step !== 'create' || draftQueued || currentOrder) {
+    if (step !== 'create' || draftQueued || currentOrder || isHydratingRoute || readTaskRouteState()) {
       return;
     }
 
@@ -1086,10 +1086,6 @@ import { cubicOut } from 'svelte/easing';
   }
 
   function orderApiBaseUrl(): string {
-    if (browser && isSpecialRuntime) {
-      return resolveOrderProxyBasePath('https://lefine.pro');
-    }
-
     return resolveOrderProxyBasePath('');
   }
 
