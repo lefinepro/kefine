@@ -664,11 +664,12 @@ import { cubicOut } from 'svelte/easing';
       return;
     }
 
+    const routeState = readTaskRouteState();
     if (isVpnTemplateRoute) {
       return;
     }
 
-    if (draftQueued || currentOrder) {
+    if (step !== 'create' || draftQueued || currentOrder || routeState) {
       return;
     }
 
