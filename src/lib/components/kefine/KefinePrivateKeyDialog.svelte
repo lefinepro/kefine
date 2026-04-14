@@ -28,7 +28,7 @@
   } = $props();
 </script>
 
-<KefineModal open={open} onClose={onClose} closeLabel={closeLabel} width="min(32rem, calc(100vw - 2rem))">
+<KefineModal open={open} onClose={onClose} closeLabel={closeLabel} width="medium">
   <lef-privatekey-dialog>
     {#if description.trim()}
       <lef-privatekey-header>

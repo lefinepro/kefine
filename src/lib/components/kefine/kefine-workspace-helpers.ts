@@ -86,27 +86,6 @@ export function resolveOrderIdCandidates(routeValue: string, knownOrders: OrderV
   return candidates;
 }
 
-export function createContactMailtoUrl(args: {
-  brandName: string;
-  recipient: string;
-  name: string;
-  email: string;
-  message: string;
-}): string {
-  const subjectSource = args.name.trim() || args.brandName;
-  const bodyLines = [
-    args.name.trim() ? `Name: ${args.name.trim()}` : '',
-    args.email.trim() ? `Email: ${args.email.trim()}` : '',
-    '',
-    args.message.trim()
-  ].filter(Boolean);
-
-  const mailto = new URL(`mailto:${args.recipient}`);
-  mailto.searchParams.set('subject', `${args.brandName}: ${subjectSource}`);
-  mailto.searchParams.set('body', bodyLines.join('\n'));
-  return mailto.toString();
-}
-
 export function mergeOrdersById(
   orders: OrderView[],
   order: OrderView

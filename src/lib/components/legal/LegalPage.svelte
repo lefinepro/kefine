@@ -1,25 +1,11 @@
 <script lang="ts">
-  import type { LegalPageContent, LegalPageId } from '$lib/constants/legal-content';
-
-  type RelatedLink = {
-    id: LegalPageId;
-    label: string;
-    href: string;
-  };
+  import type { LegalPageContent } from '$lib/constants/legal-content';
 
   let {
     content,
-    relatedLinks,
-    backLabel,
-    backHref,
-    relatedLabel,
     updatedLabel
   }: {
     content: LegalPageContent;
-    relatedLinks: RelatedLink[];
-    backLabel: string;
-    backHref: string;
-    relatedLabel: string;
     updatedLabel: string;
   } = $props();
 </script>
@@ -30,8 +16,6 @@
 
 <lef-legal-shell>
   <lef-legal-card>
-    <a href={backHref}>{backLabel}</a>
-
     <lef-legal-header>
       <lef-legal-updated>{updatedLabel}: {content.updatedAt}</lef-legal-updated>
       <h1>{content.title}</h1>
@@ -69,15 +53,6 @@
         </lef-legal-section>
       {/each}
     </lef-legal-sections>
-
-    <lef-legal-footer>
-      <h2>{relatedLabel}</h2>
-      <lef-legal-links aria-label={relatedLabel}>
-        {#each relatedLinks as link}
-          <a href={link.href}>{link.label}</a>
-        {/each}
-      </lef-legal-links>
-    </lef-legal-footer>
   </lef-legal-card>
 </lef-legal-shell>
 
@@ -105,21 +80,6 @@
       0 10px 24px color-mix(in oklab, #5d4a37 6%, transparent);
   }
 
-  lef-legal-card > a,
-  lef-legal-links a {
-    color: color-mix(in oklab, var(--kef-primary, #6f5540) 84%, #6a5642);
-    text-decoration: none;
-  }
-
-  lef-legal-card > a:hover,
-  lef-legal-links a:hover {
-    text-decoration: underline;
-  }
-
-  lef-legal-card > a {
-    font-size: 0.94rem;
-  }
-
   lef-legal-header {
     display: grid;
     display: grid;
@@ -136,8 +96,7 @@
   }
 
   lef-legal-header h1,
-  lef-legal-section h2,
-  lef-legal-footer h2 {
+  lef-legal-section h2 {
     margin: 0;
     color: var(--lefine-text, #30281f);
   }
@@ -148,8 +107,7 @@
     letter-spacing: -0.02em;
   }
 
-  lef-legal-section h2,
-  lef-legal-footer h2 {
+  lef-legal-section h2 {
     font-size: 1.02rem;
     font-weight: 700;
   }
@@ -209,21 +167,6 @@
     padding-top: 0.9rem;
     border-top: 1px solid color-mix(in oklab, var(--kef-border, #c8bbab) 44%, transparent);
   }
-
-  lef-legal-footer {
-    display: grid;
-    display: grid;
-    gap: 0.7rem;
-    padding-top: 1rem;
-    border-top: 1px solid color-mix(in oklab, var(--kef-border, #c8bbab) 44%, transparent);
-  }
-
-  lef-legal-links {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.65rem 1rem;
-  }
-
   @media (max-width: 720px) {
     lef-legal-shell {
       padding: 0.75rem;

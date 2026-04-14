@@ -16,6 +16,9 @@ export const KEFINE_TEXT_RU = {
     languageRussian: 'Русский',
     languageArmenian: 'Армянский',
     theme: {
+      auto: 'Авто',
+      light: 'Светлая',
+      dark: 'Тёмная',
       switchToDark: 'Переключить на тёмную тему',
       switchToLight: 'Переключить на светлую тему'
     },
@@ -52,8 +55,34 @@ export const KEFINE_TEXT_RU = {
       updated: 'Обновлено',
       backToApp: 'Вернуться в приложение'
     },
-    githubUrl: 'https://github.com/lefine',
-    contactEmail: 'order@lefine.pro'
+    githubUrl: 'https://github.com/lefinepro',
+    contactEmail: 'order@lefine.pro',
+    emailDialog: {
+      title: 'Написать в Lefine',
+      description: 'Выберите, как связаться с нами.',
+      copy: 'Скопировать email',
+      copied: 'Скопировано',
+      openClient: 'Открыть почтовый клиент'
+    },
+    contactPage: {
+      title: 'Связаться с нами',
+      description: 'Используйте email для вопросов по support, заказам, оплате и документам.',
+      openEmail: 'Открыть почтовый клиент',
+      openGithub: 'Открыть GitHub',
+      statusLabel: 'Статус',
+      statusValue: 'Доступно для заказов и support',
+      supportFeature: 'Поддержка заказов',
+      paymentFeature: 'Платежи и инвойсы',
+      docsFeature: 'Документы и правовые запросы',
+      responseFeature: 'Ответ по email',
+      privacyCard: 'Privacy и юридические условия',
+      mailClientHint: 'Открыть почтовый клиент по умолчанию',
+      contactsTitle: 'Контакты',
+      servicesTitle: 'Сервисы',
+      emailFact: 'Email',
+      phoneFact: 'Телефон',
+      countryFact: 'Страна'
+    }
   },
   create: {
     title: 'Опишите техническую задачу',

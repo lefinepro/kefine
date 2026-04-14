@@ -5,7 +5,7 @@
     --kef-border: #c8bbab;
     --kef-border-soft: #ddd2c3;
     --lefine-text: #30281f;
-    --lefine-text-soft: #5d5144;
+    --lefine-text-soft: #4b4034;
     --kef-primary: #6f5540;
     --kef-primary-700: #5b4432;
     --kef-accent: #5f7962;
@@ -50,7 +50,7 @@
     --kef-border: var(--kef-color-border, #c8bbab);
     --kef-border-soft: var(--kef-color-border-light, #ddd2c3);
     --lefine-text: var(--kef-color-text, #30281f);
-    --lefine-text-soft: var(--kef-color-text-label, #5d5144);
+    --lefine-text-soft: var(--kef-color-text-label, #4b4034);
     --kef-primary: var(--kef-color-primary, #6f5540);
     --kef-primary-700: var(--kef-color-primary-hover, #5b4432);
     --kef-accent: var(--kef-color-success, #5f7962);

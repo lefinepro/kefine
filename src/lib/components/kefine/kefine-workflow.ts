@@ -565,7 +565,7 @@ export function deriveResultSurface(
       type: 'iframe',
       title: localeText.result.iframeTitle,
       summary: localeText.result.iframeSummary,
-      srcdoc: `<html><body style="margin:0;font-family:Manrope,system-ui;background:#f7ecd6;color:#2e2317;display:grid;place-items:center;height:100vh;"><div style="padding:24px;border:1px solid #b8a07a;border-radius:16px;background:#eadcbc;text-align:center;"><h1 style="margin:0 0 8px;font-size:24px;">${localeText.result.iframeTitle}</h1><p style="margin:0;">${order?.title ?? localeText.defaults.taskTitle}</p></div></body></html>`
+      srcdoc: `<html><head><style>body{margin:0;font-family:Manrope,system-ui;background:#f7ecd6;color:#2e2317;display:grid;place-items:center;height:100vh}.frame-card{padding:24px;border:1px solid #b8a07a;border-radius:16px;background:#eadcbc;text-align:center}.frame-card h1{margin:0 0 8px;font-size:24px}.frame-card p{margin:0}</style></head><body><div class="frame-card"><h1>${localeText.result.iframeTitle}</h1><p>${order?.title ?? localeText.defaults.taskTitle}</p></div></body></html>`
     };
   }
 

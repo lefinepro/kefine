@@ -8,6 +8,7 @@
   import KefineServiceEditorPage from '$lib/components/kefine/KefineServiceEditorPage.svelte';
   import { KEFINE_TEXT_EN } from '$lib/constants/kefine-locale-en';
   import { KEFINE_TEXT_RU } from '$lib/constants/kefine-locale-ru';
+  import type { KefineLocaleText } from '$lib/constants/kefine-locale';
   import { readBrowserPublicRuntimeConfig } from '$lib/config/public-config';
   import { parseStoredOrders } from '$lib/components/kefine/kefine-workflow';
   import { fetchTemplateByHandleAndSlug } from '$lib/templates/template-api';
@@ -23,8 +24,9 @@
     isDefaultActorHandle
   } from '$lib/profile/profile-storage';
 
-  const localeText =
-    typeof document !== 'undefined' && document.documentElement.lang === 'ru' ? KEFINE_TEXT_RU : KEFINE_TEXT_EN;
+  const localeText: KefineLocaleText =
+    (typeof document !== 'undefined' && document.documentElement.lang === 'ru' ? KEFINE_TEXT_RU : KEFINE_TEXT_EN) as
+      unknown as KefineLocaleText;
   const passkeySession = $derived($passkeySessionStore);
 
   let order = $state<OrderView | null>(null);

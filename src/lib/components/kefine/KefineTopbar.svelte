@@ -1,18 +1,19 @@
 <script lang="ts">
-  import Icon from '@iconify/svelte';
+  import KefineTopbarIcon from '$lib/components/kefine/KefineTopbarIcon.svelte';
   import { onMount } from 'svelte';
   import { scheduleAfter } from '$lib/utils/helpers';
   import type { KefineLocale } from '$lib/constants/kefine-locale';
+  import type { KefineTopbarIconName } from '$lib/components/kefine/KefineTopbarIcon.svelte';
 
   type SocialLink = {
     id: 'mastodon' | 'discord' | 'linkedin' | 'telegram';
     label: string;
     href: string;
-    icon: string;
+    icon: KefineTopbarIconName;
   };
 
   type LegalLink = {
-    id: 'privacy' | 'terms' | 'company';
+    id: 'privacy' | 'terms' | 'company' | 'contact';
     label: string;
     href: string;
   };
@@ -29,12 +30,17 @@
     githubLabel,
     githubUrl,
     themeLabel,
+    themeMode,
+    themeAutoLabel,
+    themeLightLabel,
+    themeDarkLabel,
     signInLabel,
     signedInLabel,
     authenticatedLabel,
     authenticatedSecondaryLabel,
     authenticatedAvatarUrl,
     isAuthenticated,
+    isAuthLoading = false,
     isDarkTheme,
     isExpanded,
     locale,
@@ -42,12 +48,15 @@
     languageRussianLabel,
     languageArmenianLabel,
     socialLinks,
+    showSocialLinks = false,
+    showEmailButton = true,
+    showGithubButton = true,
+    showAuthButton = true,
     legalLinks,
-    onToggleExpand,
+    onExpandedChange,
     onBrandClick,
-    onOpenEmailDraft,
     onOpenEmailDialog,
-    onTheme,
+    onThemeChange,
     onAuth,
     onLocale
   }: {
@@ -62,12 +71,17 @@
     githubLabel: string;
     githubUrl: string;
     themeLabel: string;
+    themeMode: 'light' | 'dark' | 'auto';
+    themeAutoLabel: string;
+    themeLightLabel: string;
+    themeDarkLabel: string;
     signInLabel: string;
     signedInLabel: string;
     authenticatedLabel: string | null;
     authenticatedSecondaryLabel: string | null;
     authenticatedAvatarUrl: string | null;
     isAuthenticated: boolean;
+    isAuthLoading?: boolean;
     isDarkTheme: boolean;
     isExpanded: boolean;
     locale: KefineLocale;
@@ -75,28 +89,41 @@
     languageRussianLabel: string;
     languageArmenianLabel: string;
     socialLinks: SocialLink[];
+    showSocialLinks?: boolean;
+    showEmailButton?: boolean;
+    showGithubButton?: boolean;
+    showAuthButton?: boolean;
     legalLinks: LegalLink[];
-    onToggleExpand: () => void;
+    onExpandedChange: (expanded: boolean) => void;
     onBrandClick: () => void;
-    onOpenEmailDraft: () => void;
     onOpenEmailDialog: () => void;
-    onTheme: () => void;
+    onThemeChange: (theme: 'light' | 'dark' | 'auto') => void;
     onAuth: () => void;
     onLocale: (locale: KefineLocale) => void;
   } = $props();
 
-  const themeIcon = $derived(isDarkTheme ? 'mdi:white-balance-sunny' : 'mdi:weather-night');
   const localeCycle: KefineLocale[] = ['en', 'ru', 'hy'];
   const localeLabels = $derived({
     en: languageEnglishLabel,
     ru: languageRussianLabel,
     hy: languageArmenianLabel
   });
+  const localeFlagIcons = {
+    en: 'flag-en',
+    ru: 'flag-ru',
+    hy: 'flag-hy'
+  } as const;
   const nextLocale = $derived(localeCycle[(localeCycle.indexOf(locale) + 1) % localeCycle.length] ?? 'en');
   const localeLabel = $derived(localeLabels[nextLocale]);
+  const currentLocaleFlagIcon = $derived(localeFlagIcons[locale] ?? 'flag-en');
   let hasScrolled = $state(false);
+  let menuPopover: HTMLElement | null = $state(null);
+  let themePopover: HTMLElement | null = $state(null);
+  let localePopover: HTMLElement | null = $state(null);
   let cancelBrandClick: (() => void) | null = null;
-  let cancelEmailClick: (() => void) | null = null;
+  let cancelLocaleClick: (() => void) | null = null;
+  let themePickerOpen = $state(false);
+  let localePickerOpen = $state(false);
 
   function updateScrollState() {
     hasScrolled = window.scrollY > 8;
@@ -114,7 +141,7 @@
   function handleBrandClick() {
     cancelBrandClick?.();
     cancelBrandClick = scheduleAfter(220, () => {
-      onToggleExpand();
+      onExpandedChange(!isExpanded);
       cancelBrandClick = null;
     });
   }
@@ -126,24 +153,128 @@
   }
 
   function handleEmailClick() {
-    cancelEmailClick?.();
-    cancelEmailClick = scheduleAfter(220, () => {
-      onOpenEmailDraft();
-      cancelEmailClick = null;
+    onOpenEmailDialog();
+  }
+
+  function handleThemeButtonClick() {
+    themePickerOpen = !themePickerOpen;
+    localePickerOpen = false;
+  }
+
+  function handleThemeButtonDoubleClick() {
+    themePickerOpen = false;
+    localePickerOpen = false;
+    onThemeChange(isDarkTheme ? 'light' : 'dark');
+  }
+
+  function handleLocaleButtonClick() {
+    cancelLocaleClick?.();
+    cancelLocaleClick = scheduleAfter(220, () => {
+      localePickerOpen = !localePickerOpen;
+      themePickerOpen = false;
+      cancelLocaleClick = null;
     });
   }
 
-  function handleEmailDoubleClick() {
-    cancelEmailClick?.();
-    cancelEmailClick = null;
-
-    onOpenEmailDialog();
+  function handleLocaleButtonDoubleClick() {
+    cancelLocaleClick?.();
+    cancelLocaleClick = null;
+    localePickerOpen = false;
+    themePickerOpen = false;
+    onLocale(nextLocale);
   }
+
+  function selectTheme(theme: 'light' | 'dark' | 'auto') {
+    themePickerOpen = false;
+    onThemeChange(theme);
+  }
+
+  function selectLocale(next: KefineLocale) {
+    localePickerOpen = false;
+    onLocale(next);
+  }
+
+  function handlePopoverToggle(event: Event) {
+    const nextState = (event.currentTarget as HTMLElement | null)?.matches(':popover-open') ?? false;
+    if (nextState !== isExpanded) {
+      onExpandedChange(nextState);
+    }
+  }
+
+  function handleThemePopoverToggle() {
+    themePickerOpen = themePopover?.matches(':popover-open') ?? false;
+  }
+
+  function handleLocalePopoverToggle() {
+    localePickerOpen = localePopover?.matches(':popover-open') ?? false;
+  }
+
+  $effect(() => {
+    if (!menuPopover) {
+      return;
+    }
+
+    if (isExpanded) {
+      if (!menuPopover.matches(':popover-open')) {
+        menuPopover.showPopover();
+      }
+      return;
+    }
+
+    if (menuPopover.matches(':popover-open')) {
+      menuPopover.hidePopover();
+    }
+  });
+
+  $effect(() => {
+    if (!themePopover) {
+      return;
+    }
+
+    if (themePickerOpen && isExpanded) {
+      if (!themePopover.matches(':popover-open')) {
+        themePopover.showPopover();
+      }
+      return;
+    }
+
+    if (themePopover.matches(':popover-open')) {
+      themePopover.hidePopover();
+    }
+  });
+
+  $effect(() => {
+    if (!localePopover) {
+      return;
+    }
+
+    if (localePickerOpen && isExpanded) {
+      if (!localePopover.matches(':popover-open')) {
+        localePopover.showPopover();
+      }
+      return;
+    }
+
+    if (localePopover.matches(':popover-open')) {
+      localePopover.hidePopover();
+    }
+  });
+
+  $effect(() => {
+    if (isExpanded) {
+      return;
+    }
+
+    themePickerOpen = false;
+    localePickerOpen = false;
+  });
 </script>
 
+<header>
 <kefine-topbar data-scrolled={hasScrolled} data-expanded={isExpanded}>
   <kefine-topbar-row>
-    <kefine-sidebar-root data-expanded={isExpanded} data-scrolled={hasScrolled} aria-label={navigationLabel}>
+    <nav aria-label={navigationLabel}>
+    <kefine-sidebar-root data-expanded={isExpanded} data-scrolled={hasScrolled}>
       <button
         type="button"
         data-part="brand"
@@ -154,24 +285,29 @@
       >
         <kefine-sidebar-brand-mark data-part="brand-mark" data-testid="kefine-brand-mark">{brandLabel}</kefine-sidebar-brand-mark>
       </button>
-
-      {#if isExpanded}
-        <kefine-sidebar-float>
-          <kefine-sidebar-stack aria-label={dockLabel}>
-          <kefine-sidebar-toolbar data-kind="social" aria-label={socialLabel}>
-            {#each socialLinks as social (social.id)}
-              <a
-                data-part="icon"
-                href={social.href}
-                target="_blank"
-                rel="noreferrer"
-                aria-label={social.label}
-                title={social.label}
-              >
-                <Icon icon={social.icon} width="20" height="20" aria-hidden="true" />
-              </a>
-            {/each}
-          </kefine-sidebar-toolbar>
+      <kefine-sidebar-popover
+        bind:this={menuPopover}
+        popover="manual"
+        aria-label={dockLabel}
+        ontoggle={handlePopoverToggle}
+      >
+        <kefine-sidebar-stack>
+          {#if showSocialLinks && socialLinks.length > 0}
+            <kefine-sidebar-toolbar data-kind="social" aria-label={socialLabel}>
+              {#each socialLinks as social (social.id)}
+                <a
+                  data-part="icon"
+                  href={social.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={social.label}
+                  title={social.label}
+                >
+                  <KefineTopbarIcon name={social.icon} size={20} />
+                </a>
+              {/each}
+            </kefine-sidebar-toolbar>
+          {/if}
 
           <kefine-sidebar-nav aria-label={legalLabel}>
             {#each legalLinks as link (link.id)}
@@ -182,71 +318,138 @@
           </kefine-sidebar-nav>
 
           <kefine-sidebar-toolbar aria-label={dockLabel}>
-          <button type="button" data-part="icon" aria-label={themeLabel} title={themeLabel} onclick={onTheme}>
-            <Icon icon={themeIcon} width="20" height="20" aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            data-part="icon"
-            aria-label={localeLabel}
-            title={localeLabel}
-            onclick={() => onLocale(nextLocale)}
-          >
-            <Icon icon="mdi:translate" width="20" height="20" aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            data-part="icon"
-            aria-label={mailLabel}
-            title={mailLabel}
-            onclick={handleEmailClick}
-            ondblclick={handleEmailDoubleClick}
-          >
-            <Icon icon="mdi:email-outline" width="20" height="20" aria-hidden="true" />
-          </button>
-          <a
-            data-part="icon"
-            href={githubUrl}
-            target="_blank"
-            rel="noreferrer"
-            aria-label={githubLabel}
-            title={githubLabel}
-          >
-            <Icon icon="mdi:github" width="20" height="20" aria-hidden="true" />
-          </a>
-          </kefine-sidebar-toolbar>
-          </kefine-sidebar-stack>
-        </kefine-sidebar-float>
-      {/if}
-    </kefine-sidebar-root>
-
-    <button
-      type="button"
-      data-part="auth"
-      data-scrolled={hasScrolled}
-      data-variant={isAuthenticated ? 'ghost' : 'primary'}
-      onclick={onAuth}
-    >
-      {#if isAuthenticated}
-        <lefine-text data-part="auth-content">
-          {#if authenticatedAvatarUrl}
-            <img data-part="auth-avatar" src={authenticatedAvatarUrl} alt="" aria-hidden="true" />
-          {/if}
-          <lefine-text data-part="auth-copy">
-            <strong>{authenticatedLabel ?? signedInLabel}</strong>
-            {#if authenticatedSecondaryLabel}
-              <small>{authenticatedSecondaryLabel}</small>
+            <button
+              type="button"
+              data-part="icon"
+              data-role="theme"
+              aria-label={themeLabel}
+              title={themeLabel}
+              onclick={handleThemeButtonClick}
+              ondblclick={handleThemeButtonDoubleClick}
+            >
+              <KefineTopbarIcon name={isDarkTheme ? 'theme-light' : 'theme-dark'} size={20} />
+            </button>
+            <button
+              type="button"
+              data-part="icon"
+              data-role="locale"
+              aria-label={localeLabel}
+              title={localeLabel}
+              onclick={handleLocaleButtonClick}
+              ondblclick={handleLocaleButtonDoubleClick}
+            >
+              <KefineTopbarIcon name={currentLocaleFlagIcon} size={20} />
+            </button>
+            {#if showEmailButton}
+              <button
+                type="button"
+                data-part="icon"
+                aria-label={mailLabel}
+                title={mailLabel}
+                onclick={handleEmailClick}
+              >
+                <KefineTopbarIcon name="email" size={20} />
+              </button>
             {/if}
+            {#if showGithubButton}
+              <a
+                data-part="icon"
+                href={githubUrl}
+                target="_blank"
+                rel="noreferrer"
+                aria-label={githubLabel}
+                title={githubLabel}
+              >
+                <KefineTopbarIcon name="github" size={20} />
+              </a>
+            {/if}
+          </kefine-sidebar-toolbar>
+        </kefine-sidebar-stack>
+      </kefine-sidebar-popover>
+      <kefine-picker-popover
+        bind:this={themePopover}
+        popover="manual"
+        data-kind="theme"
+        ontoggle={handleThemePopoverToggle}
+      >
+        <kefine-picker-list>
+          <button type="button" data-part="picker-option" data-active={themeMode === 'auto'} onclick={() => selectTheme('auto')}>
+            <KefineTopbarIcon name="theme-auto" size={18} />
+            <lefine-text>{themeAutoLabel}</lefine-text>
+          </button>
+          <button type="button" data-part="picker-option" data-active={themeMode === 'light'} onclick={() => selectTheme('light')}>
+            <KefineTopbarIcon name="theme-light" size={18} />
+            <lefine-text>{themeLightLabel}</lefine-text>
+          </button>
+          <button type="button" data-part="picker-option" data-active={themeMode === 'dark'} onclick={() => selectTheme('dark')}>
+            <KefineTopbarIcon name="theme-dark" size={18} />
+            <lefine-text>{themeDarkLabel}</lefine-text>
+          </button>
+        </kefine-picker-list>
+      </kefine-picker-popover>
+      <kefine-picker-popover
+        bind:this={localePopover}
+        popover="manual"
+        data-kind="locale"
+        ontoggle={handleLocalePopoverToggle}
+      >
+        <kefine-picker-list>
+          <button type="button" data-part="picker-option" data-active={locale === 'en'} onclick={() => selectLocale('en')}>
+            <KefineTopbarIcon name={localeFlagIcons.en} size={18} />
+            <lefine-text>{languageEnglishLabel}</lefine-text>
+          </button>
+          <button type="button" data-part="picker-option" data-active={locale === 'ru'} onclick={() => selectLocale('ru')}>
+            <KefineTopbarIcon name={localeFlagIcons.ru} size={18} />
+            <lefine-text>{languageRussianLabel}</lefine-text>
+          </button>
+          <button type="button" data-part="picker-option" data-active={locale === 'hy'} onclick={() => selectLocale('hy')}>
+            <KefineTopbarIcon name={localeFlagIcons.hy} size={18} />
+            <lefine-text>{languageArmenianLabel}</lefine-text>
+          </button>
+        </kefine-picker-list>
+      </kefine-picker-popover>
+    </kefine-sidebar-root>
+    </nav>
+
+    {#if showAuthButton}
+      <button
+        type="button"
+        data-part="auth"
+        data-scrolled={hasScrolled}
+        data-variant={isAuthenticated ? 'ghost' : 'primary'}
+        data-loading={isAuthLoading}
+        disabled={isAuthLoading}
+        onclick={onAuth}
+      >
+        {#if isAuthLoading}
+          <lef-auth-loading aria-hidden="true"></lef-auth-loading>
+          <span>{signInLabel}</span>
+        {:else if isAuthenticated}
+          <lefine-text data-part="auth-content">
+            {#if authenticatedAvatarUrl}
+              <img data-part="auth-avatar" src={authenticatedAvatarUrl} alt="" aria-hidden="true" />
+            {/if}
+            <lefine-text data-part="auth-copy">
+              <strong>{authenticatedLabel ?? signedInLabel}</strong>
+              {#if authenticatedSecondaryLabel}
+                <small>{authenticatedSecondaryLabel}</small>
+              {/if}
+            </lefine-text>
           </lefine-text>
-        </lefine-text>
-      {:else}
-        {signInLabel}
-      {/if}
-    </button>
+        {:else}
+          {signInLabel}
+        {/if}
+      </button>
+    {/if}
   </kefine-topbar-row>
 </kefine-topbar>
+</header>
 
 <style>
+  header {
+    display: contents;
+  }
+
   kefine-topbar {
     position: fixed;
     top: 0;
@@ -359,30 +562,113 @@
     color: color-mix(in oklab, var(--kef-primary) 88%, #5a4636);
   }
 
-  kefine-sidebar-float {
-    position: absolute;
-    top: calc(100% + 0.9rem);
-    left: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    gap: 0.7rem;
-    width: fit-content;
-    min-width: 0;
-    min-height: 0;
-    pointer-events: auto;
+  kefine-sidebar-root > button[data-part='brand'] {
+    anchor-name: --kefine-topbar-anchor;
+  }
+
+  kefine-sidebar-toolbar [data-role='theme'] {
+    anchor-name: --kefine-theme-anchor;
+  }
+
+  kefine-sidebar-toolbar [data-role='locale'] {
+    anchor-name: --kefine-locale-anchor;
+  }
+
+  kefine-sidebar-popover {
+    position: fixed;
+    position-anchor: --kefine-topbar-anchor;
+    top: anchor(bottom);
+    left: anchor(left);
+    margin: 0;
+    margin-top: 0.9rem;
+    padding: 0.4rem;
+    width: max-content;
+    min-width: 12rem;
+    border: var(--kef-border-width-soft) solid color-mix(in oklab, var(--kef-border) 72%, transparent);
+    border-radius: var(--kef-radius-ui);
+    background: color-mix(in oklab, var(--kef-bg-card) 96%, var(--kef-bg));
+    color: inherit;
+    overflow: visible;
+    box-shadow: 0 8px 18px color-mix(in oklab, #544536 6%, transparent);
+    box-sizing: border-box;
+  }
+
+  kefine-sidebar-popover::backdrop {
+    background: transparent;
+  }
+
+  kefine-picker-popover {
+    position: fixed;
+    margin: 0;
+    padding: 0.28rem;
+    width: max-content;
+    min-width: 11rem;
+    border: var(--kef-border-width-soft) solid color-mix(in oklab, var(--kef-border) 72%, transparent);
+    border-radius: var(--kef-radius-ui);
+    background: color-mix(in oklab, var(--kef-bg-card) 98%, var(--kef-bg));
+    box-shadow: 0 10px 24px color-mix(in oklab, #544536 8%, transparent);
+    color: inherit;
+  }
+
+  kefine-picker-popover[data-kind='theme'] {
+    position-anchor: --kefine-theme-anchor;
+    top: anchor(bottom);
+    left: anchor(left);
+    margin-top: 0.45rem;
+  }
+
+  kefine-picker-popover[data-kind='locale'] {
+    position-anchor: --kefine-locale-anchor;
+    top: anchor(bottom);
+    left: anchor(left);
+    margin-top: 0.45rem;
+  }
+
+  kefine-picker-popover::backdrop {
+    background: transparent;
+  }
+
+  kefine-picker-list {
+    display: grid;
+    gap: 0.2rem;
+  }
+
+  kefine-picker-list [data-part='picker-option'] {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 0.55rem;
+    min-height: 2.45rem;
+    padding: 0.55rem 0.7rem;
+    border: var(--kef-border-width-soft) solid transparent;
+    border-radius: calc(var(--kef-radius-ui) - 0.08rem);
+    background: transparent;
+    color: color-mix(in oklab, var(--lefine-text) 96%, transparent);
+    text-align: left;
+    font: inherit;
+    transition:
+      border-color var(--kef-motion-fast) var(--kef-ease-soft),
+      background-color var(--kef-motion-fast) var(--kef-ease-soft),
+      color var(--kef-motion-fast) var(--kef-ease-soft);
+  }
+
+  kefine-picker-list [data-part='picker-option'][data-active='true'] {
+    border-color: color-mix(in oklab, var(--kef-primary) 28%, var(--kef-line));
+    background: color-mix(in oklab, var(--kef-primary) 8%, white);
+    color: color-mix(in oklab, var(--kef-primary) 92%, #4f3d30);
+  }
+
+  kefine-picker-list [data-part='picker-option']:hover {
+    border-color: color-mix(in oklab, var(--kef-primary) 22%, var(--kef-line));
+    background: color-mix(in oklab, var(--kef-primary) 6%, white);
   }
 
   kefine-sidebar-stack {
-    margin-bottom: auto;
     display: grid;
     gap: 0.45rem;
-    padding: 0.4rem;
-    width: fit-content;
-    border-radius: var(--kef-radius-ui);
-    border: var(--kef-border-width-soft) solid color-mix(in oklab, var(--kef-border) 72%, transparent);
-    background: color-mix(in oklab, var(--kef-bg-card) 96%, var(--kef-bg));
-    box-shadow: 0 8px 18px color-mix(in oklab, #544536 6%, transparent);
+    width: 100%;
+    border-radius: calc(var(--kef-radius-ui) - 0.06rem);
+    background: transparent;
   }
 
   kefine-sidebar-nav {
@@ -412,7 +698,6 @@
     background: color-mix(in oklab, var(--kef-primary) 6%, white);
     border-color: var(--kef-line-primary);
     color: color-mix(in oklab, var(--kef-primary) 92%, #4f3d30);
-    transform: translateY(-1px);
   }
 
   lefine-text[data-part='link-label'] {
@@ -424,29 +709,23 @@
   }
 
   kefine-sidebar-toolbar {
-    display: flex;
-    flex-wrap: nowrap;
-    align-items: center;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 0.4rem;
-    width: fit-content;
+    width: 100%;
     padding: 0;
-    overflow-x: auto;
-    scrollbar-width: none;
+    overflow: visible;
     border-color: color-mix(in oklab, var(--kef-border) 62%, transparent);
     color: color-mix(in oklab, var(--lefine-text) 92%, transparent);
   }
 
   kefine-sidebar-toolbar[data-kind='social'] {
-    justify-content: flex-start;
-  }
-
-  kefine-sidebar-toolbar::-webkit-scrollbar {
-    display: none;
+    justify-items: stretch;
   }
 
   kefine-sidebar-toolbar [data-part='icon'] {
-    width: 2.55rem;
-    min-width: 2.55rem;
+    width: 100%;
+    min-width: 0;
     height: 2.55rem;
     border-radius: calc(var(--kef-radius-ui) - 0.06rem);
     background: transparent;
@@ -495,6 +774,14 @@
     border-color: transparent;
   }
 
+  button[data-part='auth'][data-loading='true'] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    cursor: progress;
+  }
+
   button[data-part='auth']:hover,
   button[data-part='auth'][data-scrolled='true']:hover,
   button[data-part='auth'][data-scrolled='true'][data-variant='primary']:hover,
@@ -508,6 +795,15 @@
     display: inline-flex;
     align-items: center;
     gap: 0.65rem;
+  }
+
+  lef-auth-loading {
+    width: 0.92rem;
+    height: 0.92rem;
+    border-radius: 999px;
+    border: 1.8px solid color-mix(in oklab, currentColor 22%, transparent);
+    border-top-color: currentColor;
+    animation: kefine-auth-spin 0.78s linear infinite;
   }
 
   img[data-part='auth-avatar'] {
@@ -538,6 +834,12 @@
     opacity: 0.78;
     font-size: 0.72rem;
     font-weight: 600;
+  }
+
+  @keyframes kefine-auth-spin {
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   @media (max-width: 760px) {
@@ -574,6 +876,35 @@
 
     kefine-sidebar-root:not([data-expanded='true']) kefine-sidebar-stack {
       justify-items: center;
+    }
+
+    kefine-sidebar-popover {
+      top: anchor(bottom);
+      left: anchor(left);
+      margin-top: 0.55rem;
+      width: min(12rem, calc(100vw - 1.1rem));
+      min-width: min(12rem, calc(100vw - 1.1rem));
+      max-width: min(12rem, calc(100vw - 1.1rem));
+    }
+
+    kefine-sidebar-popover:popover-open {
+      inset: auto auto auto auto;
+    }
+
+    kefine-sidebar-stack {
+      width: 100%;
+      max-height: calc(100dvh - 5.25rem);
+      overflow-y: auto;
+      background: transparent;
+    }
+
+    kefine-sidebar-nav,
+    kefine-sidebar-toolbar {
+      width: 100%;
+    }
+
+    kefine-sidebar-toolbar {
+      gap: 0.35rem;
     }
 
     button[data-part='auth'] {

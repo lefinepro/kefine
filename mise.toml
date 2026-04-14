@@ -59,6 +59,16 @@ description = "Run the SvelteKit frontend"
 depends = ["frontend:deps"]
 run = "bun run dev --host 0.0.0.0"
 
+[tasks."frontend:build"]
+description = "Build the SvelteKit frontend for production"
+depends = ["frontend:deps"]
+run = "bun run build"
+
+[tasks.prod]
+description = "Build and run the SvelteKit frontend in production preview mode"
+depends = ["frontend:build"]
+run = "bun run preview --host 0.0.0.0"
+
 [tasks.backend]
 description = "Run the crater backend in a dev container without rebuilding"
 depends = ["db:wait"]

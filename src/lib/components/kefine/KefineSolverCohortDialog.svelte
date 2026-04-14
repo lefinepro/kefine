@@ -106,7 +106,7 @@
   }
 </script>
 
-<KefineModal open={open} onClose={onClose} closeLabel={closeLabel} width="min(42rem, calc(100vw - 2rem))" tone="dark">
+<KefineModal open={open} onClose={onClose} closeLabel={closeLabel} width="wide" tone="dark">
   <section class="kefine-solver-cohort-dialog">
     <header class="kefine-solver-cohort-dialog__header">
       <lefine-box>

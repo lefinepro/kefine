@@ -6,7 +6,8 @@
   import { isSpecialRuntimeOrigin } from '$lib/config/special-runtime';
   import { resolveOrderProxyBasePath } from '$lib/order-proxy-path';
   import { onMount } from 'svelte';
-import { cubicOut } from 'svelte/easing';
+  import { tick } from 'svelte';
+  import { cubicOut } from 'svelte/easing';
   import type { TransitionConfig } from 'svelte/transition';
   import { authState, clearAuthState, hydrateAuthStateFromSession, replaceAuthState, updateAuthState } from '$lib/auth/auth-store.svelte.js';
   import {
@@ -14,29 +15,15 @@ import { cubicOut } from 'svelte/easing';
     passkeySessionStore,
     setPasskeySession
   } from '$lib/auth/passkey-session';
-  import { readReownAccountState, subscribeToAppKitAccount, syncAppKitTheme } from '$lib/auth/appkit';
+  import type { PasskeyAuthSuccess } from '$lib/auth/routes';
   import {
-    loginWithPrivateKey,
-    performAuthentication,
-    finishAuthentication,
-    type PasskeyAuthSuccess
-  } from '$lib/auth/routes';
-  import {
-    getLocaleText,
     kefineLocale,
+    kefineLocaleText,
     setKefineLocale,
     type KefineLocale
   } from '$lib/constants/kefine-locale';
   import KefineTopbar from '$lib/components/kefine/KefineTopbar.svelte';
   import KefineCreateStep from '$lib/components/kefine/KefineCreateStep.svelte';
-  import KefineAuthDialog from '$lib/components/kefine/KefineAuthDialog.svelte';
-  import KefineContactDialog from '$lib/components/kefine/KefineContactDialog.svelte';
-  import KefinePasskeyDialog from '$lib/components/kefine/KefinePasskeyDialog.svelte';
-  import KefinePrivateKeyDialog from '$lib/components/kefine/KefinePrivateKeyDialog.svelte';
-  import KefineSubmittingStep from '$lib/components/kefine/KefineSubmittingStep.svelte';
-  import KefineErrorStep from '$lib/components/kefine/KefineErrorStep.svelte';
-  import KefineExecutingStep from '$lib/components/kefine/KefineExecutingStep.svelte';
-  import KefinePaymentStep from '$lib/components/kefine/KefinePaymentStep.svelte';
   import {
     ORDER_STORAGE_KEY,
     POLL_INTERVAL_MS,
@@ -58,7 +45,6 @@ import { cubicOut } from 'svelte/easing';
   import {
     buildTaskRouteHash,
     createGeneratedWalletAvatar,
-    createContactMailtoUrl,
     getVisibleOrdersLimit,
     mergeOrdersById,
     normalizeDraftOrder,
@@ -75,7 +61,6 @@ import { cubicOut } from 'svelte/easing';
     submitWorkspaceOrder
   } from '$lib/components/kefine/kefine-workspace-orders';
   import { waitForDelay } from '$lib/utils/helpers';
-  import { disconnectAppKit } from '$lib/auth/appkit';
   import { renderPromptTemplate, resolveTemplateLocalizedContent, syncPromptVariables } from '$lib/templates/template-content';
   import { fetchPublicTemplates, fetchTemplateByHandleAndSlug } from '$lib/templates/template-api';
   import type { Profile, ProfileTemplate } from '$lib/types/user';
@@ -104,7 +89,7 @@ import { cubicOut } from 'svelte/easing';
     initialTemplateHandle?: string;
     initialTemplateSlug?: string;
   } = $props();
-  const localeText = $derived(getLocaleText($kefineLocale));
+  const localeText = $derived($kefineLocaleText);
   const runtimeConfig = $derived(resolvePublicRuntimeConfig(page.data.publicConfig));
 
   function getNormalizedInitialOrderId() {
@@ -136,6 +121,71 @@ import { cubicOut } from 'svelte/easing';
     return normalized.replace(/\b\w/g, (char) => char.toUpperCase());
   }
 
+  function runWhenIdle(task: () => void) {
+    if (!browser) {
+      return () => {};
+    }
+
+    if ('requestIdleCallback' in window) {
+      const idleId = window.requestIdleCallback(() => {
+        task();
+      });
+
+      return () => {
+        window.cancelIdleCallback(idleId);
+      };
+    }
+
+    const timeoutId = globalThis.setTimeout(task, 160);
+    return () => {
+      globalThis.clearTimeout(timeoutId);
+    };
+  }
+
+  async function loadAuthRoutes() {
+    return import('$lib/auth/routes');
+  }
+
+  async function loadAppKitModule() {
+    return import('$lib/auth/appkit');
+  }
+
+  type LazyComponent = any;
+
+  async function ensureFlowStepComponentsLoaded() {
+    if (SubmittingStepComponent && ErrorStepComponent && ExecutingStepComponent && PaymentStepComponent) {
+      return;
+    }
+
+    const [submittingModule, errorModule, executingModule, paymentModule] = await Promise.all([
+      import('$lib/components/kefine/KefineSubmittingStep.svelte'),
+      import('$lib/components/kefine/KefineErrorStep.svelte'),
+      import('$lib/components/kefine/KefineExecutingStep.svelte'),
+      import('$lib/components/kefine/KefinePaymentStep.svelte')
+    ]);
+
+    SubmittingStepComponent ??= submittingModule.default;
+    ErrorStepComponent ??= errorModule.default;
+    ExecutingStepComponent ??= executingModule.default;
+    PaymentStepComponent ??= paymentModule.default;
+  }
+
+  async function ensureDialogComponentsLoaded() {
+    if (AuthDialogComponent && PasskeyDialogComponent && PrivateKeyDialogComponent) {
+      return;
+    }
+
+    const [authModule, passkeyModule, privateKeyModule] = await Promise.all([
+      import('$lib/components/kefine/KefineAuthDialog.svelte'),
+      import('$lib/components/kefine/KefinePasskeyDialog.svelte'),
+      import('$lib/components/kefine/KefinePrivateKeyDialog.svelte')
+    ]);
+
+    AuthDialogComponent ??= authModule.default;
+    PasskeyDialogComponent ??= passkeyModule.default;
+    PrivateKeyDialogComponent ??= privateKeyModule.default;
+  }
+
   let step = $state<FlowStep>(getNormalizedInitialOrderId() ? 'executing' : 'create');
   let draft = $state<DraftOrder>(createEmptyDraft());
   let draftQueued = $state<DraftOrder | null>(null);
@@ -158,20 +208,18 @@ import { cubicOut } from 'svelte/easing';
   let isSpecialRuntime = $state(false);
   let errorMessage = $state('');
 
-  let isDarkTheme = $state(false);
+  let themeMode = $state<'light' | 'dark' | 'auto'>('auto');
+  let systemPrefersDark = $state(false);
   let selectedAuthMethod = $state<AuthMethod>(null);
   let paymentMethod = $state<PaymentMethod>(null);
   let paymentStage = $state<PaymentStage>('payment-method-select');
   let depositDialogOpen = $state(false);
   let authDialogOpen = $state(false);
-  let contactDialogOpen = $state(false);
+  let authButtonLoading = $state(false);
   let passkeyDialogOpen = $state(false);
   let privateKeyDialogOpen = $state(false);
   let stagePreviewOpen = $state(false);
   let privateKeyInput = $state('');
-  let contactName = $state('');
-  let contactEmail = $state('');
-  let contactMessage = $state('');
   let isHydratingRoute = $state(Boolean(getNormalizedInitialOrderId()));
   let currentProfile = $state<Profile | null>(null);
   let activeTemplate = $state<ProfileTemplate | null>(null);
@@ -186,6 +234,13 @@ import { cubicOut } from 'svelte/easing';
   let resultDocumentRefreshKey = $state('');
   const activePollTokens = new Map<string, symbol>();
   let pollAbortController = $state<AbortController | null>(null);
+  let SubmittingStepComponent = $state<LazyComponent | null>(null);
+  let ErrorStepComponent = $state<LazyComponent | null>(null);
+  let ExecutingStepComponent = $state<LazyComponent | null>(null);
+  let PaymentStepComponent = $state<LazyComponent | null>(null);
+  let AuthDialogComponent = $state<LazyComponent | null>(null);
+  let PasskeyDialogComponent = $state<LazyComponent | null>(null);
+  let PrivateKeyDialogComponent = $state<LazyComponent | null>(null);
 
   const passkeySession = $derived($passkeySessionStore);
   const isPasskeyActive = $derived(passkeySession ? passkeySession.expiresAt.getTime() > Date.now() : false);
@@ -275,9 +330,9 @@ import { cubicOut } from 'svelte/easing';
   let visibleOrdersLimit = $state(ORDER_PAGE_SIZE);
   const visibleOrders = $derived(createdOrders.slice(0, visibleOrdersLimit));
   const hasMoreOrders = $derived(visibleOrdersLimit < createdOrders.length);
-  const topbarThemeActionLabel = $derived(
-    isDarkTheme ? localeText.topbar.theme.switchToLight : localeText.topbar.theme.switchToDark
-  );
+  const resolvedTheme = $derived(themeMode === 'auto' ? (systemPrefersDark ? 'dark' : 'light') : themeMode);
+  const isDarkTheme = $derived(resolvedTheme === 'dark');
+  const topbarThemeActionLabel = $derived(themeMode === 'auto' ? localeText.topbar.theme.auto : isDarkTheme ? localeText.topbar.theme.dark : localeText.topbar.theme.light);
   const layoutMode = $derived(
     step === 'create' ? 'create' : step === 'executing' || step === 'payment' || step === 'submitting' ? 'flow' : 'default'
   );
@@ -359,25 +414,25 @@ import { cubicOut } from 'svelte/easing';
       id: 'mastodon' as const,
       label: localeText.topbar.socialLinks.mastodon.label,
       href: runtimeConfig.app.socialLinks.mastodon,
-      icon: 'mdi:mastodon'
+      icon: 'mastodon' as const
     },
     {
       id: 'discord' as const,
       label: localeText.topbar.socialLinks.discord.label,
       href: runtimeConfig.app.socialLinks.discord,
-      icon: 'mdi:discord'
+      icon: 'discord' as const
     },
     {
       id: 'linkedin' as const,
       label: localeText.topbar.socialLinks.linkedin.label,
       href: runtimeConfig.app.socialLinks.linkedin,
-      icon: 'mdi:linkedin'
+      icon: 'linkedin' as const
     },
     {
       id: 'telegram' as const,
       label: localeText.topbar.socialLinks.telegram.label,
       href: runtimeConfig.app.socialLinks.telegram,
-      icon: 'mdi:telegram'
+      icon: 'telegram' as const
     }
   ]);
   const sidebarLegalLinks = $derived([
@@ -390,11 +445,6 @@ import { cubicOut } from 'svelte/easing';
       id: 'terms' as const,
       label: localeText.topbar.legalLinks.terms,
       href: '/terms'
-    },
-    {
-      id: 'company' as const,
-      label: localeText.topbar.legalLinks.company,
-      href: '/legal-information'
     }
   ]);
   const remainingAmount = $derived(currentOrder?.estimatedCost ?? 0);
@@ -518,13 +568,21 @@ import { cubicOut } from 'svelte/easing';
       void openOrderById(routeOrderId, routeState?.view ?? null);
     }
 
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    systemPrefersDark = mediaQuery.matches;
+
+    const handleThemePreferenceChange = (event: MediaQueryListEvent) => {
+      systemPrefersDark = event.matches;
+    };
+
     const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
-    isDarkTheme =
-      storedTheme === 'dark' ? true : storedTheme === 'light' ? false : window.matchMedia('(prefers-color-scheme: dark)').matches;
-    document.documentElement.setAttribute('data-kefine-theme', isDarkTheme ? 'dark' : 'light');
+    themeMode = storedTheme === 'dark' || storedTheme === 'light' || storedTheme === 'auto' ? storedTheme : 'auto';
+    document.documentElement.setAttribute('data-kefine-theme', resolvedTheme);
     document.documentElement.setAttribute('lang', $kefineLocale);
+    mediaQuery.addEventListener('change', handleThemePreferenceChange);
 
     const syncReownAuthState = async () => {
+      const { readReownAccountState } = await loadAppKitModule();
       const snapshot = await readReownAccountState();
 
       if (authState.authType === 'publickey' && authState.isConnected && !snapshot.isConnected) {
@@ -544,15 +602,26 @@ import { cubicOut } from 'svelte/easing';
       });
     };
 
-    void syncReownAuthState();
     let cancelReownSubscription: (() => void) | void;
-    void subscribeToAppKitAccount(() => {
+    const cancelIdleReownSetup = runWhenIdle(() => {
       void syncReownAuthState();
-    }).then((result) => {
-      cancelReownSubscription = result;
+      void loadAppKitModule()
+        .then(({ subscribeToAppKitAccount }) =>
+          subscribeToAppKitAccount(() => {
+            void syncReownAuthState();
+          })
+        )
+        .then((result) => {
+          cancelReownSubscription = result;
+        })
+        .catch(() => {
+          cancelReownSubscription = undefined;
+        });
     });
 
     return () => {
+      cancelIdleReownSetup();
+      mediaQuery.removeEventListener('change', handleThemePreferenceChange);
       cancelReownSubscription?.();
       pollAbortController?.abort();
       activePollTokens.clear();
@@ -588,9 +657,15 @@ import { cubicOut } from 'svelte/easing';
       return;
     }
 
-    void (async () => {
-      publicTemplates = await fetchPublicTemplates(runtimeConfig.backend.craterBaseUrl, 48);
-    })();
+    const cancelIdleTemplatesLoad = runWhenIdle(() => {
+      void (async () => {
+        publicTemplates = await fetchPublicTemplates(runtimeConfig.backend.craterBaseUrl, 48);
+      })();
+    });
+
+    return () => {
+      cancelIdleTemplatesLoad();
+    };
   });
 
   async function loadActiveTemplate() {
@@ -632,11 +707,24 @@ import { cubicOut } from 'svelte/easing';
   }
   $effect(() => {
     if (browser) {
-      const theme = isDarkTheme ? 'dark' : 'light';
-      document.documentElement.setAttribute('data-kefine-theme', theme);
-      localStorage.setItem(THEME_STORAGE_KEY, theme);
+      document.documentElement.setAttribute('data-kefine-theme', resolvedTheme);
+      localStorage.setItem(THEME_STORAGE_KEY, themeMode);
       document.documentElement.setAttribute('lang', $kefineLocale);
-      void syncAppKitTheme(theme);
+      void loadAppKitModule()
+        .then(({ syncAppKitTheme }) => syncAppKitTheme(resolvedTheme))
+        .catch(() => undefined);
+    }
+  });
+
+  $effect(() => {
+    if (step === 'submitting' || step === 'error' || step === 'executing' || step === 'payment') {
+      void ensureFlowStepComponentsLoaded();
+    }
+  });
+
+  $effect(() => {
+    if (authDialogOpen || passkeyDialogOpen || privateKeyDialogOpen) {
+      void ensureDialogComponentsLoaded();
     }
   });
 
@@ -813,6 +901,13 @@ import { cubicOut } from 'svelte/easing';
     if (!browser) return;
     if (isHydratingRoute) return;
 
+    const currentPathname = page.url.pathname.replace(/\/+$/, '') || '/';
+    const managedPathname = activeTemplatePath.replace(/\/+$/, '') || '/';
+
+    if (currentPathname !== managedPathname) {
+      return;
+    }
+
     if (page.url.pathname !== '/') {
       suppressProfileRedirect = false;
       sessionStorage.removeItem(BRAND_HOME_NAVIGATION_STORAGE_KEY);
@@ -870,6 +965,7 @@ import { cubicOut } from 'svelte/easing';
 
     try {
       console.info('[passkey] loginWithDefaultPasskey:start');
+      const { performAuthentication, finishAuthentication } = await loadAuthRoutes();
       const { transactionId, response } = await performAuthentication();
       const result = await finishAuthentication(transactionId, response);
       console.info('[passkey] loginWithDefaultPasskey:success', {
@@ -888,6 +984,7 @@ import { cubicOut } from 'svelte/easing';
   function closeAuthDialog() {
     authDialogOpen = false;
     passkeyDialogOpen = false;
+    authButtonLoading = false;
   }
 
   function markBrandHomeNavigationIntent() {
@@ -903,15 +1000,13 @@ import { cubicOut } from 'svelte/easing';
     newOrder();
   }
 
-  function openContactEmailDraft() {
-    if (!browser) return;
-
-    window.location.href = `mailto:${runtimeConfig.app.supportEmail}`;
-  }
-
   async function selectTopbarAuth() {
     if (!isAuthenticated) {
+      authButtonLoading = true;
+      await ensureDialogComponentsLoaded();
       authDialogOpen = true;
+      await tick();
+      authButtonLoading = false;
       return;
     }
     if (!currentProfile) {
@@ -964,6 +1059,7 @@ import { cubicOut } from 'svelte/easing';
 
   async function signOutProfileSession() {
     try {
+      const { disconnectAppKit } = await loadAppKitModule();
       await disconnectAppKit();
     } catch {
       // AppKit might not be initialized for passkey-only sessions.
@@ -980,18 +1076,6 @@ import { cubicOut } from 'svelte/easing';
 
   function selectTopbarLocale(locale: KefineLocale) {
     setKefineLocale(locale);
-  }
-
-  function submitContactEmail() {
-    if (!browser) return;
-    window.location.href = createContactMailtoUrl({
-      brandName: localeText.brand.name,
-      recipient: runtimeConfig.app.supportEmail,
-      name: contactName,
-      email: contactEmail,
-      message: contactMessage
-    });
-    contactDialogOpen = false;
   }
 
   function loadCreatedOrders() {
@@ -1612,6 +1696,7 @@ import { cubicOut } from 'svelte/easing';
     selectedAuthMethod = 'publickey';
     paymentMethod = 'other';
     try {
+      const { loginWithPrivateKey } = await loadAuthRoutes();
       const privateKeySession = await loginWithPrivateKey(privateKeyInput);
 
       updateAuthState({
@@ -1727,7 +1812,7 @@ import { cubicOut } from 'svelte/easing';
   <title>{browserTitle}</title>
 </svelte:head>
 
-<kefine-shell>
+<kefine-shell data-sidebar-expanded={leftNavExpanded}>
   <KefineTopbar
     brandLabel={localeText.brand.name}
     navigationLabel={localeText.topbar.quickActions}
@@ -1740,12 +1825,17 @@ import { cubicOut } from 'svelte/easing';
     githubLabel={localeText.topbar.githubLabel}
     githubUrl={runtimeConfig.app.githubUrl}
     themeLabel={topbarThemeActionLabel}
+    themeMode={themeMode}
+    themeAutoLabel={localeText.topbar.theme.auto}
+    themeLightLabel={localeText.topbar.theme.light}
+    themeDarkLabel={localeText.topbar.theme.dark}
     signInLabel={localeText.topbar.signIn}
     signedInLabel={localeText.topbar.signedIn}
     authenticatedLabel={authenticatedLabel}
     authenticatedSecondaryLabel={authState.isConnected ? walletNetworkLabel : null}
     authenticatedAvatarUrl={authState.isConnected ? walletAvatarUrl : null}
     isAuthenticated={isAuthenticated}
+    isAuthLoading={authButtonLoading}
     isDarkTheme={isDarkTheme}
     isExpanded={leftNavExpanded}
     locale={$kefineLocale}
@@ -1753,16 +1843,21 @@ import { cubicOut } from 'svelte/easing';
     languageRussianLabel={localeText.topbar.languageRussian}
     languageArmenianLabel={localeText.topbar.languageArmenian}
     socialLinks={sidebarSocialLinks}
+    showSocialLinks={false}
     legalLinks={sidebarLegalLinks}
-    onToggleExpand={() => { leftNavExpanded = !leftNavExpanded; }}
+    onExpandedChange={(expanded) => { leftNavExpanded = expanded; }}
     onBrandClick={handleTopbarBrandClick}
-    onOpenEmailDraft={openContactEmailDraft}
-    onOpenEmailDialog={() => { contactDialogOpen = true; }}
-    onTheme={() => { isDarkTheme = !isDarkTheme; }}
+    onOpenEmailDialog={() => {
+      if (browser) {
+        window.location.assign('/contact');
+      }
+    }}
+    onThemeChange={(theme) => { themeMode = theme; }}
     onAuth={selectTopbarAuth}
     onLocale={selectTopbarLocale}
   />
 
+  <main>
   <kefine-layout data-mode={layoutMode}>
     {#if templateUnavailable}
       <kefine-screen in:softScreenTransition out:softScreenTransition>
@@ -1832,211 +1927,221 @@ import { cubicOut } from 'svelte/easing';
 
     {#if step === 'submitting'}
       <kefine-screen in:softScreenTransition out:softScreenTransition>
-        <KefineSubmittingStep />
+        {#if SubmittingStepComponent}
+          <SubmittingStepComponent />
+        {:else}
+          <article class="kefine-card kefine-card--wide kefine-loading-panel" aria-busy="true">
+            <h2>{localeText.status.createSending}</h2>
+          </article>
+        {/if}
       </kefine-screen>
     {/if}
 
     {#if step === 'error'}
       <kefine-screen class="kefine-screen" in:softScreenTransition out:softScreenTransition>
-        <KefineErrorStep
-          message={errorMessage}
-          retryLabel={localeText.buttons.tryAgain}
-          onRetry={() => {
-            errorMessage = '';
-            step = 'create';
-          }}
-        />
+        {#if ErrorStepComponent}
+          <ErrorStepComponent
+            message={errorMessage}
+            retryLabel={localeText.buttons.tryAgain}
+            onRetry={() => {
+              errorMessage = '';
+              step = 'create';
+            }}
+          />
+        {:else}
+          <article class="kefine-card kefine-card--wide kefine-loading-panel" aria-busy="true">
+            <h2>{localeText.errors.fallback}</h2>
+          </article>
+        {/if}
       </kefine-screen>
     {/if}
 
     {#if step === 'executing'}
       <kefine-screen in:softScreenTransition out:softScreenTransition>
-        <KefineExecutingStep
-          currentOrder={currentOrder}
-          execution={executionPresentation}
-          isHydratingTitle={isHydratingRoute && !currentOrder?.title.trim()}
-          onWalletLogin={chooseWalletMethod}
-          onPasskeyLogin={choosePasskeyMethod}
-          onAnonymous={chooseAnonymousMethod}
-          onCancel={() => {
-            if (stagePreviewOpen && currentOrder?.status === 'completed') {
-              stagePreviewOpen = false;
-              paymentStage = 'result-ready';
-              step = 'payment';
-              return;
-            }
+        {#if ExecutingStepComponent}
+          <ExecutingStepComponent
+            currentOrder={currentOrder}
+            execution={executionPresentation}
+            isHydratingTitle={isHydratingRoute && !currentOrder?.title.trim()}
+            onWalletLogin={chooseWalletMethod}
+            onPasskeyLogin={choosePasskeyMethod}
+            onAnonymous={chooseAnonymousMethod}
+            onCancel={() => {
+              if (stagePreviewOpen && currentOrder?.status === 'completed') {
+                stagePreviewOpen = false;
+                paymentStage = 'result-ready';
+                step = 'payment';
+                return;
+              }
 
-            cancelExecutingActions();
-          }}
-          forceFinalVpnStep={stagePreviewOpen}
-          authDisplay={authDisplay}
-          walletNetworkLabel={walletNetworkLabel}
-          labels={{
-            solver: localeText.labels.solver,
-            subtasks: localeText.labels.subtasks,
-            chooseMethod: localeText.labels.chooseMethod,
-            cancel: localeText.buttons.cancel,
-            timeLeft: localeText.labels.timeLeft,
-            price: localeText.labels.price
-          }}
-          authLabels={{
-            walletTitle: localeText.auth.walletTitle,
-            passkeyTitle: localeText.auth.passkeyTitle,
-            anonymousTitle: localeText.auth.anonymousTitle,
-            anonymousDetail: localeText.auth.anonymousDetail,
-            walletAccount: localeText.auth.walletAccount
-          }}
-        />
+              cancelExecutingActions();
+            }}
+            forceFinalVpnStep={stagePreviewOpen}
+            authDisplay={authDisplay}
+            walletNetworkLabel={walletNetworkLabel}
+            labels={{
+              solver: localeText.labels.solver,
+              subtasks: localeText.labels.subtasks,
+              chooseMethod: localeText.labels.chooseMethod,
+              cancel: localeText.buttons.cancel,
+              timeLeft: localeText.labels.timeLeft,
+              price: localeText.labels.price
+            }}
+            authLabels={{
+              walletTitle: localeText.auth.walletTitle,
+              passkeyTitle: localeText.auth.passkeyTitle,
+              anonymousTitle: localeText.auth.anonymousTitle,
+              anonymousDetail: localeText.auth.anonymousDetail,
+              walletAccount: localeText.auth.walletAccount
+            }}
+          />
+        {:else}
+          <article class="kefine-card kefine-card--wide kefine-loading-panel" aria-busy="true">
+            <h2>{localeText.status.createSending}</h2>
+          </article>
+        {/if}
       </kefine-screen>
     {/if}
 
     {#if step === 'payment'}
       <kefine-screen in:softScreenTransition out:softScreenTransition>
-        <KefinePaymentStep
-          currentOrder={currentOrder}
-          resultSurface={resultSurface}
-          remainingAmount={remainingAmount}
-          paymentInvoiceFallback={`${craterBaseUrl()}/pay/${currentOrder?.id ?? ''}`}
-          selectedAuthMethod={selectedAuthMethod}
-          paymentMethod={paymentMethod}
-          paymentStage={paymentStage}
-          depositDialogOpen={depositDialogOpen}
-          onBack={() => {
-            resetTransactionState();
-            step = 'create';
-          }}
-          onRejectResult={rejectResult}
-          onOpenStages={() => {
-            const orderId = currentOrder?.id;
-            if (!orderId) {
-              stagePreviewOpen = true;
-              step = 'executing';
-              return;
-            }
+        {#if PaymentStepComponent}
+          <PaymentStepComponent
+            currentOrder={currentOrder}
+            resultSurface={resultSurface}
+            remainingAmount={remainingAmount}
+            paymentInvoiceFallback={`${craterBaseUrl()}/pay/${currentOrder?.id ?? ''}`}
+            selectedAuthMethod={selectedAuthMethod}
+            paymentMethod={paymentMethod}
+            paymentStage={paymentStage}
+            depositDialogOpen={depositDialogOpen}
+            onBack={() => {
+              resetTransactionState();
+              step = 'create';
+            }}
+            onRejectResult={rejectResult}
+            onOpenStages={() => {
+              const orderId = currentOrder?.id;
+              if (!orderId) {
+                stagePreviewOpen = true;
+                step = 'executing';
+                return;
+              }
 
-            void openOrderById(orderId, 'stages');
-          }}
-          onOpenDepositDialog={() => {
-            depositDialogOpen = true;
-          }}
-          onCloseDepositDialog={() => { depositDialogOpen = false; }}
-          onSelectDepositMethod={selectDepositMethod}
-          onConfirmPayment={confirmPayment}
-          onRevealResult={revealResult}
-          onSaveAnonymousResult={saveAnonymousResult}
-          onWalletLogin={chooseWalletMethod}
-          onPasskeyLogin={choosePasskeyMethod}
-          onAnonymousLogin={chooseAnonymousMethod}
-          labels={{
-            taskId: localeText.labels.taskId,
-            amount: localeText.labels.amount,
-            executionEstimate: localeText.labels.executionEstimate,
-            paymentInvoice: localeText.labels.paymentInvoice,
-            createNewTask: localeText.buttons.createNewTask,
-            selectedMethod: localeText.labels.selectedMethod,
-            remainingBalance: localeText.labels.remainingBalance,
-            resultTitle: localeText.labels.resultTitle
-          }}
-          paymentLabels={{
-            summaryTitle: localeText.payment.summaryTitle,
-            methodSelectTitle: localeText.payment.methodSelectTitle,
-            walletReadyTitle: localeText.payment.walletReadyTitle,
-            passkeyReadyTitle: localeText.payment.passkeyReadyTitle,
-            anonymousReadyTitle: localeText.payment.anonymousReadyTitle,
-            promoHint: localeText.payment.promoHint,
-            promoCodeLabel: localeText.labels.promoCode,
-            promoCodePlaceholder: localeText.placeholders.promoCode,
-            promoEmpty: localeText.errors.promoEmpty,
-            promoOk: localeText.errors.promoOk,
-            promoWrong: localeText.errors.promoWrong,
-            depositDialogTitle: localeText.payment.depositDialogTitle,
-            depositDialogDetail: localeText.payment.depositDialogDetail,
-            depositPendingTitle: localeText.payment.depositPendingTitle,
-            depositPendingDetail: localeText.payment.depositPendingDetail,
-            paidTitle: localeText.payment.paidTitle,
-            paidDetail: localeText.payment.paidDetail,
-            linkedWalletHint: localeText.payment.linkedWalletHint,
-            payCtaHint: localeText.payment.payCtaHint
-          }}
-          resultLabels={{
-            anonymousSaveHint: localeText.result.anonymousSaveHint
-          }}
-          authDisplay={authDisplay}
-          buttons={{
-            apply: localeText.buttons.apply,
-            payNow: localeText.buttons.payNow,
-            confirmLinkedWallet: localeText.buttons.confirmLinkedWallet,
-            depositNow: localeText.buttons.depositNow,
-            payWithPromo: localeText.buttons.payWithPromo,
-            openResult: localeText.buttons.openResult,
-            rejectResult: localeText.buttons.rejectResult,
-            openAllTasks: localeText.buttons.openAllTasks,
-            saveResult: localeText.buttons.saveResult,
-            closeDialog: localeText.buttons.closeDialog
-          }}
-        />
+              void openOrderById(orderId, 'stages');
+            }}
+            onOpenDepositDialog={() => {
+              depositDialogOpen = true;
+            }}
+            onCloseDepositDialog={() => { depositDialogOpen = false; }}
+            onSelectDepositMethod={selectDepositMethod}
+            onConfirmPayment={confirmPayment}
+            onRevealResult={revealResult}
+            onSaveAnonymousResult={saveAnonymousResult}
+            onWalletLogin={chooseWalletMethod}
+            onPasskeyLogin={choosePasskeyMethod}
+            onAnonymousLogin={chooseAnonymousMethod}
+            labels={{
+              taskId: localeText.labels.taskId,
+              amount: localeText.labels.amount,
+              executionEstimate: localeText.labels.executionEstimate,
+              paymentInvoice: localeText.labels.paymentInvoice,
+              createNewTask: localeText.buttons.createNewTask,
+              selectedMethod: localeText.labels.selectedMethod,
+              remainingBalance: localeText.labels.remainingBalance,
+              resultTitle: localeText.labels.resultTitle
+            }}
+            paymentLabels={{
+              summaryTitle: localeText.payment.summaryTitle,
+              methodSelectTitle: localeText.payment.methodSelectTitle,
+              walletReadyTitle: localeText.payment.walletReadyTitle,
+              passkeyReadyTitle: localeText.payment.passkeyReadyTitle,
+              anonymousReadyTitle: localeText.payment.anonymousReadyTitle,
+              promoHint: localeText.payment.promoHint,
+              promoCodeLabel: localeText.labels.promoCode,
+              promoCodePlaceholder: localeText.placeholders.promoCode,
+              promoEmpty: localeText.errors.promoEmpty,
+              promoOk: localeText.errors.promoOk,
+              promoWrong: localeText.errors.promoWrong,
+              depositDialogTitle: localeText.payment.depositDialogTitle,
+              depositDialogDetail: localeText.payment.depositDialogDetail,
+              depositPendingTitle: localeText.payment.depositPendingTitle,
+              depositPendingDetail: localeText.payment.depositPendingDetail,
+              paidTitle: localeText.payment.paidTitle,
+              paidDetail: localeText.payment.paidDetail,
+              linkedWalletHint: localeText.payment.linkedWalletHint,
+              payCtaHint: localeText.payment.payCtaHint
+            }}
+            resultLabels={{
+              anonymousSaveHint: localeText.result.anonymousSaveHint
+            }}
+            authDisplay={authDisplay}
+            buttons={{
+              apply: localeText.buttons.apply,
+              payNow: localeText.buttons.payNow,
+              confirmLinkedWallet: localeText.buttons.confirmLinkedWallet,
+              depositNow: localeText.buttons.depositNow,
+              payWithPromo: localeText.buttons.payWithPromo,
+              openResult: localeText.buttons.openResult,
+              rejectResult: localeText.buttons.rejectResult,
+              openAllTasks: localeText.buttons.openAllTasks,
+              saveResult: localeText.buttons.saveResult,
+              closeDialog: localeText.buttons.closeDialog
+            }}
+          />
+        {:else}
+          <article class="kefine-card kefine-card--wide kefine-loading-panel" aria-busy="true">
+            <h2>{localeText.payment.summaryTitle}</h2>
+          </article>
+        {/if}
       </kefine-screen>
     {/if}
 
   </kefine-layout>
+  </main>
 
-  <KefineAuthDialog
-    open={authDialogOpen}
-    title={localeText.executionFlow['awaiting-auth'].title}
-    description={localeText.executionFlow['awaiting-auth'].detail}
-    walletTitle={localeText.auth.walletTitle}
-    passkeyTitle={localeText.auth.passkeyTitle}
-    privateKeyTitle={localeText.auth.privateKeyTitle}
-    showPrivateKey={showPrivateKeyAuth}
-    closeLabel={localeText.buttons.closeDialog}
-    onClose={() => { authDialogOpen = false; }}
-    onWallet={chooseWalletMethod}
-    onPasskey={choosePasskeyMethod}
-    onPrivateKey={openPrivateKeyDialog}
-  />
+  {#if AuthDialogComponent}
+    <AuthDialogComponent
+      open={authDialogOpen}
+      title={localeText.executionFlow['awaiting-auth'].title}
+      description={localeText.executionFlow['awaiting-auth'].detail}
+      walletTitle={localeText.auth.walletTitle}
+      passkeyTitle={localeText.auth.passkeyTitle}
+      privateKeyTitle={localeText.auth.privateKeyTitle}
+      showPrivateKey={showPrivateKeyAuth}
+      closeLabel={localeText.buttons.closeDialog}
+      onClose={() => { authDialogOpen = false; }}
+      onWallet={chooseWalletMethod}
+      onPasskey={choosePasskeyMethod}
+      onPrivateKey={openPrivateKeyDialog}
+    />
+  {/if}
 
-  <KefinePasskeyDialog
-    open={passkeyDialogOpen}
-    title={localeText.auth.passkeyTitle}
-    onClose={() => { passkeyDialogOpen = false; }}
-    onSuccess={loginWithPasskey}
-    onError={handlePasskeyError}
-  />
+  {#if PasskeyDialogComponent}
+    <PasskeyDialogComponent
+      open={passkeyDialogOpen}
+      title={localeText.auth.passkeyTitle}
+      onClose={() => { passkeyDialogOpen = false; }}
+      onSuccess={loginWithPasskey}
+      onError={handlePasskeyError}
+    />
+  {/if}
 
-  <KefinePrivateKeyDialog
-    open={privateKeyDialogOpen}
-    title={localeText.auth.privateKeyTitle}
-    description={localeText.auth.privateKeyDescription}
-    value={privateKeyInput}
-    placeholder="pqsk_... or -----BEGIN PRIVATE KEY-----"
-    submitLabel="Sign"
-    closeLabel={localeText.buttons.closeDialog}
-    onClose={() => { privateKeyDialogOpen = false; }}
-    onInput={(value) => { privateKeyInput = value; }}
-    onSubmit={choosePrivateKeyMethod}
-  />
+  {#if PrivateKeyDialogComponent}
+    <PrivateKeyDialogComponent
+      open={privateKeyDialogOpen}
+      title={localeText.auth.privateKeyTitle}
+      description={localeText.auth.privateKeyDescription}
+      value={privateKeyInput}
+      placeholder="pqsk_... or -----BEGIN PRIVATE KEY-----"
+      submitLabel="Sign"
+      closeLabel={localeText.buttons.closeDialog}
+      onClose={() => { privateKeyDialogOpen = false; }}
+      onInput={(value: string) => { privateKeyInput = value; }}
+      onSubmit={choosePrivateKeyMethod}
+    />
+  {/if}
 
-  <KefineContactDialog
-    open={contactDialogOpen}
-    title={localeText.contact.title}
-    description={localeText.contact.description}
-    nameLabel={localeText.contact.nameLabel}
-    emailLabel={localeText.contact.emailLabel}
-    messageLabel={localeText.contact.messageLabel}
-    nameValue={contactName}
-    emailValue={contactEmail}
-    messageValue={contactMessage}
-    namePlaceholder={localeText.placeholders.contactName}
-    emailPlaceholder={localeText.placeholders.contactEmail}
-    messagePlaceholder={localeText.placeholders.contactMessage}
-    submitLabel={localeText.buttons.sendMessage}
-    closeLabel={localeText.buttons.closeDialog}
-    onClose={() => { contactDialogOpen = false; }}
-    onNameInput={(value) => { contactName = value; }}
-    onEmailInput={(value) => { contactEmail = value; }}
-    onMessageInput={(value) => { contactMessage = value; }}
-    onSubmit={submitContactEmail}
-  />
 </kefine-shell>
 
 <style>
@@ -2046,6 +2151,10 @@ import { cubicOut } from 'svelte/easing';
     grid-template-columns: minmax(0, 1fr);
     align-items: stretch;
     padding: clamp(0.75rem, 2vw, 1.4rem);
+  }
+
+  main {
+    display: contents;
   }
 
   kefine-layout {
@@ -2099,6 +2208,17 @@ import { cubicOut } from 'svelte/easing';
     margin: 0;
   }
 
+  .kefine-loading-panel {
+    display: grid;
+    place-items: center;
+    min-height: 14rem;
+    text-align: center;
+  }
+
+  .kefine-loading-panel h2 {
+    margin: 0;
+  }
+
   @media (max-width: 760px) {
     kefine-shell {
       grid-template-columns: 1fr;
@@ -2109,6 +2229,14 @@ import { cubicOut } from 'svelte/easing';
       min-height: auto;
       width: min(980px, 100%);
       padding-top: 4.75rem;
+    }
+
+    kefine-shell[data-sidebar-expanded='true'] kefine-layout[data-mode='create'] {
+      padding-top: 21rem;
+    }
+
+    kefine-shell[data-sidebar-expanded='true'] kefine-layout[data-mode='flow'] {
+      padding-top: 20rem;
     }
   }
 </style>

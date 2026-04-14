@@ -3,6 +3,48 @@ import { expect, test } from '@playwright/test';
 import { gotoAndWaitForReady, mockOrderApi } from './helpers/kefine';
 
 test.describe('Task Controls', () => {
+  test('expanded topbar menu does not overlap the create card on narrow chromium viewport', async ({ page, browserName }) => {
+    test.skip(browserName !== 'chromium', 'viewport geometry is asserted only on chromium');
+
+    await mockOrderApi(page);
+    await page.setViewportSize({ width: 453, height: 470 });
+    await gotoAndWaitForReady(page);
+
+    const brandMark = page.getByTestId('kefine-brand-mark');
+    await brandMark.click();
+
+    const menu = page.locator('kefine-sidebar-stack');
+    await expect(menu).toBeVisible();
+
+    const metrics = await page.evaluate(() => {
+      const menu = document.querySelector('kefine-sidebar-stack') as HTMLElement | null;
+      const createCard = document.querySelector('.kefine-card') as HTMLElement | null;
+      const body = document.body;
+
+      if (!menu || !createCard) {
+        return null;
+      }
+
+      const menuRect = menu.getBoundingClientRect();
+      const cardRect = createCard.getBoundingClientRect();
+
+      return {
+        menuRight: menuRect.right,
+        menuBottom: menuRect.bottom,
+        viewportWidth: window.innerWidth,
+        cardLeft: cardRect.left,
+        cardTop: cardRect.top,
+        scrollWidth: body.scrollWidth,
+        clientWidth: body.clientWidth
+      };
+    });
+
+    expect(metrics).not.toBeNull();
+    expect(metrics!.menuRight).toBeLessThanOrEqual(metrics!.viewportWidth);
+    expect(metrics!.menuBottom).toBeLessThanOrEqual(metrics!.cardTop - 8);
+    expect(metrics!.scrollWidth).toBeLessThanOrEqual(metrics!.clientWidth + 1);
+  });
+
   test('desktop stop keeps task stopped in the shared list', async ({ page }) => {
     const api = await mockOrderApi(page);
     await gotoAndWaitForReady(page);

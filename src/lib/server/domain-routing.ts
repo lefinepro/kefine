@@ -51,6 +51,7 @@ function getDomainBucket(pathname: string): DomainBucket {
   if (
     normalizedPath === '/auth' ||
     normalizedPath === '/api/auth' ||
+    normalizedPath === '/contact' ||
     normalizedPath === '/create' ||
     normalizedPath === '/api/create' ||
     normalizedPath.startsWith('/task/') ||

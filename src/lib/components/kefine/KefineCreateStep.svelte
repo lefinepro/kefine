@@ -150,10 +150,16 @@
     return (match?.[0] ?? normalized[0] ?? 'S').toUpperCase();
   }
 
-  function getServiceAccent(title: string): string {
+  function getServiceAccentToken(title: string): string {
     const seed = Array.from(title.trim()).reduce((sum, char) => sum + char.charCodeAt(0), 0);
-    const hue = seed % 360;
-    return `hsl(${hue} 70% 54%)`;
+    const accents = ['gold', 'coral', 'rose', 'plum', 'sky', 'teal'];
+    return accents[seed % accents.length] ?? 'gold';
+  }
+
+  function getTaskFontSizeToken(size: number): 'compact' | 'balanced' | 'hero' {
+    if (size >= 1.7) return 'hero';
+    if (size >= 1.3) return 'balanced';
+    return 'compact';
   }
 
   function resizeTaskInput(_description: string) {
@@ -272,18 +278,17 @@
       return;
     }
 
-    event.preventDefault();
-
     if (event.shiftKey) {
-      void onQueueTask();
       return;
     }
 
     if (event.altKey) {
+      event.preventDefault();
       void onQueueTask();
       return;
     }
 
+    event.preventDefault();
     onSubmit();
   }
 
@@ -507,8 +512,8 @@
     </section>
   {/if}
 
-  <h2>{title}</h2>
-  <p data-part="subtitle">{subtitle}</p>
+  <h2 id="kefine-create-title">{title}</h2>
+  <p id="kefine-create-subtitle" data-part="subtitle">{subtitle}</p>
 
   <form
     data-part="form"
@@ -519,6 +524,7 @@
   >
     <fieldset data-part="exec-row" data-testid="kefine-create-form">
       <kefine-task-shell>
+        <label data-part="sr-only" for="order-title">{title}</label>
         <textarea
           id="order-title"
           bind:this={taskTextarea}
@@ -528,7 +534,9 @@
           data-multiline={isMultilineDraft}
           readonly={Boolean(template && draft.templatePromptTemplate)}
           data-testid="kefine-task-input"
-          style={`--kef-task-font-size: ${titleFontSize}rem;`}
+          data-size={getTaskFontSizeToken(titleFontSize)}
+          aria-labelledby="kefine-create-title"
+          aria-describedby="kefine-create-subtitle kefine-composer-hints"
           placeholder=""
           rows="1"
           wrap={isMultilineDraft ? 'soft' : 'off'}
@@ -545,7 +553,7 @@
         {#if !draft.description.trim()}
           <kefine-task-placeholder
             data-visible={placeholderVisible}
-            style={`--kef-task-font-size: ${titleFontSize}rem;`}
+            data-size={getTaskFontSizeToken(titleFontSize)}
             aria-hidden="true"
           >
             {animatedPlaceholder}
@@ -655,7 +663,7 @@
       </kefine-file-list>
     {/if}
 
-    <p data-part="composer-hints">{composerHints}</p>
+    <p id="kefine-composer-hints" data-part="composer-hints">{composerHints}</p>
   </form>
 
   {#if (isSearching && matchedOrders.length > 0) || totalOrders > 0}
@@ -721,7 +729,7 @@
           {#if service.imageDataUrl}
             <lef-service-card-image src={service.imageDataUrl} alt=""></lef-service-card-image>
           {:else}
-            <lef-service-card-icon style={`--service-accent: ${getServiceAccent(service.title)};`} aria-hidden="true">
+            <lef-service-card-icon data-accent={getServiceAccentToken(service.title)} aria-hidden="true">
               <lefine-text>{getServiceInitial(service.title)}</lefine-text>
             </lef-service-card-icon>
           {/if}
@@ -870,10 +878,7 @@
   lef-service-card-icon {
     display: grid;
     place-items: center;
-    background:
-      linear-gradient(180deg, color-mix(in oklab, var(--service-accent) 72%, var(--kef-bg-soft)), color-mix(in oklab, var(--service-accent) 84%, black 16%));
     color: color-mix(in oklab, white 88%, var(--kef-bg-card));
-    border: 1px solid color-mix(in oklab, var(--service-accent) 34%, transparent);
   }
 
   lef-service-card-icon {
@@ -882,8 +887,45 @@
     line-height: 1;
   }
 
+  lef-service-card-icon[data-accent='gold'] {
+    background:
+      linear-gradient(180deg, color-mix(in oklab, #d6a23d 72%, var(--kef-bg-soft)), color-mix(in oklab, #d6a23d 84%, black 16%));
+    border: 1px solid color-mix(in oklab, #d6a23d 34%, transparent);
+  }
+
+  lef-service-card-icon[data-accent='coral'] {
+    background:
+      linear-gradient(180deg, color-mix(in oklab, #d86c4b 72%, var(--kef-bg-soft)), color-mix(in oklab, #d86c4b 84%, black 16%));
+    border: 1px solid color-mix(in oklab, #d86c4b 34%, transparent);
+  }
+
+  lef-service-card-icon[data-accent='rose'] {
+    background:
+      linear-gradient(180deg, color-mix(in oklab, #cf5b7c 72%, var(--kef-bg-soft)), color-mix(in oklab, #cf5b7c 84%, black 16%));
+    border: 1px solid color-mix(in oklab, #cf5b7c 34%, transparent);
+  }
+
+  lef-service-card-icon[data-accent='plum'] {
+    background:
+      linear-gradient(180deg, color-mix(in oklab, #7f59c9 72%, var(--kef-bg-soft)), color-mix(in oklab, #7f59c9 84%, black 16%));
+    border: 1px solid color-mix(in oklab, #7f59c9 34%, transparent);
+  }
+
+  lef-service-card-icon[data-accent='sky'] {
+    background:
+      linear-gradient(180deg, color-mix(in oklab, #4d8fd8 72%, var(--kef-bg-soft)), color-mix(in oklab, #4d8fd8 84%, black 16%));
+    border: 1px solid color-mix(in oklab, #4d8fd8 34%, transparent);
+  }
+
+  lef-service-card-icon[data-accent='teal'] {
+    background:
+      linear-gradient(180deg, color-mix(in oklab, #2f9d88 72%, var(--kef-bg-soft)), color-mix(in oklab, #2f9d88 84%, black 16%));
+    border: 1px solid color-mix(in oklab, #2f9d88 34%, transparent);
+  }
+
   lef-service-card-copy {
     min-width: 0;
+    gap: 0.2rem;
   }
 
   lef-service-card-copy strong {
@@ -915,6 +957,18 @@
     margin: 0;
     max-width: 42rem;
     color: var(--lefine-text-soft);
+  }
+
+  label[data-part='sr-only'] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
   }
 
   section[data-part='template-banner'] {
@@ -1066,7 +1120,7 @@
     min-height: clamp(3.3rem, 7vw, 4rem);
     height: clamp(3.3rem, 7vw, 4rem);
     max-height: 18rem;
-    font-size: var(--kef-task-font-size, clamp(1.15rem, 2.7vw, 2.2rem));
+    font-size: clamp(1.15rem, 2.7vw, 2.2rem);
     font-weight: 740;
     line-height: 1.04;
     letter-spacing: -0.02em;
@@ -1112,7 +1166,7 @@
     padding-top: max(0.48rem, calc((clamp(3.3rem, 7vw, 4rem) - 1.04em) / 2));
     padding-bottom: max(0.48rem, calc((clamp(3.3rem, 7vw, 4rem) - 1.04em) / 2));
     color: color-mix(in oklab, var(--kef-on-primary) 78%, transparent);
-    font-size: var(--kef-task-font-size, clamp(1.15rem, 2.7vw, 2.2rem));
+    font-size: clamp(1.15rem, 2.7vw, 2.2rem);
     font-weight: 720;
     opacity: 0;
     pointer-events: none;
@@ -1124,6 +1178,21 @@
 
   kefine-task-placeholder[data-visible='true'] {
     opacity: 1;
+  }
+
+  textarea[data-part='task-input'][data-size='hero'],
+  kefine-task-placeholder[data-size='hero'] {
+    font-size: 2rem;
+  }
+
+  textarea[data-part='task-input'][data-size='balanced'],
+  kefine-task-placeholder[data-size='balanced'] {
+    font-size: 1.5rem;
+  }
+
+  textarea[data-part='task-input'][data-size='compact'],
+  kefine-task-placeholder[data-size='compact'] {
+    font-size: 1rem;
   }
 
   button[data-part='exec-button'] {
@@ -1167,11 +1236,13 @@
     min-height: 2.35rem;
     padding: 0.5rem 0.95rem;
     border-radius: 999px;
-    border: 1px solid color-mix(in oklab, var(--kef-on-primary) 10%, transparent);
-    background: color-mix(in oklab, var(--kef-bg) 76%, black 24%);
+    border: 1px solid color-mix(in oklab, var(--kef-line-strong) 88%, white 12%);
+    background: color-mix(in oklab, var(--kef-bg-card) 90%, var(--kef-bg-soft) 10%);
     color: var(--lefine-text);
     font: inherit;
-    box-shadow: inset 0 1px 0 color-mix(in oklab, white 3%, transparent);
+    box-shadow:
+      inset 0 1px 0 color-mix(in oklab, white 34%, transparent),
+      0 1px 2px color-mix(in oklab, var(--lefine-text) 4%, transparent);
   }
 
   button[data-part='composer-chip'] {
@@ -1198,7 +1269,7 @@
 
   input[data-part='price-input'],
   input[data-part='currency-input'] {
-    background: color-mix(in oklab, var(--kef-bg-card) 70%, black 30%);
+    background: color-mix(in oklab, var(--kef-bg-card) 94%, white 6%);
   }
 
   input[data-part='file-input'] {
@@ -1359,12 +1430,13 @@
       grid-template-columns: minmax(0, 1fr);
     }
 
-    textarea[data-part='task-input'] {
-      font-size: min(var(--kef-task-font-size, 1rem), 0.82rem);
-    }
-
-    kefine-task-placeholder {
-      font-size: min(var(--kef-task-font-size, 1rem), 0.82rem);
+    textarea[data-part='task-input'][data-size='hero'],
+    textarea[data-part='task-input'][data-size='balanced'],
+    textarea[data-part='task-input'][data-size='compact'],
+    kefine-task-placeholder[data-size='hero'],
+    kefine-task-placeholder[data-size='balanced'],
+    kefine-task-placeholder[data-size='compact'] {
+      font-size: 0.82rem;
     }
 
     p[data-part='composer-hints'] {

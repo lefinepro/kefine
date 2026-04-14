@@ -7,6 +7,7 @@
   import { KEFINE_TEXT_RU } from '$lib/constants/kefine-locale-ru';
   import { parseStoredOrders } from '$lib/components/kefine/kefine-workflow';
   import type { OrderView, TaskAccessMode } from '$lib/components/kefine/kefine-workflow';
+  import type { KefineLocaleText } from '$lib/constants/kefine-locale';
   import type { Profile } from '$lib/types/user';
   import {
     ensureProfileForSession,
@@ -16,8 +17,9 @@
     buildProfilePath
   } from '$lib/profile/profile-storage';
 
-  const localeText =
-    typeof document !== 'undefined' && document.documentElement.lang === 'ru' ? KEFINE_TEXT_RU : KEFINE_TEXT_EN;
+  const localeText: KefineLocaleText =
+    (typeof document !== 'undefined' && document.documentElement.lang === 'ru' ? KEFINE_TEXT_RU : KEFINE_TEXT_EN) as
+      unknown as KefineLocaleText;
 
   let order = $state<OrderView | null>(null);
   let ownerProfile = $state<Profile | null>(null);

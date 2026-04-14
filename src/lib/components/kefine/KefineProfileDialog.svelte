@@ -146,7 +146,7 @@
   }
 </script>
 
-<KefineModal open={open} onClose={onClose} closeLabel="Close" width="min(58rem, calc(100vw - 2rem))">
+<KefineModal open={open} onClose={onClose} closeLabel="Close" width="xwide">
   <kefine-profile-dialog>
     <kefine-profile-header>
       <lefine-box>

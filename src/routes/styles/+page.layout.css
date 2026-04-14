@@ -488,12 +488,29 @@
     background: color-mix(in oklab, var(--kef-bg-soft) 82%, transparent);
   }
 
-  lef-flow-progress-fill {
+  lef-flow-progress-track progress {
+    width: 100%;
+    height: 100%;
+    display: block;
+    appearance: none;
+    border: 0;
+    background: transparent;
+  }
+
+  lef-flow-progress-track progress::-webkit-progress-bar {
+    background: transparent;
+  }
+
+  lef-flow-progress-track progress::-webkit-progress-value {
+    border-radius: inherit;
+    background: linear-gradient(90deg, color-mix(in oklab, var(--kef-primary) 52%, white), var(--kef-primary));
+  }
+
+  lef-flow-progress-track progress::-moz-progress-bar {
     display: block;
     height: 100%;
     border-radius: inherit;
     background: linear-gradient(90deg, color-mix(in oklab, var(--kef-primary) 52%, white), var(--kef-primary));
-    transition: width 320ms ease;
   }
 
   lef-flow-stage-copy {

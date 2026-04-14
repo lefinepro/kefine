@@ -53,7 +53,7 @@ export const DEFAULT_PUBLIC_RUNTIME_CONFIG: KefinePublicRuntimeConfig = {
   app: {
     name: 'Lefine',
     supportEmail: 'order@lefine.pro',
-    githubUrl: 'https://github.com/lefine',
+    githubUrl: 'https://github.com/lefinepro',
     reownProjectId: '909acf523be03f300ad21cca95d966c8',
     socialLinks: {
       mastodon: 'https://mastodon.social/@lefine',

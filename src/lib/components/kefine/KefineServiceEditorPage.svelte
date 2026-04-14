@@ -4,7 +4,7 @@
   import KefineChipEditorRow from '$lib/components/kefine/KefineChipEditorRow.svelte';
   import KefineChipRow from '$lib/components/kefine/KefineChipRow.svelte';
   import KefineSolverCohortDialog from '$lib/components/kefine/KefineSolverCohortDialog.svelte';
-  import { getLocaleText, kefineLocale, type KefineLocale } from '$lib/constants/kefine-locale';
+import { kefineLocale, kefineLocaleText, type KefineLocale } from '$lib/constants/kefine-locale';
   import { buildCanonicalServicePath, buildProfilePath, buildProfileServicePath, normalizeProfileResourceSlug } from '$lib/profile/profile-storage';
   import { readBrowserPublicRuntimeConfig } from '$lib/config/public-config';
   import {
@@ -32,7 +32,7 @@
     service?: ProfileTemplate | null;
   } = $props();
 
-  const localeText = $derived(getLocaleText($kefineLocale));
+  const localeText = $derived($kefineLocaleText);
 
   let title = $state('');
   let slugInput = $state('');
