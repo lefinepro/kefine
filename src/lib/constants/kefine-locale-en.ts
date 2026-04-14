@@ -16,6 +16,9 @@ export const KEFINE_TEXT_EN = {
     languageRussian: 'Russian',
     languageArmenian: 'Armenian',
     theme: {
+      auto: 'Auto',
+      light: 'Light',
+      dark: 'Dark',
       switchToDark: 'Switch to dark theme',
       switchToLight: 'Switch to light theme'
     },
@@ -52,8 +55,34 @@ export const KEFINE_TEXT_EN = {
       updated: 'Last updated',
       backToApp: 'Back to app'
     },
-    githubUrl: 'https://github.com/lefine',
-    contactEmail: 'order@lefine.pro'
+    githubUrl: 'https://github.com/lefinepro',
+    contactEmail: 'order@lefine.pro',
+    emailDialog: {
+      title: 'Email Lefine',
+      description: 'Choose how to contact us.',
+      copy: 'Copy email',
+      copied: 'Copied',
+      openClient: 'Open mail client'
+    },
+    contactPage: {
+      title: 'Contact us',
+      description: 'Use email for support, orders, payments, or document-related questions.',
+      openEmail: 'Open mail client',
+      openGithub: 'Open GitHub',
+      statusLabel: 'Status',
+      statusValue: 'Available for support and orders',
+      supportFeature: 'Order support',
+      paymentFeature: 'Payments and invoices',
+      docsFeature: 'Documents and legal requests',
+      responseFeature: 'Async email response',
+      privacyCard: 'Privacy and legal terms',
+      mailClientHint: 'Open your default email client',
+      contactsTitle: 'Contacts',
+      servicesTitle: 'Services',
+      emailFact: 'Email',
+      phoneFact: 'Phone',
+      countryFact: 'Country'
+    }
   },
   create: {
     title: 'Describe a technical task',

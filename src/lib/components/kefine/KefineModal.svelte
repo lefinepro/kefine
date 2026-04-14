@@ -8,7 +8,7 @@
     onClose,
     closeLabel = 'Close',
     showClose = true,
-    width = 'min(34rem, calc(100vw - 2rem))',
+    width = 'default',
     tone = 'default',
     children
   }: {
@@ -16,7 +16,7 @@
     onClose: () => void;
     closeLabel?: string;
     showClose?: boolean;
-    width?: string;
+    width?: 'narrow' | 'default' | 'medium' | 'wide' | 'xwide';
     tone?: 'default' | 'dark';
     children?: Snippet;
   } = $props();
@@ -52,10 +52,10 @@
 
 <dialog
   data-tone={tone}
+  data-width={width}
   bind:this={dialogEl}
   onclose={onClose}
   onclick={handleBackdropClick}
-  style={`--kefine-modal-width: ${width};`}
 >
   {#if showClose}
     <button
@@ -75,7 +75,7 @@
 
 <style>
   dialog {
-    width: var(--kefine-modal-width);
+    width: min(34rem, calc(100vw - 2rem));
     border: none;
     border-radius: 1.25rem;
     padding: 0;
@@ -89,6 +89,22 @@
     background: color-mix(in oklab, #17110d 96%, black 4%);
     color: color-mix(in oklab, #ead7b3 84%, white 16%);
     box-shadow: 0 1.25rem 3rem color-mix(in oklab, black 38%, transparent);
+  }
+
+  dialog[data-width='narrow'] {
+    width: min(30rem, calc(100vw - 2rem));
+  }
+
+  dialog[data-width='medium'] {
+    width: min(32rem, calc(100vw - 2rem));
+  }
+
+  dialog[data-width='wide'] {
+    width: min(42rem, calc(100vw - 2rem));
+  }
+
+  dialog[data-width='xwide'] {
+    width: min(58rem, calc(100vw - 2rem));
   }
 
   dialog::backdrop {

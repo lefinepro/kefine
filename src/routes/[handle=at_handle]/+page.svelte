@@ -19,7 +19,7 @@
     saveTemplateToCrater
   } from '$lib/templates/template-api';
   import { resolveTemplateLocalizedContent } from '$lib/templates/template-content';
-  import { getLocaleText, kefineLocale, setKefineLocale, type KefineLocale } from '$lib/constants/kefine-locale';
+  import { kefineLocale, kefineLocaleText, setKefineLocale, type KefineLocale } from '$lib/constants/kefine-locale';
   import {
     addProfileBonus,
     buildCanonicalServicePath,
@@ -42,9 +42,10 @@
     ProfileTemplate
   } from '$lib/types/user';
 
-  const localeText = $derived(getLocaleText($kefineLocale));
+  const localeText = $derived($kefineLocaleText);
   const passkeySession = $derived($passkeySessionStore);
   const BRAND_HOME_NAVIGATION_STORAGE_KEY = 'kefine-brand-home-navigation';
+  const THEME_STORAGE_KEY = 'kefine-theme';
 
   let profile = $state<Profile | null>(null);
   let viewerProfile = $state<Profile | null>(null);
@@ -66,7 +67,8 @@
   let firstName = $state('');
   let surname = $state('');
   let leftNavExpanded = $state(false);
-  let isDarkTheme = $state(false);
+  let themeMode = $state<'light' | 'dark' | 'auto'>('auto');
+  let systemPrefersDark = $state(false);
 
   const requestedHandle = $derived(page.params.handle ?? '');
   const isOwner = $derived(Boolean(profile && viewerProfile && profile.id === viewerProfile.id));
@@ -113,9 +115,9 @@
   const onboardingStepIndex = $derived(
     onboardingStep === 'identity' ? 1 : onboardingStep === 'card' ? 2 : onboardingStep === 'socials' ? 3 : 3
   );
-  const topbarThemeActionLabel = $derived(
-    isDarkTheme ? localeText.topbar.theme.switchToLight : localeText.topbar.theme.switchToDark
-  );
+  const resolvedTheme = $derived(themeMode === 'auto' ? (systemPrefersDark ? 'dark' : 'light') : themeMode);
+  const isDarkTheme = $derived(resolvedTheme === 'dark');
+  const topbarThemeActionLabel = $derived(themeMode === 'auto' ? localeText.topbar.theme.auto : isDarkTheme ? localeText.topbar.theme.dark : localeText.topbar.theme.light);
 
   function navigateToHomeFromBrand() {
     if (browser) {
@@ -130,25 +132,25 @@
       id: 'mastodon' as const,
       label: localeText.topbar.socialLinks.mastodon.label,
       href: runtimeConfig.app.socialLinks.mastodon,
-      icon: 'mdi:mastodon'
+      icon: 'mastodon' as const
     },
     {
       id: 'discord' as const,
       label: localeText.topbar.socialLinks.discord.label,
       href: runtimeConfig.app.socialLinks.discord,
-      icon: 'mdi:discord'
+      icon: 'discord' as const
     },
     {
       id: 'linkedin' as const,
       label: localeText.topbar.socialLinks.linkedin.label,
       href: runtimeConfig.app.socialLinks.linkedin,
-      icon: 'mdi:linkedin'
+      icon: 'linkedin' as const
     },
     {
       id: 'telegram' as const,
       label: localeText.topbar.socialLinks.telegram.label,
       href: runtimeConfig.app.socialLinks.telegram,
-      icon: 'mdi:telegram'
+      icon: 'telegram' as const
     }
   ]);
   const sidebarLegalLinks = $derived([
@@ -161,11 +163,6 @@
       id: 'terms' as const,
       label: localeText.topbar.legalLinks.terms,
       href: '/terms'
-    },
-    {
-      id: 'company' as const,
-      label: localeText.topbar.legalLinks.company,
-      href: '/legal-information'
     }
   ]);
   const cardDigits = $derived(cardNumber.replace(/\D+/g, '').slice(0, 16));
@@ -226,10 +223,10 @@
     return (match?.[0] ?? normalized[0] ?? 'S').toUpperCase();
   }
 
-  function getServiceAccent(title: string): string {
+  function getServiceAccentToken(title: string): string {
     const seed = Array.from(title.trim()).reduce((sum, char) => sum + char.charCodeAt(0), 0);
-    const hue = seed % 360;
-    return `hsl(${hue} 70% 54%)`;
+    const accents = ['gold', 'coral', 'rose', 'plum', 'sky', 'teal'];
+    return accents[seed % accents.length] ?? 'gold';
   }
 
   function syncDraftStateFromProfile(nextProfile: Profile | null) {
@@ -301,9 +298,30 @@
       return;
     }
 
-    isDarkTheme = document.documentElement.dataset.kefineTheme === 'dark';
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    systemPrefersDark = mediaQuery.matches;
+    const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
+    themeMode = storedTheme === 'dark' || storedTheme === 'light' || storedTheme === 'auto' ? storedTheme : 'auto';
+    const handleThemePreferenceChange = (event: MediaQueryListEvent) => {
+      systemPrefersDark = event.matches;
+    };
+    mediaQuery.addEventListener('change', handleThemePreferenceChange);
     hydrateAuthStateFromSession();
     loadPasskeySession();
+
+    return () => {
+      mediaQuery.removeEventListener('change', handleThemePreferenceChange);
+    };
+  });
+
+  $effect(() => {
+    if (!browser) {
+      return;
+    }
+
+    document.documentElement.setAttribute('data-kefine-theme', resolvedTheme);
+    document.documentElement.setAttribute('lang', $kefineLocale);
+    localStorage.setItem(THEME_STORAGE_KEY, themeMode);
   });
 
   async function loadProfilePageState() {
@@ -612,16 +630,6 @@
     }
   }
 
-  function toggleProfileTheme() {
-    if (!browser) {
-      return;
-    }
-
-    isDarkTheme = !isDarkTheme;
-    document.documentElement.dataset.kefineTheme = isDarkTheme ? 'dark' : 'light';
-    localStorage.setItem('kefine-theme', isDarkTheme ? 'dark' : 'light');
-  }
-
   async function verifyProfileCard() {
     if (!browser || !profile || !isOwner) {
       return;
@@ -855,6 +863,10 @@
       githubLabel={localeText.topbar.githubLabel}
       githubUrl={runtimeConfig.app.githubUrl}
       themeLabel={topbarThemeActionLabel}
+      themeMode={themeMode}
+      themeAutoLabel={localeText.topbar.theme.auto}
+      themeLightLabel={localeText.topbar.theme.light}
+      themeDarkLabel={localeText.topbar.theme.dark}
       signInLabel={localeText.topbar.signIn}
       signedInLabel={localeText.topbar.signedIn}
       authenticatedLabel={viewerProfile ? `@${viewerProfile.primaryHandle}` : null}
@@ -868,20 +880,18 @@
       languageRussianLabel={localeText.topbar.languageRussian}
       languageArmenianLabel={localeText.topbar.languageArmenian}
       socialLinks={sidebarSocialLinks}
+      showSocialLinks={false}
       legalLinks={sidebarLegalLinks}
-      onToggleExpand={() => { leftNavExpanded = !leftNavExpanded; }}
+      onExpandedChange={(expanded) => { leftNavExpanded = expanded; }}
       onBrandClick={navigateToHomeFromBrand}
-      onOpenEmailDraft={() => {
-        if (browser) {
-          window.location.href = 'mailto:hello@lefine.pro';
-        }
-      }}
       onOpenEmailDialog={() => {
         if (browser) {
-          window.location.href = 'mailto:hello@lefine.pro';
+          window.location.assign('/contact');
         }
       }}
-      onTheme={toggleProfileTheme}
+      onThemeChange={(theme) => {
+        themeMode = theme;
+      }}
       onAuth={() => {
         if (isOwner) {
           void signOut();
@@ -1242,7 +1252,7 @@
                 {:else}
                   <lefine-box
                     class="profile-template-card__icon"
-                    style={`--service-accent: ${getServiceAccent(title)};`}
+                    data-accent={getServiceAccentToken(title)}
                     aria-hidden="true"
                   >
                     <lefine-text>{getServiceInitial(title)}</lefine-text>
@@ -1791,9 +1801,6 @@
     display: grid;
     place-items: center;
     flex: 0 0 auto;
-    background:
-      radial-gradient(circle at top left, color-mix(in oklab, white 20%, var(--service-accent)), transparent 62%),
-      linear-gradient(180deg, color-mix(in oklab, var(--service-accent) 92%, black 8%), color-mix(in oklab, var(--service-accent) 72%, black 28%));
     color: white;
     box-shadow: inset 0 1px 0 color-mix(in oklab, white 18%, transparent);
   }
@@ -1802,6 +1809,42 @@
     font-size: 1rem;
     font-weight: 700;
     line-height: 1;
+  }
+
+  .profile-template-card__icon[data-accent='gold'] {
+    background:
+      radial-gradient(circle at top left, color-mix(in oklab, white 20%, #d6a23d), transparent 62%),
+      linear-gradient(180deg, color-mix(in oklab, #d6a23d 92%, black 8%), color-mix(in oklab, #d6a23d 72%, black 28%));
+  }
+
+  .profile-template-card__icon[data-accent='coral'] {
+    background:
+      radial-gradient(circle at top left, color-mix(in oklab, white 20%, #d86c4b), transparent 62%),
+      linear-gradient(180deg, color-mix(in oklab, #d86c4b 92%, black 8%), color-mix(in oklab, #d86c4b 72%, black 28%));
+  }
+
+  .profile-template-card__icon[data-accent='rose'] {
+    background:
+      radial-gradient(circle at top left, color-mix(in oklab, white 20%, #cf5b7c), transparent 62%),
+      linear-gradient(180deg, color-mix(in oklab, #cf5b7c 92%, black 8%), color-mix(in oklab, #cf5b7c 72%, black 28%));
+  }
+
+  .profile-template-card__icon[data-accent='plum'] {
+    background:
+      radial-gradient(circle at top left, color-mix(in oklab, white 20%, #7f59c9), transparent 62%),
+      linear-gradient(180deg, color-mix(in oklab, #7f59c9 92%, black 8%), color-mix(in oklab, #7f59c9 72%, black 28%));
+  }
+
+  .profile-template-card__icon[data-accent='sky'] {
+    background:
+      radial-gradient(circle at top left, color-mix(in oklab, white 20%, #4d8fd8), transparent 62%),
+      linear-gradient(180deg, color-mix(in oklab, #4d8fd8 92%, black 8%), color-mix(in oklab, #4d8fd8 72%, black 28%));
+  }
+
+  .profile-template-card__icon[data-accent='teal'] {
+    background:
+      radial-gradient(circle at top left, color-mix(in oklab, white 20%, #2f9d88), transparent 62%),
+      linear-gradient(180deg, color-mix(in oklab, #2f9d88 92%, black 8%), color-mix(in oklab, #2f9d88 72%, black 28%));
   }
 
   .profile-template-card__link,

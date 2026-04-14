@@ -243,7 +243,7 @@
           </lef-flow-progress-controls>
         </lef-flow-progress-meta>
         <lef-flow-progress-track aria-hidden="true">
-          <lef-flow-progress-fill style={`width: ${vpnProgressPercent}%`}></lef-flow-progress-fill>
+          <progress value={vpnProgressPercent} max="100"></progress>
         </lef-flow-progress-track>
 
         <lef-flow-stage-copy in:mistDissolve out:mistDissolve>
@@ -409,7 +409,7 @@
           <lefine-text>{genericProgressPercent}%</lefine-text>
         </lef-flow-progress-meta>
         <lef-flow-progress-track aria-hidden="true">
-          <lef-flow-progress-fill style={`width: ${genericProgressPercent}%`}></lef-flow-progress-fill>
+          <progress value={genericProgressPercent} max="100"></progress>
         </lef-flow-progress-track>
 
         <lef-flow-stage-copy>

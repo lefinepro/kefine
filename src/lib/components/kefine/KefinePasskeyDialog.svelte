@@ -19,7 +19,7 @@
 
 </script>
 
-<KefineModal open={open} onClose={onClose} showClose={false} width="min(32rem, calc(100vw - 2rem))">
+<KefineModal open={open} onClose={onClose} showClose={false} width="medium">
   <PasskeyLogin
     title={title}
     description="Enter your handle once. If a passkey already exists, sign in. If the server is unavailable, a local passkey profile will be saved."

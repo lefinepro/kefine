@@ -1,3 +1,7 @@
+lef-app-shell {
+  display: contents;
+}
+
 :root {
   /* Design tokens — TAC namespace prefix: --kef- */
   --kef-color-primary: #7a4b2a;

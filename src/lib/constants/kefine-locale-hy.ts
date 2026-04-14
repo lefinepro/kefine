@@ -24,6 +24,9 @@ export const KEFINE_TEXT_HY = {
     signIn: 'Մուտք',
     signedIn: 'Մուտք գործած',
     theme: {
+      auto: 'Ավտո',
+      light: 'Բաց',
+      dark: 'Մուգ',
       switchToDark: 'Անցնել մուգ թեմայի',
       switchToLight: 'Անցնել բաց թեմայի'
     },
@@ -35,6 +38,25 @@ export const KEFINE_TEXT_HY = {
       related: 'Կապակցված իրավական էջեր',
       updated: 'Թարմացվել է',
       backToApp: 'Վերադառնալ հավելված'
+    },
+    contactPage: {
+      title: 'Կապ մեզ հետ',
+      description: 'Օգտագործեք email-ը support-ի, պատվերների, վճարումների և փաստաթղթերի հարցերով։',
+      openEmail: 'Բացել փոստային հաճախորդը',
+      openGithub: 'Բացել GitHub-ը',
+      statusLabel: 'Կարգավիճակ',
+      statusValue: 'Հասանելի է support-ի և պատվերների համար',
+      supportFeature: 'Պատվերների support',
+      paymentFeature: 'Վճարումներ և հաշիվներ',
+      docsFeature: 'Փաստաթղթեր և իրավական հարցումներ',
+      responseFeature: 'Պատասխան email-ով',
+      privacyCard: 'Privacy և իրավական պայմաններ',
+      mailClientHint: 'Բացել լռելյայն փոստային հաճախորդը',
+      contactsTitle: 'Կոնտակտներ',
+      servicesTitle: 'Ծառայություններ',
+      emailFact: 'Էլ. փոստ',
+      phoneFact: 'Հեռախոս',
+      countryFact: 'Երկիր'
     }
   },
   create: {
