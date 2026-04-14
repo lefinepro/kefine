@@ -1,0 +1,48 @@
+serverAddr = "193.32.177.159"
+serverPort = 7000
+
+[auth]
+method = "token"
+token = "{{ .Envs.FRP_TOKEN }}"
+
+[[proxies]]
+name = "kefine-dev-crater"
+type = "http"
+localIP = "127.0.0.1"
+localPort = 3001
+customDomains = ["dev-proxy.col.pub"]
+locations = [
+  "/.well-known",
+  "/actor",
+  "/auth",
+  "/api/auth",
+  "/create",
+  "/inbox",
+  "/nodeinfo",
+  "/outbox",
+  "/passkeys",
+  "/pay",
+  "/payment",
+  "/payment-config",
+  "/projects",
+  "/status",
+  "/templates",
+  "/u"
+]
+healthCheck.type = "http"
+healthCheck.path = "/payment-config"
+healthCheck.timeoutSeconds = 3
+healthCheck.maxFailed = 3
+healthCheck.intervalSeconds = 10
+
+[[proxies]]
+name = "kefine-dev-frontend"
+type = "http"
+localIP = "127.0.0.1"
+localPort = 5173
+customDomains = ["dev-proxy.col.pub"]
+healthCheck.type = "http"
+healthCheck.path = "/"
+healthCheck.timeoutSeconds = 3
+healthCheck.maxFailed = 3
+healthCheck.intervalSeconds = 10

@@ -13,6 +13,35 @@ type OrderFallback = {
 const FREE_ORDER_COST = 0;
 const FREE_ORDER_CURRENCY = 'USD';
 
+function extractErrorMessage(payload: unknown, fallback: string): string {
+  if (!payload || typeof payload !== 'object') {
+    return fallback;
+  }
+
+  const record = payload as Record<string, unknown>;
+  const directError = record.error;
+
+  if (typeof directError === 'string' && directError.trim()) {
+    return directError;
+  }
+
+  if (directError && typeof directError === 'object') {
+    const nested = directError as Record<string, unknown>;
+    if (typeof nested.message === 'string' && nested.message.trim()) {
+      return nested.message;
+    }
+
+    if (typeof nested.error === 'string' && nested.error.trim()) {
+      return nested.error;
+    }
+  }
+
+  if (typeof record.message === 'string' && record.message.trim()) {
+    return record.message;
+  }
+
+  return fallback;
+}
 function normalizeOrderStatusId(orderId: string): string {
   const normalized = orderId.trim();
   if (!normalized) {
@@ -225,8 +254,7 @@ export async function submitWorkspaceOrder(args: {
     const parsed = response.ok ? readCreateResponse(responseBody) : null;
     
     if (!response.ok || !parsed) {
-      const errorData = responseBody as Record<string, unknown> | null;
-      const message = (errorData?.error as string) || args.localeText.errors.fallback;
+      const message = extractErrorMessage(responseBody, args.localeText.errors.fallback);
       return {
         kind: 'error',
         message,

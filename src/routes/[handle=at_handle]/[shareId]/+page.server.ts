@@ -12,11 +12,11 @@ export const load: PageServerLoad = async ({ params, fetch }) => {
   }
 
   const response = await fetch(
-    `/api/kefine/templates/${encodeURIComponent(defaultActorHandle)}/${encodeURIComponent(params.shareId)}`
+    `/api/services/${encodeURIComponent(params.shareId)}`
   ).catch(() => null);
 
   if (response?.ok) {
-    throw redirect(308, `/${encodeURIComponent(params.shareId)}`);
+    throw redirect(308, `/services/${encodeURIComponent(params.shareId)}`);
   }
 
   return {};

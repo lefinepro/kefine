@@ -9,6 +9,7 @@
     closeLabel = 'Close',
     showClose = true,
     width = 'min(34rem, calc(100vw - 2rem))',
+    tone = 'default',
     children
   }: {
     open: boolean;
@@ -16,6 +17,7 @@
     closeLabel?: string;
     showClose?: boolean;
     width?: string;
+    tone?: 'default' | 'dark';
     children?: Snippet;
   } = $props();
 
@@ -49,7 +51,7 @@
 </script>
 
 <dialog
-  class="kefine-modal-shell"
+  data-tone={tone}
   bind:this={dialogEl}
   onclose={onClose}
   onclick={handleBackdropClick}
@@ -58,7 +60,6 @@
   {#if showClose}
     <button
       type="button"
-      class="kefine-modal-shell__close"
       data-variant="close"
       aria-label={closeLabel}
       onclick={requestClose}
@@ -67,13 +68,13 @@
     </button>
   {/if}
 
-  <lefine-box class="kefine-modal-shell__body">
+  <lef-modal-body>
     {@render children?.()}
-  </lefine-box>
+  </lef-modal-body>
 </dialog>
 
 <style>
-  .kefine-modal-shell {
+  dialog {
     width: var(--kefine-modal-width);
     border: none;
     border-radius: 1.25rem;
@@ -84,12 +85,18 @@
     box-shadow: 0 1.25rem 3rem color-mix(in oklab, var(--lefine-text, #2e2317) 12%, transparent);
   }
 
-  .kefine-modal-shell::backdrop {
+  dialog[data-tone='dark'] {
+    background: color-mix(in oklab, #17110d 96%, black 4%);
+    color: color-mix(in oklab, #ead7b3 84%, white 16%);
+    box-shadow: 0 1.25rem 3rem color-mix(in oklab, black 38%, transparent);
+  }
+
+  dialog::backdrop {
     background: rgba(15, 23, 42, 0.32);
     backdrop-filter: blur(4px);
   }
 
-  .kefine-modal-shell__close {
+  dialog > button[data-variant='close'] {
     position: absolute;
     top: 0.8rem;
     right: 0.8rem;
@@ -97,7 +104,8 @@
     display: inline-flex;
   }
 
-  .kefine-modal-shell__body {
+  lef-modal-body {
+    display: block;
     position: relative;
     padding: 1.1rem 1.2rem 1.2rem;
   }

@@ -43,9 +43,13 @@ interface PasskeyStartResponse<T> {
 }
 
 const PRIVATE_KEY_PREFIX = 'pqsk_';
-const PUBLIC_KEY_PREFIX = 'pqpk_';
+const ML_DSA_65_SECRET_KEY_LENGTH = 4032;
+const ML_DSA_65_PUBLIC_DER_PREFIX = new Uint8Array([
+	0x30, 0x82, 0x07, 0xb2, 0x30, 0x0b, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04,
+	0x03, 0x12, 0x03, 0x82, 0x07, 0xa1, 0x00
+]);
 
-function normalizePrivateKey(value: string): string {
+function normalizePrivateKeyInput(value: string): string {
 	return value
 		.trim()
 		.replace(/\\r\\n/g, '\n')
@@ -58,31 +62,72 @@ function normalizePrivateKey(value: string): string {
 		.join('\n');
 }
 
-async function sha256Hex(value: string): Promise<string> {
+function decodePemBody(pem: string): Uint8Array {
+	const base64 = pem.replace(/-----[^-]+-----/g, '').replace(/\s+/g, '');
+	if (!base64) {
+		throw new Error('Private key PEM is empty.');
+	}
+
+	const binary = atob(base64);
+	return Uint8Array.from(binary, (char) => char.charCodeAt(0));
+}
+
+function encodePem(label: string, bytes: Uint8Array): string {
+	const binary = Array.from(bytes, (byte) => String.fromCharCode(byte)).join('');
+	const base64 = btoa(binary);
+	const lines = base64.match(/.{1,64}/g) ?? [];
+	return [`-----BEGIN ${label}-----`, ...lines, `-----END ${label}-----`].join('\n');
+}
+
+function encodeKeyString(value: string, prefix: string): string {
 	const bytes = new TextEncoder().encode(value);
-	const digest = await crypto.subtle.digest('SHA-256', bytes);
-	return Array.from(new Uint8Array(digest))
-		.map((byte) => byte.toString(16).padStart(2, '0'))
-		.join('');
+	let binary = '';
+	for (const byte of bytes) {
+		binary += String.fromCharCode(byte);
+	}
+
+	return `${prefix}${btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')}`;
+}
+
+function decodeKeyString(value: string, prefix: string): string {
+	const encoded = value.slice(prefix.length);
+	if (!encoded) {
+		return '';
+	}
+
+	const padded = encoded + '='.repeat((4 - (encoded.length % 4)) % 4);
+	const binary = atob(padded.replace(/-/g, '+').replace(/_/g, '/'));
+	return Array.from(binary, (char) => String.fromCharCode(char.charCodeAt(0))).join('');
 }
 
 export async function derivePublicKeyFromPrivateKey(privateKey: string): Promise<string> {
-	const normalized = privateKey.trim();
-	if (!normalized) {
-		return '';
+	const normalizedInput = normalizePrivateKeyInput(privateKey);
+	if (!normalizedInput) {
+		throw new Error('Private key is required.');
 	}
 
-	if (normalized.startsWith(PRIVATE_KEY_PREFIX) && normalized.length === 30) {
-		return `${PUBLIC_KEY_PREFIX}${normalized.slice(PRIVATE_KEY_PREFIX.length)}`;
+	const normalized = normalizedInput.startsWith(PRIVATE_KEY_PREFIX)
+		? normalizePrivateKeyInput(decodeKeyString(normalizedInput, PRIVATE_KEY_PREFIX))
+		: normalizedInput;
+
+	if (!normalized.includes('BEGIN PRIVATE KEY')) {
+		throw new Error('Paste a compact pqsk key or the full PEM private key string.');
 	}
 
-	const normalizedPrivateKey = normalizePrivateKey(normalized);
-	if (!normalizedPrivateKey) {
-		return '';
+	const privateKeyDer = decodePemBody(normalized);
+	if (privateKeyDer.length < ML_DSA_65_SECRET_KEY_LENGTH) {
+		throw new Error('Private key PEM is too short for ML-DSA-65.');
 	}
 
-	const digest = await sha256Hex(normalizedPrivateKey);
-	return `${PUBLIC_KEY_PREFIX}${digest.slice(0, 25)}`;
+	const { ml_dsa65 } = await import('@noble/post-quantum/ml-dsa.js');
+	const secretKey = privateKeyDer.slice(privateKeyDer.length - ML_DSA_65_SECRET_KEY_LENGTH);
+	const publicKey = ml_dsa65.getPublicKey(secretKey);
+	const publicKeyDer = new Uint8Array(ML_DSA_65_PUBLIC_DER_PREFIX.length + publicKey.length);
+	publicKeyDer.set(ML_DSA_65_PUBLIC_DER_PREFIX, 0);
+	publicKeyDer.set(publicKey, ML_DSA_65_PUBLIC_DER_PREFIX.length);
+
+	const publicKeyPem = encodePem('PUBLIC KEY', publicKeyDer);
+	return encodeKeyString(publicKeyPem, 'pqpk_');
 }
 
 async function postJson<T>(input: RequestInfo | URL, body: unknown): Promise<T> {
@@ -170,7 +215,7 @@ export async function finishAuthentication(
 export async function loginWithPrivateKey(privateKey?: string): Promise<PublicKeyAuthSuccess> {
 	const publicKey = typeof privateKey === 'string' ? await derivePublicKeyFromPrivateKey(privateKey) : '';
 
-	return postJson<PublicKeyAuthSuccess>('/api/auth', {
+	return postJson<PublicKeyAuthSuccess>(buildCraterClientUrl('/auth'), {
 		publickey: {
 			key: publicKey
 		}

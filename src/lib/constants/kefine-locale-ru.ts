@@ -71,6 +71,8 @@ export const KEFINE_TEXT_RU = {
     addPrice: '+ цена',
     fileCount: (count: number) => `${count} файл${count === 1 ? '' : count < 5 ? 'а' : 'ов'}`,
     composerHints: 'Enter отправляет, Alt+Enter ставит в фон, Shift+Enter делает новую строку',
+    serviceSetupTitle: 'Настройте сервис перед запуском',
+    serviceSetupSubtitle: 'Проверьте переменные шаблона, при необходимости измените значения и только потом запускайте сервис.',
     pinnedServicesTitle: 'Закреплённые сервисы',
     pinnedServicesSubtitle: 'Начните с настроенных точек входа сервиса перед созданием произвольной задачи.',
     pathsTitle: 'Пути задачи',
@@ -179,7 +181,8 @@ export const KEFINE_TEXT_RU = {
     walletTitle: 'Wallet / Social',
     walletDetail: 'Используйте MetaMask, WalletConnect, Email или Google, чтобы выбрать аккаунт плательщика.',
     passkeyTitle: 'Passkey',
-    privateKeyTitle: 'Public key',
+    privateKeyTitle: 'Private key',
+    privateKeyDescription: 'Вставьте compact pqsk key или полный PEM private key. Строка с экранированными \\n тоже поддерживается. Браузер локально выводит ML-DSA public key и отправляет только public key string.',
     passkeyDetail: 'Используйте аккаунт платформы или продолжите через email, если профиля ещё нет.',
     anonymousTitle: 'Гость',
     anonymousDetail: 'Продолжить без профиля и оплатить через депозит.',
@@ -294,18 +297,6 @@ export const KEFINE_TEXT_RU = {
         detail: 'Lefine ведёт исполнение и открывает финальный пакет доступа или результат.'
       }
     }
-  },
-  vpnFlow: {
-    discoveryTitle: 'Выясняем, какой VPN сервис лучше',
-    discoveryDetail: 'Сравниваем провайдеров, регионы и ограничения по протоколам, прежде чем выбрать вариант.',
-    pricingTitle: 'Узнаём цену',
-    pricingDetail: 'Выбранный решатель оценивает стоимость настройки и ожидаемое время выполнения.',
-    deployingTitle: 'Сервер подобран, начинаем разворачивать сервис',
-    deployingDetail: 'Идёт подготовка окружения и настройка VPN-сервиса на выбранном сервере.',
-    readyTitle: 'Сервис готов',
-    readyDetail: 'Виджет результата подготовлен из результата solver и пока остаётся заблюренным.',
-    widgetTitle: 'Виджет VPN-сервиса',
-    widgetSummary: 'Результат сервиса подготовлен и позже будет подключён к payload crater.'
   },
   errors: {
     orderRequired: 'Текст задачи обязателен',

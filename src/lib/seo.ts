@@ -17,7 +17,7 @@ export type SeoMeta = {
 
 const DEFAULT_TITLE = 'Lefine | From task to best-fit solution.';
 const DEFAULT_DESCRIPTION =
-  'Lefine is an Automated Freelance Exchange: you describe the task, and we match the solution path that fits it best.';
+  'Lefine is an Automated Freelance Marketplace: you describe the task, and we match the solution path that fits it best.';
 const DEFAULT_IMAGE_PATH = '/og-card.svg';
 
 function resolveLegalMeta(pathname: string): { id: LegalPageId; title: string; description: string } | null {
@@ -93,12 +93,20 @@ export function getSeoMeta(url: URL, sourceConfig: unknown = DEFAULT_PUBLIC_RUNT
 
   const isTaskFlow =
     pathname === '/create' ||
+    pathname === '/api/create' ||
     pathname.startsWith('/task/') ||
     pathname.startsWith('/order/') ||
     pathname.startsWith('/payment/') ||
+    pathname.startsWith('/api/payment/') ||
     pathname.startsWith('/pay/') ||
+    pathname.startsWith('/api/pay/') ||
+    pathname.startsWith('/auth/') ||
     pathname === '/status' ||
     pathname.startsWith('/status/') ||
+    pathname === '/api/status' ||
+    pathname.startsWith('/api/status/') ||
+    pathname === '/api/payment-config' ||
+    pathname.startsWith('/api/services') ||
     pathname.startsWith('/passkeys/') ||
     pathname.startsWith('/api/kefine/');
 

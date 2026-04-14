@@ -1,7 +1,8 @@
 require "kemal"
 require "json"
-require "http/client"
 require "../order_queue"
+require "../activitypub/types"
+require "./inbox"
 require "../utils/config"
 
 module Crater
@@ -9,6 +10,11 @@ module Crater
     module Orders
       def self.register(config : Utils::Config)
         post "/create" do |env|
+          env.response.content_type = "application/json"
+          create_order(env, config)
+        end
+
+        post "/api/create" do |env|
           env.response.content_type = "application/json"
           create_order(env, config)
         end
@@ -22,37 +28,19 @@ module Crater
             next({error: "Missing order id"}.to_json)
           end
 
-          record = OrderQueue.find_order(order_id)
-          if record.nil?
-            env.response.status_code = 404
-            next({error: "Order not found", orderId: order_id}.to_json)
+          next render_status(env, order_id)
+        end
+
+        get "/api/status/:id" do |env|
+          env.response.content_type = "application/json"
+
+          order_id = env.params.url["id"]?
+          if order_id.nil? || order_id.empty?
+            env.response.status_code = 400
+            next({error: "Missing order id"}.to_json)
           end
 
-          {
-            orderId: record.id,
-            status: record.status,
-            solver: record.solver,
-            solverName: record.solver_name,
-            solverHandle: record.solver_handle,
-            solverProfileUrl: record.solver_profile_url,
-            title: record.title,
-            description: record.description || "",
-            estimatedCost: record.estimated_cost,
-            currency: record.currency,
-            executionEstimate: record.execution_estimate,
-            uiScenario: record.ui_scenario,
-            labels: record.labels,
-            paymentUrl: record.payment_url,
-            templateId: record.template_id,
-            templateSlug: record.template_slug,
-            templateAuthorProfileId: record.template_author_profile_id,
-            templateAuthorUsername: record.template_author_username,
-            templateAuthorDisplayName: record.template_author_display_name,
-            templatePricingMode: record.template_pricing_mode,
-            templatePricingValue: record.template_pricing_value,
-            createdAt: record.created_at,
-            updatedAt: record.updated_at
-          }.to_json
+          next render_status(env, order_id)
         end
 
         get "/status" do |env|
@@ -64,40 +52,39 @@ module Crater
             next({error: "Missing order id"}.to_json)
           end
 
+          next render_status(env, order_id)
+        end
+
+        get "/api/status" do |env|
+          env.response.content_type = "application/json"
+
+          order_id = env.params.query["id"]? || env.params.query["orderId"]?
+          if order_id.nil? || order_id.empty?
+            env.response.status_code = 400
+            next({error: "Missing order id"}.to_json)
+          end
+
+          next render_status(env, order_id)
+        end
+
+        get "/pay/:id" do |env|
+          order_id = env.params.url["id"]?
+          if order_id.nil? || order_id.empty?
+            env.response.status_code = 400
+            next({error: "Missing order id"}.to_json)
+          end
+
           record = OrderQueue.find_order(order_id)
           if record.nil?
             env.response.status_code = 404
             next({error: "Order not found", orderId: order_id}.to_json)
           end
 
-          {
-            orderId: record.id,
-            status: record.status,
-            solver: record.solver,
-            solverName: record.solver_name,
-            solverHandle: record.solver_handle,
-            solverProfileUrl: record.solver_profile_url,
-            title: record.title,
-            description: record.description || "",
-            estimatedCost: record.estimated_cost,
-            currency: record.currency,
-            executionEstimate: record.execution_estimate,
-            uiScenario: record.ui_scenario,
-            labels: record.labels,
-            paymentUrl: record.payment_url,
-            templateId: record.template_id,
-            templateSlug: record.template_slug,
-            templateAuthorProfileId: record.template_author_profile_id,
-            templateAuthorUsername: record.template_author_username,
-            templateAuthorDisplayName: record.template_author_display_name,
-            templatePricingMode: record.template_pricing_mode,
-            templatePricingValue: record.template_pricing_value,
-            createdAt: record.created_at,
-            updatedAt: record.updated_at
-          }.to_json
+          target = record.payment_url || "#{config.exchange_url}/pay/#{URI.encode_path(order_id)}"
+          env.redirect(target)
         end
 
-        get "/pay/:id" do |env|
+        get "/api/pay/:id" do |env|
           order_id = env.params.url["id"]?
           if order_id.nil? || order_id.empty?
             env.response.status_code = 400
@@ -124,20 +111,17 @@ module Crater
         end
 
         record = begin
-          OrderQueue.submit_rest(payload, config)
+          activity = OrderQueue.activity_for_payload(payload, config)
+          Handlers::Inbox.accept_activity(activity, config)
         rescue ex : OrderQueue::BadRequest
+          env.response.status_code = 400
+          return({error: ex.message}.to_json)
+        rescue ex : OrderQueue::Error::InvalidActivity
           env.response.status_code = 400
           return({error: ex.message}.to_json)
         rescue ex : Exception
           env.response.status_code = 500
           return({error: "Failed to create order", reason: ex.message}.to_json)
-        end
-
-        target = config.order_queue_inbox
-        if !target.empty? && target != config.actor_inbox
-          spawn do
-            forward_to_order_queue(target, OrderQueue.activity_for(record, record.status, config).to_json)
-          end
         end
 
         env.response.status_code = 202
@@ -211,17 +195,41 @@ module Crater
         raw.split(',').map(&.strip).reject(&.empty?)
       end
 
-      private def self.forward_to_order_queue(target : String, payload : String) : Nil
-        return if target.empty?
+      private def self.render_status(env, order_id : String) : String
+        latest_activity = OrderQueue.latest_by_order(order_id)
+        return latest_activity.to_json unless latest_activity.nil?
 
-        headers = HTTP::Headers{
-          "Content-Type" => "application/activity+json",
-          "Accept"       => "application/activity+json",
-        }
+        record = OrderQueue.find_order(order_id)
+        if record.nil?
+          env.response.status_code = 404
+          return({error: "Order not found", orderId: order_id}.to_json)
+        end
 
-        HTTP::Client.post(target, headers: headers, body: payload)
-      rescue
-        # Intentionally ignore forwarding failures while keeping local queue operational
+        {
+          orderId: record.id,
+          status: record.status,
+          solver: record.solver,
+          solverName: record.solver_name,
+          solverHandle: record.solver_handle,
+          solverProfileUrl: record.solver_profile_url,
+          title: record.title,
+          description: record.description || "",
+          estimatedCost: record.estimated_cost,
+          currency: record.currency,
+          executionEstimate: record.execution_estimate,
+          uiScenario: record.ui_scenario,
+          labels: record.labels,
+          paymentUrl: record.payment_url,
+          templateId: record.template_id,
+          templateSlug: record.template_slug,
+          templateAuthorProfileId: record.template_author_profile_id,
+          templateAuthorUsername: record.template_author_username,
+          templateAuthorDisplayName: record.template_author_display_name,
+          templatePricingMode: record.template_pricing_mode,
+          templatePricingValue: record.template_pricing_value,
+          createdAt: record.created_at,
+          updatedAt: record.updated_at
+        }.to_json
       end
     end
   end

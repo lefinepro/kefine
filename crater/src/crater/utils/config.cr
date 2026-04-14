@@ -63,7 +63,7 @@ module Crater
           log_level: read_string(backend, "logLevel", "info"),
           actor_handle: read_string(default_actor, "handle", "api"),
           actor_display_name: read_string(default_actor, "displayName", "API"),
-          actor_private_key_pem: read_string(default_actor, "privateKeyPem", "")
+          actor_private_key_pem: read_env_or_string("KEFINE_PRIVATEKEY_DEFAULT", default_actor, "privateKeyPem", "")
         )
       end
 
@@ -142,6 +142,10 @@ module Crater
 
       def rp_id : String
         URI.parse(crater_url).host || "localhost"
+      end
+
+      def resolved_actor_private_key_pem : String
+        actor_private_key_pem
       end
     end
   end

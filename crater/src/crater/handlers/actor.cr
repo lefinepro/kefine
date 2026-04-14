@@ -2,6 +2,7 @@ require "kemal"
 require "json"
 require "../activitypub/types"
 require "../utils/config"
+require "../utils/actor_keys"
 
 module Crater
   module Handlers
@@ -9,6 +10,8 @@ module Crater
       def self.register(config : Utils::Config)
         get "/actor" do |env|
           env.response.content_type = "application/activity+json"
+          public_key_pem = Utils::ActorKeys.derive_public_key_pem(config.resolved_actor_private_key_pem) || ""
+          public_key_string = Utils::ActorKeys.derive_public_key_string(config.resolved_actor_private_key_pem)
 
           {
             "@context" => [
@@ -28,7 +31,8 @@ module Crater
             "publicKey" => {
               "id"           => "#{config.actor_id}#main-key",
               "owner"        => config.actor_id,
-              "publicKeyPem" => "",
+              "publicKeyPem" => public_key_pem,
+              "publicKeyString" => public_key_string,
             },
           }.to_json
         end

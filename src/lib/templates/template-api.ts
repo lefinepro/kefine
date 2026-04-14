@@ -1,4 +1,5 @@
 import type { KefineLocale } from '$lib/constants/kefine-locale';
+import { readBrowserPublicRuntimeConfig } from '$lib/config/public-config';
 import type {
   ProfileTemplate,
   ProfileTemplateBonusMode,
@@ -38,7 +39,78 @@ type TemplatePayload = {
   bonusValue: number;
 };
 
-const TEMPLATE_PROXY_BASE = '/api/kefine/templates';
+const TEMPLATE_PROXY_BASE = '/api/templates';
+const SERVICE_PROXY_BASE = '/api/services';
+
+function buildDefaultVpnTemplate(handle: string): ProfileTemplate {
+  const now = new Date().toISOString();
+  const promptTemplate =
+    'Create and deliver a VPN access package.\n\nNeed:\n- region: :region\n- protocol: WireGuard or VLESS\n- include setup steps for mobile and desktop';
+
+  return {
+    id: `default:${handle}:vpn-service`,
+    profileId: `default:${handle}`,
+    authorHandle: handle,
+    authorDisplayName: handle.toUpperCase(),
+    slug: 'vpn-service',
+    title: 'VPN Service',
+    description: 'A ready-to-use service for delivering VPN access with connection instructions.',
+    baseLocale: 'en',
+    promptTemplate,
+    promptVariables: [
+      { key: 'region', defaultValue: '' }
+    ],
+    translations: {
+      en: {
+        title: 'VPN Service',
+        description: 'A ready-to-use service for delivering VPN access with connection instructions.',
+        promptTemplate
+      },
+      ru: {
+        title: 'VPN сервис',
+        description: 'Настроенный сервис для выдачи VPN-доступа с инструкцией по подключению.',
+        promptTemplate
+      },
+      hy: {
+        title: 'VPN ծառայություն',
+        description: 'Պատրաստի ծառայություն VPN հասանելիություն տրամադրելու և միացման քայլերը ուղարկելու համար։',
+        promptTemplate
+      }
+    },
+    prefillTitle: '',
+    prefillDescription: promptTemplate,
+    prefillEstimatedCost: 15,
+    prefillCurrency: 'USD',
+    prefillFiles: [],
+    tags: ['vpn', 'wireguard'],
+    pricingMode: 'fixed',
+    pricingValue: 15,
+    visibility: 'public',
+    isPublished: true,
+    bonusEnabled: false,
+    bonusMode: 'fixed',
+    bonusValue: 0,
+    createdAt: now,
+    updatedAt: now
+  };
+}
+
+function getDefaultActorHandle(): string {
+  return readBrowserPublicRuntimeConfig().defaultActor.handle.trim().toLowerCase() || 'api';
+}
+
+function isDefaultActorHandle(handle: string): boolean {
+  return handle.replace(/^@+/, '').trim().toLowerCase() === getDefaultActorHandle();
+}
+
+function mergeDefaultVpnTemplate(handle: string, templates: ProfileTemplate[]): ProfileTemplate[] {
+  if (!isDefaultActorHandle(handle)) {
+    return templates;
+  }
+
+  const hasVpn = templates.some((item) => item.slug.trim().toLowerCase() === 'vpn-service');
+  return hasVpn ? templates : [buildDefaultVpnTemplate(handle.replace(/^@+/, '').trim().toLowerCase()), ...templates];
+}
 
 function normalizeVisibility(value: unknown, isPublished: boolean): ProfileTemplateVisibility {
   return value === 'public' || (value !== 'private' && isPublished) ? 'public' : 'private';
@@ -142,42 +214,61 @@ function mapTemplate(value: unknown): ProfileTemplate | null {
 
 export async function fetchTemplatesByHandle(baseUrl: string, handle: string): Promise<ProfileTemplate[]> {
   void baseUrl;
-  const response = await fetch(`${TEMPLATE_PROXY_BASE}/${encodeURIComponent(handle.replace(/^@+/, ''))}`);
+  const normalizedHandle = handle.replace(/^@+/, '');
+  const response = await fetch(
+    isDefaultActorHandle(normalizedHandle)
+      ? SERVICE_PROXY_BASE
+      : `${TEMPLATE_PROXY_BASE}/${encodeURIComponent(normalizedHandle)}`
+  );
   if (!response.ok) {
-    return [];
+    return mergeDefaultVpnTemplate(handle, []);
   }
 
   const payload = (await response.json().catch(() => [])) as unknown[];
-  return Array.isArray(payload) ? payload.map(mapTemplate).filter((item): item is ProfileTemplate => item !== null) : [];
+  const templates = Array.isArray(payload) ? payload.map(mapTemplate).filter((item): item is ProfileTemplate => item !== null) : [];
+  return mergeDefaultVpnTemplate(handle, templates);
 }
 
 export async function fetchPublicTemplates(baseUrl: string, limit = 24): Promise<ProfileTemplate[]> {
   void baseUrl;
   const normalizedLimit = Number.isFinite(limit) ? Math.max(1, Math.min(48, Math.round(limit))) : 24;
-  const response = await fetch(`${TEMPLATE_PROXY_BASE}?limit=${normalizedLimit}`);
+  const response = await fetch(`${SERVICE_PROXY_BASE}?limit=${normalizedLimit}`);
   if (!response.ok) {
-    return [];
+    return mergeDefaultVpnTemplate(getDefaultActorHandle(), []);
   }
 
   const payload = (await response.json().catch(() => [])) as unknown[];
-  return Array.isArray(payload) ? payload.map(mapTemplate).filter((item): item is ProfileTemplate => item !== null) : [];
+  const templates = Array.isArray(payload) ? payload.map(mapTemplate).filter((item): item is ProfileTemplate => item !== null) : [];
+  return mergeDefaultVpnTemplate(getDefaultActorHandle(), templates);
 }
 
 export async function fetchTemplateByHandleAndSlug(baseUrl: string, handle: string, slug: string): Promise<ProfileTemplate | null> {
   void baseUrl;
+  const normalizedHandle = handle.replace(/^@+/, '');
   const response = await fetch(
-    `${TEMPLATE_PROXY_BASE}/${encodeURIComponent(handle.replace(/^@+/, ''))}/${encodeURIComponent(slug)}`
+    isDefaultActorHandle(normalizedHandle)
+      ? `${SERVICE_PROXY_BASE}/${encodeURIComponent(slug)}`
+      : `${TEMPLATE_PROXY_BASE}/${encodeURIComponent(normalizedHandle)}/${encodeURIComponent(slug)}`
   );
   if (!response.ok) {
-    return null;
+    return isDefaultActorHandle(handle) && slug.trim().toLowerCase() === 'vpn-service'
+      ? buildDefaultVpnTemplate(handle.replace(/^@+/, '').trim().toLowerCase())
+      : null;
   }
 
-  return mapTemplate(await response.json().catch(() => null));
+  const template = mapTemplate(await response.json().catch(() => null));
+  if (template) {
+    return template;
+  }
+
+  return isDefaultActorHandle(handle) && slug.trim().toLowerCase() === 'vpn-service'
+    ? buildDefaultVpnTemplate(handle.replace(/^@+/, '').trim().toLowerCase())
+    : null;
 }
 
 export async function saveTemplateToCrater(baseUrl: string, payload: TemplatePayload): Promise<ProfileTemplate | null> {
   void baseUrl;
-  const response = await fetch(TEMPLATE_PROXY_BASE, {
+  const response = await fetch(isDefaultActorHandle(payload.authorHandle) ? SERVICE_PROXY_BASE : TEMPLATE_PROXY_BASE, {
     method: payload.id ? 'PUT' : 'POST',
     headers: {
       'Content-Type': 'application/json',

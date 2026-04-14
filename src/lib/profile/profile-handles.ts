@@ -52,7 +52,7 @@ export function isDefaultActorHandle(username: string, defaultActorHandle?: stri
 export function buildCanonicalServicePath(username: string, slug: string, defaultActorHandle?: string | null): string {
   const normalizedSlug = slug.trim();
   if (isDefaultActorHandle(username, defaultActorHandle)) {
-    return `/${encodeURIComponent(normalizedSlug)}`;
+    return `/services/${encodeURIComponent(normalizedSlug)}`;
   }
 
   return buildProfileServicePath(username, normalizedSlug);

@@ -116,9 +116,9 @@ module Crater
 
     private def self.ensure_default_templates(config : Utils::Config) : Nil
       normalized_handle = config.actor_username
-      return unless find_by_handle_and_slug(config, normalized_handle, "vpn-service").nil?
+      return unless find_by_handle_and_slug_without_setup(config, normalized_handle, "vpn-service").nil?
 
-      upsert(config, default_vpn_template_payload(config))
+      upsert_without_setup(config, default_vpn_template_payload(config))
     end
 
     private def self.default_vpn_template_payload(config : Utils::Config) : JSON::Any
@@ -129,10 +129,8 @@ module Crater
 
       Need:
       - region: :region
-      - duration: :duration
       - protocol: WireGuard or VLESS
       - include setup steps for mobile and desktop
-      - send a short Telegram-ready summary after delivery
       PROMPT
 
       JSON.parse({
@@ -147,7 +145,6 @@ module Crater
         "promptTemplate" => prompt_template,
         "promptVariables" => [
           {"key" => "region", "defaultValue" => ""},
-          {"key" => "duration", "defaultValue" => ""},
         ],
         "translations" => {
           "en" => {
@@ -184,6 +181,10 @@ module Crater
 
     def self.upsert(config : Utils::Config, payload : JSON::Any) : TemplateRecord
       setup(config)
+      upsert_without_setup(config, payload)
+    end
+
+    private def self.upsert_without_setup(config : Utils::Config, payload : JSON::Any) : TemplateRecord
       source = payload.as_h
       now = current_time
       id = source["id"]?.try(&.as_s?) || UUID.random.to_s
@@ -281,6 +282,10 @@ module Crater
 
     def self.find_by_handle_and_slug(config : Utils::Config, handle : String, slug : String) : TemplateRecord?
       setup(config)
+      find_by_handle_and_slug_without_setup(config, handle, slug)
+    end
+
+    private def self.find_by_handle_and_slug_without_setup(config : Utils::Config, handle : String, slug : String) : TemplateRecord?
       database(config).query_one?(
         "SELECT id, profile_id, author_handle, author_display_name, slug, title, description, image_data_url, base_locale, prompt_template, prompt_variables_json, translations_json, prefill_title, prefill_description, prefill_estimated_cost, prefill_currency, prefill_files_json, tags_json, pricing_mode, pricing_value, visibility, is_published, bonus_enabled, bonus_mode, bonus_value, created_at, updated_at FROM profile_templates WHERE author_handle = $1 AND slug = $2",
         handle,

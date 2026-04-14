@@ -1,5 +1,6 @@
 import {
   normalizeText,
+  resolvePublicRuntimeConfig,
   readBrowserPublicRuntimeConfig,
   type KefinePublicRuntimeConfig
 } from './public-config';
@@ -9,9 +10,7 @@ export function getPublicRuntimeConfig(): KefinePublicRuntimeConfig {
 }
 
 export function getCraterBaseUrl(): string {
-  if (typeof window === 'undefined') {
-    return '';
-  }
-
-  return normalizeText(window.__KEFINE_CRATER_BASE_URL__);
+  const runtimeConfig =
+    typeof window === 'undefined' ? resolvePublicRuntimeConfig({}) : readBrowserPublicRuntimeConfig();
+  return normalizeText(runtimeConfig.backend.craterBaseUrl);
 }

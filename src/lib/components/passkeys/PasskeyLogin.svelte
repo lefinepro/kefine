@@ -249,13 +249,14 @@
   }
 </script>
 
-<section class="passkey-login">
-  <header class="passkey-login__header">
+<lef-passkey-login>
+  <lef-passkey-header>
     <h2>{title}</h2>
     <p>{description}</p>
-  </header>
+  </lef-passkey-header>
 
-  <label class="passkey-login__field">
+  <lef-passkey-field>
+    <label>
     <lefine-text>Handle or username</lefine-text>
     <input
       type="text"
@@ -263,14 +264,15 @@
       autocomplete="username webauthn"
       autocapitalize="off"
       spellcheck="false"
-      placeholder="discord-handle"
+      placeholder="handle"
     />
-  </label>
+    </label>
+  </lef-passkey-field>
 
-  <lefine-box class="passkey-login__actions">
+  <lef-passkey-actions>
     <button
       type="button"
-      class="passkey-login__primary"
+      data-role="primary"
       onclick={handleLogin}
       disabled={status === 'loading'}
       aria-busy={status === 'loading'}
@@ -280,60 +282,61 @@
 
     <button
       type="button"
-      class="passkey-login__secondary"
+      data-role="secondary"
       onclick={handleRegister}
       disabled={status === 'loading'}
     >
       {status === 'loading' ? 'Creating passkey...' : 'Create passkey'}
     </button>
-  </lefine-box>
+  </lef-passkey-actions>
 
   {#if hasExistingPasskey && existingSession}
-    <p class="passkey-login__hint">Saved locally for @{existingSession.username}</p>
+    <lef-passkey-hint>Saved locally for @{existingSession.username}</lef-passkey-hint>
   {/if}
 
   {#if status === 'success'}
-    <p class="passkey-login__status" role="status" aria-live="polite">Passkey ready.</p>
+    <lef-passkey-status role="status" aria-live="polite">Passkey ready.</lef-passkey-status>
   {/if}
 
   {#if errorMessage}
-    <p class="passkey-login__error" role="alert">{errorMessage}</p>
+    <lef-passkey-error role="alert">{errorMessage}</lef-passkey-error>
   {/if}
-</section>
+</lef-passkey-login>
 
 <style>
-  .passkey-login {
+  lef-passkey-login {
     display: grid;
     gap: 1rem;
   }
 
-  .passkey-login__header {
+  lef-passkey-header {
     display: grid;
     gap: 0.35rem;
   }
 
-  .passkey-login__header h2,
-  .passkey-login__header p {
+  lef-passkey-header h2,
+  lef-passkey-header p {
     margin: 0;
   }
 
-  .passkey-login__header p {
+  lef-passkey-header p {
     color: var(--lefine-text-soft, #6f6254);
   }
 
-  .passkey-login__field {
+  lef-passkey-field,
+  lef-passkey-field label {
     display: grid;
     gap: 0.45rem;
   }
 
-  .passkey-login__field lefine-text {
+  lef-passkey-field lefine-text {
     font-size: 0.84rem;
     font-weight: 700;
     color: var(--lefine-text-soft, #6f6254);
     letter-spacing: 0.01em;
   }
 
-  .passkey-login__field input {
+  lef-passkey-field input {
     width: 100%;
     min-height: 3.6rem;
     border: 0;
@@ -348,21 +351,20 @@
       0 6px 18px color-mix(in oklab, var(--lefine-text, #2e2317) 4%, transparent);
   }
 
-  .passkey-login__field input:focus {
+  lef-passkey-field input:focus {
     outline: none;
     box-shadow:
       inset 0 0 0 1px color-mix(in oklab, var(--kef-primary, #6f5540) 42%, transparent),
       0 0 0 2px color-mix(in oklab, var(--kef-primary, #6f5540) 12%, transparent);
   }
 
-  .passkey-login__actions {
+  lef-passkey-actions {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 0.7rem;
   }
 
-  .passkey-login__primary,
-  .passkey-login__secondary {
+  lef-passkey-actions button {
     min-height: 3.2rem;
     border: 0;
     border-radius: 0.95rem;
@@ -372,40 +374,40 @@
     cursor: pointer;
   }
 
-  .passkey-login__primary {
+  lef-passkey-actions button[data-role='primary'] {
     background: var(--kef-primary, #6f5540);
     color: var(--kef-on-primary, #f7f3ec);
   }
 
-  .passkey-login__secondary {
+  lef-passkey-actions button[data-role='secondary'] {
     background: color-mix(in oklab, var(--kef-bg-soft, #efe7dc) 80%, white);
     color: var(--lefine-text, #2e2317);
   }
 
-  .passkey-login__primary:disabled,
-  .passkey-login__secondary:disabled {
+  lef-passkey-actions button:disabled {
     opacity: 0.65;
     cursor: default;
   }
 
-  .passkey-login__hint,
-  .passkey-login__status,
-  .passkey-login__error {
+  lef-passkey-hint,
+  lef-passkey-status,
+  lef-passkey-error {
+    display: block;
     margin: 0;
     font-size: 0.9rem;
   }
 
-  .passkey-login__hint,
-  .passkey-login__status {
+  lef-passkey-hint,
+  lef-passkey-status {
     color: var(--lefine-text-soft, #6f6254);
   }
 
-  .passkey-login__error {
+  lef-passkey-error {
     color: var(--kef-error, #8f5b52);
   }
 
   @media (max-width: 640px) {
-    .passkey-login__actions {
+    lef-passkey-actions {
       grid-template-columns: 1fr;
     }
   }

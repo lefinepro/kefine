@@ -1,4 +1,4 @@
-const DEFAULT_ORDER_PROXY_BASE_PATH = '';
+const DEFAULT_ORDER_PROXY_BASE_PATH = '/api';
 
 function normalizeProxyBasePath(value: string): string {
   const trimmed = value.trim();

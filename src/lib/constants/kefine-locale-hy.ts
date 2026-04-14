@@ -54,6 +54,8 @@ export const KEFINE_TEXT_HY = {
     addPrice: '+ գին',
     fileCount: (count: number) => `${count} ֆայլ`,
     composerHints: 'Enter-ը ուղարկում է, Alt+Enter-ը ուղարկում է ֆոնում, Shift+Enter-ը նոր տող է ավելացնում',
+    serviceSetupTitle: 'Կարգավորեք ծառայությունը մինչև մեկնարկը',
+    serviceSetupSubtitle: 'Ստուգեք template-ի փոփոխականները, փոխեք արժեքները, եթե պետք է, և հետո միայն գործարկեք ծառայությունը։',
     pinnedServicesTitle: 'Ամրացված ծառայություններ',
     pinnedServicesSubtitle: 'Սկսեք կարգավորված service entry point-երից, ապա միայն գրեք ազատ ձևի առաջադրանք։',
     recentTasks: 'Վերջին առաջադրանքներ',
@@ -138,6 +140,8 @@ export const KEFINE_TEXT_HY = {
     connectPasskeyContinue: 'Կապել և շարունակել',
     continueAuthenticated: 'Շարունակել նույնականացված պրոֆիլով',
     signedIn: 'Դուք մուտք եք գործել։ Կարող եք ուղարկել առաջադրանքը։',
+    privateKeyTitle: 'Private key',
+    privateKeyDescription: 'Տեղադրեք compact pqsk key կամ ամբողջական PEM private key։ Escaped \\n տարբերակն էլ է ընդունվում։ Բրաուզերը local ձևով ստանում է ML-DSA public key-ը և ուղարկում միայն public key string-ը։',
     walletTitle: 'Wallet / Social',
     walletDetail: 'Օգտագործեք MetaMask, WalletConnect, Email կամ Google՝ վճարող հաշիվը ընտրելու համար։',
     passkeyDetail: 'Օգտագործեք հարթակի հաշիվը կամ շարունակեք email-ով, եթե passkey պրոֆիլ դեռ չկա։',
@@ -192,19 +196,6 @@ export const KEFINE_TEXT_HY = {
         detail: 'Lefine-ը վարում է իրականացումը և բացում է վերջնական access package-ը կամ արդյունքը։'
       }
     }
-  },
-  vpnFlow: {
-    ...KEFINE_TEXT_EN.vpnFlow,
-    discoveryTitle: 'Որոշում ենք լավագույն VPN ծառայությունը',
-    discoveryDetail: 'Համեմատում ենք մատակարարներին, տարածաշրջաններն ու պրոտոկոլային սահմանափակումները նախքան ընտրությունը։',
-    pricingTitle: 'Որոշում ենք գինը',
-    pricingDetail: 'Ընտրված solver-ը գնահատում է տեղակայման արժեքն ու կատարման պատուհանը։',
-    deployingTitle: 'Սերվերը ընտրված է, սկսում ենք տեղակայումը',
-    deployingDetail: 'Տեղակայումը ընթացքի մեջ է, և ընտրված սերվերի վրա կարգավորվում է VPN ծառայությունը։',
-    readyTitle: 'Ծառայությունը պատրաստ է',
-    readyDetail: 'Արդյունքի widget-ը պատրաստվել է solver-ի պատասխանից և այժմ մնում է թաքցված։',
-    widgetTitle: 'VPN ծառայության widget',
-    widgetSummary: 'Ծառայության արդյունքը պատրաստ է և կհասնի crater payload-ի միջոցով։'
   },
   errors: {
     ...KEFINE_TEXT_EN.errors,

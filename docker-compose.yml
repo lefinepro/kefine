@@ -5,6 +5,11 @@ services:
       POSTGRES_DB: kefine
       POSTGRES_USER: kefine
       POSTGRES_PASSWORD: kefine
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kefine -d kefine"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
     ports:
       - "5432:5432"
     volumes:
@@ -15,7 +20,23 @@ services:
       context: .
       dockerfile: crater/Dockerfile
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://kefine:kefine@postgres:5432/kefine
+      KEFINE_PRIVATEKEY_DEFAULT: ${KEFINE_PRIVATEKEY_DEFAULT:-}
+    working_dir: /app
+    command: ["crystal", "run", "src/crater.cr"]
+    volumes:
+      - ./crater/src:/app/src
+      - ./crater/shard.yml:/app/shard.yml:ro
+      - ./crater/shard.lock:/app/shard.lock:ro
+      - ./kefine.config.json:/app/kefine.config.json:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3001/health >/dev/null"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
     ports:
       - "3001:3001"
 
@@ -24,7 +45,11 @@ services:
       context: .
       dockerfile: Containerfile
     depends_on:
-      - crater
+      crater:
+        condition: service_healthy
+    environment:
+      CRATER_BASE_URL: http://crater:3001
+      EXCHANGE_BASE_URL: http://crater:3001
     ports:
       - "5173:5173"
 

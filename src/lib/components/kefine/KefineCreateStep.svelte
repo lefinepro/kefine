@@ -11,6 +11,7 @@
   let {
     draft,
     template,
+    serviceSetup = null,
     pinnedServices,
     pinnedServicesTitle,
     pinnedServicesSubtitle,
@@ -52,6 +53,10 @@
   }: {
     draft: DraftOrder;
     template: TemplatePresentation | null;
+    serviceSetup?: {
+      title: string;
+      subtitle: string;
+    } | null;
     pinnedServices: Array<{
       id: string;
       href: string;
@@ -113,6 +118,7 @@
   let tagEditorOpen = $state(false);
   let tagInputValue = $state('');
   let taskTextarea = $state<HTMLTextAreaElement | null>(null);
+  let tagInput = $state<HTMLInputElement | null>(null);
   let fileInput = $state<HTMLInputElement | null>(null);
   let filePreviews = $state<Map<number, string>>(new Map());
   let touchStopTimers = new Map<string, () => void>();
@@ -430,6 +436,16 @@
     tagEditorOpen = false;
   }
 
+  $effect(() => {
+    if (!tagEditorOpen || !tagInput) {
+      return;
+    }
+
+    queueMicrotask(() => {
+      tagInput?.focus();
+    });
+  });
+
   function removeTag(tag: string) {
     onTagsChange?.((draft.tags ?? []).filter((item) => item !== tag));
   }
@@ -466,6 +482,13 @@
         <strong>@{template.authorHandle}</strong>
         <lefine-text>{template.pricingMode === 'percent' ? `${template.pricingValue}%` : `$${template.pricingValue.toFixed(2)}`}</lefine-text>
       </lefine-box>
+    </section>
+  {/if}
+
+  {#if serviceSetup && template}
+    <section data-part="service-setup-banner">
+      <strong>{serviceSetup.title}</strong>
+      <p>{serviceSetup.subtitle}</p>
     </section>
   {/if}
 
@@ -569,11 +592,11 @@
       {/if}
       {#if tagEditorOpen}
         <input
+          bind:this={tagInput}
           bind:value={tagInputValue}
           data-part="tag-input"
           placeholder="tag"
           maxlength="32"
-          autofocus
           onkeydown={handleTagInputKeydown}
           onblur={() => {
             if (tagInputValue.trim()) {
@@ -686,48 +709,44 @@
 </article>
 
 {#if pinnedServices.length > 0}
-  <section class="kefine-services-showcase" data-part="pinned-services">
-    <lefine-box class="kefine-services-head">
+  <lef-services-showcase>
+    <lef-services-head>
       <strong>{pinnedServicesTitle}</strong>
       <p>{pinnedServicesSubtitle}</p>
-    </lefine-box>
+    </lef-services-head>
 
-    <lefine-box class="kefine-services-list">
+    <lef-services-list>
       {#each pinnedServices as service (service.id)}
-        <a class="kefine-service-card" href={service.href}>
+        <lef-service-card href={service.href}>
           {#if service.imageDataUrl}
-            <img class="kefine-service-card__image" src={service.imageDataUrl} alt="" />
+            <lef-service-card-image src={service.imageDataUrl} alt=""></lef-service-card-image>
           {:else}
-            <lefine-box
-              class="kefine-service-card__icon"
-              style={`--service-accent: ${getServiceAccent(service.title)};`}
-              aria-hidden="true"
-            >
+            <lef-service-card-icon style={`--service-accent: ${getServiceAccent(service.title)};`} aria-hidden="true">
               <lefine-text>{getServiceInitial(service.title)}</lefine-text>
-            </lefine-box>
+            </lef-service-card-icon>
           {/if}
 
-          <lefine-box class="kefine-service-card__copy">
+          <lef-service-card-copy>
             <strong>{service.title}</strong>
             <p>{service.description}</p>
             <lefine-text>@{service.authorHandle}</lefine-text>
-          </lefine-box>
-        </a>
+          </lef-service-card-copy>
+        </lef-service-card>
       {/each}
-    </lefine-box>
-  </section>
+    </lef-services-list>
+  </lef-services-showcase>
 {/if}
 
-<section class="kefine-afe-showcase" data-part="below-fold">
-  <lefine-box class="kefine-afe-layout">
+<lef-afe-showcase>
+  <lef-afe-layout>
     {#if afeIntroCard}
-      <article class="kefine-afe-intro">
-        <p class="kefine-afe-intro__eyebrow">{afeIntroCard.title}</p>
+      <lef-afe-intro>
+        <lef-afe-intro-eyebrow>{afeIntroCard.title}</lef-afe-intro-eyebrow>
         <h3>{afeIntroCard.detail}</h3>
-      </article>
+      </lef-afe-intro>
     {/if}
 
-    <lefine-box class="kefine-afe-steps">
+    <lef-afe-steps>
       <lefine-box class="kefine-section-head">
         <p>{afe.title}</p>
       </lefine-box>
@@ -740,9 +759,9 @@
           </article>
         {/each}
       </lefine-box>
-    </lefine-box>
-  </lefine-box>
-</section>
+    </lef-afe-steps>
+  </lef-afe-layout>
+</lef-afe-showcase>
 
 <style>
   [data-kefine-create] {
@@ -754,14 +773,16 @@
     margin-inline: auto;
   }
 
-  .kefine-afe-showcase {
+  lef-afe-showcase {
+    display: block;
     width: min(100%, calc(100vw - 7rem));
     max-width: 64rem;
     justify-self: center;
     margin-inline: auto;
   }
 
-  .kefine-services-showcase {
+  lef-services-showcase {
+    display: grid;
     width: min(100%, calc(100vw - 7rem));
     max-width: 64rem;
     justify-self: center;
@@ -775,49 +796,50 @@
     box-shadow: none;
   }
 
-  .kefine-services-head,
-  .kefine-services-list,
-  .kefine-service-card,
-  .kefine-service-card__copy {
+  lef-services-head,
+  lef-services-list,
+  lef-service-card,
+  lef-service-card-copy {
     display: grid;
     gap: 0.75rem;
   }
 
-  .kefine-services-head {
+  lef-services-head {
     gap: 0.28rem;
   }
 
-  .kefine-services-head strong {
+  lef-services-head strong {
     font-size: clamp(0.98rem, 1.3vw, 1.1rem);
     letter-spacing: -0.02em;
   }
 
-  .kefine-services-head p,
-  .kefine-services-head strong,
-  .kefine-service-card__copy p,
-  .kefine-service-card__copy strong,
-  .kefine-service-card__copy lefine-text {
+  lef-services-head p,
+  lef-services-head strong,
+  lef-service-card-copy p,
+  lef-service-card-copy strong,
+  lef-service-card-copy lefine-text {
     margin: 0;
   }
 
-  .kefine-services-head p,
-  .kefine-service-card__copy p,
-  .kefine-service-card__copy lefine-text {
+  lef-services-head p,
+  lef-service-card-copy p,
+  lef-service-card-copy lefine-text {
     color: var(--lefine-text-soft);
   }
 
-  .kefine-services-head p {
+  lef-services-head p {
     max-width: 28rem;
     font-size: 0.8rem;
   }
 
-  .kefine-services-list {
+  lef-services-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.8rem;
     justify-items: start;
   }
 
-  .kefine-service-card {
+  lef-service-card {
+    display: grid;
     grid-template-columns: auto minmax(0, 1fr);
     align-items: start;
     gap: 0.6rem;
@@ -832,19 +854,20 @@
     text-decoration: none;
   }
 
-  .kefine-service-card__image,
-  .kefine-service-card__icon {
+  lef-service-card-image,
+  lef-service-card-icon {
+    display: block;
     width: 2.1rem;
     height: 2.1rem;
     border-radius: var(--kef-radius-ui);
     flex: 0 0 auto;
   }
 
-  .kefine-service-card__image {
+  lef-service-card-image {
     object-fit: cover;
   }
 
-  .kefine-service-card__icon {
+  lef-service-card-icon {
     display: grid;
     place-items: center;
     background:
@@ -853,22 +876,22 @@
     border: 1px solid color-mix(in oklab, var(--service-accent) 34%, transparent);
   }
 
-  .kefine-service-card__icon span {
+  lef-service-card-icon {
     font-size: 0.8rem;
     font-weight: 700;
     line-height: 1;
   }
 
-  .kefine-service-card__copy {
+  lef-service-card-copy {
     min-width: 0;
   }
 
-  .kefine-service-card__copy strong {
+  lef-service-card-copy strong {
     font-size: 0.92rem;
     letter-spacing: -0.01em;
   }
 
-  .kefine-service-card__copy p {
+  lef-service-card-copy p {
     line-height: 1.35;
     font-size: 0.82rem;
     line-clamp: 2;
@@ -878,7 +901,7 @@
     overflow: hidden;
   }
 
-  .kefine-service-card:hover {
+  lef-service-card:hover {
     border-color: color-mix(in oklab, var(--kef-primary) 22%, transparent);
     background: color-mix(in oklab, var(--kef-bg-card) 88%, var(--kef-bg-soft));
   }
@@ -908,6 +931,20 @@
     display: grid;
     gap: 0.75rem;
     grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  }
+
+  section[data-part='service-setup-banner'] {
+    display: grid;
+    gap: 0.35rem;
+    padding: 0.95rem 1rem;
+    border-radius: 0.75rem;
+    background: color-mix(in oklab, var(--kef-primary) 8%, var(--kef-bg-card));
+    border: 1px solid color-mix(in oklab, var(--kef-primary) 24%, transparent);
+  }
+
+  section[data-part='service-setup-banner'] p {
+    margin: 0;
+    color: var(--lefine-text-soft);
   }
 
   label[data-part='template-variable-field'] {
@@ -1255,8 +1292,8 @@
     background: transparent;
   }
 
-  .kefine-services-showcase,
-  section[data-part='below-fold'] {
+  lef-services-showcase,
+  lef-afe-showcase {
     margin-top: var(--kef-space-3);
   }
 
@@ -1265,11 +1302,11 @@
       width: min(64rem, calc(100vw - 8rem));
     }
 
-    .kefine-afe-showcase {
+    lef-afe-showcase {
       width: min(64rem, calc(100vw - 8rem));
     }
 
-    .kefine-services-showcase {
+    lef-services-showcase {
       width: min(64rem, calc(100vw - 8rem));
     }
 
@@ -1306,15 +1343,15 @@
       width: min(100%, calc(100vw - 2rem));
     }
 
-    .kefine-afe-showcase {
+    lef-afe-showcase {
       width: min(100%, calc(100vw - 2rem));
     }
 
-    .kefine-services-showcase {
+    lef-services-showcase {
       width: min(100%, calc(100vw - 2rem));
     }
 
-    .kefine-services-list {
+    lef-services-list {
       grid-template-columns: 1fr;
     }
 
@@ -1334,7 +1371,7 @@
       display: none;
     }
 
-    .kefine-service-card {
+    lef-service-card {
       width: 100%;
       min-height: 0;
     }

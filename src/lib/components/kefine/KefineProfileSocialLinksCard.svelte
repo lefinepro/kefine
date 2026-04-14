@@ -37,26 +37,25 @@
   const cardPresentation = $derived(getCardBrandPresentation(cardNumber));
 </script>
 
-<section class="profile-social-card">
-  <lefine-box class="profile-social-card__head">
+<lef-profile-social-card>
+  <lef-profile-social-head>
     <strong>{title}</strong>
-  </lefine-box>
+  </lef-profile-social-head>
 
-  <lefine-box class="profile-social-card__list">
-    <lefine-box class="profile-social-card__row profile-social-card__row--card">
-      <lefine-box class="profile-social-card__leading">
+  <lef-profile-social-list>
+    <lef-profile-social-row data-kind="card">
+      <lef-profile-social-leading>
         <Icon icon={cardPresentation.icon} width="18" height="18" aria-hidden="true" />
-      </lefine-box>
+      </lef-profile-social-leading>
       <input bind:value={cardNumber} placeholder={cardPlaceholder} aria-label="Bank card number" />
-    </lefine-box>
+    </lef-profile-social-row>
 
     {#each links as link (link.id)}
       {@const account = resolveProfileAccountPresentation(link.type, link.value, link.label)}
-      <lefine-box class="profile-social-card__row">
-        <lefine-box class="profile-social-card__leading">
+      <lef-profile-social-row>
+        <lef-profile-social-leading>
           {#if account.faviconUrl && !failedFavicons[link.id]}
             <img
-              class="profile-social-card__favicon"
               src={account.faviconUrl}
               alt=""
               width="18"
@@ -66,28 +65,27 @@
           {:else}
             <Icon icon={account.icon} width="18" height="18" aria-hidden="true" />
           {/if}
-        </lefine-box>
+        </lef-profile-social-leading>
         <input bind:value={link.value} placeholder={valuePlaceholder} aria-label={valuePlaceholder} />
         {#if isOwner}
           <button type="button" data-variant="ghost" aria-label="Remove social link" onclick={() => handleRemove(link.id)}>×</button>
         {/if}
-      </lefine-box>
+      </lef-profile-social-row>
     {/each}
 
     {#if links.length === 0 && emptyText}
       <p>{emptyText}</p>
     {/if}
-  </lefine-box>
+  </lef-profile-social-list>
 
   {#if !isOwner && links.length > 0}
-    <lefine-box class="profile-social-card__links">
+    <lef-profile-social-links>
       {#each links as link (link.id)}
         {@const account = resolveProfileAccountPresentation(link.type, link.value, link.label)}
         {#if account.href}
           <a href={account.href} rel="noreferrer" target="_blank">
             {#if account.faviconUrl && !failedFavicons[link.id]}
               <img
-                class="profile-social-card__favicon"
                 src={account.faviconUrl}
                 alt=""
                 width="16"
@@ -100,46 +98,46 @@
             <lefine-text>{link.value}</lefine-text>
           </a>
         {:else}
-          <lefine-box class="profile-social-card__chip">
+          <lef-profile-social-chip>
             <Icon icon={account.icon} width="16" height="16" aria-hidden="true" />
             <lefine-text>{link.value}</lefine-text>
-          </lefine-box>
+          </lef-profile-social-chip>
         {/if}
       {/each}
-    </lefine-box>
+    </lef-profile-social-links>
   {/if}
-</section>
+</lef-profile-social-card>
 
 <style>
-  .profile-social-card,
-  .profile-social-card__list {
+  lef-profile-social-card,
+  lef-profile-social-list {
     display: grid;
     gap: 1rem;
   }
 
-  .profile-social-card__head,
-  .profile-social-card__row,
-  .profile-social-card__links,
-  .profile-social-card__leading {
+  lef-profile-social-head,
+  lef-profile-social-row,
+  lef-profile-social-links,
+  lef-profile-social-leading {
     display: flex;
     gap: 0.75rem;
     align-items: center;
   }
 
-  .profile-social-card__head {
+  lef-profile-social-head {
     justify-content: flex-start;
     position: relative;
     z-index: 2;
   }
 
-  .profile-social-card__row {
+  lef-profile-social-row {
     padding: 1rem;
     border-radius: 1rem;
     background: color-mix(in oklab, var(--kef-color-bg) 45%, var(--kef-color-bg-card));
     border: 1px solid color-mix(in oklab, var(--kef-color-text) 8%, transparent);
   }
 
-  .profile-social-card__row--card {
+  lef-profile-social-row[data-kind='card'] {
     border-color: color-mix(in oklab, var(--kef-color-primary) 18%, transparent);
     background:
       linear-gradient(
@@ -149,21 +147,27 @@
       );
   }
 
-  .profile-social-card__leading {
+  lef-profile-social-leading {
     flex: 0 0 auto;
     width: 1.25rem;
     justify-content: center;
     color: var(--kef-color-muted);
   }
 
-  .profile-social-card__favicon {
+  lef-profile-social-leading img,
+  lef-profile-social-links img {
     display: block;
     width: 18px;
     height: 18px;
     border-radius: 4px;
   }
 
-  .profile-social-card__row input {
+  lef-profile-social-links img {
+    width: 16px;
+    height: 16px;
+  }
+
+  lef-profile-social-row input {
     width: 100%;
     min-width: 0;
     padding: 0;
@@ -176,24 +180,24 @@
     box-shadow: none;
   }
 
-  .profile-social-card__row input::placeholder {
+  lef-profile-social-row input::placeholder {
     color: color-mix(in oklab, var(--kef-color-text) 54%, transparent);
     opacity: 1;
   }
 
-  .profile-social-card__row input:focus {
+  lef-profile-social-row input:focus {
     outline: none;
     border: 0;
     background: transparent;
     box-shadow: none;
   }
 
-  .profile-social-card__links {
+  lef-profile-social-links {
     flex-wrap: wrap;
   }
 
-  .profile-social-card__links a,
-  .profile-social-card__chip {
+  lef-profile-social-links a,
+  lef-profile-social-chip {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
@@ -203,15 +207,15 @@
     border: 1px solid color-mix(in oklab, var(--kef-color-text) 8%, transparent);
   }
 
-  .profile-social-card a,
-  .profile-social-card__chip,
-  .profile-social-card p {
+  lef-profile-social-card a,
+  lef-profile-social-chip,
+  lef-profile-social-card p {
     color: inherit;
     margin: 0;
   }
 
   @media (max-width: 980px) {
-    .profile-social-card__row {
+    lef-profile-social-row {
       gap: 0.65rem;
     }
   }

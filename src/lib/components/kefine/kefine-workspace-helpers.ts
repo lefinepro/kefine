@@ -78,14 +78,8 @@ export function resolveOrderIdCandidates(routeValue: string, knownOrders: OrderV
 
   if (!uuid && !normalized.startsWith('http://') && !normalized.startsWith('https://')) {
     const globalCandidate = `https://lefine.pro/actor/orders/${normalized}`;
-    const legacyCandidate = `http://localhost:3001/actor/orders/${normalized}`;
-
     if (!candidates.includes(globalCandidate)) {
       candidates.push(globalCandidate);
-    }
-
-    if (!candidates.includes(legacyCandidate)) {
-      candidates.push(legacyCandidate);
     }
   }
 
@@ -198,6 +192,13 @@ export function normalizeDraftOrder(
   const normalized: DraftOrder = {
     title: normalizedTitle,
     description: sourceText,
+    tags: Array.from(
+      new Set(
+        form.tags
+          .map((tag) => tag.trim().replace(/^#+/, '').toLowerCase())
+          .filter(Boolean)
+      )
+    ),
     estimatedCost,
     currency,
     executionEstimate: form.executionEstimate.trim(),

@@ -6,7 +6,9 @@ import type {
   TaskAccessMode,
   TemplatePresentation,
   UiScenario,
-  VpnDeliveryGuide
+  VpnResultArticle,
+  VpnResultLink,
+  VpnResultStep
 } from '$lib/components/kefine/kefine-workflow';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -15,6 +17,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function toRecord(value: unknown): Record<string, unknown> | null {
   return isRecord(value) ? value : null;
+}
+
+function isDefined<T>(value: T | null | undefined): value is T {
+  return value != null;
 }
 
 function toStringValue(value: unknown): string | undefined {
@@ -182,14 +188,19 @@ function findPaymentLink(payload: Record<string, unknown>): Record<string, unkno
   return null;
 }
 
-function findVpnGuideAttachment(payload: Record<string, unknown>): Record<string, unknown> | null {
+function findResultDocumentAttachment(payload: Record<string, unknown>): Record<string, unknown> | null {
   for (const candidate of toRecordList(payload['attachment'])) {
     const mediaType = toStringValue(candidate['mediaType']);
     const type = toStringValue(candidate['type']);
+    const normalizedName = toStringValue(candidate['name'])?.toLowerCase();
+    const content = toRecord(candidate['content']);
 
     if (
+      type === 'Article' ||
+      mediaType === 'application/ld+json' ||
       mediaType === 'application/vnd.kefine.vpn-guide+json' ||
-      (type === 'Document' && toStringValue(candidate['name'])?.toLowerCase().includes('vpn'))
+      (type === 'Document' && normalizedName?.includes('vpn')) ||
+      (type === 'Document' && toStringValue(content?.['@type']) === 'HowTo')
     ) {
       return candidate;
     }
@@ -198,24 +209,155 @@ function findVpnGuideAttachment(payload: Record<string, unknown>): Record<string
   return null;
 }
 
-function toStringArray(value: unknown): string[] | undefined {
-  return toStringList(value);
-}
+function toVpnResultLinks(value: unknown): VpnResultLink[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
 
-function toLinkArray(value: unknown): Array<{ label: string; href: string }> | undefined {
-  if (!Array.isArray(value)) return undefined;
-
-  const items = value
+  const links = value
     .map((item) => toRecord(item))
     .filter((item): item is Record<string, unknown> => item !== null)
     .map((item) => {
-      const label = toStringValue(item['label']);
-      const href = toStringValue(item['href']);
-      return label && href ? { label, href } : null;
-    })
-    .filter((item): item is { label: string; href: string } => item !== null);
+      const href = extractHref(item);
+      const name = toStringValue(item['name']);
+      const type = toStringValue(item['type']) || 'Link';
+      if (type !== 'Link' || !href || !name) {
+        return null;
+      }
 
-  return items.length > 0 ? items : undefined;
+      return {
+        type,
+        name,
+        href
+      };
+    })
+    .filter(isDefined);
+
+  return links.length > 0 ? links : undefined;
+}
+
+function toVpnResultSteps(value: unknown): VpnResultStep[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const steps = value
+    .map((item) => toRecord(item))
+    .filter((item): item is Record<string, unknown> => item !== null)
+    .map((item) => {
+      const type = toStringValue(item['type']) || 'Article';
+      const name =
+        toStringValue(item['name']) ||
+        toStringValue(item['title']) ||
+        toStringValue(item['summary']);
+      const content =
+        toStringValue(item['content']) ||
+        toStringValue(item['text']) ||
+        toStringValue(item['detail']);
+
+      if ((type !== 'Note' && type !== 'Article') || !name || !content) {
+        return null;
+      }
+
+      return {
+        position: toNumber(item['schema:position']) ?? toNumber(item['position']),
+        name,
+        content
+      };
+    })
+    .filter(isDefined);
+
+  return steps.length > 0 ? steps : undefined;
+}
+
+function parseArticleAttachments(value: unknown): {
+  attachments?: Array<VpnResultLink | VpnResultStep>;
+  links?: VpnResultLink[];
+  steps?: VpnResultStep[];
+} {
+  const links = toVpnResultLinks(value);
+  const steps = toVpnResultSteps(value);
+  const attachments = [...(links || []), ...(steps || [])];
+
+  return {
+    attachments: attachments.length > 0 ? attachments : undefined,
+    links,
+    steps
+  };
+}
+
+function normalizeLegacyHowToDocument(
+  attachment: Record<string, unknown>,
+  content: Record<string, unknown>
+): VpnResultArticle | undefined {
+  const name = toStringValue(content['name']) || toStringValue(attachment['name']) || 'VPN delivery package';
+  const summary = toStringValue(attachment['summary']) || toStringValue(content['description']) || undefined;
+  const rawSteps = Array.isArray(content['step']) ? content['step'] : [];
+  const steps = rawSteps
+    .map((item) => toRecord(item))
+    .filter((item): item is Record<string, unknown> => item !== null)
+    .map((item, index) => {
+      const stepName =
+        toStringValue(item['title']) ||
+        toStringValue(item['name']) ||
+        toStringValue(item['summary']);
+      const lines = [
+        toStringValue(item['summary']),
+        ...(Array.isArray(item['linuxClient'])
+          ? item['linuxClient'].filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+          : []),
+        toStringValue(item['otherClientsNote'])
+      ].filter((value): value is string => typeof value === 'string' && value.trim().length > 0);
+
+      if (!stepName || lines.length === 0) {
+        return null;
+      }
+
+      return {
+        position: index + 1,
+        name: stepName,
+        content: lines.join('\n')
+      };
+    })
+    .filter(isDefined);
+
+  const attachments: Array<VpnResultLink | VpnResultStep> = [];
+  for (const rawStep of rawSteps) {
+    const step = toRecord(rawStep);
+    if (!step || !Array.isArray(step['apps'])) {
+      continue;
+    }
+
+    for (const app of step['apps']) {
+      const record = toRecord(app);
+      const href = record ? extractHref(record) : undefined;
+      const stepName = record ? toStringValue(record['label']) : undefined;
+      if (href && stepName) {
+        attachments.push({ type: 'Link', name: stepName, href });
+      }
+    }
+  }
+
+  for (const step of steps) {
+    attachments.push(step);
+  }
+
+  return {
+    id: toStringValue(attachment['id']) || undefined,
+    type: 'Article',
+    name,
+    summary,
+    content: toStringValue(content['description']) || undefined,
+    mediaType: toStringValue(attachment['mediaType']) || undefined,
+    tag: toStringList(content['keywords']) || ['vpn'],
+    attachments: attachments.length > 0 ? attachments : undefined,
+    steps: steps.length > 0 ? steps : undefined,
+    raw: {
+      ...content,
+      ...(summary ? { _attachmentSummary: summary } : {}),
+      ...(toStringValue(attachment['name']) ? { _attachmentName: toStringValue(attachment['name']) } : {})
+    }
+  };
 }
 
 function toAccessRules(
@@ -244,45 +386,59 @@ function toAccessRules(
   return Object.keys(rules).length > 0 ? rules : undefined;
 }
 
-function extractVpnGuide(payload: Record<string, unknown>): VpnDeliveryGuide | undefined {
-  const attachment = findVpnGuideAttachment(payload);
-  const content = toRecord(attachment?.['content']);
-  if (!attachment || !content) {
+function extractResultDocument(payload: Record<string, unknown>): VpnResultArticle | undefined {
+  const attachment = findResultDocumentAttachment(payload);
+  if (!attachment) {
     return undefined;
   }
 
-  const rawSteps = Array.isArray(content['steps']) ? content['steps'] : [];
-  const steps = rawSteps
-    .map((item) => toRecord(item))
-    .filter((item): item is Record<string, unknown> => item !== null)
-    .map((step) => {
-      const id = toStringValue(step['id']);
-      const title = toStringValue(step['title']);
-      const summary = toStringValue(step['summary']);
-      if (!id || !title || !summary) {
-        return null;
-      }
+  if (toStringValue(attachment['type']) === 'Article') {
+    const generator = toRecord(attachment['generator']);
+    const parsedAttachments = parseArticleAttachments(attachment['attachment']);
 
-      return {
-        id,
-        title,
-        summary,
-        apps: toLinkArray(step['apps']),
-        exampleVlessLink: toStringValue(step['exampleVlessLink']),
-        linuxClient: toStringArray(step['linuxClient']),
-        otherClientsNote: toStringValue(step['otherClientsNote'])
-      };
-    })
-    .filter((step): step is NonNullable<typeof step> => step !== null);
+    return {
+      id: toStringValue(attachment['id']) || undefined,
+      type: 'Article',
+      name: toStringValue(attachment['name']) || 'VPN delivery package',
+      summary: toStringValue(attachment['summary']) || undefined,
+      content: toStringValue(attachment['content']) || undefined,
+      mediaType: toStringValue(attachment['mediaType']) || undefined,
+      attributedTo: extractActorLabel(attachment['attributedTo']),
+      url: toStringValue(attachment['url']) || undefined,
+      generator: generator
+        ? {
+            type: toStringValue(generator['type']) || undefined,
+            name: toStringValue(generator['name']) || undefined
+          }
+        : undefined,
+      tag: toStringList(attachment['tag']),
+      attachments: parsedAttachments.attachments,
+      steps: parsedAttachments.steps,
+      raw: attachment
+    };
+  }
 
-  if (steps.length === 0) {
+  const content = toRecord(attachment['content']);
+  if (!content) {
     return undefined;
+  }
+
+  if (toStringValue(content['@type']) === 'HowTo') {
+    return normalizeLegacyHowToDocument(attachment, content);
   }
 
   return {
-    title: toStringValue(attachment['name']) || 'VPN delivery guide',
-    summary: toStringValue(attachment['summary']) || 'VPN setup instructions',
-    steps
+    id: toStringValue(attachment['id']) || undefined,
+    type: 'Article',
+    name: toStringValue(attachment['name']) || 'VPN delivery package',
+    summary: toStringValue(attachment['summary']) || undefined,
+    content: typeof attachment['content'] === 'string' ? toStringValue(attachment['content']) : undefined,
+    mediaType: toStringValue(attachment['mediaType']) || undefined,
+    raw: {
+      ...content,
+      ...(toStringValue(attachment['name']) ? { _attachmentName: toStringValue(attachment['name']) } : {}),
+      ...(toStringValue(attachment['summary']) ? { _attachmentSummary: toStringValue(attachment['summary']) } : {})
+    }
   };
 }
 
@@ -310,7 +466,7 @@ export function parseStoredOrders(raw: string | null, localeText: KefineLocaleTe
         paymentUrl: toStringValue(order['paymentUrl']) || undefined,
         uiScenario: toUiScenario(order['uiScenario']),
         labels: toStringList(order['labels']),
-        vpnGuide: extractVpnGuide(order),
+        resultDocument: extractResultDocument(order),
         activitypub: toRecord(order['activitypub']) || undefined,
         ownerProfileId: toStringValue(order['ownerProfileId']),
         ownerUsername: toStringValue(order['ownerUsername']),
@@ -378,7 +534,7 @@ export function extractStatusPayload(
   const source = activityOrObject;
   const ticket = unwrapTicketPayload(source);
   const paymentLink = findPaymentLink(source) || findPaymentLink(ticket);
-  const vpnGuide = extractVpnGuide(source) || extractVpnGuide(ticket);
+  const resultDocument = extractResultDocument(source) || extractResultDocument(ticket);
   const orderId =
     toStringValue(source['orderId']) ||
     toStringValue(source['id']) ||
@@ -444,7 +600,7 @@ export function extractStatusPayload(
     paymentUrl: extractHref(paymentLink ?? {}) || toStringValue(source['paymentUrl']) || undefined,
     uiScenario: toUiScenario(source['uiScenario']) || toUiScenario(ticket['uiScenario']),
     labels: toStringList(source['labels']) || toStringList(ticket['labels']),
-    vpnGuide,
+    resultDocument,
     activitypub: rootPayload || undefined,
     ownerProfileId: toStringValue(source['ownerProfileId']) || toStringValue(ticket['ownerProfileId']) || undefined,
     ownerUsername: toStringValue(source['ownerUsername']) || toStringValue(ticket['ownerUsername']) || undefined,
@@ -521,6 +677,8 @@ export function readPaymentQuote(body: unknown): PaymentQuote | null {
 
 export function buildCreatePayload(payload: DraftOrder, template?: TemplatePresentation | null) {
   const isVpnScenario = detectVpnScenario(payload);
+  const tags = Array.from(new Set(payload.tags.map((tag) => tag.trim()).filter(Boolean)));
+  const labels = Array.from(new Set([...(isVpnScenario ? ['vpn'] : []), ...tags]));
   const fileAttachments = payload.files.map((file) => ({
     type: 'Document',
     name: file.name,
@@ -537,7 +695,7 @@ export function buildCreatePayload(payload: DraftOrder, template?: TemplatePrese
     currency: payload.currency,
     executionEstimate: payload.executionEstimate || undefined,
     uiScenario: isVpnScenario ? 'vpn-service' : undefined,
-    labels: isVpnScenario ? ['vpn'] : undefined,
+    labels: labels.length > 0 ? labels : undefined,
     attachment: fileAttachments.length > 0 ? fileAttachments : undefined,
     templateId: template?.id,
     templateSlug: template?.slug,

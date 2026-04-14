@@ -51,7 +51,7 @@
     order = sharedOrder;
     ownerProfile = sharedOrder.ownerProfileId ? getProfileById(localStorage, sharedOrder.ownerProfileId) : null;
 
-    const userId = authState.email?.trim().toLowerCase() || authState.address?.trim();
+    const userId = authState.userId?.trim() || authState.email?.trim().toLowerCase() || authState.address?.trim();
     if (!userId || !sharedOrder.ownerProfileId) {
       return;
     }
@@ -60,7 +60,7 @@
       storage: localStorage,
       userId,
       email: authState.email,
-      displayName: authState.email?.split('@')[0] || authState.address || 'user',
+      displayName: authState.displayName?.trim() || authState.handle?.trim() || authState.email?.split('@')[0] || authState.address || 'user',
       avatarUrl: undefined,
       authType: authState.authType,
       walletAddress: authState.address,
@@ -101,33 +101,33 @@
   <title>{order ? `${order.title} | Lefine` : 'Task | Lefine'}</title>
 </svelte:head>
 
-<section class="shared-task-page">
+<lef-shared-task-page>
   {#if unavailable}
-    <article class="shared-task-card">
+    <lef-shared-task-card>
       <h1>{localeText.profile.profileUnavailable}</h1>
       <p>{localeText.profile.noPublicTasks}</p>
-    </article>
+    </lef-shared-task-card>
   {:else if order}
-    <article class="shared-task-card">
-      <header>
+    <lef-shared-task-card>
+      <lef-shared-task-head>
         <h1>{order.title}</h1>
         {#if ownerProfile}
           <a href={buildProfilePath(ownerProfile.primaryHandle || ownerProfile.username)}>{ownerProfile.displayName}</a>
         {/if}
-      </header>
+      </lef-shared-task-head>
       <p>{canSeeFullTask ? order.description : `${localeText.profile.buyView} to unlock the full task details.`}</p>
-      <lefine-box class="shared-task-meta">
+      <lef-shared-task-meta>
         <lefine-text>{order.solver}</lefine-text>
         <lefine-text>{order.status}</lefine-text>
         {#if order.estimatedCost !== undefined}
           <lefine-text>${order.estimatedCost.toFixed(2)}</lefine-text>
         {/if}
-      </lefine-box>
-    </article>
+      </lef-shared-task-meta>
+    </lef-shared-task-card>
 
-    <article class="shared-task-card">
+    <lef-shared-task-card>
       <h2>{localeText.profile.publicTasks}</h2>
-      <lefine-box class="shared-task-access">
+      <lef-shared-task-access>
         {#each ([
           ['view', localeText.profile.buyView],
           ['watch', localeText.profile.buyWatch],
@@ -145,13 +145,14 @@
             </button>
           {/if}
         {/each}
-      </lefine-box>
-    </article>
+      </lef-shared-task-access>
+    </lef-shared-task-card>
   {/if}
-</section>
+</lef-shared-task-page>
 
 <style>
-  .shared-task-page {
+  lef-shared-task-page {
+    display: grid;
     width: min(46rem, calc(100vw - 2rem));
     margin: 0 auto;
     padding: 6rem 0 2rem;
@@ -159,30 +160,30 @@
     gap: 1rem;
   }
 
-  .shared-task-card,
-  .shared-task-access {
+  lef-shared-task-card,
+  lef-shared-task-access {
     display: grid;
     gap: 0.75rem;
   }
 
-  .shared-task-card {
+  lef-shared-task-card {
     padding: 1rem;
     border-radius: 1rem;
     background: color-mix(in oklab, var(--kef-bg-card) 96%, white);
     box-shadow: 0 14px 24px color-mix(in oklab, var(--lefine-text) 5%, transparent);
   }
 
-  .shared-task-card header,
-  .shared-task-meta {
+  lef-shared-task-head,
+  lef-shared-task-meta {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 0.75rem;
   }
 
-  .shared-task-card h1,
-  .shared-task-card h2,
-  .shared-task-card p {
+  lef-shared-task-card h1,
+  lef-shared-task-card h2,
+  lef-shared-task-card p {
     margin: 0;
   }
 </style>

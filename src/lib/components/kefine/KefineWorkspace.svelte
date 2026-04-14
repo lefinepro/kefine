@@ -148,7 +148,8 @@ import { cubicOut } from 'svelte/easing';
           title: '',
           description: '',
           createdAt: new Date().toISOString(),
-          currency: 'USDC'
+          currency: 'USDC',
+          uiScenario: 'vpn-service' as const
         }
       : null
   );
@@ -181,6 +182,8 @@ import { cubicOut } from 'svelte/easing';
   let profileRedirectKey = $state('');
   let suppressProfileRedirect = $state(false);
   let autoTemplateSubmitKey = $state('');
+  let suppressPostAuthProfileRedirect = $state(false);
+  let resultDocumentRefreshKey = $state('');
   const activePollTokens = new Map<string, symbol>();
   let pollAbortController = $state<AbortController | null>(null);
 
@@ -603,11 +606,13 @@ import { cubicOut } from 'svelte/easing';
     if (!template || (template.visibility ?? (template.isPublished ? 'public' : 'private')) !== 'public') {
       activeTemplate = null;
       templateUnavailable = true;
+      autoTemplateSubmitKey = '';
       return;
     }
 
     activeTemplate = template;
     templateUnavailable = false;
+    autoTemplateSubmitKey = '';
     const localized = resolveTemplateLocalizedContent(template, $kefineLocale);
     const promptVariables = syncPromptVariables(localized.promptTemplate, template.promptVariables ?? []);
     const templateVariableValues = Object.fromEntries(
@@ -705,7 +710,6 @@ import { cubicOut } from 'svelte/easing';
     autoTemplateSubmitKey = nextAutoTemplateSubmitKey;
     void submitDraft(draft);
   });
-
   $effect(() => {
     if (isPasskeyActive) {
       if (!selectedAuthMethod || selectedAuthMethod === 'passkey') {
@@ -752,6 +756,45 @@ import { cubicOut } from 'svelte/easing';
     if (selectedAuthMethod === 'anonymous' && !paymentMethod) {
       paymentMethod = 'promo';
     }
+  });
+
+  $effect(() => {
+    if (!currentOrder || step !== 'payment' || paymentStage !== 'result-ready') {
+      return;
+    }
+
+    if (currentOrder.uiScenario !== 'vpn-service' || currentOrder.resultDocument) {
+      return;
+    }
+
+    const nextRefreshKey = `${currentOrder.id}|${currentOrder.status}|${currentOrder.createdAt}|${paymentStage}`;
+    if (resultDocumentRefreshKey === nextRefreshKey) {
+      return;
+    }
+
+    resultDocumentRefreshKey = nextRefreshKey;
+
+    void (async () => {
+      const updated = await requestOrderFromStatus(currentOrder.id, {
+        title: currentOrder.title,
+        description: currentOrder.description,
+        currency: currentOrder.currency || localeText.defaults.defaultCurrency,
+        createdAt: currentOrder.createdAt
+      });
+
+      if (!updated) {
+        return;
+      }
+
+      const nextOrder = {
+        ...currentOrder,
+        ...updated,
+        id: currentOrder.id
+      };
+
+      currentOrder = nextOrder;
+      upsertOrder(nextOrder);
+    })();
   });
 
   $effect(() => {
@@ -804,6 +847,7 @@ import { cubicOut } from 'svelte/easing';
     paymentStage = 'payment-method-select';
     depositDialogOpen = false;
     stagePreviewOpen = false;
+    suppressPostAuthProfileRedirect = false;
   }
 
   async function openSocialAuth() {
@@ -913,7 +957,7 @@ import { cubicOut } from 'svelte/easing';
       !existingProfile ||
       ensuredProfile.metadata?.['profileSetupCompleted'] !== true;
 
-    if (shouldOpenProfile && !draftQueued && !currentOrder) {
+    if (shouldOpenProfile && !draftQueued && !currentOrder && !suppressPostAuthProfileRedirect) {
       await goto(buildProfilePath(ensuredProfile.primaryHandle));
     }
   }
@@ -1540,6 +1584,8 @@ import { cubicOut } from 'svelte/easing';
       stagePreviewOpen = false;
       step = 'payment';
     }
+
+    suppressPostAuthProfileRedirect = false;
   }
 
   function handlePasskeyError(error: Error | string) {
@@ -1601,7 +1647,8 @@ import { cubicOut } from 'svelte/easing';
       privateKeyInput = '';
     } catch (error) {
       console.error('[publickey] choosePrivateKeyMethod', error);
-      privateKeyDialogOpen = true;
+      errorMessage = error instanceof Error ? error.message : localeText.errors.fallback;
+      step = 'error';
     }
   }
 
@@ -1665,6 +1712,7 @@ import { cubicOut } from 'svelte/easing';
   }
 
   function saveAnonymousResult() {
+    suppressPostAuthProfileRedirect = true;
     selectedAuthMethod = 'passkey';
     void loginWithDefaultPasskey();
   }
@@ -1728,6 +1776,10 @@ import { cubicOut } from 'svelte/easing';
         <KefineCreateStep
           draft={draft}
           template={templatePresentation}
+          serviceSetup={templatePresentation ? {
+            title: localeText.create.serviceSetupTitle,
+            subtitle: localeText.create.serviceSetupSubtitle
+          } : null}
           title={localeText.create.title}
           subtitle={localeText.create.subtitle}
           pinnedServices={pinnedCreateServices}
@@ -1849,7 +1901,6 @@ import { cubicOut } from 'svelte/easing';
           paymentMethod={paymentMethod}
           paymentStage={paymentStage}
           depositDialogOpen={depositDialogOpen}
-          isAuthenticated={isAuthenticated}
           onBack={() => {
             resetTransactionState();
             step = 'create';
@@ -1957,7 +2008,7 @@ import { cubicOut } from 'svelte/easing';
     title={localeText.auth.privateKeyTitle}
     description={localeText.auth.privateKeyDescription}
     value={privateKeyInput}
-    placeholder="pqsk_..."
+    placeholder="pqsk_... or -----BEGIN PRIVATE KEY-----"
     submitLabel="Sign"
     closeLabel={localeText.buttons.closeDialog}
     onClose={() => { privateKeyDialogOpen = false; }}
