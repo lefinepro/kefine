@@ -22,8 +22,8 @@ Kefine is a SvelteKit application for submitting solver tasks, tracking their ex
 
 Install the following tools before starting:
 
-- `bun` 1.2.x
-- `docker` and `docker compose` if you want the simplest full-stack run
+- `mise`
+- `nerdctl` with `nerdctl compose`
 
 Optional for local wallet auth:
 
@@ -31,10 +31,10 @@ Optional for local wallet auth:
 
 ## Quick start
 
-If you just want to bring the full app up quickly, use Docker:
+If you just want to bring the full app up quickly, use `nerdctl compose`:
 
 ```bash
-docker compose up --build
+nerdctl compose up --build
 ```
 
 Then open:
@@ -48,10 +48,26 @@ The frontend production container is built from the repo root [Containerfile](/h
 
 ## Local development setup
 
-### 1. Install dependencies
+### 1. Install toolchain and dependencies
+
+Trust the repository once so `mise` can execute project tasks:
 
 ```bash
-bun install
+mise trust
+```
+
+Then install the pinned toolchain:
+
+```bash
+mise install
+```
+
+This installs the pinned local versions of Bun, Node.js, and Crystal from [`mise.toml`](/home/kg/datastore/dev/lefine/kefine/mise.toml).
+
+Then install project dependencies:
+
+```bash
+mise run install
 ```
 
 ### 2. Configure `kefine.config.json`
@@ -168,14 +184,81 @@ For this setup:
 - payment and exchange-facing links are emitted under the configured exchange URL
 - the frontend proxies requests to the hosted crater at `https://lefine.pro`
 
-### 3. Start the backend
+### 3. Start the full local stack
 
-You have two practical options.
-
-Option A: run only the backend in Docker
+The recommended local workflow is now a single `mise` command:
 
 ```bash
-docker compose up --build crater
+mise run dev
+```
+
+This command:
+
+- ensures frontend dependencies are installed,
+- starts Postgres via `nerdctl compose`,
+- waits until the database is ready,
+- starts `crater` in a container on `http://localhost:3001`,
+- starts the SvelteKit frontend on `http://localhost:5173`.
+
+You can also run just `mise run`, because the default task maps to `dev`.
+
+### 4. Useful `mise` tasks
+
+- `mise run frontend` runs only the frontend
+- `mise run backend` runs the backend in a container and ensures Postgres is up
+- `mise run backend:local` runs the backend directly with local Crystal
+- `mise run backend:down` stops the backend container
+- `mise run db:up` starts only Postgres
+- `mise run db:down` stops only Postgres
+- `mise run install` refreshes all project dependencies
+
+### FRP tunnel for `dev-proxy.col.pub`
+
+`frps` is intended to run on the public server and `frpc` on your local machine.
+
+Server target:
+
+- host: `193.32.177.159`
+- control port: `7000`
+- internal FRP HTTP vhost port: `8080`
+- public HTTPS entrypoint: `443`
+
+Client config template lives at [`scripts/frpc.dev-proxy.toml`](/home/kg/datastore/dev/lefine/kefine/scripts/frpc.dev-proxy.toml).
+
+The tunnel is configured so both the frontend and `crater` live behind the same public origin:
+
+- frontend traffic goes to local `127.0.0.1:5173`
+- `crater` paths on the same domain go to local `127.0.0.1:3001`
+- app runtime config in [`kefine.config.json`](/home/kg/datastore/dev/lefine/kefine/kefine.config.json) points both `origins.*` and `backend.*BaseUrl` to `https://dev-proxy.col.pub`
+- TLS is terminated on the public server by Caddy running under `nerdctl compose`, which proxies to local FRP HTTP routing on port `8080`
+
+Run it like this after starting the frontend locally:
+
+```bash
+export FRP_TOKEN='your_server_token'
+mise run tunnel
+```
+
+Or run the local stack and the tunnel together:
+
+```bash
+export FRP_TOKEN='your_server_token'
+mise run dev:proxy
+```
+
+Important:
+
+- `dev-proxy.col.pub` must have an `A` record pointing to `193.32.177.159`
+- until DNS is added, the tunnel will connect but the domain itself will not resolve publicly
+
+### 5. Manual backend options
+
+If you do not want to use the one-command `mise` flow, you still have two practical backend options.
+
+Option A: run only the backend in a container
+
+```bash
+nerdctl compose up --build crater
 ```
 
 Option B: run the backend directly with Crystal
@@ -188,7 +271,7 @@ crystal run src/crater.cr
 
 The backend listens on `http://localhost:3001` by default.
 
-### 4. Start the frontend
+### 6. Start the frontend manually
 
 From the repository root:
 

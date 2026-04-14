@@ -1,0 +1,212 @@
+import { expect, type Page, type Route } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { ml_dsa65 } from '@noble/post-quantum/ml-dsa.js';
+
+type MockOrder = {
+  id: string;
+  title: string;
+  status: string;
+  solver: string;
+  executionEstimate: string;
+  estimatedCost: number;
+  currency: string;
+};
+
+function buildOrder(id: string, title: string, status = 'queued'): MockOrder {
+  return {
+    id,
+    title,
+    status,
+    solver: 'Test Solver',
+    executionEstimate: 'about 2 hours',
+    estimatedCost: 42,
+    currency: 'USDC'
+  };
+}
+
+function orderPayload(order: MockOrder) {
+  return {
+    orderId: order.id,
+    title: order.title,
+    status: order.status,
+    solver: order.solver,
+    description: order.title,
+    executionEstimate: order.executionEstimate,
+    estimatedCost: order.estimatedCost,
+    currency: order.currency,
+    paymentUrl: null,
+    createdAt: '2026-03-20T00:00:00.000Z',
+    updatedAt: '2026-03-20T00:00:00.000Z'
+  };
+}
+
+export async function mockOrderApi(page: Page) {
+  let createCounter = 0;
+  const orders = new Map<string, MockOrder>();
+  let createDelayMs = 0;
+
+  await page.route('**/create', async (route) => {
+    createCounter += 1;
+    const postData = route.request().postDataJSON() as { title?: string; name?: string };
+    const title = postData.title ?? postData.name ?? `Task ${createCounter}`;
+    const order = buildOrder(`order-${createCounter}`, title, 'queued');
+    orders.set(order.id, order);
+
+    if (createDelayMs > 0) {
+      await new Promise((resolve) => setTimeout(resolve, createDelayMs));
+    }
+
+    await route.fulfill({
+      status: 202,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        accepted: true,
+        orderId: order.id,
+        status: order.status,
+        solver: order.solver,
+        paymentUrl: null
+      })
+    });
+  });
+
+  async function handleOrderLookup(route: Route) {
+    const url = new URL(route.request().url());
+    const orderId = decodeURIComponent(url.pathname.split('/').at(-1) ?? '');
+    const order = orders.get(orderId);
+
+    if (!order) {
+      await route.fulfill({
+        status: 404,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'Order not found', orderId })
+      });
+      return;
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(orderPayload(order))
+    });
+  }
+
+  await page.route('**/order/**', handleOrderLookup);
+  await page.route('**/status/**', handleOrderLookup);
+
+  return {
+    setCreateDelay(delayMs: number) {
+      createDelayMs = delayMs;
+    },
+    setOrderStatus(orderId: string, status: string) {
+      const order = orders.get(orderId);
+      if (order) {
+        order.status = status;
+      }
+    }
+  };
+}
+
+export async function gotoAndWaitForReady(page: Page) {
+  await page.goto('/');
+  await page.evaluate(() => {
+    window.localStorage.clear();
+  });
+  await page.reload();
+  await expect(page.getByTestId('kefine-task-input')).toBeVisible();
+  await page.waitForFunction(() => {
+    const el = document.querySelector('[data-testid="kefine-task-input"]');
+    return el && Object.getOwnPropertySymbols(el).length > 0;
+  });
+}
+
+export async function submitTask(page: Page) {
+  await page.getByTestId('kefine-task-input').press('Enter');
+}
+
+export async function createTask(page: Page, title: string) {
+  await page.getByTestId('kefine-task-input').fill(title);
+  await submitTask(page);
+}
+
+export async function mockPrivateKeyAuth(page: Page) {
+  const expectedPublicKey = await deriveActorPublicKeyString();
+
+  await page.route('**/auth', async (route) => {
+    const body = route.request().postDataJSON() as {
+      publickey?: { key?: string };
+      privatekey?: { key?: string };
+    };
+
+    expect(body.privatekey).toBeUndefined();
+    expect(body.publickey?.key).toBe(expectedPublicKey);
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        verified: true,
+        token: 'publickey:api:test',
+        userId: 'publickey:api',
+        username: 'api',
+        displayName: 'API',
+        handle: 'api',
+        email: 'api@actor.local',
+        publickey: {
+          key: 'pqpk_testpublickey_for_api',
+          pem: ''
+        },
+        keyId: 'pq1_testactoraddress',
+        actorAddress: 'pq1_testactoraddress',
+        authType: 'publickey',
+        expiresAt: '2026-12-31T00:00:00.000Z'
+      })
+    });
+  });
+
+  await page.route('**/api/kefine/templates/api', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([])
+    });
+  });
+}
+
+export function readActorPrivateKeyPem() {
+  return readFileSync(path.resolve(process.cwd(), 'actor-privatekey.pem'), 'utf8');
+}
+
+function pemToDer(pem: string) {
+  const base64 = pem.replace(/-----[^-]+-----/g, '').replace(/\s+/g, '');
+  return Buffer.from(base64, 'base64');
+}
+
+function encodeKeyString(value: string, prefix: string) {
+  return `${prefix}${Buffer.from(value, 'utf8').toString('base64url')}`;
+}
+
+export function readActorPrivateKeyCompact() {
+  return encodeKeyString(readActorPrivateKeyPem(), 'pqsk_');
+}
+
+export async function deriveActorPublicKeyString() {
+  const privateKeyPem = readActorPrivateKeyPem();
+  const privateKeyDer = pemToDer(privateKeyPem);
+  const secretKey = privateKeyDer.subarray(privateKeyDer.length - ml_dsa65.lengths.secretKey);
+  const publicKey = Buffer.from(ml_dsa65.getPublicKey(secretKey));
+  const publicKeyDer = Buffer.concat([
+    Buffer.from([
+      0x30, 0x82, 0x07, 0xb2, 0x30, 0x0b, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04,
+      0x03, 0x12, 0x03, 0x82, 0x07, 0xa1, 0x00
+    ]),
+    publicKey
+  ]);
+  const publicKeyPem = [
+    '-----BEGIN PUBLIC KEY-----',
+    ...(publicKeyDer.toString('base64').match(/.{1,64}/g) ?? []),
+    '-----END PUBLIC KEY-----'
+  ].join('\n');
+
+  return encodeKeyString(publicKeyPem, 'pqpk_');
+}

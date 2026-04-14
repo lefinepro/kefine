@@ -1,0 +1,32 @@
+{
+  // Example VLESS profile reference for the VPN mock result.
+  // Import the VLESS URL directly in Exclave, Happ, Streisand, or Throne when possible.
+
+  "profileName": "UsServer1",
+  "protocol": "vless",
+  "server": {
+    "address": "provider.akashprovid.com",
+    "port": 32701
+  },
+  "credentials": {
+    "uuid": "32274730-3454-49e3-b2d9-e6adf153b176",
+    "encryption": "none",
+    "flow": "xtls-rprx-vision"
+  },
+  "transport": {
+    "type": "tcp",
+    "security": "reality",
+    "serverName": "github.com",
+    "fingerprint": "chrome",
+    "publicKey": "1Lj8mfaT2j_ScjZvTQmAhFrsy9rdmFpNTObdhZxoJzs",
+    "shortId": "ea392ae8"
+  },
+  "import": {
+    "vlessUrl": "vless://32274730-3454-49e3-b2d9-e6adf153b176@provider.akashprovid.com:32701?encryption=none&flow=xtls-rprx-vision&fp=chrome&pbk=1Lj8mfaT2j_ScjZvTQmAhFrsy9rdmFpNTObdhZxoJzs&security=reality&sid=ea392ae8&sni=github.com&type=tcp#UsServer1",
+    "recommendedClients": {
+      "android": "Exclave",
+      "ios": ["Happ", "Streisand"],
+      "desktop": "Throne"
+    }
+  }
+}

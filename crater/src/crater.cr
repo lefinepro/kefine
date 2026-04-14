@@ -17,12 +17,26 @@ require "./crater/middleware/logger"
 require "./crater/payment_store"
 require "./crater/template_store"
 require "./crater/utils/config"
+require "./crater/utils/actor_keys"
 
 module Crater
   VERSION = "0.1.0"
 
   def self.run
     config = Utils::Config.load
+    actor_private_key = config.resolved_actor_private_key_pem
+    actor_address = Utils::ActorKeys.derive_actor_address(actor_private_key)
+    actor_private_key_string = Utils::ActorKeys.encode_private_key_string(actor_private_key)
+    actor_public_key_string = Utils::ActorKeys.derive_public_key_string(actor_private_key)
+    actor_key_source = ENV["KEFINE_PRIVATEKEY_DEFAULT"]?.try(&.strip).to_s.empty? ? "kefine.config.json defaultActor.privateKeyPem" : "KEFINE_PRIVATEKEY_DEFAULT"
+
+    puts "[crater] default actor: @#{config.actor_username}"
+    puts "[crater] private key loaded: #{!actor_private_key.strip.empty?}"
+    puts "[crater] private key source: #{actor_key_source}"
+    puts "[crater] private key string: #{actor_private_key_string.empty? ? "unavailable" : actor_private_key_string}"
+    puts "[crater] public key string: #{actor_public_key_string.empty? ? "unavailable" : actor_public_key_string}"
+    puts "[crater] actor address: #{actor_address || "unavailable"}"
+
     PaymentStore.setup(config)
     TemplateStore.setup(config)
 

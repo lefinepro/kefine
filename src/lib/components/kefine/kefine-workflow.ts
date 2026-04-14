@@ -1,5 +1,4 @@
 import { type KefineLocaleText } from '$lib/constants/kefine-locale';
-import { VPN_FLOW_MOCK } from '$lib/components/kefine/kefine-vpn-flow';
 import type { ProfileTemplateFile, ProfileTemplatePricingMode, ProfileTemplateVariable } from '$lib/types/user';
 export {
   buildCreatePayload,
@@ -27,6 +26,37 @@ export type TaskAccessMode = 'view' | 'watch' | 'join';
 export type TaskAccessRule = {
   enabled: boolean;
   priceUsd: number;
+};
+
+export type VpnResultLink = {
+  type: string;
+  name: string;
+  href: string;
+};
+
+export type VpnResultStep = {
+  position?: number;
+  name: string;
+  content: string;
+};
+
+export type VpnResultArticle = {
+  id?: string;
+  type: 'Article';
+  name: string;
+  summary?: string;
+  content?: string;
+  mediaType?: string;
+  attributedTo?: string;
+  url?: string;
+  generator?: {
+    type?: string;
+    name?: string;
+  };
+  tag?: string[];
+  attachments?: Array<VpnResultLink | VpnResultStep>;
+  steps?: VpnResultStep[];
+  raw: Record<string, unknown>;
 };
 
 export type DraftOrder = {
@@ -59,7 +89,7 @@ export type OrderView = {
   paymentUrl?: string;
   uiScenario?: Exclude<UiScenario, 'default'>;
   labels?: string[];
-  vpnGuide?: VpnDeliveryGuide;
+  resultDocument?: VpnResultArticle;
   activitypub?: Record<string, unknown>;
   ownerProfileId?: string;
   ownerUsername?: string;
@@ -115,25 +145,6 @@ export type PaymentQuote = {
   labels: string[];
 };
 
-export type VpnDeliveryGuideStep = {
-  id: string;
-  title: string;
-  summary: string;
-  apps?: Array<{
-    label: string;
-    href: string;
-  }>;
-  exampleVlessLink?: string;
-  linuxClient?: string[];
-  otherClientsNote?: string;
-};
-
-export type VpnDeliveryGuide = {
-  title: string;
-  summary: string;
-  steps: VpnDeliveryGuideStep[];
-};
-
 export type OrderSubtask = {
   id: string;
   title: string;
@@ -146,49 +157,6 @@ export type StageItem = {
   title: string;
   detail: string;
   state: ProgressState;
-};
-
-export type VpnExecutionStep = {
-  solver: {
-    name: string;
-    handle: string;
-    profileUrl: string;
-  };
-  instructions?: Array<{
-    title: string;
-    detail: string;
-  }>;
-  id: 'vpn-discovery' | 'vpn-pricing' | 'vpn-deploying' | 'vpn-ready';
-  badge: string;
-  title: string;
-  detail: string;
-  revealSolver: boolean;
-  revealExecutionEstimate: boolean;
-  revealPrice: boolean;
-  revealWidget: boolean;
-};
-
-export type VpnFlowPresentation = {
-  stepDelaysMs: number[];
-  labels: {
-    scenario: string;
-    current: string;
-    next: string;
-    step: string;
-    of: string;
-    timer: string;
-    profile: string;
-    copy: string;
-    executionEstimate: string;
-    price: string;
-    widget: string;
-  };
-  steps: VpnExecutionStep[];
-  widget: {
-    title: string;
-    summary: string;
-    badge: string;
-  };
 };
 
 export type ResultSurface =
@@ -226,7 +194,6 @@ export type ExecutionPresentation = {
   supportingText: string;
   stageItems: StageItem[];
   subtasks: OrderSubtask[];
-  vpnFlow: VpnFlowPresentation | null;
   primaryMetric: {
     label: string;
     value: string;
@@ -238,6 +205,52 @@ export type ExecutionPresentation = {
     unit: string;
   };
 };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function extractAttachmentResult(order: OrderView | null): { title: string; summary: string; content: string } | null {
+  const attachments = Array.isArray(order?.activitypub?.attachment) ? order?.activitypub?.attachment : [];
+
+  for (const item of attachments) {
+    if (!isRecord(item)) {
+      continue;
+    }
+
+    const mediaType = typeof item.mediaType === 'string' ? item.mediaType : '';
+    const type = typeof item.type === 'string' ? item.type : '';
+    const rel = Array.isArray(item.rel) ? item.rel : typeof item.rel === 'string' ? [item.rel] : [];
+
+    const isPaymentLink =
+      type === 'PaymentLink' ||
+      rel.some((value) => typeof value === 'string' && /payment|price/i.test(value)) ||
+      mediaType === 'application/payment-link+json';
+
+    if (isPaymentLink) {
+      continue;
+    }
+
+    const content = item.content;
+    if (typeof content === 'string' && content.trim()) {
+      return {
+        title: typeof item.name === 'string' && item.name.trim() ? item.name : 'Task result',
+        summary: typeof item.summary === 'string' && item.summary.trim() ? item.summary : 'Server-provided result payload.',
+        content
+      };
+    }
+
+    if (isRecord(content)) {
+      return {
+        title: typeof item.name === 'string' && item.name.trim() ? item.name : 'Task result',
+        summary: typeof item.summary === 'string' && item.summary.trim() ? item.summary : 'Server-provided result payload.',
+        content: JSON.stringify(content, null, 2)
+      };
+    }
+  }
+
+  return null;
+}
 
 export function isVpnOrder(order: OrderView | null): boolean {
   if (!order) {
@@ -472,24 +485,6 @@ export function deriveExecutionPresentation(
   const estimate = splitEstimate(order?.executionEstimate, localeText);
   const isVpnScenario = isVpnOrder(order);
 
-  const vpnFlow = isVpnScenario
-    ? {
-        stepDelaysMs: [...VPN_FLOW_MOCK.stepDelaysMs],
-        labels: { ...VPN_FLOW_MOCK.labels },
-        steps: VPN_FLOW_MOCK.steps.map((step) => {
-          const instructions = 'instructions' in step ? step.instructions : undefined;
-          return {
-            ...step,
-            solver: { ...step.solver },
-            instructions: Array.isArray(instructions)
-              ? instructions.map((instruction: { title: string; detail: string }) => ({ ...instruction }))
-              : undefined
-          };
-        }),
-        widget: { ...VPN_FLOW_MOCK.widget }
-      }
-    : null;
-
   return {
     scenario: isVpnScenario ? 'vpn-service' : 'default',
     stage,
@@ -498,7 +493,6 @@ export function deriveExecutionPresentation(
     supportingText: stageConfig.detail,
     stageItems: buildStageItems(stage, localeText),
     subtasks: buildOrderSubtasks(order, localeText),
-    vpnFlow,
     primaryMetric: {
       label: localeText.labels.price,
       value: formatAmountValue(order?.estimatedCost),
@@ -517,30 +511,54 @@ export function deriveResultSurface(
   localeText: KefineLocaleText,
   fallbackHref: string
 ): ResultSurface {
+  const attachmentResult = extractAttachmentResult(order);
+
   if (isVpnOrder(order)) {
-    const mockPayload = {
-      task: order?.title ?? localeText.defaults.taskTitle,
-      protocol: 'vless',
-      region: 'netherlands',
-      host: 'edge.lefine.pro',
-      port: 443,
-      tls: true,
-      transport: 'ws',
-      path: '/vless',
-      clientId: 'f4c73a77-e2db-42e1-917a-05a8804882ff',
-      flow: 'xtls-rprx-vision',
-      package: 'vpn-config.json'
-    };
+    const resultDocument = order?.resultDocument;
+    if (resultDocument) {
+      return {
+        type: 'json',
+        title: resultDocument.name,
+        summary: resultDocument.summary || 'Server-generated ActivityStreams article.',
+        content: JSON.stringify(resultDocument.raw, null, 2)
+      };
+    }
+
+    if (attachmentResult) {
+      return {
+        type: 'json',
+        title: attachmentResult.title,
+        summary: attachmentResult.summary,
+        content: attachmentResult.content
+      };
+    }
 
     return {
       type: 'json',
       title: 'VPN mock result',
-      summary: order?.vpnGuide?.summary ?? 'Mock VLESS package rendered inline as JSON.',
-      content: JSON.stringify(mockPayload, null, 2)
+      summary: 'VPN guide is unavailable, showing fallback package payload.',
+      content: JSON.stringify(
+        {
+          task: order?.title ?? localeText.defaults.taskTitle,
+          protocol: 'vless',
+          package: 'vless-us1.jsonc'
+        },
+        null,
+        2
+      )
     };
   }
 
   const normalizedTitle = order?.title.trim().toLowerCase() ?? '';
+
+  if (attachmentResult) {
+    return {
+      type: 'json',
+      title: attachmentResult.title,
+      summary: attachmentResult.summary,
+      content: attachmentResult.content
+    };
+  }
 
   if (normalizedTitle.includes('deploy') || normalizedTitle.includes('production')) {
     return {

@@ -1,2 +1,95 @@
 [tools]
 bun = "1.3"
+node = "22"
+crystal = "1.16.3"
+"ubi:fatedier/frp" = { version = "0.68.0", exe = "frpc" }
+
+[tasks.default]
+description = "Start the local development environment"
+depends = ["dev"]
+
+[tasks.install]
+description = "Install all project dependencies"
+depends = ["frontend:deps"]
+
+[tasks."frontend:deps"]
+description = "Install frontend dependencies with Bun"
+run = '''
+if [ ! -d node_modules ]; then
+  bun install --frozen-lockfile
+fi
+'''
+
+[tasks."backend:deps"]
+description = "Install crater dependencies with shards"
+run = '''
+if [ ! -d crater/lib/kemal ]; then
+  cd crater && shards install
+fi
+'''
+
+[tasks."backend:build"]
+description = "Build the crater dev container image"
+run = "./scripts/nerdctl-compose.sh build crater"
+
+[tasks."db:up"]
+description = "Start local Postgres in nerdctl compose"
+run = "./scripts/nerdctl-compose.sh up -d postgres"
+
+[tasks."db:wait"]
+description = "Wait until local Postgres accepts connections"
+depends = ["db:up"]
+run = '''
+until ./scripts/nerdctl-compose.sh exec -T postgres pg_isready -U kefine -d kefine >/dev/null 2>&1; do
+  echo "Waiting for postgres on localhost:5432..."
+  sleep 1
+done
+'''
+
+[tasks."container:repair"]
+description = "Repair broken rootless nerdctl/containerd state"
+run = "containerd-rootless-setuptool.sh install"
+
+[tasks."db:down"]
+description = "Stop local Postgres"
+run = "./scripts/nerdctl-compose.sh stop postgres"
+
+[tasks.frontend]
+description = "Run the SvelteKit frontend"
+depends = ["frontend:deps"]
+run = "bun run dev --host 0.0.0.0"
+
+[tasks.backend]
+description = "Run the crater backend in a dev container without rebuilding"
+depends = ["db:wait"]
+run = "./scripts/nerdctl-compose.sh up crater"
+
+[tasks."backend:local"]
+description = "Run the crater backend directly with Crystal"
+depends = ["backend:deps", "db:wait"]
+run = "cd crater && crystal run src/crater.cr"
+
+[tasks."backend:down"]
+description = "Stop the crater backend container"
+run = "./scripts/nerdctl-compose.sh stop crater"
+
+[tasks.dev]
+description = "Start Postgres, crater, and the frontend"
+depends = ["install"]
+run = "mise run backend ::: frontend"
+
+[tasks.tunnel]
+description = "Expose the local frontend through FRP"
+run = '''
+if [ -z "${FRP_TOKEN:-}" ]; then
+  echo "FRP_TOKEN is required"
+  echo "export FRP_TOKEN=..."
+  exit 1
+fi
+frpc -c scripts/frpc.dev-proxy.toml
+'''
+
+[tasks."dev:proxy"]
+description = "Start the local stack and expose it through FRP"
+depends = ["install"]
+run = "mise run backend ::: frontend ::: tunnel"

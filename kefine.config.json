@@ -54,7 +54,7 @@
   "defaultActor": {
     "handle": "api",
     "displayName": "API",
-    "privateKeyPem": "dev-private-key"
+    "privateKeyPem": ""
   },
   "services": [
     {

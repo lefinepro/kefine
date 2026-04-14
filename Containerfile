@@ -8,23 +8,19 @@ RUN bun install --frozen-lockfile
 COPY . .
 RUN bun run build
 
-FROM caddy:2.10-alpine
+FROM oven/bun:1.2.23
 
 WORKDIR /app
-
-RUN apk add --no-cache nodejs
 
 COPY --from=build /app/build ./build
 COPY --from=build /app/kefine.config.json ./kefine.config.json
 COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/node_modules ./node_modules
-COPY Caddyfile /etc/caddy/Caddyfile
 
 ENV NODE_ENV=production
 ENV PORT=5173
-ENV APP_PORT=3000
+ENV HOST=0.0.0.0
 
 EXPOSE 5173
 
-CMD ["sh", "-c", "HOST=127.0.0.1 PORT=${APP_PORT} node build & exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile"]
-
+CMD ["bun", "build/index.js"]

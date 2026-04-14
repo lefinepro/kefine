@@ -505,10 +505,20 @@ module Crater
         "templateAuthorDisplayName" => order.template_author_display_name,
         "templatePricingMode" => order.template_pricing_mode,
         "templatePricingValue" => order.template_pricing_value,
-        "attachment" => payment_links(order, status, config)
+        "attachment" => result_attachments(order, status, config)
       }
 
       JSON.parse(object_payload.to_json)
+    end
+
+    private def self.result_attachments(order : OrderRecord, status : String, config : Utils::Config)
+      attachments = payment_links(order, status, config)
+
+      if status == "completed" && order.ui_scenario == "vpn-service"
+        attachments << JSON.parse(vpn_delivery_attachment(order, config).to_json)
+      end
+
+      attachments
     end
 
     private def self.payment_links(order : OrderRecord, status : String, config : Utils::Config)
@@ -539,6 +549,63 @@ module Crater
       [JSON.parse(payment_record.to_json)]
     end
 
+    private def self.vpn_delivery_attachment(order : OrderRecord, config : Utils::Config)
+      vless_uri = "vless://32274730-3454-49e3-b2d9-e6adf153b176@provider.akashprovid.com:32701?encryption=none&flow=xtls-rprx-vision&fp=chrome&pbk=1Lj8mfaT2j_ScjZvTQmAhFrsy9rdmFpNTObdhZxoJzs&security=reality&sid=ea392ae8&sni=github.com&type=tcp#UsServer1"
+
+      {
+        "@context" => ActivityPub::CONTEXT,
+        "id" => "#{config.actor_outbox}/deliveries/#{URI.encode_path(order.id)}",
+        "type" => "Article",
+        "name" => "VPN delivery package",
+        "summary" => "Structured VPN connection package and setup guide.",
+        "mediaType" => "text/markdown",
+        "attributedTo" => config.actor_id,
+        "url" => "/vless-us1.jsonc",
+        "content" => "Provisioned VLESS access package with client setup steps for mobile and desktop.",
+        "generator" => {
+          "type" => "Service",
+          "name" => "Crater"
+        },
+        "tag" => ["vpn", "vless", "delivery"],
+        "attachment" => [
+          {
+            "type" => "Link",
+            "name" => "VLESS profile",
+            "href" => vless_uri
+          },
+          {
+            "type" => "Link",
+            "name" => "Config file",
+            "href" => "/vless-us1.jsonc"
+          },
+          {
+            "type" => "Article",
+            "position" => 1,
+            "name" => "Android setup",
+            "content" => "Install Exclave or v2rayNG, import the VLESS URI, confirm the UsServer1 profile, then connect and verify the new IP."
+          },
+          {
+            "type" => "Article",
+            "position" => 2,
+            "name" => "iOS setup",
+            "content" => "Open Shadowrocket or Stash, import the VLESS URI from clipboard or URL, approve the VPN profile, then connect."
+          },
+          {
+            "type" => "Article",
+            "position" => 3,
+            "name" => "Desktop setup",
+            "content" => "Use v2rayN on Windows, V2RayU on macOS, or NekoBox on Linux. Import the same VLESS URI, select UsServer1, and enable system proxy if required."
+          },
+          {
+            "type" => "Article",
+            "position" => 4,
+            "name" => "Verification",
+            "content" => "After connection, open whatismyip.com or run curl ifconfig.me to verify that traffic is routed through the provisioned endpoint."
+          }
+        ]
+      }
+    end
+
     def self.activity_for(order : OrderRecord, status : String, config : Utils::Config) : JSON::Any
       activity_payload = {
         "@context" => [
@@ -557,6 +624,13 @@ module Crater
       }
 
       JSON.parse(activity_payload.to_json)
+    end
+
+    def self.activity_for_payload(payload : JSON::Any, config : Utils::Config) : ActivityPub::Activity
+      raise BadRequest.new("Payload must be JSON object") unless payload.as_h?
+
+      record = parse_order_payload(payload, config)
+      ActivityPub::Activity.from_json(activity_for(record, record.status, config).to_json)
     end
 
     def self.submit_create(activity : ActivityPub::Activity, config : Utils::Config) : OrderRecord
@@ -580,23 +654,7 @@ module Crater
     end
 
     def self.submit_rest(payload : JSON::Any, config : Utils::Config) : OrderRecord
-      raise BadRequest.new("Payload must be JSON object") unless payload.as_h?
-
-      record = parse_order_payload(payload, config)
-
-      @@lock.synchronize do
-        persist_order(record, config)
-        persist_activity(activity_for(record, record.status, config), record.id, config)
-      end
-
-      spawn do
-        sleep 3.seconds
-        transition(record.id, "in_progress", config)
-        sleep 3.seconds
-        transition(record.id, "completed", config)
-      end
-
-      record
+      submit_create(activity_for_payload(payload, config), config)
     end
 
     def self.transition(order_id : String, status : String, config : Utils::Config)
@@ -618,7 +676,7 @@ module Crater
       row = database(config).query_one?(
         "SELECT id, status, solver, title, description, estimated_cost, currency, execution_estimate, created_at, updated_at, payment_url, ui_scenario, labels_json, template_id, template_slug, template_author_profile_id, template_author_username, template_author_display_name, template_pricing_mode, template_pricing_value, solver_name, solver_handle, solver_profile_url FROM orders WHERE id = $1",
         order_id,
-        as: {String, String, String, String, String?, String?, String, String?, String, String, String?, String?, String}
+        as: {String, String, String, String, String?, String?, String, String?, String, String, String?, String?, String, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?}
       )
       return nil unless row
 

@@ -71,6 +71,8 @@ export const KEFINE_TEXT_EN = {
     addPrice: '+ price',
     fileCount: (count: number) => `${count} file${count === 1 ? '' : 's'}`,
     composerHints: 'Enter to send, Alt+Enter to queue, Shift+Enter for a new line',
+    serviceSetupTitle: 'Configure the service before launch',
+    serviceSetupSubtitle: 'Review the template variables, adjust the values, then start the service manually.',
     pinnedServicesTitle: 'Pinned services',
     pinnedServicesSubtitle: 'Start from configured service entry points before describing a custom task.',
     pathsTitle: 'Task routes',
@@ -178,7 +180,8 @@ export const KEFINE_TEXT_EN = {
     walletTitle: 'Wallet / Social',
     walletDetail: 'Use MetaMask, WalletConnect, Email, or Google to claim the paying account.',
     passkeyTitle: 'Passkey',
-    privateKeyTitle: 'Public key',
+    privateKeyTitle: 'Private key',
+    privateKeyDescription: 'Paste a compact pqsk key or full PEM private key text. Escaped \\n lines are accepted too. The browser derives the ML-DSA public key locally and sends only the public key string.',
     passkeyDetail: 'Use your platform account, or continue with email if no passkey profile exists.',
     anonymousTitle: '10 min test',
     anonymousDetail: 'Test now',
@@ -293,18 +296,6 @@ export const KEFINE_TEXT_EN = {
         detail: 'Lefine manages execution and unlocks the final access package or result.'
       }
     }
-  },
-  vpnFlow: {
-    discoveryTitle: 'We determine the best VPN service',
-    discoveryDetail: 'We compare providers, regions, and protocol constraints before committing to an option.',
-    pricingTitle: 'We determine the price',
-    pricingDetail: 'The selected solver estimates setup cost and the expected execution window.',
-    deployingTitle: 'Server selected, starting service deployment',
-    deployingDetail: 'Provisioning is in progress and the VPN service is being configured on the selected server.',
-    readyTitle: 'Service is ready',
-    readyDetail: 'The delivery widget is prepared from the solver result and stays blurred for now.',
-    widgetTitle: 'VPN service widget',
-    widgetSummary: 'The service result is prepared and will be connected to the crater payload later.'
   },
   errors: {
     orderRequired: 'Task text is required',

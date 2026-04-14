@@ -249,7 +249,7 @@
     paymentError = '';
 
     try {
-      const response = await fetch(`/payment/${encodeURIComponent(currentOrder.id)}`, {
+      const response = await fetch(`/api/payment/${encodeURIComponent(currentOrder.id)}`, {
         headers: { Accept: 'application/json' }
       });
       const body = await readJsonOrThrow(response);
@@ -291,7 +291,7 @@
       return paymentConfig;
     }
 
-    const response = await fetch('/api/kefine/payment-config', {
+    const response = await fetch('/api/payment-config', {
       headers: { Accept: 'application/json' }
     });
     const body = await readJsonOrThrow(response);
@@ -316,7 +316,7 @@
     paymentError = '';
 
     try {
-      const response = await fetch(`/payment/${encodeURIComponent(currentOrder.id)}/promo`, {
+      const response = await fetch(`/api/payment/${encodeURIComponent(currentOrder.id)}/promo`, {
         method: 'POST',
         headers: {
           Accept: 'application/json',
@@ -541,7 +541,7 @@
           <p>{resultSurface.summary}</p>
 
           {#if resultSurface.type === 'json'}
-            <pre class="kefine-result-json">{resultSurface.content}</pre>
+            <lef-result-json>{resultSurface.content}</lef-result-json>
           {:else if resultSurface.type === 'iframe'}
             <iframe srcdoc={resultSurface.srcdoc} title={resultSurface.title}></iframe>
           {:else if resultSurface.type === 'external-link'}
@@ -573,7 +573,8 @@
 </article>
 
 <style>
-  .kefine-result-json {
+  lef-result-json {
+    display: block;
     margin: 0;
     padding: 1rem;
     border: 1px solid color-mix(in oklab, var(--kef-color-text) 16%, transparent);

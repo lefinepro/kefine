@@ -29,70 +29,73 @@
 </script>
 
 <KefineModal open={open} onClose={onClose} closeLabel={closeLabel} width="min(32rem, calc(100vw - 2rem))">
-  <section class="publickey-dialog">
+  <lef-privatekey-dialog>
     {#if description.trim()}
-      <header class="publickey-dialog__header">
+      <lef-privatekey-header>
         <h2>{title}</h2>
         <p>{description}</p>
-      </header>
+      </lef-privatekey-header>
     {:else}
-      <h2 class="publickey-dialog__title">{title}</h2>
+      <lef-privatekey-title>{title}</lef-privatekey-title>
     {/if}
 
-    <label class="publickey-dialog__field">
-      <input
-        type="text"
-        data-testid="kefine-publickey-input"
-        value={value}
+    <lef-privatekey-field>
+      <label>
+      <textarea
+        data-testid="kefine-privatekey-input"
         placeholder={placeholder}
         autocomplete="off"
         spellcheck="false"
-        oninput={(event) => onInput((event.currentTarget as HTMLInputElement).value)}
-      />
-    </label>
+        oninput={(event) => onInput((event.currentTarget as HTMLTextAreaElement).value)}
+      >{value}</textarea>
+      </label>
+    </lef-privatekey-field>
 
     {#if helperText.trim()}
-      <p class="publickey-dialog__helper">{helperText}</p>
+      <lef-privatekey-helper>{helperText}</lef-privatekey-helper>
     {/if}
 
-    <button type="button" class="publickey-dialog__submit" data-testid="kefine-publickey-submit" onclick={onSubmit}>
+    <button type="button" data-testid="kefine-privatekey-submit" onclick={onSubmit}>
       {submitLabel}
     </button>
-  </section>
+  </lef-privatekey-dialog>
 </KefineModal>
 
 <style>
-  .publickey-dialog {
+  lef-privatekey-dialog {
     display: grid;
     gap: 1rem;
     padding: 1.25rem;
   }
 
-  .publickey-dialog__header h2,
-  .publickey-dialog__header p {
+  lef-privatekey-header h2,
+  lef-privatekey-header p {
     margin: 0;
   }
 
-  .publickey-dialog__title {
+  lef-privatekey-title {
+    display: block;
     margin: 0;
   }
 
-  .publickey-dialog__header {
+  lef-privatekey-header {
     display: grid;
     gap: 0.4rem;
   }
 
-  .publickey-dialog__header p {
+  lef-privatekey-header p {
     opacity: 0.72;
   }
 
-  .publickey-dialog__field {
+  lef-privatekey-field,
+  lef-privatekey-field label {
     display: grid;
     gap: 0.5rem;
   }
 
-  .publickey-dialog__field input {
+  lef-privatekey-field textarea {
     width: 100%;
+    min-height: 10rem;
     border: 1px solid color-mix(in oklab, var(--lefine-text, #2e2317) 14%, transparent);
     border-radius: 0.85rem;
     padding: 0.9rem 1rem;
@@ -101,9 +104,13 @@
     font: inherit;
     font-size: 0.95rem;
     letter-spacing: 0.01em;
+    line-height: 1.45;
+    resize: vertical;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
   }
 
-  .publickey-dialog__submit {
+  lef-privatekey-dialog > button {
     border: 0;
     border-radius: 0.85rem;
     padding: 0.85rem 1rem;
@@ -113,7 +120,8 @@
     font-weight: 600;
   }
 
-  .publickey-dialog__helper {
+  lef-privatekey-helper {
+    display: block;
     margin: -0.25rem 0 0;
     opacity: 0.72;
     font-size: 0.92rem;

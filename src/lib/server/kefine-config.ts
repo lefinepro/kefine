@@ -90,6 +90,10 @@ function loadRawConfigFile(): unknown {
 
 let cachedConfig: KefineFullConfig | null = null;
 
+function readEnvironmentOverride(name: string): string {
+  return normalizeText(process.env[name]);
+}
+
 export function getKefineConfig(): KefineFullConfig {
   if (cachedConfig) {
     return cachedConfig;
@@ -115,7 +119,10 @@ export function getKefineConfig(): KefineFullConfig {
     defaultActor: {
       handle: publicConfig.defaultActor.handle,
       displayName: publicConfig.defaultActor.displayName,
-      privateKeyPem: normalizeText(defaultActor.privateKeyPem, DEFAULT_CONFIG.defaultActor.privateKeyPem)
+      privateKeyPem: normalizeText(
+        readEnvironmentOverride('KEFINE_PRIVATEKEY_DEFAULT'),
+        normalizeText(defaultActor.privateKeyPem, DEFAULT_CONFIG.defaultActor.privateKeyPem)
+      )
     },
     origins: {
       primary: normalizeText(origins.primary, DEFAULT_CONFIG.origins.primary),
@@ -123,8 +130,14 @@ export function getKefineConfig(): KefineFullConfig {
       task: normalizeText(origins.task, DEFAULT_CONFIG.origins.task)
     },
     backend: {
-      craterBaseUrl: normalizeText(backend.craterBaseUrl, DEFAULT_CONFIG.backend.craterBaseUrl),
-      exchangeBaseUrl: normalizeText(backend.exchangeBaseUrl, DEFAULT_CONFIG.backend.exchangeBaseUrl),
+      craterBaseUrl: normalizeText(
+        readEnvironmentOverride('CRATER_BASE_URL'),
+        normalizeText(backend.craterBaseUrl, DEFAULT_CONFIG.backend.craterBaseUrl)
+      ),
+      exchangeBaseUrl: normalizeText(
+        readEnvironmentOverride('EXCHANGE_BASE_URL'),
+        normalizeText(backend.exchangeBaseUrl, DEFAULT_CONFIG.backend.exchangeBaseUrl)
+      ),
       port: normalizeNumber(backend.port, DEFAULT_CONFIG.backend.port),
       host: normalizeText(backend.host, DEFAULT_CONFIG.backend.host),
       environment: normalizeText(backend.environment, DEFAULT_CONFIG.backend.environment),

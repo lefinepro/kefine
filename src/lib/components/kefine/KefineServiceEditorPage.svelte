@@ -59,6 +59,7 @@
   let preferredSolverIds = $state<string[]>([]);
   let fileInput = $state<HTMLInputElement | null>(null);
   let imageInput = $state<HTMLInputElement | null>(null);
+  let tagInput = $state<HTMLInputElement | null>(null);
   let hydratedServiceKey = $state<string>('');
 
   function formatPromptVariableLabel(key: string): string {
@@ -108,6 +109,16 @@
       solverCohortQuery: 'vpn'
     };
   }
+
+  $effect(() => {
+    if (!tagEditorOpen || !tagInput) {
+      return;
+    }
+
+    queueMicrotask(() => {
+      tagInput?.focus();
+    });
+  });
 
   $effect(() => {
     const nextHydratedServiceKey = `${service?.id ?? '__new__'}|${$kefineLocale}`;
@@ -411,11 +422,11 @@
 
         {#if tagEditorOpen}
           <input
+            bind:this={tagInput}
             bind:value={tagInputValue}
             data-part="tag-input"
             placeholder="tag"
             maxlength="32"
-            autofocus
             onkeydown={handleTagInputKeydown}
             onblur={() => {
               if (tagInputValue.trim()) {
@@ -518,7 +529,6 @@
   .service-page__form,
   .service-page__variables,
   .service-page__field,
-  .service-page__theme,
   .service-page__headline-field,
   .service-page__headline-note,
   .service-page__slug-field {
@@ -534,7 +544,6 @@
   }
 
   .service-page__head lefine-text,
-  .service-page__theme strong,
   .service-page__variables strong {
     color: color-mix(in oklab, var(--kef-color-text) 58%, transparent);
     margin: 0;
@@ -594,12 +603,6 @@
     font: inherit;
   }
 
-  .service-page__slug-field small span {
-    display: block;
-    margin-top: 0.25rem;
-    color: color-mix(in oklab, var(--kef-color-text) 72%, transparent);
-  }
-
   .service-page__layout {
     display: block;
   }
@@ -653,7 +656,6 @@
     display: block;
   }
 
-  .service-page__visibility,
   .service-page__actions,
   .service-page__files {
     display: flex;
@@ -670,7 +672,6 @@
     width: min(100%, 58rem);
   }
 
-  .service-page__theme,
   .service-page__variables {
     padding: 0;
     border: 0;

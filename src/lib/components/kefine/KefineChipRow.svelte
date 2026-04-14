@@ -10,19 +10,19 @@
   } = $props();
 </script>
 
-<kefine-chip-row class="kefine-chip-row" class:kefine-chip-row--nowrap={!wrap} aria-label={ariaLabel}>
+<kefine-chip-row data-wrap={wrap} aria-label={ariaLabel}>
   {@render children?.()}
 </kefine-chip-row>
 
 <style>
-  .kefine-chip-row {
+  kefine-chip-row {
     display: flex;
     flex-wrap: wrap;
     gap: 0.65rem;
     align-items: center;
   }
 
-  .kefine-chip-row--nowrap {
+  kefine-chip-row[data-wrap='false'] {
     flex-wrap: nowrap;
   }
 </style>

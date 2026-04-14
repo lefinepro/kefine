@@ -46,21 +46,21 @@
 </script>
 
 <KefineModal open={open} onClose={onClose} closeLabel={closeLabel} width="min(30rem, calc(100vw - 2rem))">
-  <header class="kefine-contact-dialog__header">
-    <lefine-box>
+  <lef-contact-header>
+    <lef-contact-copy>
       <h2>{title}</h2>
       <p>{description}</p>
-    </lefine-box>
-  </header>
+    </lef-contact-copy>
+  </lef-contact-header>
 
   <form
-    class="kefine-contact-dialog__form"
-    onsubmit={(event) => {
+    onsubmit={(event: SubmitEvent) => {
       event.preventDefault();
       onSubmit();
     }}
   >
-    <label class="kefine-contact-dialog__field">
+    <lef-contact-field>
+      <label>
       <lefine-text>{nameLabel}</lefine-text>
       <input
         type="text"
@@ -68,9 +68,11 @@
         placeholder={namePlaceholder}
         oninput={(event) => onNameInput((event.currentTarget as HTMLInputElement).value)}
       />
-    </label>
+      </label>
+    </lef-contact-field>
 
-    <label class="kefine-contact-dialog__field">
+    <lef-contact-field>
+      <label>
       <lefine-text>{emailLabel}</lefine-text>
       <input
         type="email"
@@ -78,26 +80,33 @@
         placeholder={emailPlaceholder}
         oninput={(event) => onEmailInput((event.currentTarget as HTMLInputElement).value)}
       />
-    </label>
+      </label>
+    </lef-contact-field>
 
-    <label class="kefine-contact-dialog__field">
+    <lef-contact-field>
+      <label>
       <lefine-text>{messageLabel}</lefine-text>
       <textarea
         rows="5"
         placeholder={messagePlaceholder}
         oninput={(event) => onMessageInput((event.currentTarget as HTMLTextAreaElement).value)}
       >{messageValue}</textarea>
-    </label>
+      </label>
+    </lef-contact-field>
 
-    <footer class="kefine-contact-dialog__footer">
+    <lef-contact-footer>
       <button type="button" data-variant="ghost" onclick={onClose}>{closeLabel}</button>
       <button type="submit" data-variant="primary">{submitLabel}</button>
-    </footer>
+    </lef-contact-footer>
   </form>
 </KefineModal>
 
 <style>
-  .kefine-contact-dialog__header {
+  lef-contact-header {
+    display: block;
+  }
+
+  lef-contact-header {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
@@ -105,32 +114,33 @@
     padding: 1.15rem 1.15rem 0;
   }
 
-  .kefine-contact-dialog__header h2 {
+  lef-contact-header h2 {
     margin: 0 0 0.3rem;
   }
 
-  .kefine-contact-dialog__header p {
+  lef-contact-header p {
     margin: 0;
     opacity: 0.72;
   }
 
-  .kefine-contact-dialog__form {
+  form {
     display: grid;
     gap: 0.9rem;
     padding: 1.15rem;
   }
 
-  .kefine-contact-dialog__field {
+  lef-contact-field,
+  lef-contact-field label {
     display: grid;
     gap: 0.35rem;
   }
 
-  .kefine-contact-dialog__field lefine-text {
+  lef-contact-field lefine-text {
     font-size: 0.92rem;
     font-weight: 600;
   }
 
-  .kefine-contact-dialog__footer {
+  lef-contact-footer {
     display: flex;
     justify-content: flex-end;
     gap: 0.65rem;

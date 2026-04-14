@@ -1,4 +1,5 @@
 import { getKefineConfig } from '$lib/server/kefine-config';
+import { isSpecialRuntimeHostname } from '$lib/config/special-runtime';
 
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
 
@@ -48,14 +49,24 @@ function getDomainBucket(pathname: string): DomainBucket {
   }
 
   if (
+    normalizedPath === '/auth' ||
+    normalizedPath === '/api/auth' ||
     normalizedPath === '/create' ||
+    normalizedPath === '/api/create' ||
     normalizedPath.startsWith('/task/') ||
     normalizedPath.startsWith('/order/') ||
     normalizedPath.startsWith('/payment/') ||
+    normalizedPath.startsWith('/api/payment/') ||
     normalizedPath.startsWith('/pay/') ||
+    normalizedPath.startsWith('/api/pay/') ||
+    normalizedPath.startsWith('/auth/') ||
     normalizedPath.startsWith('/passkeys/') ||
     normalizedPath === '/status' ||
     normalizedPath.startsWith('/status/') ||
+    normalizedPath === '/api/status' ||
+    normalizedPath.startsWith('/api/status/') ||
+    normalizedPath === '/api/payment-config' ||
+    normalizedPath.startsWith('/api/services') ||
     normalizedPath.startsWith('/api/kefine/')
   ) {
     return 'task';
@@ -80,7 +91,7 @@ function getConfiguredOrigins(): DomainConfig {
 }
 
 export function resolveDomainRedirect(url: URL): URL | null {
-  if (isLocalHost(url.hostname)) {
+  if (isLocalHost(url.hostname) || isSpecialRuntimeHostname(url.hostname)) {
     return null;
   }
 

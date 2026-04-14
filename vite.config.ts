@@ -10,6 +10,7 @@ export default defineConfig({
     }
   },
   server: {
+    allowedHosts: ['dev-proxy.col.pub'],
     fs: {
       allow: [resolve(__dirname, '.meta/data/mocks')]
     },

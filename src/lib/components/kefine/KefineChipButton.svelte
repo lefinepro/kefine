@@ -20,8 +20,7 @@
 
 <button
   {type}
-  class="kefine-chip-button"
-  class:kefine-chip-button--dashed={dashed}
+  data-dashed={dashed}
   aria-label={ariaLabel}
   {title}
   {disabled}
@@ -31,7 +30,7 @@
 </button>
 
 <style>
-  .kefine-chip-button {
+  button {
     display: inline-flex;
     align-items: center;
     gap: 0.45rem;
@@ -45,7 +44,7 @@
     font: inherit;
   }
 
-  .kefine-chip-button--dashed {
+  button[data-dashed='true'] {
     border-style: dashed;
   }
 

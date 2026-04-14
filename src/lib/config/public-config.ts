@@ -165,6 +165,10 @@ export function resolvePublicRuntimeConfig(value: unknown): KefinePublicRuntimeC
   };
 }
 
+export function getPublicRuntimeConfig(value: unknown = {}): KefinePublicRuntimeConfig {
+  return resolvePublicRuntimeConfig(value);
+}
+
 let browserPublicRuntimeConfig: KefinePublicRuntimeConfig | null = null;
 
 export function setBrowserPublicRuntimeConfig(value: unknown): void {

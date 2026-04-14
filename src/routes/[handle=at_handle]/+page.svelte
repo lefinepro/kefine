@@ -1798,7 +1798,7 @@
     box-shadow: inset 0 1px 0 color-mix(in oklab, white 18%, transparent);
   }
 
-  .profile-template-card__icon span {
+  .profile-template-card__icon {
     font-size: 1rem;
     font-weight: 700;
     line-height: 1;

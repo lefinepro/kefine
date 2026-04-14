@@ -69,8 +69,8 @@
     onApply: (payload: { cohortQuery: string; solverIds: string[] }) => void;
   } = $props();
 
-  let localQuery = $state(cohortQuery);
-  let localSelectedSolverIds = $state<string[]>(selectedSolverIds);
+  let localQuery = $state('');
+  let localSelectedSolverIds = $state<string[]>([]);
 
   $effect(() => {
     if (!open) {
@@ -245,15 +245,18 @@
     margin-top: 0.3rem;
   }
 
-  .kefine-solver-cohort-dialog__badges span {
+  .kefine-solver-cohort-dialog__badges {
+    color: color-mix(in oklab, #ead7b3 62%, transparent);
+    font-size: 0.82rem;
+  }
+
+  .kefine-solver-cohort-dialog__badges lefine-text {
     display: inline-flex;
     min-height: 1.8rem;
     align-items: center;
     padding: 0.2rem 0.55rem;
     border-radius: 999px;
     background: color-mix(in oklab, #24170f 90%, black 10%);
-    color: color-mix(in oklab, #ead7b3 62%, transparent);
-    font-size: 0.82rem;
   }
 
   .kefine-solver-cohort-dialog__actions {

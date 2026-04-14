@@ -26,13 +26,13 @@
       const storedProfile = getProfileByUsername(localStorage, page.params.handle ?? '');
       const walletAddress = authState.address?.trim() || null;
       const walletHandle = walletAddress ? deriveWalletProfileHandle(walletAddress) : null;
-      const userId = passkeySession?.userId || authState.email?.trim().toLowerCase() || walletAddress;
+      const userId = passkeySession?.userId || authState.userId?.trim() || authState.email?.trim().toLowerCase() || walletAddress;
       const viewerProfile = userId
         ? ensureProfileForSession({
             storage: localStorage,
             userId,
             email: authState.email,
-            displayName: passkeySession?.username || authState.email?.split('@')[0] || walletHandle || authState.address || 'user',
+            displayName: passkeySession?.username || authState.displayName?.trim() || authState.handle?.trim() || authState.email?.split('@')[0] || walletHandle || authState.address || 'user',
             avatarUrl: undefined,
             authType: passkeySession ? 'passkey' : authState.authType,
             walletAddress,
@@ -80,18 +80,19 @@
   });
 </script>
 
-<section class="service-redirect-page">
+<lef-service-redirect-page>
   <p>{profile ? 'Redirecting to the service page…' : 'Loading service…'}</p>
-</section>
+</lef-service-redirect-page>
 
 <style>
-  .service-redirect-page {
+  lef-service-redirect-page {
+    display: block;
     width: min(42rem, calc(100vw - 2rem));
     margin: 0 auto;
     padding: 6rem 0 2rem;
   }
 
-  .service-redirect-page p {
+  lef-service-redirect-page p {
     margin: 0;
     color: var(--kef-color-muted);
   }

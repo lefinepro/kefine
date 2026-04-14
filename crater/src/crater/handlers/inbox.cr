@@ -1,6 +1,5 @@
 require "kemal"
 require "json"
-require "http/client"
 require "../activitypub/types"
 require "../order_queue"
 require "../utils/config"
@@ -21,25 +20,17 @@ module Crater
             next({error: "Invalid JSON body"}.to_json)
           end
 
-          unless ACCEPTED_TYPES.includes?(activity.type)
-            env.response.status_code = 400
-            next({error: "Unknown activity type: #{activity.type}"}.to_json)
-          end
+          env.response.content_type = "application/json"
 
-          # TODO: Verify HTTP Signature before processing
           order = begin
-            OrderQueue.submit_create(activity, config)
+            accept_activity(activity, config)
+          rescue ex : OrderQueue::Error::InvalidActivity
+            env.response.status_code = 400
+            next({error: ex.message}.to_json)
           rescue ex : Exception
             env.response.status_code = 500
             next({error: "Failed to queue order", reason: ex.message}.to_json)
           end
-
-          target = config.order_queue_inbox
-          if !target.empty? && target != config.actor_inbox
-              spawn do
-                forward_to_order_queue(target, body)
-              end
-            end
 
           env.response.status_code = 202
           {
@@ -53,17 +44,13 @@ module Crater
         end
       end
 
-      private def self.forward_to_order_queue(target : String, payload : String) : Nil
-        return if target.empty?
+      def self.accept_activity(activity : ActivityPub::Activity, config : Utils::Config) : OrderQueue::OrderRecord
+        unless ACCEPTED_TYPES.includes?(activity.type)
+          raise OrderQueue::Error::InvalidActivity.new("Unknown activity type: #{activity.type}")
+        end
 
-        headers = HTTP::Headers{
-          "Content-Type" => "application/activity+json",
-          "Accept"       => "application/activity+json",
-        }
-
-        HTTP::Client.post(target, headers: headers, body: payload)
-      rescue
-        # Intentionally ignore forwarding failures while keeping local queue operational
+        # TODO: Verify HTTP Signature before processing
+        OrderQueue.submit_create(activity, config)
       end
     end
   end
