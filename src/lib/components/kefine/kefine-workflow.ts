@@ -94,6 +94,8 @@ export type OrderView = {
   ownerProfileId?: string;
   ownerUsername?: string;
   ownerDisplayName?: string;
+  actorHandle?: string;
+  actorDid?: string;
   shareId?: string;
   isClosedCompleted?: boolean;
   isPublicTask?: boolean;

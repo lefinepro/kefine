@@ -86,7 +86,7 @@ export const KEFINE_TEXT_EN = {
   },
   create: {
     title: 'Describe a technical task',
-    subtitle: 'Set your budget. Lefine finds a solver, confirms the price and ETA, and delivers the result.',
+    subtitle: 'Set the execution time. Lefine finds a solver, confirms the route and ETA, and delivers the result.',
     placeholder: 'Describe the VPN or DevOps task...',
     placeholderVariants: [
       'Deploy private VPN for the team',
@@ -97,7 +97,7 @@ export const KEFINE_TEXT_EN = {
     executeAria: 'Execute task',
     backgroundExecuteAria: 'Send task in background',
     addFile: '+ file',
-    addPrice: '+ price',
+    addExecutionEstimate: '+ ETA',
     fileCount: (count: number) => `${count} file${count === 1 ? '' : 's'}`,
     composerHints: 'Enter to send, Alt+Enter to queue, Shift+Enter for a new line',
     serviceSetupTitle: 'Configure the service before launch',
@@ -123,7 +123,7 @@ export const KEFINE_TEXT_EN = {
   },
   status: {
     statusPollingMessage: (solver: string, queued: boolean) => `Solver ${solver} is ${queued ? 'accepting' : 'executing'} the task`,
-    createSending: 'Sending task...',
+    createSending: 'Forwarding document...',
     queued: (solver: string) => `Task queued. Assigned solver: ${solver}`,
     notCompleted: 'Solver did not return completion status yet. Please refresh order status manually.',
     completed: 'Task completed. Choose payment.'
@@ -148,6 +148,10 @@ export const KEFINE_TEXT_EN = {
     orderStatusUnavailable: 'Waiting for task status update...',
     timeLeft: 'Time left:',
     price: 'Price:',
+    summary: 'Task Summary',
+    execution: 'Execution',
+    relatedItems: 'Related items',
+    window: 'Window',
     taskStatus: 'Task status',
     hoursUnit: 'hours',
     minutesUnit: 'min',
@@ -211,6 +215,7 @@ export const KEFINE_TEXT_EN = {
     passkeyTitle: 'Passkey',
     privateKeyTitle: 'Private key',
     privateKeyDescription: 'Paste a compact pqsk key or full PEM private key text. Escaped \\n lines are accepted too. The browser derives the ML-DSA public key locally and sends only the public key string.',
+    privateKeyGenerateLabel: 'Generate actor',
     passkeyDetail: 'Use your platform account, or continue with email if no passkey profile exists.',
     anonymousTitle: '10 min test',
     anonymousDetail: 'Test now',
@@ -305,24 +310,23 @@ export const KEFINE_TEXT_EN = {
     anonymousSaveHint: 'Authenticate to save and revisit this result later.'
   },
   afe: {
-    title: 'How Lefine works',
+    title: '',
     cards: {
       afe: {
         title: 'What is Lefine?',
-        detail:
-          'Lefine is an Automated Freelance Marketplace (AFM). You describe the task, and we match it with the solution path that fits it best.'
+        detail: 'Lefine is an Automated Freelance Marketplace (AFM) where you describe the work you need and Lefine finds the right path to deliver the result.'
       },
       task: {
-        title: '1. Describe the task',
-        detail: 'Describe the engineering outcome you need and set a budget cap.'
+        title: 'Brief',
+        detail: 'Describe the work and set the timing.'
       },
       quote: {
-        title: '2. Solver quote',
-        detail: 'A solver accepts the task, confirms the route, price, and ETA within that scope.'
+        title: 'Quote',
+        detail: 'A solver confirms the route and ETA.'
       },
       delivery: {
-        title: '3. Delivery',
-        detail: 'Lefine manages execution and unlocks the final access package or result.'
+        title: 'Delivery',
+        detail: 'Lefine delivers the final access or result.'
       }
     }
   },

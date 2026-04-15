@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { browser } from '$app/environment';
   import type { DraftOrder, OrderView, TemplatePresentation } from './kefine-workflow';
   import { scheduleAfter } from '$lib/utils/helpers';
   import KefineOrderListItem from '$lib/components/kefine/KefineOrderListItem.svelte';
@@ -31,25 +32,31 @@
     hasMoreOrders,
     matchedTasksLabel,
     addFileLabel,
-    addPriceLabel,
+    addExecutionEstimateLabel,
     fileCountLabel,
     composerHints,
     timeLeftLabel,
-    priceLabel,
+    openTaskLabel,
+    summaryLabel,
+    executionLabel,
+    relatedItemsLabel,
+    windowLabel,
     statusLabel,
     stopTaskLabel,
+    deleteTaskLabel,
     onSubmit,
     onQueueTask,
     onAttachFiles,
     onRemoveFile,
     onStopOrder,
+    onDeleteOrder,
     onOpenOrder,
     onLoadMoreOrders,
     onDescriptionChange,
     onTemplateVariableChange,
     onTagsChange,
-    onCostChange,
-    onCurrencyChange
+    executionEstimateLabel,
+    onExecutionEstimateChange
   }: {
     draft: DraftOrder;
     template: TemplatePresentation | null;
@@ -89,41 +96,49 @@
     hasMoreOrders: boolean;
     matchedTasksLabel: string;
     addFileLabel: string;
-    addPriceLabel: string;
+    addExecutionEstimateLabel: string;
     fileCountLabel: (count: number) => string;
     composerHints: string;
     timeLeftLabel: string;
-    priceLabel: string;
+    openTaskLabel: string;
+    summaryLabel: string;
+    executionLabel: string;
+    relatedItemsLabel: string;
+    windowLabel: string;
     statusLabel: string;
     stopTaskLabel: string;
+    deleteTaskLabel: string;
     onSubmit: () => void;
     onQueueTask: () => Promise<void> | void;
     onAttachFiles: (files: File[]) => void;
     onRemoveFile: (index: number) => void;
     onStopOrder: (order: OrderView, event: Event) => void;
+    onDeleteOrder: (order: OrderView, event: Event) => void;
     onOpenOrder: (order: OrderView) => void;
     onLoadMoreOrders: () => void;
     onDescriptionChange?: (value: string) => void;
     onTemplateVariableChange?: (key: string, value: string) => void;
     onTagsChange?: (tags: string[]) => void;
-    onCostChange?: (value: string) => void;
-    onCurrencyChange?: (value: string) => void;
+    executionEstimateLabel: string;
+    onExecutionEstimateChange?: (value: string) => void;
   } = $props();
 
   let animatedPlaceholder = $state('');
   let placeholderVisible = $state(false);
   let placeholderFocused = $state(false);
   let isLoadingMore = $state(false);
-  let priceEditorOpen = $state(false);
+  let executionEditorOpen = $state(false);
   let tagEditorOpen = $state(false);
   let tagInputValue = $state('');
   let taskTextarea = $state<HTMLTextAreaElement | null>(null);
   let tagInput = $state<HTMLInputElement | null>(null);
   let fileInput = $state<HTMLInputElement | null>(null);
+  let recentLoadTrigger = $state<HTMLDivElement | null>(null);
   let filePreviews = $state<Map<number, string>>(new Map());
   let touchStopTimers = new Map<string, () => void>();
   let touchStopTriggered = new Set<string>();
   let cancelPlaceholderTick: (() => void) | null = null;
+  let cancelLoadMoreReset: (() => void) | null = null;
   let placeholderVariantIndex = $state(0);
   let placeholderCharIndex = $state(0);
   let placeholderDeleting = $state(false);
@@ -261,6 +276,8 @@
     return () => {
       cancelPlaceholderTick?.();
       cancelPlaceholderTick = null;
+      cancelLoadMoreReset?.();
+      cancelLoadMoreReset = null;
 
       for (const cancelTimer of touchStopTimers.values()) {
         cancelTimer();
@@ -339,21 +356,67 @@
     target.value = '';
   }
 
-  function handleRecentOrdersScroll(event: Event) {
+  function requestRecentOrdersLoad() {
     if (!hasMoreOrders || isLoadingMore) return;
-
-    const target = event.currentTarget as HTMLDivElement | null;
-    if (!target) return;
-
-    const nearBottom = target.scrollHeight - target.scrollTop - target.clientHeight <= 36;
-    if (!nearBottom) return;
-
     isLoadingMore = true;
     onLoadMoreOrders();
-    requestAnimationFrame(() => {
+    cancelLoadMoreReset?.();
+    cancelLoadMoreReset = scheduleAfter(180, () => {
       isLoadingMore = false;
+      cancelLoadMoreReset = null;
     });
   }
+
+  function isRecentOrdersSentinelNearViewport() {
+    if (!browser || !recentLoadTrigger) {
+      return false;
+    }
+
+    const rect = recentLoadTrigger.getBoundingClientRect();
+    return rect.top - globalThis.innerHeight <= 240;
+  }
+
+  $effect(() => {
+    if (!browser || isSearching || totalOrders === 0 || !hasMoreOrders || !recentLoadTrigger) {
+      return;
+    }
+
+    if ('IntersectionObserver' in globalThis) {
+      const observer = new IntersectionObserver(
+        (entries) => {
+          if (entries.some((entry) => entry.isIntersecting)) {
+            requestRecentOrdersLoad();
+          }
+        },
+        {
+          root: null,
+          rootMargin: '0px 0px 240px 0px',
+          threshold: 0
+        }
+      );
+
+      observer.observe(recentLoadTrigger);
+
+      return () => {
+        observer.disconnect();
+      };
+    }
+
+    const handleWindowScroll = () => {
+      if (isRecentOrdersSentinelNearViewport()) {
+        requestRecentOrdersLoad();
+      }
+    };
+
+    handleWindowScroll();
+    globalThis.addEventListener('scroll', handleWindowScroll, { passive: true });
+    globalThis.addEventListener('resize', handleWindowScroll);
+
+    return () => {
+      globalThis.removeEventListener('scroll', handleWindowScroll);
+      globalThis.removeEventListener('resize', handleWindowScroll);
+    };
+  });
 
   function startStopPress(order: OrderView, event: PointerEvent) {
     if (event.pointerType === 'mouse') {
@@ -395,6 +458,12 @@
     }
 
     onStopOrder(order, event);
+  }
+
+  function handleDeleteClick(order: OrderView, event: MouseEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+    onDeleteOrder(order, event);
   }
 
   function handleOpenOrderKeydown(order: OrderView, event: KeyboardEvent) {
@@ -515,13 +584,7 @@
   <h2 id="kefine-create-title">{title}</h2>
   <p id="kefine-create-subtitle" data-part="subtitle">{subtitle}</p>
 
-  <form
-    data-part="form"
-    onsubmit={(event) => {
-      event.preventDefault();
-      onSubmit();
-    }}
-  >
+  <lef-create-form data-part="form">
     <fieldset data-part="exec-row" data-testid="kefine-create-form">
       <kefine-task-shell>
         <label data-part="sr-only" for="order-title">{title}</label>
@@ -561,11 +624,12 @@
         {/if}
       </kefine-task-shell>
       <button
-        type="submit"
+        type="button"
         data-variant="primary"
         data-part="exec-button"
         data-testid="kefine-submit-task"
         aria-label={executeAria}
+        onclick={onSubmit}
       >
         <kefine-exec-arrow aria-hidden="true">➵</kefine-exec-arrow>
       </button>
@@ -578,24 +642,18 @@
           <strong>{fileCountLabel(draft.files.length)}</strong>
         {/if}
       </button>
-      {#if priceEditorOpen}
-        <kefine-price-editor>
+      {#if executionEditorOpen}
+        <kefine-execution-editor>
           <input 
-            value={draft.estimatedCost} 
-            data-part="price-input" 
-            inputmode="decimal"
-            oninput={(e) => onCostChange?.((e.currentTarget as HTMLInputElement).value)}
+            value={draft.executionEstimate}
+            data-part="execution-estimate-input"
+            placeholder={executionEstimateLabel}
+            oninput={(e) => onExecutionEstimateChange?.((e.currentTarget as HTMLInputElement).value)}
           />
-          <input 
-            value={draft.currency} 
-            data-part="currency-input" 
-            maxlength="8"
-            oninput={(e) => onCurrencyChange?.((e.currentTarget as HTMLInputElement).value)}
-          />
-        </kefine-price-editor>
+        </kefine-execution-editor>
       {:else}
-        <button type="button" data-part="composer-chip" onclick={() => { priceEditorOpen = true; }}>
-          <lefine-text>{addPriceLabel}</lefine-text>
+        <button type="button" data-part="composer-chip" onclick={() => { executionEditorOpen = true; }}>
+          <lefine-text>{addExecutionEstimateLabel}</lefine-text>
         </button>
       {/if}
       {#if tagEditorOpen}
@@ -664,7 +722,7 @@
     {/if}
 
     <p id="kefine-composer-hints" data-part="composer-hints">{composerHints}</p>
-  </form>
+  </lef-create-form>
 
   {#if (isSearching && matchedOrders.length > 0) || totalOrders > 0}
     <section data-part="recent" aria-label={isSearching ? matchedTasksLabel : solverLabel}>
@@ -676,33 +734,51 @@
               {order}
               {statusLabel}
               {timeLeftLabel}
-              {priceLabel}
+              {solverLabel}
+              {openTaskLabel}
+              {summaryLabel}
+              {executionLabel}
+              {relatedItemsLabel}
+              {windowLabel}
+              {deleteTaskLabel}
+              showDelete={true}
               itemTestId={`kefine-search-order-${order.id}`}
               openTestId={`kefine-open-search-order-${order.id}`}
               etaTestId={`kefine-order-eta-${order.id}`}
+              deleteTestId={`kefine-delete-search-order-${order.id}`}
               onOpen={() => onOpenOrder(order)}
               onOpenKeydown={(event) => handleOpenOrderKeydown(order, event)}
+              onDelete={(event) => handleDeleteClick(order, event)}
             />
           {/each}
         </ul>
       {:else if totalOrders > 0}
-        <section data-part="recent-scroll" data-testid="kefine-recent-scroll" onscroll={handleRecentOrdersScroll}>
+        <section data-part="recent-scroll" data-testid="kefine-recent-scroll">
           <ul data-part="recent-list" data-testid="kefine-recent-list">
             {#each recentOrders as order (order.id)}
               <KefineOrderListItem
                 {order}
                 {statusLabel}
                 {timeLeftLabel}
-                {priceLabel}
+                {solverLabel}
+                {openTaskLabel}
+                {summaryLabel}
+                {executionLabel}
+                {relatedItemsLabel}
+                {windowLabel}
                 {stopTaskLabel}
+                {deleteTaskLabel}
                 showStop={true}
+                showDelete={true}
                 itemTestId={`kefine-order-item-${order.id}`}
                 openTestId={`kefine-open-order-${order.id}`}
                 etaTestId={`kefine-order-eta-${order.id}`}
                 stopTestId={`kefine-stop-order-${order.id}`}
+                deleteTestId={`kefine-delete-order-${order.id}`}
                 onOpen={() => onOpenOrder(order)}
                 onOpenKeydown={(event) => handleOpenOrderKeydown(order, event)}
                 onStop={(event) => handleStopClick(order, event)}
+                onDelete={(event) => handleDeleteClick(order, event)}
                 onStopPointerDown={(event) => startStopPress(order, event)}
                 onStopPointerUp={() => clearStopPress(order.id)}
                 onStopPointerLeave={() => clearStopPress(order.id)}
@@ -710,6 +786,9 @@
               />
             {/each}
           </ul>
+          {#if hasMoreOrders}
+            <div bind:this={recentLoadTrigger} data-part="recent-load-trigger" aria-hidden="true"></div>
+          {/if}
         </section>
       {/if}
     </section>
@@ -755,18 +834,65 @@
     {/if}
 
     <lef-afe-steps>
-      <lefine-box class="kefine-section-head">
-        <p>{afe.title}</p>
-      </lefine-box>
+      <lef-afe-flow aria-label={afe.title}>
+        <lef-afe-diagram>
+          <lef-afe-node-round>
+            <strong>Task</strong>
+          </lef-afe-node-round>
 
-      <lefine-box class="kefine-afe-grid kefine-afe-grid--executing">
-        {#each afeStepCards as card}
-          <article class="kefine-afe-card kefine-afe-card--executing">
-            <strong>{card.title}</strong>
-            <p>{card.detail}</p>
-          </article>
-        {/each}
-      </lefine-box>
+          {#if afeStepCards[0]}
+            <lef-afe-link-in aria-hidden="true">
+              <span>in</span>
+            </lef-afe-link-in>
+            <lef-afe-node-step>
+              <lef-afe-step-head>
+                <strong>{afeStepCards[0].title}</strong>
+                <lef-brief-writing aria-hidden="true">
+                  <lef-brief-sheet>
+                    <lef-brief-sheet-line></lef-brief-sheet-line>
+                    <lef-brief-sheet-line></lef-brief-sheet-line>
+                    <lef-brief-sheet-line></lef-brief-sheet-line>
+                  </lef-brief-sheet>
+                </lef-brief-writing>
+              </lef-afe-step-head>
+              <p>{afeStepCards[0].detail}</p>
+            </lef-afe-node-step>
+          {/if}
+
+          {#if afeStepCards[1]}
+            <lef-afe-link-route aria-hidden="true">
+              <span>route</span>
+            </lef-afe-link-route>
+            <lef-afe-node-step>
+              <lef-afe-step-head>
+                <strong>{afeStepCards[1].title}</strong>
+                <lef-quote-box-pick aria-hidden="true">
+                  <lef-quote-doc-chip>
+                    <lef-quote-doc-line></lef-quote-doc-line>
+                    <lef-quote-doc-line></lef-quote-doc-line>
+                  </lef-quote-doc-chip>
+                  <lef-quote-box></lef-quote-box>
+                  <lef-quote-box></lef-quote-box>
+                  <lef-quote-box data-selected="true"></lef-quote-box>
+                </lef-quote-box-pick>
+              </lef-afe-step-head>
+              <p>{afeStepCards[1].detail}</p>
+            </lef-afe-node-step>
+          {/if}
+
+          <lef-afe-link-out aria-hidden="true">
+            <span>result</span>
+          </lef-afe-link-out>
+          <lef-afe-node-round>
+            <strong>{afeStepCards[2]?.title ?? 'Delivery'}</strong>
+            <lef-delivery-pack aria-hidden="true">
+              <lef-delivery-pack-doc></lef-delivery-pack-doc>
+              <lef-delivery-pack-box></lef-delivery-pack-box>
+              <lef-delivery-pack-lid></lef-delivery-pack-lid>
+            </lef-delivery-pack>
+          </lef-afe-node-round>
+        </lef-afe-diagram>
+      </lef-afe-flow>
     </lef-afe-steps>
   </lef-afe-layout>
 </lef-afe-showcase>
@@ -948,6 +1074,727 @@
     background: color-mix(in oklab, var(--kef-bg-card) 88%, var(--kef-bg-soft));
   }
 
+  lef-afe-flow {
+    --afe-ink: #23170f;
+    --afe-ink-soft: #332419;
+    --afe-ink-muted: #3b2819;
+    --afe-edge: #2f2015;
+    --afe-edge-soft: #7a5a37;
+    --afe-edge-warm: #8f6a43;
+    --afe-paper: #ecd9b2;
+    --afe-paper-deep: #dcc292;
+    --afe-paper-note: #f8ebca;
+    --afe-paper-sheet: #f7e7c5;
+    --afe-paper-fold: #f3dfb6;
+    --afe-paper-highlight: #fff8ea;
+    --afe-feather: #4a3220;
+    --afe-feather-mid: #6d4b2f;
+    --afe-feather-light: #8c6945;
+    --afe-quill-spine: #f4e3bf;
+    --afe-quill-shaft: #24170f;
+    --afe-quill-shaft-end: #5a3f28;
+    --afe-quill-nib: #170e09;
+    --afe-quill-nib-end: #38261a;
+    --afe-box: #e8cd9d;
+    --afe-box-lid: #edd6ab;
+    --afe-box-deep: #d7b576;
+    --afe-pack-box: #e4c794;
+    --afe-pack-box-deep: #cda869;
+    --afe-accepted: #dbe7c9;
+    --afe-accepted-deep: #b8ce97;
+    --afe-accepted-ink: #3b5b31;
+    --afe-accepted-glow: #8fb07f;
+    --afe-wash-a: #8d6438;
+    --afe-wash-b: #7b542d;
+    --afe-grain: #6e4d2b;
+    --afe-speck: #5d4025;
+    --afe-shadow: #4d3522;
+    --afe-shadow-deep: #7f5d35;
+    position: relative;
+    display: grid;
+    gap: 1rem;
+    width: 100%;
+    min-width: 0;
+    padding: clamp(1rem, 2vw, 1.5rem);
+    border-radius: 1.35rem;
+    border: 1px solid color-mix(in oklab, var(--afe-edge-soft) 34%, transparent);
+    background:
+      radial-gradient(circle at 18% 22%, color-mix(in oklab, var(--afe-wash-a) 8%, transparent), transparent 18%),
+      radial-gradient(circle at 82% 76%, color-mix(in oklab, var(--afe-wash-b) 7%, transparent), transparent 20%),
+      color-mix(in oklab, var(--afe-paper) 92%, var(--afe-paper-deep) 8%);
+    box-shadow:
+      inset 0 1px 0 color-mix(in oklab, var(--afe-paper-highlight) 28%, transparent),
+      inset 0 0 0 1px color-mix(in oklab, var(--afe-edge-warm) 14%, transparent),
+      inset 0 0 80px color-mix(in oklab, var(--afe-wash-a) 5%, transparent),
+      0 14px 30px color-mix(in oklab, var(--afe-shadow-deep) 9%, transparent);
+    overflow: hidden;
+  }
+
+  lef-afe-flow::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      repeating-linear-gradient(
+        0deg,
+        color-mix(in oklab, var(--afe-grain) 3.2%, transparent) 0 2px,
+        transparent 2px 8px
+      ),
+      repeating-linear-gradient(
+        90deg,
+        color-mix(in oklab, var(--afe-grain) 2.6%, transparent) 0 3px,
+        transparent 3px 11px
+      ),
+      radial-gradient(circle at 20% 24%, color-mix(in oklab, var(--afe-speck) 8%, transparent) 0 1px, transparent 1.2px),
+      radial-gradient(circle at 72% 68%, color-mix(in oklab, var(--afe-speck) 7%, transparent) 0 1px, transparent 1.2px);
+    background-size: auto, auto, 24px 24px, 32px 32px;
+    mix-blend-mode: multiply;
+    opacity: 0.72;
+    pointer-events: none;
+  }
+
+  lef-afe-flow::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow:
+      inset 0 0 30px color-mix(in oklab, var(--afe-wash-b) 7%, transparent),
+      inset 0 0 80px color-mix(in oklab, var(--afe-speck) 4%, transparent);
+    pointer-events: none;
+  }
+
+  lef-afe-diagram {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    width: 100%;
+    min-width: 0;
+    grid-template-columns:
+      minmax(4.8rem, 5.8rem)
+      minmax(2rem, 0.42fr)
+      minmax(0, 1.1fr)
+      minmax(2rem, 0.42fr)
+      minmax(0, 1.1fr)
+      minmax(2rem, 0.42fr)
+      minmax(4.8rem, 5.8rem);
+    grid-template-rows: auto auto;
+    align-items: center;
+    column-gap: clamp(0.45rem, 1vw, 0.8rem);
+    row-gap: 0.9rem;
+  }
+
+  lef-afe-node-round,
+  lef-afe-node-step,
+  lef-afe-node-round strong,
+  lef-afe-node-step strong,
+  lef-afe-node-step p,
+  lef-afe-step-head,
+  lef-afe-link-in span,
+  lef-afe-link-route span,
+  lef-afe-link-out span {
+    margin: 0;
+  }
+
+  lef-afe-node-round,
+  lef-afe-node-step {
+    position: relative;
+    display: grid;
+    min-width: 0;
+    color: var(--afe-ink);
+    background: color-mix(in oklab, var(--afe-paper) 94%, var(--afe-paper-deep) 6%);
+  }
+
+  lef-afe-node-round {
+    place-items: center;
+    width: clamp(4.6rem, 8vw, 5.7rem);
+    aspect-ratio: 1;
+    border-radius: 999px;
+    border: 2px solid color-mix(in oklab, var(--afe-edge) 86%, transparent);
+    box-shadow:
+      inset 0 0 0 1px color-mix(in oklab, var(--afe-paper-highlight) 20%, transparent),
+      0 0 0 1px color-mix(in oklab, var(--afe-edge) 14%, transparent);
+    transform: rotate(-3deg);
+  }
+
+  lef-afe-node-round strong {
+    font-size: 0.94rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--afe-ink);
+  }
+
+  lef-afe-node-step {
+    align-content: start;
+    justify-items: start;
+    min-height: 8.4rem;
+    padding: 0.9rem 1rem 0.95rem;
+    border-radius: 0.95rem;
+    border: 2px solid color-mix(in oklab, var(--afe-edge) 78%, transparent);
+    box-shadow:
+      inset 0 0 0 1px color-mix(in oklab, var(--afe-paper-highlight) 18%, transparent),
+      0 8px 18px color-mix(in oklab, var(--afe-shadow) 5%, transparent);
+    transform: rotate(-0.6deg);
+    overflow: hidden;
+  }
+
+  lef-afe-node-step strong {
+    font-size: 1rem;
+    font-weight: 760;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    color: var(--afe-ink);
+  }
+
+  lef-afe-step-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.85rem;
+    width: 100%;
+  }
+
+  lef-afe-node-step p {
+    margin-top: 0.45rem;
+    font-size: 0.84rem;
+    line-height: 1.45;
+    color: color-mix(in oklab, var(--afe-ink-soft) 96%, var(--afe-edge-soft) 4%);
+  }
+
+  lef-brief-writing {
+    position: relative;
+    display: block;
+    width: 2.35rem;
+    height: 2.2rem;
+    overflow: hidden;
+    flex: 0 0 auto;
+  }
+
+  lef-brief-sheet {
+    position: absolute;
+    inset: 0.62rem 0.24rem 0.12rem 0.38rem;
+    display: grid;
+    align-content: center;
+    gap: 0.22rem;
+    padding: 0.34rem 0.34rem 0.28rem;
+    border: 2px solid color-mix(in oklab, var(--afe-edge) 70%, transparent);
+    border-radius: 0.36rem 0.5rem 0.42rem 0.46rem;
+    background: color-mix(in oklab, var(--afe-paper-note) 92%, white 8%);
+    box-shadow: 0 4px 10px color-mix(in oklab, var(--afe-shadow) 5%, transparent);
+    transform: rotate(4deg);
+    opacity: 0.9;
+    overflow: hidden;
+  }
+
+  lef-brief-sheet-line {
+    display: block;
+    height: 2px;
+    border-radius: 999px;
+    background: color-mix(in oklab, var(--afe-ink-muted) 82%, transparent);
+    justify-self: start;
+    transform-origin: left center;
+    animation: kefine-brief-writing 3.2s ease-in-out infinite;
+  }
+
+  lef-brief-sheet-line:nth-child(1) {
+    width: 78%;
+    animation-delay: 0.1s;
+  }
+
+  lef-brief-sheet-line:nth-child(2) {
+    width: 92%;
+    animation-delay: 0.45s;
+  }
+
+  lef-brief-sheet-line:nth-child(3) {
+    width: 66%;
+    animation-delay: 0.8s;
+  }
+
+  lef-quote-box-pick {
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    gap: 0.22rem;
+    min-width: 3.6rem;
+    height: 2.1rem;
+    padding: 0.1rem 0 0;
+    flex: 0 0 auto;
+  }
+
+  lef-quote-doc-chip,
+  lef-quote-doc-line,
+  lef-quote-box,
+  lef-delivery-pack,
+  lef-delivery-pack-doc,
+  lef-delivery-pack-box,
+  lef-delivery-pack-lid {
+    display: block;
+  }
+
+  lef-quote-doc-chip {
+    position: absolute;
+    top: 0.02rem;
+    left: 0.08rem;
+    width: 0.9rem;
+    height: 1.08rem;
+    padding: 0.18rem 0.14rem;
+    border: 1.6px solid color-mix(in oklab, #2f2015 68%, transparent);
+    border-radius: 0.14rem 0.24rem 0.16rem 0.16rem;
+    background: color-mix(in oklab, #f7e7c5 96%, white 4%);
+    box-shadow: 0 3px 8px color-mix(in oklab, #4d3522 7%, transparent);
+    transform: rotate(-8deg);
+    animation: kefine-quote-doc-select 4.8s cubic-bezier(0.22, 0.7, 0.2, 1) infinite;
+    z-index: 2;
+  }
+
+  lef-quote-doc-chip::before {
+    content: '';
+    position: absolute;
+    top: -0.02rem;
+    right: -0.02rem;
+    width: 0.28rem;
+    height: 0.28rem;
+    border-top: 1.6px solid color-mix(in oklab, #2f2015 58%, transparent);
+    border-right: 1.6px solid color-mix(in oklab, #2f2015 58%, transparent);
+    background: color-mix(in oklab, #f3dfb6 92%, white 8%);
+    clip-path: polygon(100% 0, 0 0, 100% 100%);
+  }
+
+  lef-quote-doc-line {
+    height: 2px;
+    border-radius: 999px;
+    background: color-mix(in oklab, #3b2819 76%, transparent);
+    opacity: 0.82;
+  }
+
+  lef-quote-doc-line:first-child {
+    width: 72%;
+  }
+
+  lef-quote-doc-line:last-child {
+    width: 86%;
+    margin-top: 0.14rem;
+  }
+
+  lef-quote-box {
+    position: relative;
+    width: 0.92rem;
+    height: 0.7rem;
+    border: 2px solid color-mix(in oklab, #2f2015 64%, transparent);
+    border-radius: 0.18rem;
+    background: color-mix(in oklab, #e8cd9d 92%, #d7b576 8%);
+    box-shadow: 0 3px 8px color-mix(in oklab, #4d3522 5%, transparent);
+    animation: kefine-quote-box-idle 4.8s ease-in-out infinite;
+  }
+
+  lef-quote-box::before {
+    content: '';
+    position: absolute;
+    top: -0.18rem;
+    left: 0.08rem;
+    right: 0.08rem;
+    height: 0.22rem;
+    border: 2px solid color-mix(in oklab, #2f2015 60%, transparent);
+    border-bottom: 0;
+    border-radius: 0.18rem 0.18rem 0 0;
+    background: color-mix(in oklab, #edd6ab 90%, #d7b576 10%);
+  }
+
+  lef-quote-box:nth-child(2) {
+    animation-delay: 0s;
+  }
+
+  lef-quote-box:nth-child(3) {
+    animation-delay: 1.1s;
+  }
+
+  lef-quote-box:nth-child(4) {
+    animation-delay: 2.2s;
+  }
+
+  lef-quote-box[data-selected='true'] {
+    background: color-mix(in oklab, #dbe7c9 82%, #b8ce97 18%);
+    border-color: color-mix(in oklab, #3b5b31 62%, transparent);
+    box-shadow: 0 0 0 2px color-mix(in oklab, #8fb07f 16%, transparent);
+  }
+
+  lef-delivery-pack {
+    position: absolute;
+    bottom: 0.7rem;
+    left: 50%;
+    width: 1.55rem;
+    height: 1.05rem;
+    transform: translateX(-50%);
+    overflow: hidden;
+  }
+
+  lef-delivery-pack-doc {
+    position: absolute;
+    left: 50%;
+    top: -0.02rem;
+    width: 0.72rem;
+    height: 0.88rem;
+    border: 1.6px solid color-mix(in oklab, #2f2015 68%, transparent);
+    border-radius: 0.12rem 0.2rem 0.14rem 0.14rem;
+    background: color-mix(in oklab, #f7e7c5 96%, white 4%);
+    transform: translateX(-50%);
+    animation: kefine-delivery-doc-pack 4.6s ease-in-out infinite;
+    z-index: 0;
+  }
+
+  lef-delivery-pack-box {
+    position: absolute;
+    inset: auto 0 0;
+    height: 0.6rem;
+    border: 2px solid color-mix(in oklab, #2f2015 72%, transparent);
+    border-radius: 0.16rem;
+    background: color-mix(in oklab, #e4c794 92%, #cda869 8%);
+    z-index: 1;
+  }
+
+  lef-delivery-pack-lid {
+    position: absolute;
+    top: 0.18rem;
+    left: 0.06rem;
+    right: 0.06rem;
+    height: 0.24rem;
+    border: 2px solid color-mix(in oklab, #2f2015 68%, transparent);
+    border-bottom: 0;
+    border-radius: 0.16rem 0.16rem 0 0;
+    background: color-mix(in oklab, #edd6ab 90%, #d7b576 10%);
+    transform-origin: center bottom;
+    animation: kefine-delivery-lid-pack 4.6s ease-in-out infinite;
+    z-index: 2;
+  }
+
+  @keyframes kefine-quote-doc-select {
+    0%,
+    10%,
+    100% {
+      left: 0.08rem;
+      top: 0.02rem;
+      transform: rotate(-8deg) scale(0.92);
+    }
+
+    28% {
+      left: 1.18rem;
+      top: 0.08rem;
+      transform: rotate(-3deg) scale(0.96);
+    }
+
+    52% {
+      left: 2.24rem;
+      top: 0.06rem;
+      transform: rotate(4deg) scale(1);
+    }
+
+    74% {
+      left: 2.24rem;
+      top: 0.44rem;
+      transform: rotate(2deg) scale(0.88);
+    }
+  }
+
+  @keyframes kefine-quote-box-idle {
+    0%,
+    12%,
+    100% {
+      transform: translateY(0) scale(0.94);
+    }
+
+    22%,
+    34% {
+      transform: translateY(-0.05rem) scale(1);
+    }
+  }
+
+  @keyframes kefine-brief-writing {
+    0%,
+    18%,
+    100% {
+      opacity: 0.2;
+      transform: scaleX(0.08);
+    }
+
+    26%,
+    46% {
+      opacity: 1;
+      transform: scaleX(1);
+    }
+  }
+
+  @keyframes kefine-delivery-doc-pack {
+    0%,
+    12%,
+    100% {
+      top: -0.02rem;
+      opacity: 0.95;
+      transform: translateX(-50%) scale(0.96);
+    }
+
+    46% {
+      top: -0.02rem;
+      opacity: 0.95;
+      transform: translateX(-50%) scale(1);
+    }
+
+    68% {
+      top: 0.3rem;
+      opacity: 1;
+      transform: translateX(-50%) scale(0.88);
+    }
+
+    82% {
+      top: 0.52rem;
+      opacity: 0.14;
+      transform: translateX(-50%) scale(0.74);
+    }
+
+    100% {
+      top: 0.58rem;
+      opacity: 0;
+      transform: translateX(-50%) scale(0.68);
+    }
+  }
+
+  @keyframes kefine-delivery-lid-pack {
+    0%,
+    34%,
+    100% {
+      transform: perspective(40px) rotateX(-62deg);
+    }
+
+    52% {
+      transform: perspective(40px) rotateX(-20deg);
+    }
+
+    74% {
+      transform: perspective(40px) rotateX(0deg);
+    }
+  }
+
+  lef-afe-link-in,
+  lef-afe-link-route,
+  lef-afe-link-out {
+    position: relative;
+    display: block;
+    height: 2px;
+    border-radius: 999px;
+    background: currentColor;
+    opacity: 0.9;
+  }
+
+  lef-afe-link-in::after,
+  lef-afe-link-route::after,
+  lef-afe-link-out::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: -0.02rem;
+    width: 0.78rem;
+    height: 0.78rem;
+    border-top: 2px solid currentColor;
+    border-right: 2px solid currentColor;
+    transform: translateY(-50%) rotate(45deg);
+  }
+
+  lef-afe-link-in,
+  lef-afe-link-route,
+  lef-afe-link-out {
+    color: #23170f;
+  }
+
+  lef-afe-link-in span,
+  lef-afe-link-route span,
+  lef-afe-link-out span {
+    position: absolute;
+    top: -1.1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: lowercase;
+    color: color-mix(in oklab, #2d1e14 92%, #7a5838 8%);
+  }
+
+  lef-afe-diagram > lef-afe-node-round,
+  lef-afe-diagram > lef-afe-node-step,
+  lef-afe-diagram > lef-afe-link-in,
+  lef-afe-diagram > lef-afe-link-route,
+  lef-afe-diagram > lef-afe-link-out {
+    grid-row: 1;
+  }
+
+  lef-afe-diagram > lef-afe-node-round:last-child {
+    transform: rotate(2.6deg);
+  }
+
+  :global(:root[data-kefine-theme='dark']) lef-afe-flow {
+    --afe-ink: #1c120b;
+    --afe-ink-soft: #1c120b;
+    --afe-ink-muted: #1c120b;
+    --afe-edge: #25170f;
+    --afe-edge-soft: #8b6a44;
+    --afe-edge-warm: #7f5c38;
+    --afe-paper: #cfb487;
+    --afe-paper-deep: #8f6d47;
+    --afe-paper-note: #dfc48f;
+    --afe-paper-sheet: #dfc48f;
+    --afe-paper-fold: #d4b67c;
+    --afe-paper-highlight: #fff1d8;
+    --afe-feather: #2c1b11;
+    --afe-feather-mid: #5d4229;
+    --afe-feather-light: #5d4229;
+    --afe-quill-spine: #e6d4b1;
+    --afe-quill-shaft: #180f0a;
+    --afe-quill-shaft-end: #4a3421;
+    --afe-quill-nib: #140c08;
+    --afe-quill-nib-end: #140c08;
+    --afe-box: #d5b478;
+    --afe-box-lid: #d5b478;
+    --afe-box-deep: #8f6a43;
+    --afe-pack-box: #d5b478;
+    --afe-pack-box-deep: #8f6a43;
+    --afe-accepted: #93ab72;
+    --afe-accepted-deep: #c2a16d;
+    --afe-accepted-ink: #28461f;
+    --afe-accepted-glow: #5d7d4d;
+    --afe-wash-a: #7a5a36;
+    --afe-wash-b: #5c4228;
+    --afe-speck: #5b4126;
+    border-color: color-mix(in oklab, var(--afe-edge-soft) 42%, transparent);
+    background:
+      radial-gradient(circle at 18% 22%, color-mix(in oklab, var(--afe-wash-a) 12%, transparent), transparent 18%),
+      radial-gradient(circle at 82% 76%, color-mix(in oklab, var(--afe-wash-b) 10%, transparent), transparent 20%),
+      color-mix(in oklab, var(--afe-paper) 78%, var(--afe-paper-deep) 22%);
+    box-shadow:
+      inset 0 1px 0 color-mix(in oklab, var(--afe-paper-highlight) 10%, transparent),
+      inset 0 0 0 1px color-mix(in oklab, var(--afe-edge-warm) 18%, transparent),
+      inset 0 0 80px color-mix(in oklab, var(--afe-speck) 11%, transparent),
+      0 14px 30px color-mix(in oklab, #000000 18%, transparent);
+  }
+
+  :global(:root[data-kefine-theme='dark']) lef-afe-flow::before {
+    opacity: 0.86;
+  }
+
+  :global(:root[data-kefine-theme='dark']) lef-afe-flow::after {
+    box-shadow:
+      inset 0 0 36px color-mix(in oklab, #3d2a19 16%, transparent),
+      inset 0 0 90px color-mix(in oklab, #24180f 12%, transparent);
+  }
+
+  :global(:root[data-kefine-theme='dark']) lef-afe-node-round,
+  :global(:root[data-kefine-theme='dark']) lef-afe-node-step {
+    color: #1a110b;
+    background: color-mix(in oklab, #e1c896 88%, #a67e52 12%);
+  }
+
+  :global(:root[data-kefine-theme='dark']) lef-afe-node-round {
+    border-color: color-mix(in oklab, #21150d 92%, transparent);
+    box-shadow:
+      inset 0 0 0 1px color-mix(in oklab, #fff3dc 10%, transparent),
+      0 0 0 1px color-mix(in oklab, #1d120b 18%, transparent);
+  }
+
+  :global(:root[data-kefine-theme='dark']) lef-afe-node-step {
+    border-color: color-mix(in oklab, #20140d 90%, transparent);
+    box-shadow:
+      inset 0 0 0 1px color-mix(in oklab, #fff3dc 9%, transparent),
+      0 8px 18px color-mix(in oklab, #000000 14%, transparent);
+  }
+
+  :global(:root[data-kefine-theme='dark']) lef-afe-node-round strong,
+  :global(:root[data-kefine-theme='dark']) lef-afe-node-step strong,
+  :global(:root[data-kefine-theme='dark']) lef-afe-node-step p,
+  :global(:root[data-kefine-theme='dark']) lef-brief-sheet-line,
+  :global(:root[data-kefine-theme='dark']) lef-quote-doc-line,
+  :global(:root[data-kefine-theme='dark']) lef-afe-link-in,
+  :global(:root[data-kefine-theme='dark']) lef-afe-link-route,
+  :global(:root[data-kefine-theme='dark']) lef-afe-link-out,
+  :global(:root[data-kefine-theme='dark']) lef-afe-link-in span,
+  :global(:root[data-kefine-theme='dark']) lef-afe-link-route span,
+  :global(:root[data-kefine-theme='dark']) lef-afe-link-out span {
+    color: #1c120b;
+  }
+
+  @media (max-width: 1080px) {
+    lef-afe-flow {
+      padding-block: 1rem;
+    }
+
+    lef-afe-diagram {
+      grid-template-columns: 1fr;
+      grid-template-rows: none;
+      gap: 0.5rem;
+    }
+
+    lef-afe-link-in,
+    lef-afe-link-route,
+    lef-afe-link-out {
+      width: 2px;
+      height: 1.35rem;
+      justify-self: center;
+    }
+
+    lef-afe-link-in::after,
+    lef-afe-link-route::after,
+    lef-afe-link-out::after {
+      top: auto;
+      bottom: 0;
+      right: 50%;
+      transform: translateX(50%) rotate(135deg);
+    }
+
+    lef-afe-link-in span,
+    lef-afe-link-route span,
+    lef-afe-link-out span {
+      top: 50%;
+      left: 1rem;
+      transform: translateY(-50%);
+    }
+
+    lef-afe-node-round {
+      justify-self: center;
+    }
+
+    lef-afe-node-step {
+      min-height: 0;
+      width: 100%;
+      padding-block: 0.8rem;
+    }
+
+    lef-afe-step-head {
+      gap: 0.6rem;
+    }
+
+    lef-brief-writing {
+      width: 2.1rem;
+      height: 1.95rem;
+    }
+
+    lef-quote-box-pick {
+      min-width: 3rem;
+      height: 1.95rem;
+    }
+
+    lef-quote-box {
+      width: 0.82rem;
+      height: 0.62rem;
+    }
+
+    lef-afe-diagram > lef-afe-node-round,
+    lef-afe-diagram > lef-afe-node-step,
+    lef-afe-diagram > lef-afe-link-in,
+    lef-afe-diagram > lef-afe-link-route,
+    lef-afe-diagram > lef-afe-link-out {
+      grid-column: auto;
+      grid-row: auto;
+    }
+  }
+
   [data-kefine-create] h2 {
     font-size: clamp(1.35rem, 2vw, 1.75rem);
     margin: 0;
@@ -1085,7 +1932,7 @@
     text-align: right;
   }
 
-  form[data-part='form'] {
+  lef-create-form[data-part='form'] {
     display: grid;
     gap: 0.75rem;
   }
@@ -1230,8 +2077,7 @@
   }
 
   button[data-part='composer-chip'],
-  input[data-part='price-input'],
-  input[data-part='currency-input'],
+  input[data-part='execution-estimate-input'],
   button[data-part='file-pill'] {
     min-height: 2.35rem;
     padding: 0.5rem 0.95rem;
@@ -1252,23 +2098,14 @@
     letter-spacing: -0.01em;
   }
 
-  kefine-price-editor {
+  kefine-execution-editor {
     display: flex;
     gap: 0.5rem;
     align-items: center;
   }
 
-  input[data-part='price-input'] {
-    width: 7rem;
-  }
-
-  input[data-part='currency-input'] {
-    width: 5.5rem;
-    text-transform: uppercase;
-  }
-
-  input[data-part='price-input'],
-  input[data-part='currency-input'] {
+  input[data-part='execution-estimate-input'] {
+    width: 10rem;
     background: color-mix(in oklab, var(--kef-bg-card) 94%, white 6%);
   }
 
@@ -1354,13 +2191,15 @@
   }
 
   section[data-part='recent-scroll'] {
-    border: 0;
-    border-radius: 0.35rem;
-    height: auto;
-    max-height: min(40vh, 24rem);
-    overflow: auto;
+    display: grid;
+    gap: 0.5rem;
+    min-height: 0;
     padding: clamp(0.3rem, 2vw, 0.5rem);
-    background: transparent;
+  }
+
+  div[data-part='recent-load-trigger'] {
+    width: 100%;
+    height: 1px;
   }
 
   lef-services-showcase,

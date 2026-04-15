@@ -73,8 +73,12 @@ export function deriveProfileUsername(args: {
   fallback?: string | null;
 }): string {
   const emailSource = args.email?.split('@')[0];
+  const portableEmailSource =
+    emailSource?.startsWith('portable+') || emailSource?.startsWith('portable-')
+      ? emailSource.slice('portable+'.length)
+      : emailSource;
   const preferred =
-    sanitizeUsernamePart(emailSource || '') ||
+    sanitizeUsernamePart(portableEmailSource || '') ||
     sanitizeUsernamePart(args.displayName || '') ||
     sanitizeUsernamePart(args.fallback || '');
 

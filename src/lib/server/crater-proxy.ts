@@ -15,11 +15,41 @@ export async function proxyCraterRequest(
   try {
     const contentType = request.headers.get('content-type');
     const isMultipart = contentType?.includes('multipart/form-data');
+    const forwardedProto = request.headers.get('x-forwarded-proto');
+    const forwardedHost = request.headers.get('x-forwarded-host');
+    const forwardedPort = request.headers.get('x-forwarded-port');
+    const origin = request.headers.get('origin');
+    const referer = request.headers.get('referer');
+    const userAgent = request.headers.get('user-agent');
 
     let body: BodyInit | undefined;
     let headers: Record<string, string> = {
       Accept: request.headers.get('accept') ?? 'application/json'
     };
+
+    if (forwardedProto) {
+      headers['X-Forwarded-Proto'] = forwardedProto;
+    }
+
+    if (forwardedHost) {
+      headers['X-Forwarded-Host'] = forwardedHost;
+    }
+
+    if (forwardedPort) {
+      headers['X-Forwarded-Port'] = forwardedPort;
+    }
+
+    if (origin) {
+      headers['Origin'] = origin;
+    }
+
+    if (referer) {
+      headers['Referer'] = referer;
+    }
+
+    if (userAgent) {
+      headers['User-Agent'] = userAgent;
+    }
 
     if (request.method !== 'GET' && request.method !== 'HEAD') {
       if (isMultipart) {

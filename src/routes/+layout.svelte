@@ -20,6 +20,7 @@
     '/services/[slug]',
     '/task/[id]',
     '/order/[id]',
+    '/[actor=actor_handle]/orders/[id]',
     '/[handle=at_handle]'
   ]);
 
@@ -32,9 +33,11 @@
   const localeText = $derived($kefineLocaleText);
   const passkeySession = $derived($passkeySessionStore);
   const runtimePublicConfig = $derived(resolvePublicRuntimeConfig(data.publicConfig));
-  const seo = $derived(getSeoMeta(page.url, runtimePublicConfig));
-  const canonicalUrl = $derived(`${page.url.origin}${seo.canonicalPath}`);
-  const imageUrl = $derived(`${page.url.origin}${seo.imagePath}`);
+  const requestOrigin = $derived(data.requestOrigin || page.url.origin);
+  const seoUrl = $derived(new URL(`${page.url.pathname}${page.url.search}`, requestOrigin));
+  const seo = $derived(getSeoMeta(seoUrl, runtimePublicConfig));
+  const canonicalUrl = $derived(`${requestOrigin}${seo.canonicalPath}`);
+  const imageUrl = $derived(`${requestOrigin}${seo.imagePath}`);
   const showSharedTopbar = $derived(!ROUTES_WITH_OWN_TOPBAR.has(page.route.id ?? ''));
   const sidebarSocialLinks = $derived([
     {

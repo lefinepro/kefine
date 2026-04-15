@@ -9,10 +9,12 @@
     helperText = '',
     placeholder,
     submitLabel,
+    generateLabel = '',
     closeLabel,
     onClose,
     onInput,
-    onSubmit
+    onSubmit,
+    onGenerate
   }: {
     open: boolean;
     title: string;
@@ -21,10 +23,12 @@
     helperText?: string;
     placeholder: string;
     submitLabel: string;
+    generateLabel?: string;
     closeLabel: string;
     onClose: () => void;
     onInput: (value: string) => void;
     onSubmit: () => void;
+    onGenerate?: () => void;
   } = $props();
 </script>
 
@@ -55,9 +59,16 @@
       <lef-privatekey-helper>{helperText}</lef-privatekey-helper>
     {/if}
 
-    <button type="button" data-testid="kefine-privatekey-submit" onclick={onSubmit}>
-      {submitLabel}
-    </button>
+    <lef-privatekey-actions>
+      {#if generateLabel.trim() && onGenerate}
+        <button type="button" data-variant="ghost" data-testid="kefine-privatekey-generate" onclick={onGenerate}>
+          {generateLabel}
+        </button>
+      {/if}
+      <button type="button" data-testid="kefine-privatekey-submit" onclick={onSubmit}>
+        {submitLabel}
+      </button>
+    </lef-privatekey-actions>
   </lef-privatekey-dialog>
 </KefineModal>
 
@@ -110,7 +121,13 @@
     overflow-wrap: anywhere;
   }
 
-  lef-privatekey-dialog > button {
+  lef-privatekey-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  lef-privatekey-dialog button {
     border: 0;
     border-radius: 0.85rem;
     padding: 0.85rem 1rem;
@@ -118,6 +135,11 @@
     color: white;
     font: inherit;
     font-weight: 600;
+  }
+
+  lef-privatekey-dialog button[data-variant='ghost'] {
+    background: color-mix(in oklab, var(--kef-bg, #f0e5d4) 72%, white);
+    color: var(--lefine-text, #2e2317);
   }
 
   lef-privatekey-helper {

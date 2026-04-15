@@ -36,6 +36,10 @@ function normalizePathname(pathname: string): string {
   return pathname.replace(/\/+$/, '');
 }
 
+function isActorOrderPath(pathname: string): boolean {
+  return /^\/@[^/]+\/orders?\/[^/]+$/i.test(pathname);
+}
+
 function getDomainBucket(pathname: string): DomainBucket {
   const normalizedPath = normalizePathname(pathname);
 
@@ -56,6 +60,7 @@ function getDomainBucket(pathname: string): DomainBucket {
     normalizedPath === '/api/create' ||
     normalizedPath.startsWith('/task/') ||
     normalizedPath.startsWith('/order/') ||
+    isActorOrderPath(normalizedPath) ||
     normalizedPath.startsWith('/payment/') ||
     normalizedPath.startsWith('/api/payment/') ||
     normalizedPath.startsWith('/pay/') ||

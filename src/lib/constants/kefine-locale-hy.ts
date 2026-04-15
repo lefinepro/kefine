@@ -62,7 +62,7 @@ export const KEFINE_TEXT_HY = {
   create: {
     ...KEFINE_TEXT_EN.create,
     title: 'Նկարագրեք տեխնիկական առաջադրանք',
-    subtitle: 'Սահմանեք բյուջեն։ Lefine-ը գտնում է solver, հաստատում գինն ու ETA-ն, հետո հանձնում արդյունքը։',
+    subtitle: 'Նշեք կատարման ժամկետը։ Lefine-ը գտնում է solver, հաստատում ուղին ու ETA-ն, հետո հանձնում արդյունքը։',
     placeholder: 'Նկարագրեք VPN կամ DevOps առաջադրանքը...',
     placeholderVariants: [
       'Թիմի համար տեղակայել մասնավոր VPN',
@@ -73,7 +73,7 @@ export const KEFINE_TEXT_HY = {
     executeAria: 'Ուղարկել առաջադրանքը',
     backgroundExecuteAria: 'Ուղարկել առաջադրանքը ֆոնային ռեժիմով',
     addFile: '+ ֆայլ',
-    addPrice: '+ գին',
+    addExecutionEstimate: '+ ժամկետ',
     fileCount: (count: number) => `${count} ֆայլ`,
     composerHints: 'Enter-ը ուղարկում է, Alt+Enter-ը ուղարկում է ֆոնում, Shift+Enter-ը նոր տող է ավելացնում',
     serviceSetupTitle: 'Կարգավորեք ծառայությունը մինչև մեկնարկը',
@@ -95,7 +95,7 @@ export const KEFINE_TEXT_HY = {
   },
   status: {
     ...KEFINE_TEXT_EN.status,
-    createSending: 'Առաջադրանքը ուղարկվում է...',
+    createSending: 'Փաստաթուղթը փոխանցվում է...',
     notCompleted: 'Solver-ը դեռ ավարտման կարգավիճակ չի վերադարձրել։ Թարմացրեք ձեռքով։',
     completed: 'Առաջադրանքը ավարտված է։ Արդյունքը պատրաստ է։'
   },
@@ -119,6 +119,10 @@ export const KEFINE_TEXT_HY = {
     orderStatusUnavailable: 'Սպասում ենք առաջադրանքի կարգավիճակի թարմացմանը...',
     timeLeft: 'Մնացած ժամանակը:',
     price: 'Գինը:',
+    summary: 'Առաջադրանքի ամփոփում',
+    execution: 'Կատարում',
+    relatedItems: 'Կապակցված տարրեր',
+    window: 'Ժամկետ',
     taskStatus: 'Առաջադրանքի կարգավիճակ',
     hoursUnit: 'ժ',
     minutesUnit: 'ր',
@@ -164,6 +168,7 @@ export const KEFINE_TEXT_HY = {
     signedIn: 'Դուք մուտք եք գործել։ Կարող եք ուղարկել առաջադրանքը։',
     privateKeyTitle: 'Private key',
     privateKeyDescription: 'Տեղադրեք compact pqsk key կամ ամբողջական PEM private key։ Escaped \\n տարբերակն էլ է ընդունվում։ Բրաուզերը local ձևով ստանում է ML-DSA public key-ը և ուղարկում միայն public key string-ը։',
+    privateKeyGenerateLabel: 'Ստեղծել actor',
     walletTitle: 'Wallet / Social',
     walletDetail: 'Օգտագործեք MetaMask, WalletConnect, Email կամ Google՝ վճարող հաշիվը ընտրելու համար։',
     passkeyDetail: 'Օգտագործեք հարթակի հաշիվը կամ շարունակեք email-ով, եթե passkey պրոֆիլ դեռ չկա։',
@@ -198,24 +203,24 @@ export const KEFINE_TEXT_HY = {
   },
   afe: {
     ...KEFINE_TEXT_EN.afe,
-    title: 'Ինչպես է աշխատում Lefine-ը',
+    title: '',
     cards: {
       afe: {
         title: 'Ի՞նչ է Lefine-ը',
         detail:
-          'Lefine-ը Automated Freelance Marketplace (AFM) է։ Դուք պարզապես նկարագրում եք առաջադրանքը, իսկ մենք ընտրում ենք այն լուծումը, որը լավագույնս համապատասխանում է դրան։'
+          'Lefine-ը Automated Freelance Marketplace (AFM) է, որտեղ դուք նկարագրում եք անհրաժեշտ աշխատանքը, իսկ Lefine-ը գտնում է ճիշտ ուղին արդյունքը հասցնելու համար։'
       },
       task: {
-        title: '1. Նկարագրեք առաջադրանքը',
-        detail: 'Նկարագրեք ձեզ անհրաժեշտ engineering արդյունքը և սահմանեք բյուջեի վերին շեմը։'
+        title: 'Բրիֆ',
+        detail: 'Նկարագրեք աշխատանքը և նշեք ժամկետը։'
       },
       quote: {
-        title: '2. Solver-ի quote',
-        detail: 'Solver-ը ընդունում է առաջադրանքը և հաստատում երթուղին, գինը և ETA-ն այդ շրջանակում։'
+        title: 'Գնառաջարկ',
+        detail: 'Solver-ը հաստատում է ուղին և ETA-ն։'
       },
       delivery: {
-        title: '3. Արդյունքի հանձնում',
-        detail: 'Lefine-ը վարում է իրականացումը և բացում է վերջնական access package-ը կամ արդյունքը։'
+        title: 'Առաքում',
+        detail: 'Lefine-ը հասցնում է վերջնական հասանելիությունը կամ արդյունքը։'
       }
     }
   },

@@ -13,6 +13,21 @@ type OrderFallback = {
 const FREE_ORDER_COST = 0;
 const FREE_ORDER_CURRENCY = 'USD';
 
+function mergeActorIdentity(previous: OrderView, next: OrderView): OrderView {
+  const actorHandle = next.actorHandle?.trim() || previous.actorHandle?.trim() || undefined;
+  const actorDid =
+    next.actorDid?.trim() ||
+    previous.actorDid?.trim() ||
+    (actorHandle ? `did:key:${actorHandle.replace(/^@+/, '')}` : undefined);
+
+  return {
+    ...previous,
+    ...next,
+    ...(actorHandle ? { actorHandle: actorHandle.replace(/^@+/, '') } : {}),
+    ...(actorDid ? { actorDid } : {})
+  };
+}
+
 function extractErrorMessage(payload: unknown, fallback: string): string {
   if (!payload || typeof payload !== 'object') {
     return fallback;
@@ -163,12 +178,18 @@ export async function pollWorkspaceOrder(args: {
     }
 
     if (updated) {
-      latestOrder = { ...latestOrder, ...updated, id: latestOrder.id };
+      latestOrder = {
+        ...mergeActorIdentity(latestOrder, updated),
+        id: latestOrder.id
+      };
       args.upsertOrder(latestOrder);
 
       const currentOrder = args.getCurrentOrder();
       if (currentOrder?.id === latestOrder.id) {
-        args.setCurrentOrder({ ...currentOrder, ...updated, id: currentOrder.id });
+        args.setCurrentOrder({
+          ...mergeActorIdentity(currentOrder, updated),
+          id: currentOrder.id
+        });
       }
 
       if (updated.status === 'completed') {
@@ -270,6 +291,8 @@ export async function submitWorkspaceOrder(args: {
         solverName: parsed.solverName,
         solverHandle: parsed.solverHandle,
         solverProfileUrl: parsed.solverProfileUrl,
+        actorHandle: parsed.actorHandle,
+        actorDid: parsed.actorDid,
         status: parsed.status || 'queued',
         title: args.payload.title || args.localeText.defaults.taskTitle,
         description: args.payload.description || '',
