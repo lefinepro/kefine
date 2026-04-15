@@ -76,7 +76,7 @@
       </thead>
       <tbody>
         {#each filteredOrders as order (order.id)}
-          <tr onclick={() => onOpenOrder(order)}>
+          <tr ondblclick={() => onOpenOrder(order)}>
             <td>
               <strong>{order.title}</strong>
               <p>{order.id}</p>

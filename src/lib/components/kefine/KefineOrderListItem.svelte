@@ -1,7 +1,7 @@
 <script lang="ts">
+  import Icon from '@iconify/svelte';
   import type { OrderView } from './kefine-workflow';
   import {
-    formatKefineOrderPrice,
     formatKefineOrderStatus,
     formatKefineOrderTime
   } from '$lib/components/kefine/kefine-order-formatters';
@@ -10,16 +10,25 @@
     order,
     statusLabel,
     timeLeftLabel,
-    priceLabel,
+    solverLabel,
+    openTaskLabel,
+    summaryLabel,
+    executionLabel,
+    relatedItemsLabel,
+    windowLabel,
     stopTaskLabel = '',
+    deleteTaskLabel = '',
     itemTestId,
     openTestId,
     etaTestId,
     stopTestId,
+    deleteTestId,
     showStop = false,
+    showDelete = false,
     onOpen,
     onOpenKeydown,
     onStop,
+    onDelete,
     onStopPointerDown,
     onStopPointerUp,
     onStopPointerLeave,
@@ -28,168 +37,409 @@
     order: OrderView;
     statusLabel: string;
     timeLeftLabel: string;
-    priceLabel: string;
+    solverLabel: string;
+    openTaskLabel: string;
+    summaryLabel: string;
+    executionLabel: string;
+    relatedItemsLabel: string;
+    windowLabel: string;
     stopTaskLabel?: string;
+    deleteTaskLabel?: string;
     itemTestId: string;
     openTestId: string;
     etaTestId: string;
     stopTestId?: string;
+    deleteTestId?: string;
     showStop?: boolean;
+    showDelete?: boolean;
     onOpen: () => void;
     onOpenKeydown: (event: KeyboardEvent) => void;
     onStop?: (event: MouseEvent) => void;
+    onDelete?: (event: MouseEvent) => void;
     onStopPointerDown?: (event: PointerEvent) => void;
     onStopPointerUp?: () => void;
     onStopPointerLeave?: () => void;
     onStopPointerCancel?: () => void;
   } = $props();
+
+  const formattedStatus = $derived(formatKefineOrderStatus(order.status));
+  const formattedTime = $derived(formatKefineOrderTime(order, timeLeftLabel));
+  const hasDescription = $derived(Boolean(order.description?.trim() && order.description !== order.title));
+  const hasLabels = $derived((order.labels?.length ?? 0) > 0);
+  const hasSolverInfo = $derived(Boolean(order.solver?.trim() || order.solverHandle?.trim()));
+  const hasExpandedSections = $derived(hasDescription || hasSolverInfo || hasLabels || Boolean(order.executionEstimate));
 </script>
 
 <li>
-  <kefine-order-item
+  <details
     data-testid={itemTestId}
     data-order-id={order.id}
     data-status={order.status}
-    role="button"
-    tabindex="0"
-    onclick={onOpen}
-    onkeydown={onOpenKeydown}
+    data-has-sections={hasExpandedSections}
   >
-    {#if showStop}
-      <button
-        type="button"
-        data-part="status-toggle"
-        data-testid={stopTestId}
-        aria-label={`${stopTaskLabel}: ${order.title}`}
-        data-status={order.status}
-        onpointerdown={onStopPointerDown}
-        onpointerup={onStopPointerUp}
-        onpointerleave={onStopPointerLeave}
-        onpointercancel={onStopPointerCancel}
-        onclick={onStop}
-      >
-        <status-mark aria-hidden="true" data-status={order.status}><task-dot></task-dot></status-mark>
-      </button>
-    {/if}
+    <summary ondblclick={onOpen}>
+      <kefine-order-row>
+        <kefine-order-mark aria-hidden="true" data-status={order.status}>
+          <task-dot></task-dot>
+        </kefine-order-mark>
 
-    <section data-part="open" data-testid={openTestId}>
-      <kefine-order-summary>
-        <kefine-order-title>{order.title}</kefine-order-title>
-        <kefine-order-meta>
-          <kefine-order-solver>{order.solver}</kefine-order-solver>
-          <kefine-order-estimate data-testid={etaTestId}>
-            <lefine-text>{statusLabel} {formatKefineOrderStatus(order.status)}</lefine-text>
-            <lefine-text>{formatKefineOrderTime(order, timeLeftLabel)}</lefine-text>
-            <lefine-text>{formatKefineOrderPrice(order, priceLabel)}</lefine-text>
-          </kefine-order-estimate>
-        </kefine-order-meta>
-      </kefine-order-summary>
-    </section>
-  </kefine-order-item>
+        <kefine-order-copy>
+          <kefine-order-title>{order.title}</kefine-order-title>
+          <kefine-order-meta data-testid={etaTestId}>
+            <lefine-text>{formattedStatus}</lefine-text>
+            <lefine-text>{formattedTime}</lefine-text>
+          </kefine-order-meta>
+        </kefine-order-copy>
+
+        <kefine-order-disclosure aria-hidden="true">
+          <Icon icon="mdi:chevron-down" width="18" height="18" />
+        </kefine-order-disclosure>
+      </kefine-order-row>
+    </summary>
+
+    <kefine-order-panel>
+      <kefine-order-actions>
+        <button
+          type="button"
+          data-part="open-task"
+          data-testid={openTestId}
+          onclick={onOpen}
+          onkeydown={onOpenKeydown}
+        >
+          <Icon icon="mdi:arrow-top-right" width="15" height="15" aria-hidden="true" />
+          <lefine-text>{openTaskLabel}</lefine-text>
+        </button>
+
+        {#if showStop}
+          <button
+            type="button"
+            data-part="status-toggle"
+            data-testid={stopTestId}
+            aria-label={`${stopTaskLabel}: ${order.title}`}
+            data-status={order.status}
+            onpointerdown={onStopPointerDown}
+            onpointerup={onStopPointerUp}
+            onpointerleave={onStopPointerLeave}
+            onpointercancel={onStopPointerCancel}
+            onclick={onStop}
+          >
+            <status-mark aria-hidden="true" data-status={order.status}><task-dot></task-dot></status-mark>
+            <lefine-text>{stopTaskLabel}</lefine-text>
+          </button>
+        {/if}
+
+        {#if showDelete}
+          <button
+            type="button"
+            data-part="delete-task"
+            data-testid={deleteTestId}
+            aria-label={`${deleteTaskLabel}: ${order.title}`}
+            onclick={onDelete}
+          >
+            <Icon icon="mdi:trash-can-outline" width="15" height="15" aria-hidden="true" />
+          </button>
+        {/if}
+      </kefine-order-actions>
+
+      <kefine-order-sections>
+        <details open>
+          <summary>{summaryLabel}</summary>
+          <kefine-order-detail-grid>
+            <kefine-order-detail-row>
+              <dt>{statusLabel}</dt>
+              <dd>{formattedStatus}</dd>
+            </kefine-order-detail-row>
+            <kefine-order-detail-row>
+              <dt>{timeLeftLabel}</dt>
+              <dd>{order.executionEstimate || '-'}</dd>
+            </kefine-order-detail-row>
+          </kefine-order-detail-grid>
+          {#if hasDescription}
+            <p data-part="description">{order.description}</p>
+          {/if}
+        </details>
+
+        {#if hasSolverInfo || order.executionEstimate}
+          <details>
+            <summary>{executionLabel}</summary>
+            <kefine-order-detail-grid>
+              {#if hasSolverInfo}
+                <kefine-order-detail-row>
+                  <dt>{solverLabel}</dt>
+                  <dd>
+                    {order.solver}
+                    {#if order.solverHandle}
+                      <lefine-text>{order.solverHandle}</lefine-text>
+                    {/if}
+                  </dd>
+                </kefine-order-detail-row>
+              {/if}
+              {#if order.executionEstimate}
+                <kefine-order-detail-row>
+                  <dt>{windowLabel}</dt>
+                  <dd>{order.executionEstimate}</dd>
+                </kefine-order-detail-row>
+              {/if}
+            </kefine-order-detail-grid>
+          </details>
+        {/if}
+
+        {#if hasLabels}
+          <details>
+            <summary>{relatedItemsLabel}</summary>
+            <kefine-order-tag-list>
+              {#each order.labels ?? [] as label (`${order.id}-${label}`)}
+                <li>#{label}</li>
+              {/each}
+            </kefine-order-tag-list>
+          </details>
+        {/if}
+      </kefine-order-sections>
+    </kefine-order-panel>
+  </details>
 </li>
 
 <style>
-  kefine-order-item {
-    width: 100%;
-    border: 0;
-    border-radius: 0.4rem;
-    background: color-mix(in oklab, var(--kef-bg-card) 99%, var(--kef-bg-soft));
-    padding: clamp(0.68rem, 2vw, 0.86rem);
-    text-align: left;
+  li {
+    list-style: none;
+  }
+
+  li > details {
+    border-radius: 0.8rem;
+    border: 1px solid color-mix(in oklab, var(--kef-line) 72%, transparent);
+    background:
+      linear-gradient(180deg, color-mix(in oklab, var(--kef-bg-card) 97%, #f6edd2 3%), color-mix(in oklab, var(--kef-bg-card) 99%, transparent)),
+      repeating-linear-gradient(
+        0deg,
+        transparent 0,
+        transparent 28px,
+        color-mix(in oklab, var(--kef-line) 8%, transparent) 28px,
+        color-mix(in oklab, var(--kef-line) 8%, transparent) 29px
+      );
+    box-shadow:
+      inset 0 0 0 1px color-mix(in oklab, var(--kef-line) 26%, transparent),
+      inset 0 1px 0 color-mix(in oklab, white 26%, transparent),
+      0 8px 18px color-mix(in oklab, var(--lefine-text) 4%, transparent);
+    overflow: hidden;
+  }
+
+  summary {
+    list-style: none;
+    cursor: pointer;
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
+  }
+
+  kefine-order-row {
     display: grid;
-    gap: 0.3rem;
-    min-width: 0;
-    transition:
-      box-shadow var(--kef-motion-fast) var(--kef-ease-soft),
-      background-color var(--kef-motion-fast) var(--kef-ease-soft);
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 0.8rem;
+    padding: 0.9rem 1rem;
   }
 
-  kefine-order-item:hover {
-    background: color-mix(in oklab, var(--kef-bg-card) 100%, white);
-    box-shadow: 0 14px 26px color-mix(in oklab, var(--lefine-text) 6%, transparent);
+  kefine-order-mark {
+    width: 1.2rem;
+    height: 1.2rem;
+    margin-top: 0.1rem;
+    border-radius: 999px;
+    display: inline-grid;
+    place-items: center;
+    border: 1px solid color-mix(in oklab, var(--kef-line) 58%, transparent);
+    color: var(--lefine-text-soft);
+    background: color-mix(in oklab, var(--kef-bg-card) 86%, transparent);
   }
 
-  kefine-order-item[data-status='done'] {
-    border-color: color-mix(in oklab, var(--kef-primary) 28%, transparent);
+  kefine-order-mark task-dot,
+  status-mark task-dot {
+    display: block;
+    width: 0.48rem;
+    height: 0.48rem;
+    border-radius: 999px;
+    background: currentColor;
+    opacity: 0.95;
   }
 
-  kefine-order-item[data-status='stopped'] {
-    opacity: 0.72;
+  kefine-order-mark[data-status='done'],
+  kefine-order-mark[data-status='completed'],
+  status-mark[data-status='done'],
+  status-mark[data-status='completed'] {
+    color: #5e9360;
   }
 
-  section[data-part='open'] {
-    min-width: 0;
+  kefine-order-mark[data-status='executing'],
+  kefine-order-mark[data-status='accepted'],
+  status-mark[data-status='executing'],
+  status-mark[data-status='accepted'] {
+    color: #4f7f9b;
   }
 
-  kefine-order-summary {
+  kefine-order-mark[data-status='stopped'],
+  status-mark[data-status='stopped'] {
+    color: #a66b55;
+  }
+
+  kefine-order-copy {
     display: grid;
-    gap: 0.28rem;
+    gap: 0.22rem;
     min-width: 0;
   }
 
   kefine-order-title {
     display: block;
-    margin: 0;
     font-size: 1.02rem;
-    line-height: 1.2;
+    line-height: 1.25;
     color: var(--lefine-text);
     overflow-wrap: anywhere;
   }
 
   kefine-order-meta {
-    display: grid;
-    gap: 0.28rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.8rem;
     color: var(--lefine-text-soft);
     font-size: 0.84rem;
   }
 
-  kefine-order-solver {
-    display: block;
+  kefine-order-disclosure {
+    color: var(--lefine-text-soft);
+    transition: transform var(--kef-motion-fast) var(--kef-ease-soft);
   }
 
-  kefine-order-estimate {
+  li > details[open] kefine-order-disclosure {
+    transform: rotate(180deg);
+  }
+
+  kefine-order-panel {
+    display: grid;
+    gap: 0.8rem;
+    padding: 0 1rem 1rem;
+    border-top: 1px solid color-mix(in oklab, var(--kef-line) 22%, transparent);
+  }
+
+  kefine-order-actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.45rem 0.8rem;
+    gap: 0.45rem;
+    align-items: center;
+    padding-top: 0.75rem;
   }
 
-  button[data-part='status-toggle'] {
+  button[data-part='open-task'],
+  button[data-part='status-toggle'],
+  button[data-part='delete-task'] {
+    min-height: 2rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border-radius: 999px;
+    border: 1px solid color-mix(in oklab, var(--kef-line) 62%, transparent);
+    background: color-mix(in oklab, var(--kef-bg-card) 94%, transparent);
+    color: var(--lefine-text);
+    padding: 0.38rem 0.78rem;
+    font: inherit;
+  }
+
+  button[data-part='open-task'] {
+    color: color-mix(in oklab, var(--lefine-text) 90%, #456c8e 10%);
+  }
+
+  button[data-part='delete-task'] {
     width: 2rem;
     min-width: 2rem;
-    min-height: 2rem;
-    display: inline-grid;
-    place-items: center;
-    border-radius: 999px;
-    border: 1px solid color-mix(in oklab, var(--kef-line) 78%, transparent);
-    background: color-mix(in oklab, var(--kef-bg-card) 96%, transparent);
+    padding-inline: 0;
+    justify-content: center;
+    color: color-mix(in oklab, var(--lefine-text) 84%, #8e3f2b 16%);
+  }
+
+  kefine-order-sections {
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  kefine-order-sections details {
+    border-radius: 0.7rem;
+    border-color: color-mix(in oklab, var(--kef-line) 32%, transparent);
+    background: color-mix(in oklab, var(--kef-bg-card) 90%, #efe4bf 10%);
+    box-shadow: none;
+  }
+
+  kefine-order-sections summary {
+    padding: 0.65rem 0.78rem;
     color: var(--lefine-text);
-    padding: 0;
-    margin-bottom: 0.35rem;
+    font-weight: 600;
   }
 
-  button[data-part='status-toggle'][data-status='done'] {
-    border-color: color-mix(in oklab, var(--kef-primary) 44%, transparent);
-    background: color-mix(in oklab, var(--kef-primary) 10%, var(--kef-bg-card));
+  kefine-order-sections details[open] summary {
+    border-bottom: 1px solid color-mix(in oklab, var(--kef-line) 18%, transparent);
   }
 
-  button[data-part='status-toggle'][data-status='completed'],
-  button[data-part='status-toggle'][data-status='executing'],
-  button[data-part='status-toggle'][data-status='accepted'] {
-    border-color: color-mix(in oklab, #9dcc7a 44%, transparent);
-    background: color-mix(in oklab, #9dcc7a 14%, var(--kef-bg-card));
+  kefine-order-detail-grid {
+    display: grid;
+    gap: 0;
+    padding: 0.2rem 0.78rem 0.78rem;
   }
 
-  button[data-part='status-toggle'][data-status='stopped'] {
-    border-color: color-mix(in oklab, #d68a6c 44%, transparent);
-    background: color-mix(in oklab, #d68a6c 10%, var(--kef-bg-card));
+  kefine-order-detail-row {
+    display: grid;
+    grid-template-columns: minmax(0, 10rem) minmax(0, 1fr);
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid color-mix(in oklab, var(--kef-line) 12%, transparent);
   }
 
-  button[data-part='status-toggle'] task-dot {
-    display: block;
-    width: 0.8rem;
-    height: 0.8rem;
-    border-radius: 999px;
-    background: currentColor;
-    opacity: 0.9;
+  kefine-order-detail-row:last-child {
+    border-bottom: 0;
+  }
+
+  kefine-order-detail-row dt,
+  kefine-order-detail-row dd {
+    margin: 0;
+    min-width: 0;
+  }
+
+  kefine-order-detail-row dt {
+    color: var(--lefine-text-soft);
+  }
+
+  kefine-order-detail-row dd {
+    color: var(--lefine-text);
+    overflow-wrap: anywhere;
+    display: grid;
+    gap: 0.2rem;
+  }
+
+  p[data-part='description'] {
+    margin: 0;
+    padding: 0 0.78rem 0.78rem;
+    color: var(--lefine-text-soft);
+    line-height: 1.45;
+  }
+
+  kefine-order-tag-list {
+    margin: 0;
+    padding: 0.2rem 0.78rem 0.82rem 1.7rem;
+    display: grid;
+    gap: 0.42rem;
+    color: var(--lefine-text-soft);
+  }
+
+  @media (max-width: 760px) {
+    kefine-order-row {
+      grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    kefine-order-disclosure {
+      grid-column: 2;
+      justify-self: end;
+      margin-top: -1.65rem;
+    }
+
+    kefine-order-detail-row {
+      grid-template-columns: 1fr;
+      gap: 0.2rem;
+    }
   }
 </style>

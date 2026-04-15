@@ -15,6 +15,11 @@
     passkeySessionStore,
     setPasskeySession
   } from '$lib/auth/passkey-session';
+  import {
+    loadGeneratedPublicKeyCookie,
+    saveGeneratedPrivateKeyCookie,
+    saveGeneratedPublicKeyCookie
+  } from '$lib/auth/publickey-cookie';
   import type { PasskeyAuthSuccess } from '$lib/auth/routes';
   import {
     kefineLocale,
@@ -43,10 +48,11 @@
     toNumber
   } from '$lib/components/kefine/kefine-workflow';
   import {
-    buildTaskRouteHash,
+    buildActorOrderPath,
     createGeneratedWalletAvatar,
     getVisibleOrdersLimit,
     mergeOrdersById,
+    normalizeActorHandle,
     normalizeDraftOrder,
     resolveOrderIdCandidates,
     resolveOrderIdFromRouteValue,
@@ -81,10 +87,12 @@
   const BRAND_HOME_NAVIGATION_STORAGE_KEY = 'kefine-brand-home-navigation';
 
   let {
+    initialActorHandle,
     initialOrderId,
     initialTemplateHandle,
     initialTemplateSlug
   }: {
+    initialActorHandle?: string;
     initialOrderId?: string;
     initialTemplateHandle?: string;
     initialTemplateSlug?: string;
@@ -94,6 +102,36 @@
 
   function getNormalizedInitialOrderId() {
     return initialOrderId?.trim() || null;
+  }
+
+  function getNormalizedInitialActorHandle() {
+    return initialActorHandle?.trim() ? normalizeActorHandle(initialActorHandle) : null;
+  }
+
+  function getRouteActorHandleFallback() {
+    return getNormalizedInitialActorHandle() ?? normalizedActorHandle ?? null;
+  }
+
+  function applyActorIdentityFallback(
+    order: OrderView,
+    fallback?: Partial<Pick<OrderView, 'actorHandle' | 'actorDid'>>
+  ): OrderView {
+    const actorHandle =
+      order.actorHandle?.trim() ||
+      fallback?.actorHandle?.trim() ||
+      getRouteActorHandleFallback() ||
+      undefined;
+
+    const actorDid =
+      order.actorDid?.trim() ||
+      fallback?.actorDid?.trim() ||
+      (actorHandle ? `did:key:${normalizeActorHandle(actorHandle)}` : undefined);
+
+    return {
+      ...order,
+      ...(actorHandle ? { actorHandle: normalizeActorHandle(actorHandle) } : {}),
+      ...(actorDid ? { actorDid } : {})
+    };
   }
 
   function createEmptyDraft(): DraftOrder {
@@ -199,6 +237,7 @@
           description: '',
           createdAt: new Date().toISOString(),
           currency: 'USDC',
+          actorHandle: getNormalizedInitialActorHandle() ?? undefined,
           uiScenario: 'vpn-service' as const
         }
       : null
@@ -222,6 +261,7 @@
   let privateKeyInput = $state('');
   let isHydratingRoute = $state(Boolean(getNormalizedInitialOrderId()));
   let currentProfile = $state<Profile | null>(null);
+  let temporaryProfile = $state<Profile | null>(null);
   let activeTemplate = $state<ProfileTemplate | null>(null);
   let publicTemplates = $state<ProfileTemplate[]>([]);
   let templateUnavailable = $state(false);
@@ -306,6 +346,10 @@
   const normalizedPrivateKeyLabel = $derived.by(() => {
     const handle = authState.handle?.trim();
     return handle ? `@${handle.replace(/^@+/, '')}` : null;
+  });
+  const normalizedActorHandle = $derived.by(() => {
+    const handle = authState.handle?.trim();
+    return handle ? normalizeActorHandle(handle) : null;
   });
   const authenticatedLabel = $derived.by(() => {
     if (currentProfile?.primaryHandle) {
@@ -462,7 +506,9 @@
     const title = currentOrder?.title?.trim();
     const isTaskRoute =
       getNormalizedInitialOrderId() !== null ||
-      (browser && window.location.pathname.replace(/\/+$/, '').startsWith('/task/'));
+      (browser &&
+        (/^\/task\//.test(window.location.pathname.replace(/\/+$/, '')) ||
+          /^\/@[^/]+\/order\/[^/]+/.test(window.location.pathname.replace(/\/+$/, ''))));
 
     if (isTaskRoute) {
       return title ? `${title} | Lefine` : 'Loading task | Lefine';
@@ -554,12 +600,201 @@
     };
   }
 
+  function isGeneratedProfile(profile: Profile | null): profile is Profile {
+    return Boolean(
+      profile &&
+        profile.primaryHandleType === 'publickey' &&
+        profile.email?.trim().toLowerCase().endsWith('@local.invalid')
+    );
+  }
+
+  function getGeneratedProfileHandle(profile: Profile): string {
+    const emailSource = profile.email?.split('@')[0]?.trim().toLowerCase() || '';
+    const emailHandle =
+      emailSource.startsWith('portable+') || emailSource.startsWith('portable-')
+        ? emailSource.slice('portable+'.length)
+        : '';
+    const fallbackHandle = profile.userId?.trim() || profile.primaryHandle;
+    return normalizeProfileUsername(emailHandle || fallbackHandle);
+  }
+
+  function normalizeGeneratedProfile(profile: Profile): Profile {
+    const nextHandle = getGeneratedProfileHandle(profile);
+    if (nextHandle === profile.primaryHandle && nextHandle === profile.username) {
+      return profile;
+    }
+
+    const updated =
+      updateStoredProfile(localStorage, profile.id, (current) => ({
+        ...current,
+        username: nextHandle,
+        primaryHandle: nextHandle,
+        displayName: current.displayName?.startsWith('@') ? `@${nextHandle}` : current.displayName
+      })) ?? profile;
+
+    createdOrders = createdOrders.map((order) =>
+      order.ownerProfileId === updated.id
+        ? {
+            ...order,
+            ownerUsername: nextHandle
+          }
+        : order
+    );
+
+    if (currentOrder?.ownerProfileId === updated.id) {
+      currentOrder = {
+        ...currentOrder,
+        ownerUsername: nextHandle
+      };
+    }
+
+    persistOrders();
+    return updated;
+  }
+
+  function resolveAuthProfileMatch(args: {
+    userId: string;
+    email?: string | null;
+    walletAddress?: string | null;
+    excludeProfileId?: string | null;
+  }): Profile | null {
+    const normalizedEmail = args.email?.trim().toLowerCase() || null;
+    const normalizedWalletAddress = args.walletAddress?.trim().toLowerCase() || null;
+
+    return (
+      readProfiles(localStorage).find((profile) => {
+        if (args.excludeProfileId && profile.id === args.excludeProfileId) {
+          return false;
+        }
+
+        return (
+          profile.userId === args.userId ||
+          (normalizedEmail && profile.email?.trim().toLowerCase() === normalizedEmail) ||
+          (normalizedWalletAddress && profile.walletAddress?.trim().toLowerCase() === normalizedWalletAddress)
+        );
+      }) ?? null
+    );
+  }
+
+  function reassignOrdersToProfile(fromProfileId: string, nextProfile: Profile) {
+    let didChange = false;
+
+    createdOrders = createdOrders.map((order) => {
+      if (order.ownerProfileId !== fromProfileId) {
+        return order;
+      }
+
+      didChange = true;
+      return applyActorIdentityFallback(
+        {
+          ...order,
+          ownerProfileId: nextProfile.id,
+          ownerUsername: nextProfile.primaryHandle,
+          ownerDisplayName: nextProfile.displayName
+        },
+        nextProfile.primaryHandleType === 'publickey'
+          ? {
+              actorHandle: nextProfile.primaryHandle,
+              actorDid: `did:key:${nextProfile.primaryHandle}`
+            }
+          : undefined
+      );
+    });
+
+    if (currentOrder?.ownerProfileId === fromProfileId) {
+      currentOrder = applyActorIdentityFallback(
+        {
+          ...currentOrder,
+          ownerProfileId: nextProfile.id,
+          ownerUsername: nextProfile.primaryHandle,
+          ownerDisplayName: nextProfile.displayName
+        },
+        nextProfile.primaryHandleType === 'publickey'
+          ? {
+              actorHandle: nextProfile.primaryHandle,
+              actorDid: `did:key:${nextProfile.primaryHandle}`
+            }
+          : undefined
+      );
+      didChange = true;
+    }
+
+    if (didChange) {
+      persistOrders();
+    }
+  }
+
+  async function ensureTemporaryOrderProfile(options?: { createIfMissing?: boolean }) {
+    if (!browser) {
+      return null;
+    }
+
+    if (temporaryProfile) {
+      return temporaryProfile;
+    }
+
+    let publicKey = loadGeneratedPublicKeyCookie();
+    if (!publicKey && options?.createIfMissing === false) {
+      return null;
+    }
+
+    if (!publicKey) {
+      const { generatePortableActorKeyPair } = await loadAuthRoutes();
+      const generated = await generatePortableActorKeyPair();
+      publicKey = generated.publicKey;
+      saveGeneratedPublicKeyCookie(generated.publicKey);
+      saveGeneratedPrivateKeyCookie(generated.privateKey);
+    }
+
+    const nextTemporaryProfile = ensureProfileForSession({
+      storage: localStorage,
+      userId: publicKey,
+      email: `portable+${publicKey.slice(0, 24)}@local.invalid`,
+      displayName: `@${publicKey.slice(0, 16)}`,
+      authType: 'publickey'
+    });
+
+    const normalizedProfile = isGeneratedProfile(nextTemporaryProfile)
+      ? normalizeGeneratedProfile(nextTemporaryProfile)
+      : nextTemporaryProfile;
+
+    temporaryProfile = normalizedProfile;
+    return normalizedProfile;
+  }
+
   onMount(() => {
     if (!browser) return;
     hydrateAuthStateFromSession();
     loadPasskeySession();
     loadCreatedOrders();
     isSpecialRuntime = isSpecialRuntimeOrigin(window.location.origin);
+    void ensureTemporaryOrderProfile({ createIfMissing: false });
+
+    if (!authState.isConnected) {
+      void (async () => {
+        try {
+          const { restoreGeneratedPortableActor } = await loadAuthRoutes();
+          const restored = await restoreGeneratedPortableActor();
+          if (!restored) {
+            return;
+          }
+
+          updateAuthState({
+            isConnected: true,
+            address: null,
+            chainId: null,
+            email: restored.email,
+            userId: restored.userId,
+            handle: normalizeActorHandle(restored.handle || restored.publickey.key),
+            displayName: restored.displayName,
+            authType: 'publickey',
+            status: 'connected'
+          });
+        } catch (error) {
+          console.error('[publickey] restoreGeneratedPortableActor', error);
+        }
+      })();
+    }
 
     const routeState = readTaskRouteState();
     const routeOrderId = routeState?.orderId || getNormalizedInitialOrderId();
@@ -740,6 +975,11 @@
       return;
     }
 
+    if (temporaryProfile) {
+      currentProfile = temporaryProfile;
+      return;
+    }
+
     currentProfile = ensureProfileForSession({
       storage: localStorage,
       userId: activeSessionProfileSeed.userId,
@@ -880,8 +1120,9 @@
         id: currentOrder.id
       };
 
-      currentOrder = nextOrder;
-      upsertOrder(nextOrder);
+      const nextOrderWithActor = applyActorIdentityFallback(nextOrder, currentOrder);
+      currentOrder = nextOrderWithActor;
+      upsertOrder(nextOrderWithActor);
     })();
   });
 
@@ -903,6 +1144,30 @@
 
     const currentPathname = page.url.pathname.replace(/\/+$/, '') || '/';
     const managedPathname = activeTemplatePath.replace(/\/+$/, '') || '/';
+    const nextUrl = new URL(window.location.href);
+    const orderId =
+      (step === 'executing' || step === 'payment') && currentOrder?.id
+        ? currentOrder.id
+        : null;
+    const actorHandle =
+      currentOrder?.actorHandle?.trim() ||
+      getRouteActorHandleFallback();
+
+    if (orderId && actorHandle) {
+      nextUrl.pathname = buildActorOrderPath(actorHandle, orderId);
+      nextUrl.search = '';
+      nextUrl.hash =
+        step === 'payment' && paymentStage === 'result-ready'
+          ? '#result'
+          : step === 'executing' && stagePreviewOpen
+            ? '#stages'
+            : '';
+
+      if (window.location.href !== nextUrl.toString()) {
+        window.history.replaceState({}, '', nextUrl);
+      }
+      return;
+    }
 
     if (currentPathname !== managedPathname) {
       return;
@@ -913,23 +1178,9 @@
       sessionStorage.removeItem(BRAND_HOME_NAVIGATION_STORAGE_KEY);
     }
 
-    const nextUrl = new URL(window.location.href);
-    const orderId =
-      (step === 'executing' || step === 'payment') && currentOrder?.id
-        ? currentOrder.id
-        : null;
-
     nextUrl.pathname = activeTemplatePath;
     nextUrl.search = '';
-    if (!orderId) {
-      nextUrl.hash = '';
-    } else if (step === 'payment' && paymentStage === 'result-ready') {
-      nextUrl.hash = buildTaskRouteHash(orderId, 'result');
-    } else if (step === 'executing' && stagePreviewOpen) {
-      nextUrl.hash = buildTaskRouteHash(orderId, 'stages');
-    } else {
-      nextUrl.hash = buildTaskRouteHash(orderId);
-    }
+    nextUrl.hash = '';
 
     if (window.location.href !== nextUrl.toString()) {
       window.history.replaceState({}, '', nextUrl);
@@ -1029,11 +1280,41 @@
       return;
     }
 
-    const existingProfile = readProfiles(localStorage).find(
-      (profile) =>
-        profile.userId === args.userId ||
-        (args.email && profile.email?.trim().toLowerCase() === args.email.trim().toLowerCase())
-    );
+    const existingProfile = resolveAuthProfileMatch(args);
+
+    if (isGeneratedProfile(temporaryProfile)) {
+      let ensuredProfile = temporaryProfile;
+
+      if (existingProfile && existingProfile.id !== temporaryProfile.id) {
+        reassignOrdersToProfile(temporaryProfile.id, existingProfile);
+        ensuredProfile = existingProfile;
+        temporaryProfile = null;
+      } else {
+        const promotedProfile =
+          updateStoredProfile(localStorage, temporaryProfile.id, (profile) => ({
+            ...profile,
+            email: args.email?.trim() || profile.email,
+            displayName: args.displayName?.trim() || profile.displayName,
+            avatarUrl: walletAvatarUrl || profile.avatarUrl,
+            walletAddress: args.walletAddress?.trim().toLowerCase() || profile.walletAddress,
+            walletAlias: args.walletAlias?.trim() || profile.walletAlias
+          })) ?? temporaryProfile;
+
+        ensuredProfile = promotedProfile;
+        temporaryProfile = promotedProfile;
+      }
+
+      currentProfile = ensuredProfile;
+      const shouldOpenProfile =
+        args.force === true ||
+        !existingProfile ||
+        ensuredProfile.metadata?.['profileSetupCompleted'] !== true;
+
+      if (shouldOpenProfile && !draftQueued && !currentOrder && !suppressPostAuthProfileRedirect) {
+        await goto(buildProfilePath(ensuredProfile.primaryHandle));
+      }
+      return;
+    }
 
     const ensuredProfile = ensureProfileForSession({
       storage: localStorage,
@@ -1172,8 +1453,9 @@
               ...updated,
               id: (currentOrder ?? local).id
             };
-            currentOrder = nextOrder;
-            upsertOrder(nextOrder);
+            const nextOrderWithActor = applyActorIdentityFallback(nextOrder, currentOrder ?? local);
+            currentOrder = nextOrderWithActor;
+            upsertOrder(nextOrderWithActor);
           }
         }
 
@@ -1189,8 +1471,12 @@
         });
 
         if (remote) {
-          upsertOrder(remote);
-          showOrderFlow(remote, preferredView);
+          const nextRemote = applyActorIdentityFallback({
+            ...remote,
+            actorHandle: remote.actorHandle || getRouteActorHandleFallback() || undefined
+          });
+          upsertOrder(nextRemote);
+          showOrderFlow(nextRemote, preferredView);
           return;
         }
       }
@@ -1214,7 +1500,7 @@
   }
 
   function orderApiBaseUrl(): string {
-    return resolveOrderProxyBasePath('');
+    return resolveOrderProxyBasePath();
   }
 
   function craterBaseUrl(): string {
@@ -1325,13 +1611,26 @@
             pricingValue: activeTemplate.pricingValue
           })
         : null;
+    const orderOwnerProfile = currentProfile ?? (await ensureTemporaryOrderProfile({ createIfMissing: true }));
+    const orderOwnerActorHandle =
+      authState.authType === 'publickey' && normalizedActorHandle
+        ? normalizedActorHandle
+        : orderOwnerProfile?.primaryHandleType === 'publickey'
+          ? orderOwnerProfile.primaryHandle
+          : null;
     const ownerOrder = {
       ...result.order,
-      ...(currentProfile
+      ...(orderOwnerActorHandle
         ? {
-            ownerProfileId: currentProfile.id,
-            ownerUsername: currentProfile.primaryHandle,
-            ownerDisplayName: currentProfile.displayName,
+            actorHandle: orderOwnerActorHandle,
+            actorDid: `did:key:${orderOwnerActorHandle}`
+          }
+        : {}),
+      ...(orderOwnerProfile
+        ? {
+            ownerProfileId: orderOwnerProfile.id,
+            ownerUsername: orderOwnerProfile.primaryHandle,
+            ownerDisplayName: orderOwnerProfile.displayName,
             shareId: result.order.shareId || result.order.id,
             isClosedCompleted: result.order.status === 'completed' || result.order.status === 'done',
             isPublicTask: false,
@@ -1357,59 +1656,61 @@
         : {})
     };
 
-    upsertOrder(ownerOrder);
-    startOrderPolling(ownerOrder);
+    const ownerOrderWithActor = applyActorIdentityFallback(ownerOrder);
+
+    upsertOrder(ownerOrderWithActor);
+    startOrderPolling(ownerOrderWithActor);
 
     if (browser && activeTemplate && templateAmounts && templateAmounts.feeUsd > 0) {
-      const isSelfTemplate = currentProfile?.id === activeTemplate.profileId;
+      const isSelfTemplate = orderOwnerProfile?.id === activeTemplate.profileId;
       if (!isSelfTemplate) {
         addProfileBonus({
           storage: localStorage,
           profileId: activeTemplate.profileId,
           amountUsd: templateAmounts.feeUsd,
           source: 'template-order',
-          note: `Template fee from order ${ownerOrder.title}`,
-          orderId: ownerOrder.id
+          note: `Template fee from order ${ownerOrderWithActor.title}`,
+          orderId: ownerOrderWithActor.id
         });
       }
     }
 
-    if (browser && activeTemplate && currentProfile && activeTemplate.bonusEnabled) {
+    if (browser && activeTemplate && orderOwnerProfile && activeTemplate.bonusEnabled) {
       const bonusAmount =
         activeTemplate.bonusMode === 'percent'
-          ? Number((((ownerOrder.estimatedCost ?? 0) * activeTemplate.bonusValue) / 100).toFixed(2))
+          ? Number((((ownerOrderWithActor.estimatedCost ?? 0) * activeTemplate.bonusValue) / 100).toFixed(2))
           : Number(activeTemplate.bonusValue.toFixed(2));
 
       if (bonusAmount > 0) {
         addProfileBonus({
           storage: localStorage,
-          profileId: currentProfile.id,
+          profileId: orderOwnerProfile.id,
           amountUsd: bonusAmount,
           source: 'service-bonus',
           note: `Service bonus from ${activeTemplate.title}`,
-          orderId: ownerOrder.id
+          orderId: ownerOrderWithActor.id
         });
       }
-    } else if (browser && currentProfile) {
-      const follow = readProfileFollows(localStorage).find((item) => item.followerProfileId === currentProfile?.id);
+    } else if (browser && orderOwnerProfile) {
+      const follow = readProfileFollows(localStorage).find((item) => item.followerProfileId === orderOwnerProfile.id);
       if (follow) {
         const targetProfile = getProfileById(localStorage, follow.targetProfileId);
-        const amount = Number((((ownerOrder.estimatedCost ?? 0) * (targetProfile?.referralPercent ?? 0)) / 100).toFixed(2));
+        const amount = Number((((ownerOrderWithActor.estimatedCost ?? 0) * (targetProfile?.referralPercent ?? 0)) / 100).toFixed(2));
         if (targetProfile && amount > 0) {
           addProfileBonus({
             storage: localStorage,
             profileId: targetProfile.id,
             amountUsd: amount,
             source: 'follower-task',
-            note: `Referral credit from task ${ownerOrder.title}`,
-            orderId: ownerOrder.id
+            note: `Referral credit from task ${ownerOrderWithActor.title}`,
+            orderId: ownerOrderWithActor.id
           });
         }
       }
     }
 
     if (!isBackground) {
-      currentOrder = ownerOrder;
+      currentOrder = ownerOrderWithActor;
       resetTransactionState();
       step = 'executing';
     }
@@ -1473,18 +1774,28 @@
     draft.tags = tags;
   }
 
-  function updateCost(value: string) {
-    draft.estimatedCost = value;
-  }
-
-  function updateCurrency(value: string) {
-    draft.currency = value;
+  function updateExecutionEstimate(value: string) {
+    draft.executionEstimate = value;
   }
 
   function handleStopOrder(order: OrderView, event: Event) {
     event.preventDefault();
     event.stopPropagation();
     stopOrder(order);
+  }
+
+  function handleDeleteOrder(order: OrderView, event: Event) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    activePollTokens.delete(order.id);
+    createdOrders = createdOrders.filter((item) => item.id !== order.id);
+    visibleOrdersLimit = getVisibleOrdersLimit(createdOrders.length, visibleOrdersLimit, ORDER_PAGE_SIZE);
+    persistOrders();
+
+    if (currentOrder?.id === order.id) {
+      newOrder();
+    }
   }
 
   function newOrder() {
@@ -1705,7 +2016,7 @@
         chainId: null,
         email: privateKeySession.email,
         userId: privateKeySession.userId,
-        handle: privateKeySession.handle,
+        handle: normalizeActorHandle(privateKeySession.handle),
         displayName: privateKeySession.displayName,
         authType: 'publickey',
         status: 'connected'
@@ -1732,6 +2043,42 @@
       privateKeyInput = '';
     } catch (error) {
       console.error('[publickey] choosePrivateKeyMethod', error);
+      errorMessage = error instanceof Error ? error.message : localeText.errors.fallback;
+      step = 'error';
+    }
+  }
+
+  async function chooseGeneratedPrivateKeyMethod() {
+    privateKeyDialogOpen = false;
+    selectedAuthMethod = 'publickey';
+    paymentMethod = 'other';
+
+    try {
+      const { loginWithGeneratedPortableActor } = await loadAuthRoutes();
+      const generatedSession = await loginWithGeneratedPortableActor();
+
+      updateAuthState({
+        isConnected: true,
+        address: null,
+        chainId: null,
+        email: generatedSession.email,
+        userId: generatedSession.userId,
+        handle: normalizeActorHandle(generatedSession.handle || generatedSession.publickey.key),
+        displayName: generatedSession.displayName,
+        authType: 'publickey',
+        status: 'connected'
+      });
+
+      if (draftQueued) {
+        void continueAfterAuth();
+        return;
+      }
+
+      if (currentOrder && step === 'executing') {
+        step = 'payment';
+      }
+    } catch (error) {
+      console.error('[publickey] chooseGeneratedPrivateKeyMethod', error);
       errorMessage = error instanceof Error ? error.message : localeText.errors.fallback;
       step = 'error';
     }
@@ -1858,7 +2205,7 @@
   />
 
   <main>
-  <kefine-layout data-mode={layoutMode}>
+  <kefine-layout data-mode={layoutMode} data-step={step}>
     {#if templateUnavailable}
       <kefine-screen in:softScreenTransition out:softScreenTransition>
         <article class="kefine-card kefine-card--wide kefine-template-unavailable">
@@ -1903,24 +2250,30 @@
           onLoadMoreOrders={loadMoreOrders}
           matchedTasksLabel={localeText.create.matchedTasks}
           addFileLabel={localeText.create.addFile}
-          addPriceLabel={localeText.create.addPrice}
+          addExecutionEstimateLabel={localeText.create.addExecutionEstimate}
           fileCountLabel={localeText.create.fileCount}
           composerHints={localeText.create.composerHints}
           timeLeftLabel={localeText.labels.timeLeft}
-          priceLabel={localeText.labels.price}
+          openTaskLabel={localeText.labels.openOrderLink}
+          summaryLabel={localeText.labels.summary}
+          executionLabel={localeText.labels.execution}
+          relatedItemsLabel={localeText.labels.relatedItems}
+          windowLabel={localeText.labels.window}
+          executionEstimateLabel={localeText.labels.executionEstimate}
           statusLabel={localeText.labels.taskStatus}
           stopTaskLabel={localeText.buttons.stopTask}
+          deleteTaskLabel={localeText.buttons.delete}
           onSubmit={handleSubmit}
           onQueueTask={queueTaskBelow}
           onAttachFiles={attachFiles}
           onRemoveFile={removeAttachedFile}
           onStopOrder={handleStopOrder}
+          onDeleteOrder={handleDeleteOrder}
           onOpenOrder={openOrder}
           onDescriptionChange={updateDescription}
           onTemplateVariableChange={updateTemplateVariableValue}
           onTagsChange={updateTags}
-          onCostChange={updateCost}
-          onCurrencyChange={updateCurrency}
+          onExecutionEstimateChange={updateExecutionEstimate}
         />
       </kefine-screen>
     {/if}
@@ -1928,10 +2281,16 @@
     {#if step === 'submitting'}
       <kefine-screen in:softScreenTransition out:softScreenTransition>
         {#if SubmittingStepComponent}
-          <SubmittingStepComponent />
+          <SubmittingStepComponent
+            ariaLabel={localeText.meta.locale === 'ru'
+              ? 'Пересылка документа на сервер'
+              : localeText.meta.locale === 'hy'
+                ? 'Փաստաթղթի փոխանցում սերվերին'
+                : 'Forwarding document to server'}
+          />
         {:else}
           <article class="kefine-card kefine-card--wide kefine-loading-panel" aria-busy="true">
-            <h2>{localeText.status.createSending}</h2>
+            <loading-orb aria-hidden="true"></loading-orb>
           </article>
         {/if}
       </kefine-screen>
@@ -1997,7 +2356,7 @@
           />
         {:else}
           <article class="kefine-card kefine-card--wide kefine-loading-panel" aria-busy="true">
-            <h2>{localeText.status.createSending}</h2>
+            <loading-orb aria-hidden="true"></loading-orb>
           </article>
         {/if}
       </kefine-screen>
@@ -2136,9 +2495,11 @@
       placeholder="pqsk_... or -----BEGIN PRIVATE KEY-----"
       submitLabel="Sign"
       closeLabel={localeText.buttons.closeDialog}
+      generateLabel={localeText.auth.privateKeyGenerateLabel}
       onClose={() => { privateKeyDialogOpen = false; }}
       onInput={(value: string) => { privateKeyInput = value; }}
       onSubmit={choosePrivateKeyMethod}
+      onGenerate={chooseGeneratedPrivateKeyMethod}
     />
   {/if}
 
@@ -2187,6 +2548,14 @@
     padding-top: clamp(3.5rem, 8vh, 5.5rem);
   }
 
+  kefine-layout[data-step='submitting'] {
+    min-height: calc(100vh - clamp(1.5rem, 4vw, 2.8rem));
+    align-items: center;
+    align-content: center;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
   kefine-layout > * {
     min-width: 0;
     width: 100%;
@@ -2215,8 +2584,20 @@
     text-align: center;
   }
 
-  .kefine-loading-panel h2 {
-    margin: 0;
+  .kefine-loading-panel loading-orb {
+    display: block;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 999px;
+    border: 2px solid color-mix(in oklab, var(--kef-line) 72%, transparent);
+    border-top-color: color-mix(in oklab, var(--kef-primary) 82%, white 8%);
+    animation: kefine-loading-orb-spin 0.85s linear infinite;
+  }
+
+  @keyframes kefine-loading-orb-spin {
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   @media (max-width: 760px) {

@@ -399,7 +399,6 @@
         <lefine-box class="kefine-flow-badges">
           <lefine-text class="kefine-flow-badge kefine-flow-badge--timer">{labels.timeLeft}: {formattedElapsed}</lefine-text>
           <lefine-text class="kefine-flow-badge">{labels.timeLeft}: {execution.secondaryMetric.value} {execution.secondaryMetric.unit}</lefine-text>
-          <lefine-text class="kefine-flow-badge" data-testid="kefine-price-metric">{labels.price}: {execution.primaryMetric.value} {execution.primaryMetric.unit}</lefine-text>
         </lefine-box>
       </lefine-box>
 
@@ -415,7 +414,6 @@
         <lef-flow-stage-copy>
           <lef-flow-stage-meta>
             <lef-flow-stage-label>Now</lef-flow-stage-label>
-            <lefine-text class="kefine-flow-badge">{labels.price}: {execution.primaryMetric.value} {execution.primaryMetric.unit}</lefine-text>
           </lef-flow-stage-meta>
           {#if currentOrder?.solver}
             <lef-solver-row data-testid="kefine-solver-fallback">
@@ -448,14 +446,21 @@
           {/if}
 
           {#if genericSteps.length > 1}
-            <lef-flow-instruction-list data-testid="kefine-subtask-list">
+            <lef-flow-outline-list data-testid="kefine-subtask-list">
               {#each genericSteps as stepItem, index}
-                <lef-flow-instruction-card data-state={stepItem.state}>
-                  <strong>Step {index + 1}</strong>
-                  <p>{stepItem.title}</p>
-                </lef-flow-instruction-card>
+                <details data-state={stepItem.state} open={stepItem.state === 'active'}>
+                  <summary>
+                    <lef-flow-outline-row>
+                      <strong>Step {index + 1}</strong>
+                      <p>{stepItem.title}</p>
+                    </lef-flow-outline-row>
+                  </summary>
+                  <lef-flow-outline-copy>
+                    <p>{stepItem.detail}</p>
+                  </lef-flow-outline-copy>
+                </details>
               {/each}
-            </lef-flow-instruction-list>
+            </lef-flow-outline-list>
           {/if}
         </lef-flow-stage-copy>
       </lef-flow-progress-panel>
@@ -522,3 +527,67 @@
     </section>
   {/if}
 </article>
+
+<style>
+  lef-flow-outline-list {
+    display: grid;
+    gap: 0.45rem;
+    margin-top: 1rem;
+  }
+
+  lef-flow-outline-list details {
+    border-radius: 0.8rem;
+    border: 1px solid color-mix(in oklab, var(--kef-line) 34%, transparent);
+    background:
+      linear-gradient(180deg, color-mix(in oklab, var(--kef-bg-card) 96%, #efe3bc 4%), color-mix(in oklab, var(--kef-bg-card) 100%, transparent));
+    overflow: hidden;
+  }
+
+  lef-flow-outline-list summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 0.78rem 0.9rem;
+  }
+
+  lef-flow-outline-list summary::-webkit-details-marker {
+    display: none;
+  }
+
+  lef-flow-outline-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.7rem;
+    align-items: baseline;
+  }
+
+  lef-flow-outline-row strong {
+    color: var(--lefine-text-soft);
+    font-size: 0.78rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  lef-flow-outline-row p {
+    margin: 0;
+    color: var(--lefine-text);
+  }
+
+  lef-flow-outline-copy {
+    display: block;
+    padding: 0 0.9rem 0.9rem;
+    border-top: 1px solid color-mix(in oklab, var(--kef-line) 16%, transparent);
+  }
+
+  lef-flow-outline-copy p {
+    margin: 0.72rem 0 0;
+    color: var(--lefine-text-soft);
+  }
+
+  lef-flow-outline-list details[data-state='completed'] {
+    border-color: color-mix(in oklab, #8fb47a 34%, transparent);
+  }
+
+  lef-flow-outline-list details[data-state='active'] {
+    border-color: color-mix(in oklab, #7c9ab5 40%, transparent);
+  }
+</style>

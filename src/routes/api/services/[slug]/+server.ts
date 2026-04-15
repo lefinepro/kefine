@@ -7,5 +7,7 @@ function getDefaultActorHandle(): string {
 }
 
 export const GET: RequestHandler = async ({ request, fetch, params }) => {
-  return proxyTemplateByHandleAndSlug(request, getDefaultActorHandle(), params.slug, fetch);
+  const url = new URL(request.url);
+  const handle = url.searchParams.get('handle')?.replace(/^@+/, '').trim() || getDefaultActorHandle();
+  return proxyTemplateByHandleAndSlug(request, handle, params.slug, fetch);
 };

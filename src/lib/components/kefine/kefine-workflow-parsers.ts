@@ -53,6 +53,25 @@ function toTemplatePricingMode(value: unknown): 'fixed' | 'percent' | undefined 
   return value === 'percent' ? 'percent' : value === 'fixed' ? 'fixed' : undefined;
 }
 
+function extractActorHandleFromOrderReference(value: string | undefined): string | undefined {
+  const normalized = toStringValue(value);
+  if (!normalized) {
+    return undefined;
+  }
+
+  const actorPathMatch = normalized.match(/\/(@[^/]+)\/orders?\/[^/?#]+$/i);
+  if (actorPathMatch?.[1]) {
+    return actorPathMatch[1].replace(/^@+/, '');
+  }
+
+  const actorApiMatch = normalized.match(/\/actor\/orders\/(@[^/?#]+|[^/?#]+)$/i);
+  if (actorApiMatch?.[1]) {
+    return actorApiMatch[1].replace(/^@+/, '');
+  }
+
+  return undefined;
+}
+
 function inferExecutionEstimate(title: string, localeText: KefineLocaleText): string | undefined {
   const normalizedTitle = title.trim().toLowerCase();
   if (!normalizedTitle) {
@@ -471,6 +490,8 @@ export function parseStoredOrders(raw: string | null, localeText: KefineLocaleTe
         ownerProfileId: toStringValue(order['ownerProfileId']),
         ownerUsername: toStringValue(order['ownerUsername']),
         ownerDisplayName: toStringValue(order['ownerDisplayName']),
+        actorHandle: toStringValue(order['actorHandle']),
+        actorDid: toStringValue(order['actorDid']),
         shareId: toStringValue(order['shareId']),
         isClosedCompleted: order['isClosedCompleted'] === true,
         isPublicTask: order['isPublicTask'] === true,
@@ -494,6 +515,8 @@ export function readCreateResponse(body: unknown): {
   solverName?: string;
   solverHandle?: string;
   solverProfileUrl?: string;
+  actorHandle?: string;
+  actorDid?: string;
   status?: string;
   uiScenario?: Exclude<UiScenario, 'default'>;
 } | null {
@@ -512,6 +535,8 @@ export function readCreateResponse(body: unknown): {
     solverName: toStringValue(body['solverName']) || undefined,
     solverHandle: toStringValue(body['solverHandle']) || undefined,
     solverProfileUrl: toStringValue(body['solverProfileUrl']) || undefined,
+    actorHandle: toStringValue(body['actorHandle']) || extractActorHandleFromOrderReference(orderId) || undefined,
+    actorDid: toStringValue(body['actorDid']) || undefined,
     status: toStringValue(body['status']) || 'queued',
     uiScenario: toUiScenario(body['uiScenario'])
   };
@@ -605,6 +630,8 @@ export function extractStatusPayload(
     ownerProfileId: toStringValue(source['ownerProfileId']) || toStringValue(ticket['ownerProfileId']) || undefined,
     ownerUsername: toStringValue(source['ownerUsername']) || toStringValue(ticket['ownerUsername']) || undefined,
     ownerDisplayName: toStringValue(source['ownerDisplayName']) || toStringValue(ticket['ownerDisplayName']) || undefined,
+    actorHandle: toStringValue(source['actorHandle']) || toStringValue(ticket['actorHandle']) || undefined,
+    actorDid: toStringValue(source['actorDid']) || toStringValue(ticket['actorDid']) || undefined,
     shareId: toStringValue(source['shareId']) || toStringValue(ticket['shareId']) || undefined,
     isClosedCompleted: source['isClosedCompleted'] === true || ticket['isClosedCompleted'] === true,
     isPublicTask: source['isPublicTask'] === true || ticket['isPublicTask'] === true,

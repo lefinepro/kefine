@@ -1,4 +1,5 @@
 import { clearPasskeySession } from './passkey-session.js';
+import { clearGeneratedActorCookies } from './publickey-cookie.js';
 
 // ---------------------------------------------------------------------------
 // Wallet / email session (OKR-015 — Reown AppKit)
@@ -43,10 +44,11 @@ export function clearSession(): void {
 }
 
 export function clearWalletSession(): void {
-	if (typeof window === 'undefined') return;
-	try {
-		localStorage.removeItem(WALLET_SESSION_KEY);
-	} catch {
-		// localStorage may be unavailable
-	}
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.removeItem(WALLET_SESSION_KEY);
+    clearGeneratedActorCookies();
+  } catch {
+    // localStorage may be unavailable
+  }
 }

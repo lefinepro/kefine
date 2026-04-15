@@ -86,7 +86,7 @@ export const KEFINE_TEXT_RU = {
   },
   create: {
     title: 'Опишите техническую задачу',
-    subtitle: 'Задайте бюджет. Lefine найдёт solver’а, подтвердит цену и срок, а затем доставит результат.',
+    subtitle: 'Укажите срок выполнения. Lefine найдёт solver’а, подтвердит маршрут и ETA, а затем доставит результат.',
     placeholder: 'Опишите задачу по VPN или DevOps...',
     placeholderVariants: [
       'Развернуть приватный VPN для команды',
@@ -97,7 +97,7 @@ export const KEFINE_TEXT_RU = {
     executeAria: 'Выполнить задачу',
     backgroundExecuteAria: 'Отправить задачу в фоне',
     addFile: '+ файл',
-    addPrice: '+ цена',
+    addExecutionEstimate: '+ срок',
     fileCount: (count: number) => `${count} файл${count === 1 ? '' : count < 5 ? 'а' : 'ов'}`,
     composerHints: 'Enter отправляет, Alt+Enter ставит в фон, Shift+Enter делает новую строку',
     serviceSetupTitle: 'Настройте сервис перед запуском',
@@ -124,7 +124,7 @@ export const KEFINE_TEXT_RU = {
   status: {
     statusPollingMessage: (solver: string, queued: boolean) =>
       `Решатель ${solver} сейчас ${queued ? 'принимает' : 'исполняет'} задачу`,
-    createSending: 'Отправка задачи...',
+    createSending: 'Пересылка документа...',
     queued: (solver: string) => `Задача в очереди. Назначенный решатель: ${solver}`,
     notCompleted: 'Решатель ещё не вернул статус выполнения. Обновите статус задачи вручную.',
     completed: 'Задача завершена. Можно перейти к оплате.'
@@ -149,6 +149,10 @@ export const KEFINE_TEXT_RU = {
     orderStatusUnavailable: 'Ожидание обновления статуса задачи...',
     timeLeft: 'Осталось времени:',
     price: 'Цена:',
+    summary: 'Сводка задачи',
+    execution: 'Исполнение',
+    relatedItems: 'Связанные элементы',
+    window: 'Срок',
     taskStatus: 'Статус задачи',
     hoursUnit: 'ч',
     minutesUnit: 'мин',
@@ -212,6 +216,7 @@ export const KEFINE_TEXT_RU = {
     passkeyTitle: 'Passkey',
     privateKeyTitle: 'Private key',
     privateKeyDescription: 'Вставьте compact pqsk key или полный PEM private key. Строка с экранированными \\n тоже поддерживается. Браузер локально выводит ML-DSA public key и отправляет только public key string.',
+    privateKeyGenerateLabel: 'Создать actor',
     passkeyDetail: 'Используйте аккаунт платформы или продолжите через email, если профиля ещё нет.',
     anonymousTitle: 'Гость',
     anonymousDetail: 'Продолжить без профиля и оплатить через депозит.',
@@ -306,24 +311,24 @@ export const KEFINE_TEXT_RU = {
     anonymousSaveHint: 'Авторизуйтесь, чтобы сохранить результат и вернуться к нему позже.'
   },
   afe: {
-    title: 'Как работает Lefine',
+    title: '',
     cards: {
       afe: {
         title: 'Что такое Lefine?',
         detail:
-          'Lefine — это Automated Freelance Marketplace (AFM). Вам достаточно описать задачу, а мы подберём решение, которое лучше всего ей подходит.'
+          'Lefine — это Automated Freelance Marketplace (AFM), где вы описываете нужную работу, а Lefine находит правильный путь, чтобы доставить результат.'
       },
       task: {
-        title: '1. Опишите задачу',
-        detail: 'Опишите нужный инженерный результат и задайте верхнюю границу бюджета.'
+        title: 'Бриф',
+        detail: 'Опишите работу и укажите срок.'
       },
       quote: {
-        title: '2. Квота от solver’а',
-        detail: 'Solver принимает задачу, подтверждает маршрут, цену и ETA в рамках этого запроса.'
+        title: 'Квота',
+        detail: 'Solver подтверждает маршрут и ETA.'
       },
       delivery: {
-        title: '3. Доставка результата',
-        detail: 'Lefine ведёт исполнение и открывает финальный пакет доступа или результат.'
+        title: 'Доставка',
+        detail: 'Lefine доставляет финальный доступ или результат.'
       }
     }
   },

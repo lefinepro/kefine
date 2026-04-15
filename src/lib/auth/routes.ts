@@ -10,6 +10,12 @@ import type {
 } from '@simplewebauthn/types';
 import { getCraterBaseUrl } from '$lib/config/kefine-config';
 import { buildOrderProxyUrl } from '$lib/order-proxy-path';
+import {
+  loadGeneratedPrivateKeyCookie,
+  loadGeneratedPublicKeyCookie,
+  saveGeneratedPrivateKeyCookie,
+  saveGeneratedPublicKeyCookie
+} from '$lib/auth/publickey-cookie';
 
 export interface PasskeyAuthSuccess {
 	verified: true;
@@ -43,6 +49,7 @@ interface PasskeyStartResponse<T> {
 }
 
 const PRIVATE_KEY_PREFIX = 'pqsk_';
+const LEGACY_PUBLIC_KEY_PREFIX = 'pqpk_';
 const ML_DSA_65_SECRET_KEY_LENGTH = 4032;
 const ML_DSA_65_PUBLIC_DER_PREFIX = new Uint8Array([
 	0x30, 0x82, 0x07, 0xb2, 0x30, 0x0b, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04,
@@ -89,6 +96,26 @@ function encodeKeyString(value: string, prefix: string): string {
 	return `${prefix}${btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')}`;
 }
 
+function encodeCompactBytes(bytes: Uint8Array, prefix = ''): string {
+	let binary = '';
+	for (const byte of bytes) {
+		binary += String.fromCharCode(byte);
+	}
+
+	return `${prefix}${btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')}`;
+}
+
+function decodeCompactBytes(value: string, prefix = ''): Uint8Array {
+	const encoded = prefix ? value.slice(prefix.length) : value;
+	if (!encoded) {
+		return new Uint8Array();
+	}
+
+	const padded = encoded + '='.repeat((4 - (encoded.length % 4)) % 4);
+	const binary = atob(padded.replace(/-/g, '+').replace(/_/g, '/'));
+	return Uint8Array.from(binary, (char) => char.charCodeAt(0));
+}
+
 function decodeKeyString(value: string, prefix: string): string {
 	const encoded = value.slice(prefix.length);
 	if (!encoded) {
@@ -107,7 +134,14 @@ export async function derivePublicKeyFromPrivateKey(privateKey: string): Promise
 	}
 
 	const normalized = normalizedInput.startsWith(PRIVATE_KEY_PREFIX)
-		? normalizePrivateKeyInput(decodeKeyString(normalizedInput, PRIVATE_KEY_PREFIX))
+		? (() => {
+			const decodedText = decodeKeyString(normalizedInput, PRIVATE_KEY_PREFIX);
+			if (decodedText.includes('BEGIN PRIVATE KEY')) {
+				return normalizePrivateKeyInput(decodedText);
+			}
+
+			return encodePem('PRIVATE KEY', decodeCompactBytes(normalizedInput, PRIVATE_KEY_PREFIX));
+		})()
 		: normalizedInput;
 
 	if (!normalized.includes('BEGIN PRIVATE KEY')) {
@@ -127,7 +161,82 @@ export async function derivePublicKeyFromPrivateKey(privateKey: string): Promise
 	publicKeyDer.set(publicKey, ML_DSA_65_PUBLIC_DER_PREFIX.length);
 
 	const publicKeyPem = encodePem('PUBLIC KEY', publicKeyDer);
-	return encodeKeyString(publicKeyPem, 'pqpk_');
+	return encodeKeyString(publicKeyPem, LEGACY_PUBLIC_KEY_PREFIX);
+}
+
+export async function derivePortablePublicKeyFromPrivateKey(privateKey: string): Promise<string> {
+	const normalizedInput = normalizePrivateKeyInput(privateKey);
+	if (!normalizedInput) {
+		throw new Error('Private key is required.');
+	}
+
+	const normalized = normalizedInput.startsWith(PRIVATE_KEY_PREFIX)
+		? (() => {
+			const decodedText = decodeKeyString(normalizedInput, PRIVATE_KEY_PREFIX);
+			if (decodedText.includes('BEGIN PRIVATE KEY')) {
+				return normalizePrivateKeyInput(decodedText);
+			}
+
+			return encodePem('PRIVATE KEY', decodeCompactBytes(normalizedInput, PRIVATE_KEY_PREFIX));
+		})()
+		: normalizedInput;
+
+	const privateKeyDer = decodePemBody(normalized);
+	if (privateKeyDer.length < ML_DSA_65_SECRET_KEY_LENGTH) {
+		throw new Error('Private key PEM is too short for ML-DSA-65.');
+	}
+
+	const { ml_dsa65 } = await import('@noble/post-quantum/ml-dsa.js');
+	const secretKey = privateKeyDer.slice(privateKeyDer.length - ML_DSA_65_SECRET_KEY_LENGTH);
+	const publicKey = ml_dsa65.getPublicKey(secretKey);
+	const publicKeyDer = new Uint8Array(ML_DSA_65_PUBLIC_DER_PREFIX.length + publicKey.length);
+	publicKeyDer.set(ML_DSA_65_PUBLIC_DER_PREFIX, 0);
+	publicKeyDer.set(publicKey, ML_DSA_65_PUBLIC_DER_PREFIX.length);
+	return encodeCompactBytes(publicKeyDer);
+}
+
+export async function generatePortableActorKeyPair(): Promise<{
+	privateKey: string;
+	publicKey: string;
+	didKey: string;
+}> {
+	const { ml_dsa65 } = await import('@noble/post-quantum/ml-dsa.js');
+	const keys = ml_dsa65.keygen();
+	const publicKeyDer = new Uint8Array(ML_DSA_65_PUBLIC_DER_PREFIX.length + keys.publicKey.length);
+	publicKeyDer.set(ML_DSA_65_PUBLIC_DER_PREFIX, 0);
+	publicKeyDer.set(keys.publicKey, ML_DSA_65_PUBLIC_DER_PREFIX.length);
+	const publicKey = encodeCompactBytes(publicKeyDer);
+	const privateKey = encodeCompactBytes(keys.secretKey, PRIVATE_KEY_PREFIX);
+
+	return {
+		privateKey,
+		publicKey,
+		didKey: `did:key:${publicKey}`
+	};
+}
+
+function normalizePublicKeySession(
+	payload: PublicKeyAuthSuccess,
+	publicKey: string
+): PublicKeyAuthSuccess {
+	const handle = payload.handle?.trim() || publicKey;
+	const username = payload.username?.trim() || publicKey;
+	const displayName = payload.displayName?.trim() || `@${publicKey.slice(0, 16)}`;
+	const email =
+		payload.email?.trim() || `portable+${publicKey.slice(0, 24)}@local.invalid`;
+
+	return {
+		...payload,
+		handle,
+		username,
+		displayName,
+		email,
+		actorAddress: payload.actorAddress?.trim() || `did:key:${publicKey}`,
+		publickey: {
+			key: payload.publickey?.key?.trim() || publicKey,
+			pem: payload.publickey?.pem?.trim() || ''
+		}
+	};
 }
 
 async function postJson<T>(input: RequestInfo | URL, body: unknown): Promise<T> {
@@ -215,9 +324,57 @@ export async function finishAuthentication(
 export async function loginWithPrivateKey(privateKey?: string): Promise<PublicKeyAuthSuccess> {
 	const publicKey = typeof privateKey === 'string' ? await derivePublicKeyFromPrivateKey(privateKey) : '';
 
-	return postJson<PublicKeyAuthSuccess>(buildCraterClientUrl('/auth'), {
+	const payload = await postJson<PublicKeyAuthSuccess>(buildCraterClientUrl('/auth'), {
 		publickey: {
 			key: publicKey
 		}
 	});
+
+	return normalizePublicKeySession(payload, publicKey);
+}
+
+export async function loginWithPortablePublicKey(publicKey: string): Promise<PublicKeyAuthSuccess> {
+	const payload = await postJson<PublicKeyAuthSuccess>(buildCraterClientUrl('/auth'), {
+		publickey: {
+			key: publicKey
+		}
+	});
+
+	return normalizePublicKeySession(payload, publicKey);
+}
+
+export async function loginWithGeneratedPortableActor(): Promise<
+	PublicKeyAuthSuccess & {
+		privateKey: string;
+		didKey: string;
+	}
+> {
+	const generated = await generatePortableActorKeyPair();
+	saveGeneratedPrivateKeyCookie(generated.privateKey);
+	saveGeneratedPublicKeyCookie(generated.publicKey);
+	const session = await loginWithPortablePublicKey(generated.publicKey);
+
+	return {
+		...session,
+		privateKey: generated.privateKey,
+		didKey: generated.didKey
+	};
+}
+
+export async function restoreGeneratedPortableActor(): Promise<PublicKeyAuthSuccess | null> {
+	const storedPrivateKey = loadGeneratedPrivateKeyCookie();
+	const storedPublicKey = loadGeneratedPublicKeyCookie();
+	const publicKey =
+		storedPublicKey ||
+		(storedPrivateKey ? await derivePortablePublicKeyFromPrivateKey(storedPrivateKey) : null);
+
+	if (!publicKey) {
+		return null;
+	}
+
+	if (!storedPublicKey) {
+		saveGeneratedPublicKeyCookie(publicKey);
+	}
+
+	return loginWithPortablePublicKey(publicKey);
 }

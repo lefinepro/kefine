@@ -39,7 +39,6 @@ type TemplatePayload = {
   bonusValue: number;
 };
 
-const TEMPLATE_PROXY_BASE = '/api/templates';
 const SERVICE_PROXY_BASE = '/api/services';
 
 function buildDefaultVpnTemplate(handle: string): ProfileTemplate {
@@ -218,7 +217,7 @@ export async function fetchTemplatesByHandle(baseUrl: string, handle: string): P
   const response = await fetch(
     isDefaultActorHandle(normalizedHandle)
       ? SERVICE_PROXY_BASE
-      : `${TEMPLATE_PROXY_BASE}/${encodeURIComponent(normalizedHandle)}`
+      : `${SERVICE_PROXY_BASE}?handle=${encodeURIComponent(normalizedHandle)}`
   );
   if (!response.ok) {
     return mergeDefaultVpnTemplate(handle, []);
@@ -248,7 +247,7 @@ export async function fetchTemplateByHandleAndSlug(baseUrl: string, handle: stri
   const response = await fetch(
     isDefaultActorHandle(normalizedHandle)
       ? `${SERVICE_PROXY_BASE}/${encodeURIComponent(slug)}`
-      : `${TEMPLATE_PROXY_BASE}/${encodeURIComponent(normalizedHandle)}/${encodeURIComponent(slug)}`
+      : `${SERVICE_PROXY_BASE}/${encodeURIComponent(slug)}?handle=${encodeURIComponent(normalizedHandle)}`
   );
   if (!response.ok) {
     return isDefaultActorHandle(handle) && slug.trim().toLowerCase() === 'vpn-service'
@@ -268,7 +267,7 @@ export async function fetchTemplateByHandleAndSlug(baseUrl: string, handle: stri
 
 export async function saveTemplateToCrater(baseUrl: string, payload: TemplatePayload): Promise<ProfileTemplate | null> {
   void baseUrl;
-  const response = await fetch(isDefaultActorHandle(payload.authorHandle) ? SERVICE_PROXY_BASE : TEMPLATE_PROXY_BASE, {
+  const response = await fetch(SERVICE_PROXY_BASE, {
     method: payload.id ? 'PUT' : 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -286,7 +285,7 @@ export async function saveTemplateToCrater(baseUrl: string, payload: TemplatePay
 
 export async function deleteTemplateFromCrater(baseUrl: string, templateId: string): Promise<boolean> {
   void baseUrl;
-  const response = await fetch(`${TEMPLATE_PROXY_BASE}/id/${encodeURIComponent(templateId)}`, {
+  const response = await fetch(`${SERVICE_PROXY_BASE}?templateId=${encodeURIComponent(templateId)}`, {
     method: 'DELETE'
   });
 

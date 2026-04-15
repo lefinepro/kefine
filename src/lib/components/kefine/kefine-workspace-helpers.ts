@@ -6,6 +6,8 @@ export type TaskRouteView = 'result' | 'stages' | null;
 const GLOBAL_ORDER_PATH_PREFIX = '/orders/';
 const LEGACY_TASK_PATH_PREFIX = '/task/';
 const LEGACY_ORDER_PATH_PREFIX = '/order/';
+const CANONICAL_ACTOR_ORDER_PATH_PATTERN = /^\/@([^/]+)\/orders\/([^/#?]+)$/i;
+const LEGACY_ACTOR_ORDER_PATH_PATTERN = /^\/@([^/]+)\/order\/([^/#?]+)$/i;
 
 function extractOrderUuid(orderId: string): string | null {
   const normalized = orderId.trim();
@@ -15,6 +17,21 @@ function extractOrderUuid(orderId: string): string | null {
 
   const uuidMatch = normalized.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
   return uuidMatch?.[0] ?? null;
+}
+
+export function normalizeActorHandle(value: string): string {
+  return value.trim().replace(/^@+/, '');
+}
+
+export function buildActorOrderPath(actorHandle: string, orderId: string): string {
+  const normalizedHandle = normalizeActorHandle(actorHandle);
+  const normalizedOrderId = orderId.trim();
+  if (!normalizedHandle || !normalizedOrderId) {
+    return '/';
+  }
+
+  const routeId = extractOrderUuid(normalizedOrderId) ?? normalizedOrderId;
+  return `/@${encodeURIComponent(normalizedHandle)}/orders/${encodeURIComponent(routeId)}`;
 }
 
 export function buildTaskRouteHash(orderId: string, view: TaskRouteView = null): string {
@@ -134,6 +151,16 @@ function parseTaskRouteValue(rawValue: string): { orderId: string; view: TaskRou
 }
 
 export function readTaskRouteStateFromLocation(location: Location): { orderId: string; view: TaskRouteView } | null {
+  const actorPath = location.pathname.replace(/\/+$/, '');
+  const actorMatch = actorPath.match(CANONICAL_ACTOR_ORDER_PATH_PATTERN) ?? actorPath.match(LEGACY_ACTOR_ORDER_PATH_PATTERN);
+  const actorView = location.hash === '#result' ? 'result' : location.hash === '#stages' ? 'stages' : null;
+  if (actorMatch?.[2]) {
+    return {
+      orderId: decodeURIComponent(actorMatch[2]),
+      view: actorView
+    };
+  }
+
   const hash = location.hash.replace(/^#/, '').replace(/\/+$/, '');
   const hashTaskPrefix = GLOBAL_ORDER_PATH_PREFIX;
   const hashLegacyPrefixes = [LEGACY_TASK_PATH_PREFIX, LEGACY_ORDER_PATH_PREFIX];
