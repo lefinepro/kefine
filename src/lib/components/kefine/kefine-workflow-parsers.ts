@@ -1,8 +1,18 @@
 import type { KefineLocaleText } from '$lib/constants/kefine-locale';
 import type {
   DraftOrder,
+  ExecutionStage,
+  OrderExecutor,
+  OrderExecutionStep,
+  OrderIteration,
+  OrderNotebook,
+  OrderNotebookBlock,
+  OrderNotebookStep,
+  OrderResultSection,
+  OrderStepComment,
   OrderView,
   PaymentQuote,
+  ProgressState,
   TaskAccessMode,
   TemplatePresentation,
   UiScenario,
@@ -51,6 +61,502 @@ function toUiScenario(value: unknown): Exclude<UiScenario, 'default'> | undefine
 
 function toTemplatePricingMode(value: unknown): 'fixed' | 'percent' | undefined {
   return value === 'percent' ? 'percent' : value === 'fixed' ? 'fixed' : undefined;
+}
+
+function toProgressState(value: unknown): ProgressState | undefined {
+  if (value === 'completed' || value === 'active' || value === 'upcoming') {
+    return value;
+  }
+
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  if (['done', 'complete', 'completed', 'confirmed', 'success'].includes(normalized)) {
+    return 'completed';
+  }
+
+  if (['active', 'current', 'in-progress', 'in_progress', 'running', 'pending-confirmation', 'awaiting-confirmation'].includes(normalized)) {
+    return 'active';
+  }
+
+  if (['upcoming', 'pending', 'queued', 'next', 'waiting'].includes(normalized)) {
+    return 'upcoming';
+  }
+
+  return undefined;
+}
+
+function toBoolean(value: unknown): boolean | undefined {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+
+  if (typeof value === 'string') {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+  }
+
+  return undefined;
+}
+
+function toExecutionSteps(value: unknown): OrderExecutionStep[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const steps = value
+    .map((item, index) => {
+      const record = toRecord(item);
+      if (!record) {
+        return null;
+      }
+
+      const title =
+        toStringValue(record['title']) ||
+        toStringValue(record['name']) ||
+        toStringValue(record['label']);
+      if (!title) {
+        return null;
+      }
+
+      const detail =
+        toStringValue(record['detail']) ||
+        toStringValue(record['description']) ||
+        toStringValue(record['content']) ||
+        '';
+      const state =
+        toProgressState(record['state']) ||
+        toProgressState(record['status']) ||
+        (record['active'] === true ? 'active' : record['completed'] === true ? 'completed' : 'upcoming');
+      const confirmationSource =
+        toRecord(record['confirmation']) ||
+        toRecord(record['confirm']) ||
+        (toBoolean(record['requiresConfirmation']) === true || toBoolean(record['confirmed']) !== undefined
+          ? record
+          : null);
+      const confirmation = confirmationSource
+        ? {
+            required:
+              toBoolean(confirmationSource['required']) ??
+              toBoolean(confirmationSource['requiresConfirmation']) ??
+              false,
+            confirmed:
+              toBoolean(confirmationSource['confirmed']) ??
+              toBoolean(confirmationSource['isConfirmed']) ??
+              false,
+            label:
+              toStringValue(confirmationSource['label']) ||
+              toStringValue(confirmationSource['title']) ||
+              undefined,
+            detail:
+              toStringValue(confirmationSource['detail']) ||
+              toStringValue(confirmationSource['hint']) ||
+              toStringValue(confirmationSource['description']) ||
+              undefined
+          }
+        : undefined;
+
+      return {
+        id: toStringValue(record['id']) || toStringValue(record['key']) || `step-${index + 1}`,
+        title,
+        detail,
+        state,
+        confirmation: confirmation && (confirmation.required || confirmation.confirmed || confirmation.label || confirmation.detail)
+          ? confirmation
+          : undefined
+      } satisfies OrderExecutionStep;
+    })
+    .filter(isDefined);
+
+  return steps.length > 0 ? steps : undefined;
+}
+
+function toExecutionStage(value: unknown): ExecutionStage | undefined {
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  if (['queued', 'queue', 'created'].includes(normalized)) return 'queued';
+  if (['matching', 'competition', 'searching'].includes(normalized)) return 'matching';
+  if (['assigned', 'accepted', 'winner-selected', 'winner_selected'].includes(normalized)) return 'assigned';
+  if (['running', 'executing', 'in-progress', 'in_progress', 'bridging'].includes(normalized)) return 'running';
+  if (['review', 'awaiting-review', 'pending-confirmation', 'awaiting-confirmation'].includes(normalized)) return 'review';
+  if (['completed', 'done', 'paid'].includes(normalized)) return 'completed';
+  if (['failed', 'error', 'rejected', 'stopped'].includes(normalized)) return 'failed';
+  if (['batching', 'awaiting-auth', 'awaiting-payment'].includes(normalized)) return normalized as ExecutionStage;
+  return undefined;
+}
+
+function toExecutorStatus(value: unknown): OrderExecutor['status'] | undefined {
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  if (['waiting', 'queued', 'pending'].includes(normalized)) return 'waiting';
+  if (['accepted', 'assigned'].includes(normalized)) return 'accepted';
+  if (['running', 'executing', 'active', 'in-progress', 'in_progress'].includes(normalized)) return 'running';
+  if (['review', 'awaiting-review', 'pending-confirmation'].includes(normalized)) return 'review';
+  if (['completed', 'done', 'confirmed'].includes(normalized)) return 'completed';
+  if (['failed', 'error', 'rejected', 'stopped'].includes(normalized)) return 'failed';
+  return undefined;
+}
+
+function toNotebookBlockType(value: unknown): OrderNotebookBlock['type'] {
+  if (typeof value !== 'string') {
+    return 'markdown';
+  }
+
+  const normalized = value.trim().toLowerCase();
+  if (['code', 'source'].includes(normalized)) return 'code';
+  if (['output', 'stdout', 'stderr', 'result'].includes(normalized)) return 'output';
+  if (['artifact', 'file', 'attachment', 'link'].includes(normalized)) return 'artifact';
+  if (['diff', 'patch'].includes(normalized)) return 'diff';
+  if (['warning', 'error', 'notice'].includes(normalized)) return 'warning';
+  return 'markdown';
+}
+
+function toStepComments(value: unknown): OrderStepComment[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const comments = value
+    .map((item, index) => {
+      const record = toRecord(item);
+      if (!record) {
+        return null;
+      }
+
+      const content =
+        toStringValue(record['content']) ||
+        toStringValue(record['text']) ||
+        toStringValue(record['body']) ||
+        toStringValue(record['message']);
+      if (!content) {
+        return null;
+      }
+
+      return {
+        id: toStringValue(record['id']) || `comment-${index + 1}`,
+        content,
+        authorName: toStringValue(record['authorName']) || toStringValue(record['author']) || toStringValue(record['name']),
+        authorHandle: toStringValue(record['authorHandle']) || toStringValue(record['handle']),
+        createdAt: toStringValue(record['createdAt']) || toStringValue(record['published'])
+      } satisfies OrderStepComment;
+    })
+    .filter(isDefined);
+
+  return comments.length > 0 ? comments : undefined;
+}
+
+function toNotebookBlocks(value: unknown): OrderNotebookBlock[] | undefined {
+  if (typeof value === 'string' && value.trim()) {
+    return [{ id: 'block-1', type: 'markdown', content: value.trim() }];
+  }
+
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const blocks = value
+    .map((item, index) => {
+      if (typeof item === 'string' && item.trim()) {
+        return {
+          id: `block-${index + 1}`,
+          type: 'markdown',
+          content: item.trim()
+        } satisfies OrderNotebookBlock;
+      }
+
+      const record = toRecord(item);
+      if (!record) {
+        return null;
+      }
+
+      const content =
+        toStringValue(record['content']) ||
+        toStringValue(record['text']) ||
+        toStringValue(record['body']) ||
+        toStringValue(record['value']) ||
+        toStringValue(record['summary']);
+      if (!content && !extractHref(record)) {
+        return null;
+      }
+
+      return {
+        id: toStringValue(record['id']) || `block-${index + 1}`,
+        type: toNotebookBlockType(record['type']),
+        title: toStringValue(record['title']) || toStringValue(record['name']),
+        content: content || '',
+        language: toStringValue(record['language']) || toStringValue(record['lang']),
+        href: extractHref(record)
+      } satisfies OrderNotebookBlock;
+    })
+    .filter(isDefined);
+
+  return blocks.length > 0 ? blocks : undefined;
+}
+
+function toNotebookStep(value: unknown, index: number): OrderNotebookStep | null {
+  const record = toRecord(value);
+  if (!record) {
+    return null;
+  }
+
+  const title =
+    toStringValue(record['title']) ||
+    toStringValue(record['name']) ||
+    toStringValue(record['label']) ||
+    `Stage ${index + 1}`;
+  const blocks =
+    toNotebookBlocks(record['blocks']) ||
+    toNotebookBlocks(record['contentBlocks']) ||
+    toNotebookBlocks(record['cells']) ||
+    toNotebookBlocks(record['content']) ||
+    toNotebookBlocks(record['output']) ||
+    [];
+
+  return {
+    id: toStringValue(record['id']) || `notebook-step-${index + 1}`,
+    title,
+    detail: toStringValue(record['detail']) || toStringValue(record['description']),
+    state:
+      toProgressState(record['state']) ||
+      toProgressState(record['status']) ||
+      (toBoolean(record['completed']) ? 'completed' : toBoolean(record['active']) ? 'active' : 'upcoming'),
+    statusLabel: toStringValue(record['status']) || undefined,
+    executorId: toStringValue(record['executorId']) || toStringValue(record['performerId']),
+    executorName: toStringValue(record['executorName']) || toStringValue(record['performerName']),
+    createdAt: toStringValue(record['createdAt']) || toStringValue(record['published']),
+    completedAt: toStringValue(record['completedAt']) || undefined,
+    iterationIndex: toNumber(record['iterationIndex']),
+    blocks,
+    comments: toStepComments(record['comments']) || toStepComments(record['commentThread']),
+    commentThreadId: toStringValue(record['commentThreadId']) || toStringValue(record['threadId'])
+  };
+}
+
+function toNotebook(value: unknown): OrderNotebook | undefined {
+  const record = toRecord(value);
+  const rawSteps = Array.isArray(value)
+    ? value
+    : Array.isArray(record?.['steps'])
+      ? record?.['steps']
+      : Array.isArray(record?.['entries'])
+        ? record?.['entries']
+        : Array.isArray(record?.['timeline'])
+          ? record?.['timeline']
+          : null;
+
+  if (!rawSteps) {
+    return undefined;
+  }
+
+  const steps = rawSteps.map((item, index) => toNotebookStep(item, index)).filter(isDefined);
+  return steps.length > 0 ? { steps } : undefined;
+}
+
+function toResultSection(value: unknown, fallbackTitle: string): OrderResultSection | undefined {
+  if (typeof value === 'string' && value.trim()) {
+    return {
+      title: fallbackTitle,
+      blocks: [{ id: 'result-block-1', type: 'markdown', content: value.trim() }]
+    };
+  }
+
+  const record = toRecord(value);
+  if (!record) {
+    return undefined;
+  }
+
+  const blocks =
+    toNotebookBlocks(record['blocks']) ||
+    toNotebookBlocks(record['contentBlocks']) ||
+    toNotebookBlocks(record['content']) ||
+    toNotebookBlocks(record['output']);
+  if (!blocks || blocks.length === 0) {
+    return undefined;
+  }
+
+  return {
+    title: toStringValue(record['title']) || toStringValue(record['name']) || fallbackTitle,
+    summary: toStringValue(record['summary']) || toStringValue(record['description']),
+    blocks
+  };
+}
+
+function resultDocumentToSection(document: VpnResultArticle | undefined, fallbackTitle: string): OrderResultSection | undefined {
+  if (!document) {
+    return undefined;
+  }
+
+  return {
+    title: document.name || fallbackTitle,
+    summary: document.summary,
+    blocks: [
+      {
+        id: 'result-document',
+        type: 'output',
+        content: document.content?.trim() || JSON.stringify(document.raw, null, 2)
+      }
+    ]
+  };
+}
+
+function toIterations(value: unknown): OrderIteration[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const iterations = value
+    .map((item, index) => {
+      const record = toRecord(item);
+      if (!record) {
+        return null;
+      }
+
+      return {
+        id: toStringValue(record['id']) || `iteration-${index + 1}`,
+        title: toStringValue(record['title']) || toStringValue(record['name']) || `Iteration ${index + 1}`,
+        summary: toStringValue(record['summary']) || toStringValue(record['description']),
+        createdAt: toStringValue(record['createdAt']) || toStringValue(record['published']),
+        current: toBoolean(record['current']) ?? false,
+        stepCount: toNumber(record['stepCount'])
+      } satisfies OrderIteration;
+    })
+    .filter(isDefined);
+
+  return iterations.length > 0 ? iterations : undefined;
+}
+
+function toExecutors(value: unknown): OrderExecutor[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const executors = value
+    .map((item, index) => {
+      const record = toRecord(item);
+      if (!record) {
+        return null;
+      }
+
+      const name =
+        toStringValue(record['name']) ||
+        toStringValue(record['solverName']) ||
+        toStringValue(record['performerName']) ||
+        toStringValue(record['label']);
+      if (!name) {
+        return null;
+      }
+
+      return {
+        id: toStringValue(record['id']) || `executor-${index + 1}`,
+        name,
+        handle: toStringValue(record['handle']) || toStringValue(record['solverHandle']) || toStringValue(record['performerHandle']),
+        avatarUrl: extractHref(record) || toStringValue(record['avatarUrl']),
+        rank: toNumber(record['rank']) ?? toNumber(record['position']) ?? index + 1,
+        status: toExecutorStatus(record['status']) || toExecutorStatus(record['state']) || 'waiting',
+        progressPercent: toNumber(record['progressPercent']) ?? toNumber(record['progress']),
+        currentNotebookStepId: toStringValue(record['currentNotebookStepId']) || toStringValue(record['stepId']),
+        resultSummary: toStringValue(record['resultSummary']) || toStringValue(record['summary'])
+      } satisfies OrderExecutor;
+    })
+    .filter(isDefined)
+    .sort((left, right) => (left.rank ?? Number.MAX_SAFE_INTEGER) - (right.rank ?? Number.MAX_SAFE_INTEGER));
+
+  return executors.length > 0 ? executors : undefined;
+}
+
+function findExecutionSteps(source: Record<string, unknown>, ticket: Record<string, unknown>): OrderExecutionStep[] | undefined {
+  return (
+    toExecutionSteps(source['executionSteps']) ||
+    toExecutionSteps(source['steps']) ||
+    toExecutionSteps(source['subtasks']) ||
+    toExecutionSteps(ticket['executionSteps']) ||
+    toExecutionSteps(ticket['steps']) ||
+    toExecutionSteps(ticket['subtasks'])
+  );
+}
+
+function findActiveExecutionStepId(source: Record<string, unknown>, ticket: Record<string, unknown>): string | undefined {
+  return (
+    toStringValue(source['activeExecutionStepId']) ||
+    toStringValue(source['activeStepId']) ||
+    toStringValue(ticket['activeExecutionStepId']) ||
+    toStringValue(ticket['activeStepId'])
+  );
+}
+
+function findProgressPercent(source: Record<string, unknown>, ticket: Record<string, unknown>): number | undefined {
+  return (
+    toNumber(source['progressPercent']) ??
+    toNumber(source['progress']) ??
+    toNumber(ticket['progressPercent']) ??
+    toNumber(ticket['progress']) ??
+    undefined
+  );
+}
+
+function findExchangeStage(source: Record<string, unknown>, ticket: Record<string, unknown>): ExecutionStage | undefined {
+  return (
+    toExecutionStage(source['exchangeStage']) ||
+    toExecutionStage(source['executionStage']) ||
+    toExecutionStage(source['stage']) ||
+    toExecutionStage(ticket['exchangeStage']) ||
+    toExecutionStage(ticket['executionStage']) ||
+    toExecutionStage(ticket['stage']) ||
+    toExecutionStage(source['status']) ||
+    toExecutionStage(ticket['status'])
+  );
+}
+
+function findExecutors(source: Record<string, unknown>, ticket: Record<string, unknown>): OrderExecutor[] | undefined {
+  return (
+    toExecutors(source['executors']) ||
+    toExecutors(source['performers']) ||
+    toExecutors(source['workers']) ||
+    toExecutors(ticket['executors']) ||
+    toExecutors(ticket['performers']) ||
+    toExecutors(ticket['workers'])
+  );
+}
+
+function findNotebook(source: Record<string, unknown>, ticket: Record<string, unknown>): OrderNotebook | undefined {
+  return (
+    toNotebook(source['notebook']) ||
+    toNotebook(source['timeline']) ||
+    toNotebook(source['journal']) ||
+    toNotebook(ticket['notebook']) ||
+    toNotebook(ticket['timeline']) ||
+    toNotebook(ticket['journal'])
+  );
+}
+
+function findInterimResult(source: Record<string, unknown>, ticket: Record<string, unknown>): OrderResultSection | undefined {
+  return (
+    toResultSection(source['interimResult'], 'Interim result') ||
+    toResultSection(source['currentResult'], 'Interim result') ||
+    toResultSection(ticket['interimResult'], 'Interim result') ||
+    toResultSection(ticket['currentResult'], 'Interim result')
+  );
+}
+
+function findFinalResult(source: Record<string, unknown>, ticket: Record<string, unknown>): OrderResultSection | undefined {
+  return (
+    toResultSection(source['result'], 'Final result') ||
+    toResultSection(source['finalResult'], 'Final result') ||
+    toResultSection(ticket['result'], 'Final result') ||
+    toResultSection(ticket['finalResult'], 'Final result')
+  );
+}
+
+function findIterations(source: Record<string, unknown>, ticket: Record<string, unknown>): OrderIteration[] | undefined {
+  return toIterations(source['iterations']) || toIterations(ticket['iterations']);
 }
 
 function extractActorHandleFromOrderReference(value: string | undefined): string | undefined {
@@ -471,21 +977,36 @@ export function parseStoredOrders(raw: string | null, localeText: KefineLocaleTe
     .filter(isRecord)
     .map((order) => {
       const title = toStringValue(order['title']) || localeText.defaults.taskTitle;
+      const resultDocument = extractResultDocument(order);
 
       return {
         id: toStringValue(order['id']) || '',
-        solver: toStringValue(order['solver']) || localeText.defaults.unknownSolver,
+        solver: toStringValue(order['solver']) || '',
         status: toStringValue(order['status']) || 'queued',
         title,
         description: toStringValue(order['description']) || '',
         createdAt: toStringValue(order['createdAt']) || new Date().toISOString(),
+        assignedAt: toStringValue(order['assignedAt']) || toStringValue(order['acceptedAt']) || toStringValue(order['matchedAt']),
+        startedAt: toStringValue(order['startedAt']) || toStringValue(order['executionStartedAt']) || toStringValue(order['runningAt']),
         estimatedCost: toNumber(order['estimatedCost']) || undefined,
         currency: toStringValue(order['currency']) || localeText.defaults.defaultCurrency,
         executionEstimate: resolveExecutionEstimate(toStringValue(order['executionEstimate']) || undefined, title, localeText),
         paymentUrl: toStringValue(order['paymentUrl']) || undefined,
         uiScenario: toUiScenario(order['uiScenario']),
         labels: toStringList(order['labels']),
-        resultDocument: extractResultDocument(order),
+        exchangeStage: toExecutionStage(order['exchangeStage']) || toExecutionStage(order['status']),
+        executionSteps: toExecutionSteps(order['executionSteps']) || toExecutionSteps(order['steps']) || toExecutionSteps(order['subtasks']),
+        activeExecutionStepId: toStringValue(order['activeExecutionStepId']) || toStringValue(order['activeStepId']),
+        progressPercent: toNumber(order['progressPercent']) ?? toNumber(order['progress']),
+        executors: toExecutors(order['executors']) || toExecutors(order['performers']),
+        notebook: toNotebook(order['notebook']) || toNotebook(order['timeline']),
+        interimResult: toResultSection(order['interimResult'], 'Interim result') || toResultSection(order['currentResult'], 'Interim result'),
+        result:
+          toResultSection(order['result'], 'Final result') ||
+          toResultSection(order['finalResult'], 'Final result') ||
+          resultDocumentToSection(resultDocument, 'Final result'),
+        iterations: toIterations(order['iterations']),
+        resultDocument,
         activitypub: toRecord(order['activitypub']) || undefined,
         ownerProfileId: toStringValue(order['ownerProfileId']),
         ownerUsername: toStringValue(order['ownerUsername']),
@@ -515,10 +1036,22 @@ export function readCreateResponse(body: unknown): {
   solverName?: string;
   solverHandle?: string;
   solverProfileUrl?: string;
+  ownerProfileId?: string;
+  ownerUsername?: string;
+  ownerDisplayName?: string;
   actorHandle?: string;
   actorDid?: string;
   status?: string;
   uiScenario?: Exclude<UiScenario, 'default'>;
+  exchangeStage?: ExecutionStage;
+  executionSteps?: OrderExecutionStep[];
+  activeExecutionStepId?: string;
+  progressPercent?: number;
+  executors?: OrderExecutor[];
+  notebook?: OrderNotebook;
+  interimResult?: OrderResultSection;
+  result?: OrderResultSection;
+  iterations?: OrderIteration[];
 } | null {
   if (!isRecord(body) || body['accepted'] !== true) {
     return null;
@@ -535,10 +1068,22 @@ export function readCreateResponse(body: unknown): {
     solverName: toStringValue(body['solverName']) || undefined,
     solverHandle: toStringValue(body['solverHandle']) || undefined,
     solverProfileUrl: toStringValue(body['solverProfileUrl']) || undefined,
+    ownerProfileId: toStringValue(body['ownerProfileId']) || undefined,
+    ownerUsername: toStringValue(body['ownerUsername']) || undefined,
+    ownerDisplayName: toStringValue(body['ownerDisplayName']) || undefined,
     actorHandle: toStringValue(body['actorHandle']) || extractActorHandleFromOrderReference(orderId) || undefined,
     actorDid: toStringValue(body['actorDid']) || undefined,
     status: toStringValue(body['status']) || 'queued',
-    uiScenario: toUiScenario(body['uiScenario'])
+    uiScenario: toUiScenario(body['uiScenario']),
+    exchangeStage: findExchangeStage(body, body),
+    executionSteps: findExecutionSteps(body, body),
+    activeExecutionStepId: findActiveExecutionStepId(body, body),
+    progressPercent: findProgressPercent(body, body),
+    executors: findExecutors(body, body),
+    notebook: findNotebook(body, body),
+    interimResult: findInterimResult(body, body),
+    result: findFinalResult(body, body),
+    iterations: findIterations(body, body)
   };
 }
 
@@ -579,6 +1124,22 @@ export function extractStatusPayload(
     toStringValue(ticket['createdAt']) ||
     toStringValue(ticket['published']) ||
     fallback.createdAt;
+  const assignedAt =
+    toStringValue(source['assignedAt']) ||
+    toStringValue(source['acceptedAt']) ||
+    toStringValue(source['matchedAt']) ||
+    toStringValue(ticket['assignedAt']) ||
+    toStringValue(ticket['acceptedAt']) ||
+    toStringValue(ticket['matchedAt']) ||
+    undefined;
+  const startedAt =
+    toStringValue(source['startedAt']) ||
+    toStringValue(source['executionStartedAt']) ||
+    toStringValue(source['runningAt']) ||
+    toStringValue(ticket['startedAt']) ||
+    toStringValue(ticket['executionStartedAt']) ||
+    toStringValue(ticket['runningAt']) ||
+    undefined;
   const linkedPrice = toNumber(paymentLink?.['price']) ?? toNumber(paymentLink?.['amount']);
   const linkedCurrency = toStringValue(paymentLink?.['currency']) || undefined;
   const linkedSolver =
@@ -586,10 +1147,17 @@ export function extractStatusPayload(
     extractActorLabel(source['attributedTo']) ||
     extractActorLabel(ticket['attributedTo']) ||
     undefined;
+  const executionSteps = findExecutionSteps(source, ticket);
+  const exchangeStage = findExchangeStage(source, ticket);
+  const executors = findExecutors(source, ticket);
+  const notebook = findNotebook(source, ticket);
+  const interimResult = findInterimResult(source, ticket);
+  const result = findFinalResult(source, ticket) || resultDocumentToSection(resultDocument, 'Final result');
+  const iterations = findIterations(source, ticket);
 
   return {
     id: orderId,
-    solver: toStringValue(source['solver']) || linkedSolver || localeText.defaults.solverNetwork,
+    solver: toStringValue(source['solver']) || linkedSolver || '',
     solverName: toStringValue(source['solverName']) || undefined,
     solverHandle: toStringValue(source['solverHandle']) || undefined,
     solverProfileUrl: toStringValue(source['solverProfileUrl']) || undefined,
@@ -602,6 +1170,8 @@ export function extractStatusPayload(
       toStringValue(ticket['content']) ||
       fallback.description,
     createdAt,
+    assignedAt,
+    startedAt,
     estimatedCost:
       linkedPrice ??
       toNumber(source['estimatedCost']) ??
@@ -625,6 +1195,15 @@ export function extractStatusPayload(
     paymentUrl: extractHref(paymentLink ?? {}) || toStringValue(source['paymentUrl']) || undefined,
     uiScenario: toUiScenario(source['uiScenario']) || toUiScenario(ticket['uiScenario']),
     labels: toStringList(source['labels']) || toStringList(ticket['labels']),
+    exchangeStage,
+    executionSteps,
+    activeExecutionStepId: findActiveExecutionStepId(source, ticket),
+    progressPercent: findProgressPercent(source, ticket),
+    executors,
+    notebook,
+    interimResult,
+    result,
+    iterations,
     resultDocument,
     activitypub: rootPayload || undefined,
     ownerProfileId: toStringValue(source['ownerProfileId']) || toStringValue(ticket['ownerProfileId']) || undefined,
@@ -702,7 +1281,17 @@ export function readPaymentQuote(body: unknown): PaymentQuote | null {
   };
 }
 
-export function buildCreatePayload(payload: DraftOrder, template?: TemplatePresentation | null) {
+export function buildCreatePayload(
+  payload: DraftOrder,
+  template?: TemplatePresentation | null,
+  owner?: {
+    ownerProfileId?: string;
+    ownerUsername?: string;
+    ownerDisplayName?: string;
+    actorHandle?: string;
+    actorDid?: string;
+  } | null
+) {
   const isVpnScenario = detectVpnScenario(payload);
   const tags = Array.from(new Set(payload.tags.map((tag) => tag.trim()).filter(Boolean)));
   const labels = Array.from(new Set([...(isVpnScenario ? ['vpn'] : []), ...tags]));
@@ -730,6 +1319,11 @@ export function buildCreatePayload(payload: DraftOrder, template?: TemplatePrese
     templateAuthorUsername: template?.authorHandle,
     templateAuthorDisplayName: template?.authorDisplayName,
     templatePricingMode: template?.pricingMode,
-    templatePricingValue: template?.pricingValue
+    templatePricingValue: template?.pricingValue,
+    ownerProfileId: owner?.ownerProfileId,
+    ownerUsername: owner?.ownerUsername,
+    ownerDisplayName: owner?.ownerDisplayName,
+    actorHandle: owner?.actorHandle,
+    actorDid: owner?.actorDid
   };
 }

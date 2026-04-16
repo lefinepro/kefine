@@ -15,7 +15,7 @@ function extractOrderUuid(orderId: string): string | null {
     return null;
   }
 
-  const uuidMatch = normalized.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+  const uuidMatch = normalized.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
   return uuidMatch?.[0] ?? null;
 }
 
@@ -75,7 +75,7 @@ export function resolveOrderIdFromRouteValue(routeValue: string, knownOrders: Or
     return normalized;
   }
 
-  return `https://lefine.pro/actor/orders/${normalized}`;
+  return normalized;
 }
 
 export function resolveOrderIdCandidates(routeValue: string, knownOrders: OrderView[]): string[] {
@@ -86,18 +86,14 @@ export function resolveOrderIdCandidates(routeValue: string, knownOrders: OrderV
 
   const resolved = resolveOrderIdFromRouteValue(normalized, knownOrders);
   const candidates = [resolved];
-  const uuid = extractOrderUuid(normalized);
 
   const suffixMatch = knownOrders.find((item) => item.id.endsWith(`/${normalized}`));
   if (suffixMatch && !candidates.includes(suffixMatch.id)) {
     candidates.unshift(suffixMatch.id);
   }
 
-  if (!uuid && !normalized.startsWith('http://') && !normalized.startsWith('https://')) {
-    const globalCandidate = `https://lefine.pro/actor/orders/${normalized}`;
-    if (!candidates.includes(globalCandidate)) {
-      candidates.push(globalCandidate);
-    }
+  if (!candidates.includes(normalized)) {
+    candidates.push(normalized);
   }
 
   return candidates;

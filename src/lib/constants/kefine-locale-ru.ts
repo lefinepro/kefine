@@ -157,6 +157,14 @@ export const KEFINE_TEXT_RU = {
     hoursUnit: 'ч',
     minutesUnit: 'мин',
     subtasks: 'Подзадачи',
+    exchangeWaiting: 'Exchange',
+    performers: 'Исполнители',
+    notebook: 'Ноутбук выполнения',
+    iterations: 'Итерации',
+    interimResult: 'Промежуточный результат',
+    finalResult: 'Финальный результат',
+    leaveComment: 'Оставить комментарий',
+    noNotebookYet: 'Исполнитель ещё не опубликовал этапы ноутбука.',
     selectedMethod: 'Выбранный способ',
     remainingBalance: 'Остаток к оплате',
     promoApplied: 'Промокод',
@@ -191,6 +199,7 @@ export const KEFINE_TEXT_RU = {
     depositNow: 'Внести депозит',
     confirmLinkedWallet: 'Подтвердить привязанный кошелёк',
     openResult: 'Открыть результат',
+    confirmStep: 'Подтвердить шаг',
     rejectResult: 'Отклонить результат',
     saveResult: 'Сохранить результат',
     enterPromo: 'Ввести промокод',
@@ -228,6 +237,34 @@ export const KEFINE_TEXT_RU = {
     anonymousHint: 'Анонимная оплата доступна.'
   },
   executionFlow: {
+    queued: {
+      title: 'Задача отправлена на exchange',
+      detail: 'Задача зарегистрирована и ожидает исполнителя.'
+    },
+    matching: {
+      title: 'Идёт поиск исполнителя',
+      detail: 'Exchange подбирает доступных исполнителей для этой задачи.'
+    },
+    assigned: {
+      title: 'Исполнители найдены',
+      detail: 'Один или несколько исполнителей приняли задачу и готовят запуск.'
+    },
+    running: {
+      title: 'Задача выполняется',
+      detail: 'Выполнение уже идёт. Ниже можно следить за этапами и обновлениями исполнителя.'
+    },
+    review: {
+      title: 'Результат на проверке',
+      detail: 'Исполнитель вернул результат. Проверьте этапы ноутбука и подтвердите, если нужно.'
+    },
+    completed: {
+      title: 'Выполнение завершено',
+      detail: 'Финальный ноутбук и результат готовы.'
+    },
+    failed: {
+      title: 'Выполнение завершилось ошибкой',
+      detail: 'Текущий запуск завершился ошибкой. Посмотрите последний этап ноутбука.'
+    },
     batching: {
       title: 'Батчинг ордеров',
       detail: 'Ордеры, созданные одновременно, объединяются, чтобы снизить стоимость исполнения.'
@@ -333,6 +370,8 @@ export const KEFINE_TEXT_RU = {
     }
   },
   errors: {
+    backendUnavailableTitle: 'Crater не настроен',
+    backendUnavailableDetail: 'Проверка backend health не прошла. Запустите crater или исправьте настроенный crater URL.',
     orderRequired: 'Текст задачи обязателен',
     loadGeneric: 'Не удалось создать задачу',
     unknown: 'Неизвестная ошибка',

@@ -15,7 +15,7 @@ type KefineFullConfig = {
   company: KefineCompanyPublicConfig;
   services: KefinePinnedServiceConfig[];
   defaultActor: KefineDefaultActorPublicConfig & {
-    privateKeyPem: string;
+    privateKey: string;
   };
   origins: {
     primary: string;
@@ -46,7 +46,7 @@ const DEFAULT_CONFIG: KefineFullConfig = {
   services: DEFAULT_PUBLIC_RUNTIME_CONFIG.services,
   defaultActor: {
     ...DEFAULT_PUBLIC_RUNTIME_CONFIG.defaultActor,
-    privateKeyPem: ''
+    privateKey: ''
   },
   origins: {
     primary: 'https://lefine.pro',
@@ -119,9 +119,15 @@ export function getKefineConfig(): KefineFullConfig {
     defaultActor: {
       handle: publicConfig.defaultActor.handle,
       displayName: publicConfig.defaultActor.displayName,
-      privateKeyPem: normalizeText(
+      privateKey: normalizeText(
         readEnvironmentOverride('KEFINE_PRIVATEKEY_DEFAULT'),
-        normalizeText(defaultActor.privateKeyPem, DEFAULT_CONFIG.defaultActor.privateKeyPem)
+        normalizeText(
+          typeof defaultActor.privateKey === 'string' ? defaultActor.privateKey : '',
+          normalizeText(
+            typeof defaultActor.privateKeyPem === 'string' ? defaultActor.privateKeyPem : '',
+            DEFAULT_CONFIG.defaultActor.privateKey
+          )
+        )
       )
     },
     origins: {

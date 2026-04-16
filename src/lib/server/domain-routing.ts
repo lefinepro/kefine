@@ -55,6 +55,7 @@ function getDomainBucket(pathname: string): DomainBucket {
   if (
     normalizedPath === '/auth' ||
     normalizedPath === '/api/auth' ||
+    normalizedPath === '/api/health' ||
     normalizedPath === '/contact' ||
     normalizedPath === '/create' ||
     normalizedPath === '/api/create' ||
@@ -67,11 +68,11 @@ function getDomainBucket(pathname: string): DomainBucket {
     normalizedPath.startsWith('/api/pay/') ||
     normalizedPath.startsWith('/auth/') ||
     normalizedPath.startsWith('/passkeys/') ||
+    normalizedPath.startsWith('/api/passkeys/') ||
     normalizedPath === '/status' ||
     normalizedPath.startsWith('/status/') ||
     normalizedPath === '/api/status' ||
     normalizedPath.startsWith('/api/status/') ||
-    normalizedPath === '/api/payment-config' ||
     normalizedPath.startsWith('/api/services') ||
     normalizedPath.startsWith('/api/kefine/')
   ) {

@@ -156,6 +156,14 @@ export const KEFINE_TEXT_EN = {
     hoursUnit: 'hours',
     minutesUnit: 'min',
     subtasks: 'Work breakdown',
+    exchangeWaiting: 'Exchange',
+    performers: 'Performers',
+    notebook: 'Notebook',
+    iterations: 'Iterations',
+    interimResult: 'Interim result',
+    finalResult: 'Final result',
+    leaveComment: 'Leave comment',
+    noNotebookYet: 'The performer has not published notebook stages yet.',
     selectedMethod: 'Selected method',
     remainingBalance: 'Remaining balance',
     promoApplied: 'Promo applied',
@@ -190,6 +198,7 @@ export const KEFINE_TEXT_EN = {
     depositNow: 'Deposit',
     confirmLinkedWallet: 'Confirm linked wallet',
     openResult: 'Open result',
+    confirmStep: 'Confirm step',
     rejectResult: 'Reject result',
     saveResult: 'Save result',
     enterPromo: 'Enter promo code',
@@ -227,6 +236,34 @@ export const KEFINE_TEXT_EN = {
     anonymousHint: 'Anonymous checkout enabled.'
   },
   executionFlow: {
+    queued: {
+      title: 'Sent to exchange',
+      detail: 'The task is registered and waiting for performers.'
+    },
+    matching: {
+      title: 'Waiting for performers',
+      detail: 'The exchange is matching available performers for this task.'
+    },
+    assigned: {
+      title: 'Performers found',
+      detail: 'One or more performers accepted the task and are preparing execution.'
+    },
+    running: {
+      title: 'Task in progress',
+      detail: 'Execution is live. Follow notebook stages and performer updates below.'
+    },
+    review: {
+      title: 'Reviewing result',
+      detail: 'A performer has returned a result. Review notebook stages and confirm if needed.'
+    },
+    completed: {
+      title: 'Execution completed',
+      detail: 'The final notebook and result are ready.'
+    },
+    failed: {
+      title: 'Execution failed',
+      detail: 'The current run failed. Review the latest notebook stage for context.'
+    },
     batching: {
       title: 'Batching orders',
       detail: 'Orders placed together are grouped to reduce execution costs.'
@@ -331,6 +368,8 @@ export const KEFINE_TEXT_EN = {
     }
   },
   errors: {
+    backendUnavailableTitle: 'Crater not configured',
+    backendUnavailableDetail: 'The backend health check failed. Start crater or fix the configured crater URL.',
     orderRequired: 'Task text is required',
     loadGeneric: 'Could not create task',
     unknown: 'Unknown error',

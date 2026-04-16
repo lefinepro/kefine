@@ -18,22 +18,25 @@ export async function proxyOrderStatus(
   });
 }
 
-export async function proxyPaymentQuote(request: Request, orderId: string, fetchFn: typeof fetch): Promise<Response> {
-  return proxyCraterRequest(request, fetchFn, `/payment/${encodeURIComponent(orderId)}`, {
-    errorMessage: 'Failed to load payment quote.',
+export async function proxyOrderStepConfirmation(
+  request: Request,
+  orderId: string,
+  fetchFn: typeof fetch
+): Promise<Response> {
+  return proxyCraterRequest(request, fetchFn, `/status/${encodeURIComponent(orderId)}/confirm`, {
+    errorMessage: 'Failed to confirm task step.',
     context: { orderId }
   });
 }
 
-export async function proxyPaymentConfig(request: Request, fetchFn: typeof fetch): Promise<Response> {
-  return proxyCraterRequest(request, fetchFn, '/payment-config', {
-    errorMessage: 'Failed to load payment config.'
-  });
-}
-
-export async function proxyPaymentPromo(request: Request, orderId: string, fetchFn: typeof fetch): Promise<Response> {
-  return proxyCraterRequest(request, fetchFn, `/payment/${encodeURIComponent(orderId)}/promo`, {
-    errorMessage: 'Failed to apply promo code.',
-    context: { orderId }
+export async function proxyOrderStepComment(
+  request: Request,
+  orderId: string,
+  stepId: string,
+  fetchFn: typeof fetch
+): Promise<Response> {
+  return proxyCraterRequest(request, fetchFn, `/status/${encodeURIComponent(orderId)}/steps/${encodeURIComponent(stepId)}/comments`, {
+    errorMessage: 'Failed to post task step comment.',
+    context: { orderId, stepId }
   });
 }

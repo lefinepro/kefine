@@ -17,7 +17,7 @@ module Crater
     end
 
     def self.actor_url
-      "#{BASE_URL}/actor"
+      CONFIG.actor_id
     end
 
     def self.inbox_url

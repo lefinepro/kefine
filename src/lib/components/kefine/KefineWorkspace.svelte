@@ -1,6 +1,6 @@
 <script lang="ts">
   import { browser } from '$app/environment';
-  import { goto } from '$app/navigation';
+  import { goto, replaceState } from '$app/navigation';
   import { page } from '$app/state';
   import { resolvePublicRuntimeConfig } from '$lib/config/public-config';
   import { isSpecialRuntimeOrigin } from '$lib/config/special-runtime';
@@ -29,6 +29,7 @@
   } from '$lib/constants/kefine-locale';
   import KefineTopbar from '$lib/components/kefine/KefineTopbar.svelte';
   import KefineCreateStep from '$lib/components/kefine/KefineCreateStep.svelte';
+  import KefineLoadingDocuments from '$lib/components/kefine/KefineLoadingDocuments.svelte';
   import {
     ORDER_STORAGE_KEY,
     POLL_INTERVAL_MS,
@@ -60,11 +61,13 @@
     readTaskRouteStateFromLocation
   } from '$lib/components/kefine/kefine-workspace-helpers';
   import {
+    confirmWorkspaceOrderStep,
     fetchOrderStatus,
     loadWorkspaceOrders,
     persistWorkspaceOrders,
     pollWorkspaceOrder,
-    submitWorkspaceOrder
+    submitWorkspaceOrder,
+    submitWorkspaceOrderStepComment
   } from '$lib/components/kefine/kefine-workspace-orders';
   import { waitForDelay } from '$lib/utils/helpers';
   import { renderPromptTemplate, resolveTemplateLocalizedContent, syncPromptVariables } from '$lib/templates/template-content';
@@ -237,8 +240,7 @@
           description: '',
           createdAt: new Date().toISOString(),
           currency: 'USDC',
-          actorHandle: getNormalizedInitialActorHandle() ?? undefined,
-          uiScenario: 'vpn-service' as const
+          actorHandle: getNormalizedInitialActorHandle() ?? undefined
         }
       : null
   );
@@ -255,6 +257,8 @@
   let depositDialogOpen = $state(false);
   let authDialogOpen = $state(false);
   let authButtonLoading = $state(false);
+  let confirmStepLoading = $state(false);
+  let stepCommentLoadingId = $state<string | null>(null);
   let passkeyDialogOpen = $state(false);
   let privateKeyDialogOpen = $state(false);
   let stagePreviewOpen = $state(false);
@@ -265,6 +269,7 @@
   let activeTemplate = $state<ProfileTemplate | null>(null);
   let publicTemplates = $state<ProfileTemplate[]>([]);
   let templateUnavailable = $state(false);
+  let craterHealthState = $state<'checking' | 'ok' | 'failed'>('checking');
   let templateLoadKey = $state('');
   let publicTemplateLoadKey = $state('');
   let profileRedirectKey = $state('');
@@ -499,7 +504,7 @@
     deriveResultSurface(
       currentOrder,
       localeText,
-      currentOrder?.paymentUrl ?? `${craterBaseUrl()}/pay/${currentOrder?.id ?? ''}`
+      currentOrder?.paymentUrl ?? `/api/pay/${currentOrder?.id ?? ''}`
     )
   );
   const browserTitle = $derived.by(() => {
@@ -764,6 +769,7 @@
 
   onMount(() => {
     if (!browser) return;
+    void checkCraterHealth();
     hydrateAuthStateFromSession();
     loadPasskeySession();
     loadCreatedOrders();
@@ -1142,8 +1148,6 @@
     if (!browser) return;
     if (isHydratingRoute) return;
 
-    const currentPathname = page.url.pathname.replace(/\/+$/, '') || '/';
-    const managedPathname = activeTemplatePath.replace(/\/+$/, '') || '/';
     const nextUrl = new URL(window.location.href);
     const orderId =
       (step === 'executing' || step === 'payment') && currentOrder?.id
@@ -1164,12 +1168,8 @@
             : '';
 
       if (window.location.href !== nextUrl.toString()) {
-        window.history.replaceState({}, '', nextUrl);
+        replaceState(nextUrl, page.state);
       }
-      return;
-    }
-
-    if (currentPathname !== managedPathname) {
       return;
     }
 
@@ -1183,7 +1183,7 @@
     nextUrl.hash = '';
 
     if (window.location.href !== nextUrl.toString()) {
-      window.history.replaceState({}, '', nextUrl);
+      replaceState(nextUrl, page.state);
     }
   });
 
@@ -1503,11 +1503,6 @@
     return resolveOrderProxyBasePath();
   }
 
-  function craterBaseUrl(): string {
-    if (!browser) return '';
-    return isSpecialRuntime ? 'https://lefine.pro' : window.location.origin;
-  }
-
   async function requestOrderFromStatus(
     orderId: string,
     fallbackOrder: {
@@ -1525,6 +1520,123 @@
       orderApiBaseUrl: orderApiBaseUrl()
     });
   }
+
+  async function checkCraterHealth() {
+    if (!browser) {
+      return;
+    }
+
+    craterHealthState = 'checking';
+
+    try {
+      const response = await fetch('/api/health', {
+        headers: {
+          Accept: 'application/json'
+        }
+      });
+
+      craterHealthState = response.ok ? 'ok' : 'failed';
+    } catch {
+      craterHealthState = 'failed';
+    }
+  }
+
+  async function confirmCurrentExecutionStep() {
+    if (!currentOrder || confirmStepLoading) {
+      return;
+    }
+
+    const currentStep = executionPresentation.activeStep;
+    if (!currentStep?.confirmation?.required || currentStep.confirmation.confirmed === true) {
+      return;
+    }
+
+    confirmStepLoading = true;
+
+    try {
+      const confirmed = await confirmWorkspaceOrderStep({
+        orderId: currentOrder.id,
+        stepId: currentStep.id,
+        fetchFn: fetch,
+        orderApiBaseUrl: orderApiBaseUrl()
+      });
+
+      if (!confirmed) {
+        return;
+      }
+
+      const updated = await requestOrderFromStatus(currentOrder.id, {
+        title: currentOrder.title,
+        description: currentOrder.description,
+        currency: currentOrder.currency || localeText.defaults.defaultCurrency,
+        createdAt: currentOrder.createdAt
+      });
+
+      if (!updated) {
+        return;
+      }
+
+      const nextOrderWithActor = applyActorIdentityFallback(
+        {
+          ...currentOrder,
+          ...updated,
+          id: currentOrder.id
+        },
+        currentOrder
+      );
+      currentOrder = nextOrderWithActor;
+      upsertOrder(nextOrderWithActor);
+    } finally {
+      confirmStepLoading = false;
+    }
+  }
+
+  async function submitStepComment(stepId: string, content: string) {
+    if (!currentOrder || !stepId.trim() || !content.trim() || stepCommentLoadingId) {
+      return;
+    }
+
+    stepCommentLoadingId = stepId;
+
+    try {
+      const posted = await submitWorkspaceOrderStepComment({
+        orderId: currentOrder.id,
+        stepId,
+        content,
+        fetchFn: fetch,
+        orderApiBaseUrl: orderApiBaseUrl()
+      });
+
+      if (!posted) {
+        return;
+      }
+
+      const updated = await requestOrderFromStatus(currentOrder.id, {
+        title: currentOrder.title,
+        description: currentOrder.description,
+        currency: currentOrder.currency || localeText.defaults.defaultCurrency,
+        createdAt: currentOrder.createdAt
+      });
+
+      if (!updated) {
+        return;
+      }
+
+      const nextOrderWithActor = applyActorIdentityFallback(
+        {
+          ...currentOrder,
+          ...updated,
+          id: currentOrder.id
+        },
+        currentOrder
+      );
+      currentOrder = nextOrderWithActor;
+      upsertOrder(nextOrderWithActor);
+    } finally {
+      stepCommentLoadingId = null;
+    }
+  }
+
   function startOrderPolling(order: OrderView) {
     if (!pollAbortController || pollAbortController.signal.aborted) {
       pollAbortController = new AbortController();
@@ -1582,6 +1694,23 @@
     const result = await submitWorkspaceOrder({
       payload,
       template: templatePresentation,
+      owner: {
+        ownerProfileId: currentProfile?.id,
+        ownerUsername: currentProfile?.primaryHandle,
+        ownerDisplayName: currentProfile?.displayName,
+        actorHandle:
+          authState.authType === 'publickey' && normalizedActorHandle
+            ? normalizedActorHandle
+            : currentProfile?.primaryHandleType === 'publickey'
+              ? currentProfile.primaryHandle
+              : undefined,
+        actorDid:
+          authState.authType === 'publickey' && normalizedActorHandle
+            ? `did:key:${normalizedActorHandle}`
+            : currentProfile?.primaryHandleType === 'publickey'
+              ? `did:key:${currentProfile.primaryHandle}`
+              : undefined
+      },
       isBackground,
       localeText,
       fetchFn: fetch,
@@ -2206,7 +2335,14 @@
 
   <main>
   <kefine-layout data-mode={layoutMode} data-step={step}>
-    {#if templateUnavailable}
+    {#if craterHealthState === 'failed'}
+      <kefine-screen in:softScreenTransition out:softScreenTransition>
+        <article class="kefine-card kefine-card--wide kefine-template-unavailable">
+          <h2>{localeText.errors.backendUnavailableTitle}</h2>
+          <p>{localeText.errors.backendUnavailableDetail}</p>
+        </article>
+      </kefine-screen>
+    {:else if templateUnavailable}
       <kefine-screen in:softScreenTransition out:softScreenTransition>
         <article class="kefine-card kefine-card--wide kefine-template-unavailable">
           <h2>{localeText.profile.profileUnavailable}</h2>
@@ -2279,7 +2415,7 @@
     {/if}
 
     {#if step === 'submitting'}
-      <kefine-screen in:softScreenTransition out:softScreenTransition>
+      <kefine-screen class="kefine-screen--centered" in:softScreenTransition out:softScreenTransition>
         {#if SubmittingStepComponent}
           <SubmittingStepComponent
             ariaLabel={localeText.meta.locale === 'ru'
@@ -2290,7 +2426,7 @@
           />
         {:else}
           <article class="kefine-card kefine-card--wide kefine-loading-panel" aria-busy="true">
-            <loading-orb aria-hidden="true"></loading-orb>
+            <KefineLoadingDocuments ariaLabel="Loading" />
           </article>
         {/if}
       </kefine-screen>
@@ -2322,6 +2458,11 @@
             currentOrder={currentOrder}
             execution={executionPresentation}
             isHydratingTitle={isHydratingRoute && !currentOrder?.title.trim()}
+            isConfirmingStep={confirmStepLoading}
+            commentSubmittingStepId={stepCommentLoadingId}
+            confirmCurrentStepLabel={localeText.buttons.confirmStep}
+            onConfirmCurrentStep={confirmCurrentExecutionStep}
+            onSubmitStepComment={submitStepComment}
             onWalletLogin={chooseWalletMethod}
             onPasskeyLogin={choosePasskeyMethod}
             onAnonymous={chooseAnonymousMethod}
@@ -2344,7 +2485,15 @@
               chooseMethod: localeText.labels.chooseMethod,
               cancel: localeText.buttons.cancel,
               timeLeft: localeText.labels.timeLeft,
-              price: localeText.labels.price
+              price: localeText.labels.price,
+              exchangeWaiting: localeText.labels.exchangeWaiting,
+              performers: localeText.labels.performers,
+              notebook: localeText.labels.notebook,
+              iterations: localeText.labels.iterations,
+              interimResult: localeText.labels.interimResult,
+              finalResult: localeText.labels.finalResult,
+              leaveComment: localeText.labels.leaveComment,
+              noNotebookYet: localeText.labels.noNotebookYet
             }}
             authLabels={{
               walletTitle: localeText.auth.walletTitle,
@@ -2356,7 +2505,7 @@
           />
         {:else}
           <article class="kefine-card kefine-card--wide kefine-loading-panel" aria-busy="true">
-            <loading-orb aria-hidden="true"></loading-orb>
+            <KefineLoadingDocuments ariaLabel="Loading" />
           </article>
         {/if}
       </kefine-screen>
@@ -2369,7 +2518,7 @@
             currentOrder={currentOrder}
             resultSurface={resultSurface}
             remainingAmount={remainingAmount}
-            paymentInvoiceFallback={`${craterBaseUrl()}/pay/${currentOrder?.id ?? ''}`}
+            paymentInvoiceFallback={`/api/pay/${currentOrder?.id ?? ''}`}
             selectedAuthMethod={selectedAuthMethod}
             paymentMethod={paymentMethod}
             paymentStage={paymentStage}
@@ -2566,6 +2715,12 @@
     width: 100%;
   }
 
+  kefine-screen.kefine-screen--centered {
+    min-height: calc(100vh - clamp(1.5rem, 4vw, 2.8rem));
+    place-items: center;
+    align-content: center;
+  }
+
   .kefine-template-unavailable {
     justify-self: center;
     max-width: 42rem;
@@ -2582,22 +2737,6 @@
     place-items: center;
     min-height: 14rem;
     text-align: center;
-  }
-
-  .kefine-loading-panel loading-orb {
-    display: block;
-    width: 2.75rem;
-    height: 2.75rem;
-    border-radius: 999px;
-    border: 2px solid color-mix(in oklab, var(--kef-line) 72%, transparent);
-    border-top-color: color-mix(in oklab, var(--kef-primary) 82%, white 8%);
-    animation: kefine-loading-orb-spin 0.85s linear infinite;
-  }
-
-  @keyframes kefine-loading-orb-spin {
-    to {
-      transform: rotate(360deg);
-    }
   }
 
   @media (max-width: 760px) {

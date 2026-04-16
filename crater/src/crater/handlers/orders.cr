@@ -67,39 +67,6 @@ module Crater
           next render_status(env, order_id)
         end
 
-        get "/pay/:id" do |env|
-          order_id = env.params.url["id"]?
-          if order_id.nil? || order_id.empty?
-            env.response.status_code = 400
-            next({error: "Missing order id"}.to_json)
-          end
-
-          record = OrderQueue.find_order(order_id)
-          if record.nil?
-            env.response.status_code = 404
-            next({error: "Order not found", orderId: order_id}.to_json)
-          end
-
-          target = record.payment_url || "#{config.exchange_url}/pay/#{URI.encode_path(order_id)}"
-          env.redirect(target)
-        end
-
-        get "/api/pay/:id" do |env|
-          order_id = env.params.url["id"]?
-          if order_id.nil? || order_id.empty?
-            env.response.status_code = 400
-            next({error: "Missing order id"}.to_json)
-          end
-
-          record = OrderQueue.find_order(order_id)
-          if record.nil?
-            env.response.status_code = 404
-            next({error: "Order not found", orderId: order_id}.to_json)
-          end
-
-          target = record.payment_url || "#{config.exchange_url}/pay/#{URI.encode_path(order_id)}"
-          env.redirect(target)
-        end
       end
 
       private def self.create_order(env, config : Utils::Config)
@@ -111,14 +78,16 @@ module Crater
         end
 
         record = begin
-          activity = OrderQueue.activity_for_payload(payload, config)
-          Handlers::Inbox.accept_activity(activity, config)
+          OrderQueue.submit_rest(payload, config)
         rescue ex : OrderQueue::BadRequest
           env.response.status_code = 400
           return({error: ex.message}.to_json)
         rescue ex : OrderQueue::Error::InvalidActivity
           env.response.status_code = 400
           return({error: ex.message}.to_json)
+        rescue ex : OrderQueue::DeliveryFailed
+          env.response.status_code = 502
+          return({error: "Failed to deliver order to exchange", reason: ex.message}.to_json)
         rescue ex : Exception
           env.response.status_code = 500
           return({error: "Failed to create order", reason: ex.message}.to_json)
@@ -133,8 +102,12 @@ module Crater
           solverName: record.solver_name,
           solverHandle: record.solver_handle,
           solverProfileUrl: record.solver_profile_url,
-          uiScenario: record.ui_scenario,
-          paymentUrl: record.payment_url
+          ownerProfileId: record.owner_profile_id,
+          ownerUsername: record.owner_username,
+          ownerDisplayName: record.owner_display_name,
+          actorHandle: record.actor_handle,
+          actorDid: record.actor_did,
+          uiScenario: record.ui_scenario
         }.to_json
       end
 
@@ -172,6 +145,11 @@ module Crater
         add_string_field(payload, "currency", params["currency"]?)
         add_string_field(payload, "executionEstimate", params["executionEstimate"]?)
         add_string_field(payload, "uiScenario", params["uiScenario"]?)
+        add_string_field(payload, "ownerProfileId", params["ownerProfileId"]?)
+        add_string_field(payload, "ownerUsername", params["ownerUsername"]?)
+        add_string_field(payload, "ownerDisplayName", params["ownerDisplayName"]?)
+        add_string_field(payload, "actorHandle", params["actorHandle"]?)
+        add_string_field(payload, "actorDid", params["actorDid"]?)
 
         labels = parse_json_array(params["labels"]?)
         payload["labels"] = labels unless labels.empty?
@@ -196,9 +174,6 @@ module Crater
       end
 
       private def self.render_status(env, order_id : String) : String
-        latest_activity = OrderQueue.latest_by_order(order_id)
-        return latest_activity.to_json unless latest_activity.nil?
-
         record = OrderQueue.find_order(order_id)
         if record.nil?
           env.response.status_code = 404
@@ -219,7 +194,6 @@ module Crater
           executionEstimate: record.execution_estimate,
           uiScenario: record.ui_scenario,
           labels: record.labels,
-          paymentUrl: record.payment_url,
           templateId: record.template_id,
           templateSlug: record.template_slug,
           templateAuthorProfileId: record.template_author_profile_id,
@@ -227,6 +201,11 @@ module Crater
           templateAuthorDisplayName: record.template_author_display_name,
           templatePricingMode: record.template_pricing_mode,
           templatePricingValue: record.template_pricing_value,
+          ownerProfileId: record.owner_profile_id,
+          ownerUsername: record.owner_username,
+          ownerDisplayName: record.owner_display_name,
+          actorHandle: record.actor_handle,
+          actorDid: record.actor_did,
           createdAt: record.created_at,
           updatedAt: record.updated_at
         }.to_json

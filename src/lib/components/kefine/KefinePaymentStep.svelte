@@ -11,13 +11,6 @@
     type OrderView,
     type ResultSurface
   } from './kefine-workflow';
-  type PaymentConfig = {
-    paymentAddress: string;
-    paymentChainId: number;
-    paymentTokenAddress: string;
-    paymentTokenSymbol: string;
-    paymentTokenDecimals: number;
-  };
 
   const ZERO_EVM_ADDRESS = '0x0000000000000000000000000000000000000000';
 
@@ -118,7 +111,6 @@
   let promoFeedback = $state('');
   let promoFeedbackTone = $state<'neutral' | 'success' | 'error'>('neutral');
   let paymentQuote = $state<PaymentQuote | null>(null);
-  let paymentConfig = $state<PaymentConfig | null>(null);
   let paymentLoading = $state(false);
   let paySubmitting = $state(false);
   let paymentError = $state('');
@@ -154,7 +146,7 @@
     return Number.isInteger(amount) ? String(amount) : amount.toFixed(2).replace(/\.?0+$/, '');
   }
 
-  function buildPaymentRequest(config: PaymentConfig, amount: number) {
+  function buildPaymentRequest(config: PaymentQuote, amount: number) {
     const address = config.paymentAddress;
     if (!address || address.toLowerCase() === ZERO_EVM_ADDRESS || amount <= 0) {
       return undefined;
@@ -165,7 +157,7 @@
   }
 
   function buildFallbackQuote(code?: string): PaymentQuote | null {
-    if (!currentOrder || !paymentConfig) {
+    if (!currentOrder || !paymentQuote) {
       return null;
     }
 
@@ -188,48 +180,14 @@
       promoMessage: normalizedCode ? (promoApplied ? 'Promo applied. VPN delivery is now unlocked.' : 'Promo code not recognized.') : undefined,
       strikeOriginalPrice: promoApplied && originalAmount > 0,
       freeUnlock: promoApplied,
-      paymentAddress: paymentConfig.paymentAddress,
-      paymentRequest: buildPaymentRequest(paymentConfig, effectiveAmount),
-      paymentChainId: paymentConfig.paymentChainId,
-      paymentTokenAddress: paymentConfig.paymentTokenAddress,
-      paymentTokenSymbol: paymentConfig.paymentTokenSymbol,
-      paymentTokenDecimals: paymentConfig.paymentTokenDecimals,
+      paymentAddress: paymentQuote.paymentAddress,
+      paymentRequest: buildPaymentRequest(paymentQuote, effectiveAmount),
+      paymentChainId: paymentQuote.paymentChainId,
+      paymentTokenAddress: paymentQuote.paymentTokenAddress,
+      paymentTokenSymbol: paymentQuote.paymentTokenSymbol,
+      paymentTokenDecimals: paymentQuote.paymentTokenDecimals,
       paymentUrl: currentOrder.paymentUrl ?? paymentInvoiceFallback,
       labels
-    };
-  }
-
-  function readPaymentConfig(body: unknown): PaymentConfig | null {
-    if (!body || typeof body !== 'object') {
-      return null;
-    }
-
-    const record = body as Record<string, unknown>;
-    const paymentAddress = typeof record.paymentAddress === 'string' ? record.paymentAddress.trim() : '';
-    const paymentTokenAddress = typeof record.paymentTokenAddress === 'string' ? record.paymentTokenAddress.trim() : '';
-    const paymentTokenSymbol = typeof record.paymentTokenSymbol === 'string' ? record.paymentTokenSymbol.trim() : '';
-    const paymentChainId = typeof record.paymentChainId === 'number' ? record.paymentChainId : Number(record.paymentChainId);
-    const paymentTokenDecimals =
-      typeof record.paymentTokenDecimals === 'number' ? record.paymentTokenDecimals : Number(record.paymentTokenDecimals);
-
-    if (
-      !paymentAddress ||
-      !paymentTokenAddress ||
-      !paymentTokenSymbol ||
-      paymentAddress.toLowerCase() === ZERO_EVM_ADDRESS ||
-      paymentTokenAddress.toLowerCase() === ZERO_EVM_ADDRESS ||
-      !Number.isFinite(paymentChainId) ||
-      !Number.isFinite(paymentTokenDecimals)
-    ) {
-      return null;
-    }
-
-    return {
-      paymentAddress,
-      paymentChainId,
-      paymentTokenAddress,
-      paymentTokenSymbol,
-      paymentTokenDecimals
     };
   }
 
@@ -260,20 +218,12 @@
       }
 
       paymentQuote = parsed;
-      paymentConfig = {
-        paymentAddress: parsed.paymentAddress,
-        paymentChainId: parsed.paymentChainId,
-        paymentTokenAddress: parsed.paymentTokenAddress,
-        paymentTokenSymbol: parsed.paymentTokenSymbol,
-        paymentTokenDecimals: parsed.paymentTokenDecimals
-      };
       promoFeedback = parsed.promoMessage ?? '';
       promoFeedbackTone = parsed.promoApplied ? 'success' : 'neutral';
       if (parsed.promoCode) {
         promoCode = parsed.promoCode;
       }
     } catch (error) {
-      await ensurePaymentConfig();
       const fallback = buildFallbackQuote();
       if (fallback) {
         paymentQuote = fallback;
@@ -284,24 +234,6 @@
     } finally {
       paymentLoading = false;
     }
-  }
-
-  async function ensurePaymentConfig() {
-    if (paymentConfig) {
-      return paymentConfig;
-    }
-
-    const response = await fetch('/api/payment-config', {
-      headers: { Accept: 'application/json' }
-    });
-    const body = await readJsonOrThrow(response);
-    const parsed = readPaymentConfig(body);
-    if (!parsed) {
-      throw new Error('Payment config is invalid or not configured on the server.');
-    }
-
-    paymentConfig = parsed;
-    return parsed;
   }
 
   async function applyPromoCode() {
@@ -335,13 +267,6 @@
       }
 
       paymentQuote = parsed;
-      paymentConfig = {
-        paymentAddress: parsed.paymentAddress,
-        paymentChainId: parsed.paymentChainId,
-        paymentTokenAddress: parsed.paymentTokenAddress,
-        paymentTokenSymbol: parsed.paymentTokenSymbol,
-        paymentTokenDecimals: parsed.paymentTokenDecimals
-      };
       promoFeedback = parsed.promoMessage ?? (parsed.promoApplied ? paymentLabels.promoOk : paymentLabels.promoWrong);
       promoFeedbackTone = parsed.promoApplied ? 'success' : 'error';
 
@@ -415,7 +340,6 @@
       return;
     }
 
-    void ensurePaymentConfig().catch(() => undefined);
     void loadPaymentQuote();
   });
 

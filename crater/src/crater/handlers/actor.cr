@@ -37,15 +37,16 @@ module Crater
           }.to_json
         end
 
-        get "/u/:username" do |env|
+        get "/actor/:username" do |env|
           username = env.params.url["username"]
-          if username == config.actor_username
-            env.response.status_code = 302
-            env.response.headers["Location"] = config.actor_id
-          else
+          if username != config.actor_username
             env.response.status_code = 404
-            {error: "Actor not found"}.to_json
+            next({error: "Actor not found"}.to_json)
           end
+
+          env.response.status_code = 302
+          env.response.headers["Location"] = config.actor_id
+          ""
         end
       end
     end

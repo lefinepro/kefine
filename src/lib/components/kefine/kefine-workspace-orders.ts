@@ -63,7 +63,7 @@ function normalizeOrderStatusId(orderId: string): string {
     return normalized;
   }
 
-  const uuidMatch = normalized.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+  const uuidMatch = normalized.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
   return uuidMatch?.[0] ?? normalized;
 }
 
@@ -216,6 +216,13 @@ export async function pollWorkspaceOrder(args: {
 export async function submitWorkspaceOrder(args: {
   payload: DraftOrder;
   template?: TemplatePresentation | null;
+  owner?: {
+    ownerProfileId?: string;
+    ownerUsername?: string;
+    ownerDisplayName?: string;
+    actorHandle?: string;
+    actorDid?: string;
+  } | null;
   isBackground: boolean;
   localeText: KefineLocaleText;
   fetchFn: typeof fetch;
@@ -227,7 +234,7 @@ export async function submitWorkspaceOrder(args: {
   | { kind: 'error'; message?: string; statusCode?: number }
 > {
   try {
-    const requestPayload = buildCreatePayload(args.payload, args.template);
+    const requestPayload = buildCreatePayload(args.payload, args.template, args.owner);
     const hasFiles = args.payload.files.length > 0;
     
     const requestBody = hasFiles
@@ -248,6 +255,21 @@ export async function submitWorkspaceOrder(args: {
           }
           if (requestPayload.labels) {
             formData.append('labels', JSON.stringify(requestPayload.labels));
+          }
+          if (requestPayload.ownerProfileId) {
+            formData.append('ownerProfileId', requestPayload.ownerProfileId);
+          }
+          if (requestPayload.ownerUsername) {
+            formData.append('ownerUsername', requestPayload.ownerUsername);
+          }
+          if (requestPayload.ownerDisplayName) {
+            formData.append('ownerDisplayName', requestPayload.ownerDisplayName);
+          }
+          if (requestPayload.actorHandle) {
+            formData.append('actorHandle', requestPayload.actorHandle);
+          }
+          if (requestPayload.actorDid) {
+            formData.append('actorDid', requestPayload.actorDid);
           }
           if (requestPayload.attachment) {
             formData.append('attachment', JSON.stringify(requestPayload.attachment));
@@ -287,16 +309,21 @@ export async function submitWorkspaceOrder(args: {
       kind: 'remote',
       order: {
         id: parsed.orderId,
-        solver: parsed.solver || args.localeText.defaults.openSolverMarket,
+        solver: parsed.solver || '',
         solverName: parsed.solverName,
         solverHandle: parsed.solverHandle,
         solverProfileUrl: parsed.solverProfileUrl,
+        ownerProfileId: parsed.ownerProfileId || args.owner?.ownerProfileId,
+        ownerUsername: parsed.ownerUsername || args.owner?.ownerUsername,
+        ownerDisplayName: parsed.ownerDisplayName || args.owner?.ownerDisplayName,
         actorHandle: parsed.actorHandle,
         actorDid: parsed.actorDid,
         status: parsed.status || 'queued',
         title: args.payload.title || args.localeText.defaults.taskTitle,
         description: args.payload.description || '',
         createdAt: new Date().toISOString(),
+        assignedAt: undefined,
+        startedAt: undefined,
         estimatedCost: FREE_ORDER_COST,
         currency: FREE_ORDER_CURRENCY,
         executionEstimate: args.resolveExecutionEstimate(
@@ -306,11 +333,74 @@ export async function submitWorkspaceOrder(args: {
         ),
         labels: args.payload.tags,
         paymentUrl: undefined,
-        uiScenario: parsed.uiScenario
+        uiScenario: parsed.uiScenario,
+        exchangeStage: parsed.exchangeStage,
+        executionSteps: parsed.executionSteps,
+        activeExecutionStepId: parsed.activeExecutionStepId,
+        progressPercent: parsed.progressPercent,
+        executors: parsed.executors,
+        notebook: parsed.notebook,
+        interimResult: parsed.interimResult,
+        result: parsed.result,
+        iterations: parsed.iterations
       }
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : args.localeText.errors.fallback;
     return { kind: 'error', message };
+  }
+}
+
+export async function confirmWorkspaceOrderStep(args: {
+  orderId: string;
+  stepId?: string;
+  fetchFn: typeof fetch;
+  orderApiBaseUrl: string;
+}): Promise<boolean> {
+  try {
+    const response = await args.fetchFn(
+      buildOrderProxyUrl(`/status/${encodeURIComponent(normalizeOrderStatusId(args.orderId))}/confirm`, args.orderApiBaseUrl),
+      {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(args.stepId ? { stepId: args.stepId } : {})
+      }
+    );
+
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+export async function submitWorkspaceOrderStepComment(args: {
+  orderId: string;
+  stepId: string;
+  content: string;
+  fetchFn: typeof fetch;
+  orderApiBaseUrl: string;
+}): Promise<boolean> {
+  try {
+    const response = await args.fetchFn(
+      buildOrderProxyUrl(
+        `/status/${encodeURIComponent(normalizeOrderStatusId(args.orderId))}/steps/${encodeURIComponent(args.stepId)}/comments`,
+        args.orderApiBaseUrl
+      ),
+      {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ content: args.content })
+      }
+    );
+
+    return response.ok;
+  } catch {
+    return false;
   }
 }

@@ -7,7 +7,7 @@ require "../utils/config"
 module Crater
   module Handlers
     module Inbox
-      ACCEPTED_TYPES = %w[Create]
+      ACCEPTED_TYPES = %w[Create Update]
 
       def self.register(config : Utils::Config)
         post "/inbox" do |env|
@@ -38,8 +38,7 @@ module Crater
             orderId: order.id,
             status: order.status,
             solver: order.solver,
-            uiScenario: order.ui_scenario,
-            paymentUrl: order.payment_url
+            uiScenario: order.ui_scenario
           }.to_json
         end
       end
@@ -50,7 +49,14 @@ module Crater
         end
 
         # TODO: Verify HTTP Signature before processing
-        OrderQueue.submit_create(activity, config)
+        case activity.type
+        when "Create"
+          OrderQueue.receive_create(activity, config)
+        when "Update"
+          OrderQueue.submit_update(activity, config)
+        else
+          raise OrderQueue::Error::InvalidActivity.new("Unknown activity type: #{activity.type}")
+        end
       end
     end
   end
