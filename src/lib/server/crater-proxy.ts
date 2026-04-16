@@ -4,10 +4,6 @@ import { buildCraterApiUrl } from '$lib/server/crater-api';
 type ProxyOptions = {
   errorMessage: string;
   context?: Record<string, string>;
-  fallbackResponse?: {
-    status: number;
-    body: Record<string, unknown>;
-  };
 };
 
 export async function proxyCraterRequest(
@@ -80,13 +76,7 @@ export async function proxyCraterRequest(
     const payload = await response.text();
     const responseContentType = response.headers.get('content-type') ?? 'application/json';
 
-    const looksLikeHtmlError = /^\s*</.test(payload);
-
-    if (!response.ok && (!responseContentType.toLowerCase().includes('application/json') || looksLikeHtmlError)) {
-      if (options.fallbackResponse) {
-        return json(options.fallbackResponse.body, { status: options.fallbackResponse.status });
-      }
-
+    if (!response.ok && !responseContentType.toLowerCase().includes('application/json')) {
       const normalized = payload.replace(/\s+/g, ' ').trim();
       const message = normalized || response.statusText || options.errorMessage;
 
