@@ -53,6 +53,28 @@ module Crater
 
           next render_status(env, order_id)
         end
+
+        patch "/status/:id/document" do |env|
+          env.response.content_type = "application/json"
+          order_id = env.params.url["id"]?
+          if order_id.nil? || order_id.empty?
+            env.response.status_code = 400
+            next({error: "Missing order id"}.to_json)
+          end
+
+          next update_document(env, order_id)
+        end
+
+        patch "/api/status/:id/document" do |env|
+          env.response.content_type = "application/json"
+          order_id = env.params.url["id"]?
+          if order_id.nil? || order_id.empty?
+            env.response.status_code = 400
+            next({error: "Missing order id"}.to_json)
+          end
+
+          next update_document(env, order_id)
+        end
       end
 
       private def self.render_status(env, order_id : String) : String
@@ -61,6 +83,13 @@ module Crater
           env.response.status_code = 404
           return({error: "Order not found", orderId: order_id}.to_json)
         end
+
+        document = begin
+          JSON.parse(record.document_json || %({"format":"markdown","content":""}))
+        rescue
+          JSON.parse(%({"format":"markdown","content":""}))
+        end
+        activities = OrderQueue.activities_for_order(record.id)
 
         {
           orderId: record.id,
@@ -88,9 +117,30 @@ module Crater
           ownerDisplayName: record.owner_display_name,
           actorHandle: record.actor_handle,
           actorDid: record.actor_did,
+          document: document,
+          activities: activities,
           createdAt: record.created_at,
           updatedAt: record.updated_at
         }.to_json
+      end
+
+      private def self.update_document(env, order_id : String) : String
+        payload = begin
+          body = env.request.body.try(&.gets_to_end) || ""
+          JSON.parse(body)
+        rescue ex : JSON::ParseException
+          env.response.status_code = 400
+          return({error: "Invalid request body", reason: ex.message}.to_json)
+        end
+
+        document = payload.as_h?.try(&.["document"]?) || payload
+        record = OrderQueue.update_document(order_id, document)
+        if record.nil?
+          env.response.status_code = 404
+          return({error: "Order not found", orderId: order_id}.to_json)
+        end
+
+        render_status(env, record.id)
       end
     end
   end

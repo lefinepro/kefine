@@ -1,5 +1,6 @@
 import type { DraftOrder, OrderView } from '$lib/components/kefine/kefine-workflow';
 import type { KefineLocaleText } from '$lib/constants/kefine-locale';
+import { buildProfileTaskPath } from '$lib/profile/profile-handles';
 import { stripLocalePrefix } from '$lib/routing/kefine-locale-routing';
 
 export type TaskRouteView = 'result' | 'stages' | null;
@@ -7,7 +8,8 @@ export type TaskRouteView = 'result' | 'stages' | null;
 const GLOBAL_ORDER_PATH_PREFIX = '/orders/';
 const LEGACY_TASK_PATH_PREFIX = '/task/';
 const LEGACY_ORDER_PATH_PREFIX = '/order/';
-const CANONICAL_ACTOR_ORDER_PATH_PATTERN = /^\/@([^/]+)\/orders\/([^/#?]+)$/i;
+const CANONICAL_ACTOR_ORDER_PATH_PATTERN = /^\/@([^/]+)\/([^/#?]+)$/i;
+const CANONICAL_ACTOR_ORDER_WITH_RESOURCE_PATH_PATTERN = /^\/@([^/]+)\/(?:orders|order)\/([^/#?]+)$/i;
 const LEGACY_ACTOR_ORDER_PATH_PATTERN = /^\/@([^/]+)\/order\/([^/#?]+)$/i;
 
 function extractOrderUuid(orderId: string): string | null {
@@ -32,7 +34,7 @@ export function buildActorOrderPath(actorHandle: string, orderId: string): strin
   }
 
   const routeId = extractOrderUuid(normalizedOrderId) ?? normalizedOrderId;
-  return `/@${encodeURIComponent(normalizedHandle)}/orders/${encodeURIComponent(routeId)}`;
+  return buildProfileTaskPath(normalizedHandle, routeId);
 }
 
 export function buildTaskRouteHash(orderId: string, view: TaskRouteView = null): string {
@@ -149,7 +151,10 @@ function parseTaskRouteValue(rawValue: string): { orderId: string; view: TaskRou
 
 export function readTaskRouteStateFromLocation(location: Location): { orderId: string; view: TaskRouteView } | null {
   const actorPath = stripLocalePrefix(location.pathname).replace(/\/+$/, '');
-  const actorMatch = actorPath.match(CANONICAL_ACTOR_ORDER_PATH_PATTERN) ?? actorPath.match(LEGACY_ACTOR_ORDER_PATH_PATTERN);
+  const actorMatch =
+    actorPath.match(CANONICAL_ACTOR_ORDER_WITH_RESOURCE_PATH_PATTERN) ??
+    actorPath.match(LEGACY_ACTOR_ORDER_PATH_PATTERN) ??
+    actorPath.match(CANONICAL_ACTOR_ORDER_PATH_PATTERN);
   const actorView = location.hash === '#result' ? 'result' : location.hash === '#stages' ? 'stages' : null;
   if (actorMatch?.[2]) {
     return {

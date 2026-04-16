@@ -351,6 +351,47 @@ export async function submitWorkspaceOrder(args: {
   }
 }
 
+export async function saveWorkspaceOrderDocument(args: {
+  orderId: string;
+  content: string;
+  fetchFn: typeof fetch;
+  orderApiBaseUrl: string;
+  localeText: KefineLocaleText;
+}): Promise<OrderView | null> {
+  try {
+    const response = await args.fetchFn(
+      buildOrderProxyUrl(`/status/${encodeURIComponent(normalizeOrderStatusId(args.orderId))}/document`, args.orderApiBaseUrl),
+      {
+        method: 'PATCH',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          document: {
+            format: 'markdown',
+            content: args.content
+          }
+        })
+      }
+    );
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const payload: unknown = await response.json();
+    return extractStatusPayload(payload, {
+      title: '',
+      description: args.content,
+      currency: args.localeText.defaults.defaultCurrency,
+      createdAt: new Date().toISOString()
+    }, args.localeText);
+  } catch {
+    return null;
+  }
+}
+
 export async function confirmWorkspaceOrderStep(args: {
   orderId: string;
   stepId?: string;

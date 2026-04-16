@@ -66,6 +66,21 @@ export type VpnResultArticle = {
   raw: Record<string, unknown>;
 };
 
+export type OrderDocument = {
+  format: 'markdown';
+  content: string;
+  updatedAt?: string;
+};
+
+export type OrderActivity = {
+  id: string;
+  type: string;
+  published?: string;
+  actor?: string;
+  status?: string;
+  payload: Record<string, unknown>;
+};
+
 export type DraftOrder = {
   title: string;
   description: string;
@@ -109,6 +124,8 @@ export type OrderView = {
   iterations?: OrderIteration[];
   resultDocument?: VpnResultArticle;
   activitypub?: Record<string, unknown>;
+  document?: OrderDocument;
+  activities?: OrderActivity[];
   ownerProfileId?: string;
   ownerUsername?: string;
   ownerDisplayName?: string;
@@ -126,6 +143,9 @@ export type OrderView = {
   templatePricingValue?: number;
   templateFeeUsd?: number;
   templateNetUsd?: number;
+  templatePromptTemplate?: string;
+  templateVariables?: ProfileTemplateVariable[];
+  templateVariableValues?: Record<string, string>;
 };
 
 export type TemplatePresentation = {

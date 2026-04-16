@@ -30,6 +30,7 @@
   import KefineTopbar from '$lib/components/kefine/KefineTopbar.svelte';
   import KefineCreateStep from '$lib/components/kefine/KefineCreateStep.svelte';
   import KefineLoadingDocuments from '$lib/components/kefine/KefineLoadingDocuments.svelte';
+  import KefineExecutingStep from '$lib/components/kefine/KefineExecutingStep.svelte';
   import {
     ORDER_STORAGE_KEY,
     POLL_INTERVAL_MS,
@@ -66,6 +67,7 @@
     loadWorkspaceOrders,
     persistWorkspaceOrders,
     pollWorkspaceOrder,
+    saveWorkspaceOrderDocument,
     submitWorkspaceOrder,
     submitWorkspaceOrderStepComment
   } from '$lib/components/kefine/kefine-workspace-orders';
@@ -196,20 +198,18 @@
   type LazyComponent = any;
 
   async function ensureFlowStepComponentsLoaded() {
-    if (SubmittingStepComponent && ErrorStepComponent && ExecutingStepComponent && PaymentStepComponent) {
+    if (SubmittingStepComponent && ErrorStepComponent && PaymentStepComponent) {
       return;
     }
 
-    const [submittingModule, errorModule, executingModule, paymentModule] = await Promise.all([
+    const [submittingModule, errorModule, paymentModule] = await Promise.all([
       import('$lib/components/kefine/KefineSubmittingStep.svelte'),
       import('$lib/components/kefine/KefineErrorStep.svelte'),
-      import('$lib/components/kefine/KefineExecutingStep.svelte'),
       import('$lib/components/kefine/KefinePaymentStep.svelte')
     ]);
 
     SubmittingStepComponent ??= submittingModule.default;
     ErrorStepComponent ??= errorModule.default;
-    ExecutingStepComponent ??= executingModule.default;
     PaymentStepComponent ??= paymentModule.default;
   }
 
@@ -283,7 +283,6 @@
   let pollAbortController = $state<AbortController | null>(null);
   let SubmittingStepComponent = $state<LazyComponent | null>(null);
   let ErrorStepComponent = $state<LazyComponent | null>(null);
-  let ExecutingStepComponent = $state<LazyComponent | null>(null);
   let PaymentStepComponent = $state<LazyComponent | null>(null);
   let AuthDialogComponent = $state<LazyComponent | null>(null);
   let PasskeyDialogComponent = $state<LazyComponent | null>(null);
@@ -377,7 +376,9 @@
 
     return normalizedPrivateKeyLabel ?? normalizedPasskeyLabel ?? normalizedWalletLabel;
   });
+  const profileNeedsSetup = $derived(currentProfile?.metadata?.['profileSetupCompleted'] !== true);
   const ORDER_PAGE_SIZE = 12;
+  const SERVICE_PREFILL_STORAGE_KEY = 'kefine-service-prefill-v1';
   let visibleOrdersLimit = $state(ORDER_PAGE_SIZE);
   const visibleOrders = $derived(createdOrders.slice(0, visibleOrdersLimit));
   const hasMoreOrders = $derived(visibleOrdersLimit < createdOrders.length);
@@ -1069,7 +1070,7 @@
     const walletReady = selectedAuthMethod === 'wallet' && authState.isConnected;
     const privateKeyReady = selectedAuthMethod === 'publickey' && authState.isConnected;
     const passkeyReady = selectedAuthMethod === 'passkey' && isPasskeyActive;
-    if (step === 'executing' && !stagePreviewOpen && (walletReady || privateKeyReady || passkeyReady)) {
+    if (step === 'executing' && currentOrder?.uiScenario === 'vpn-service' && !stagePreviewOpen && (walletReady || privateKeyReady || passkeyReady)) {
       paymentStage = 'result-ready';
       step = 'payment';
     }
@@ -1143,7 +1144,7 @@
     }
 
     const normalizedStatus = currentOrder.status.trim().toLowerCase();
-    if (normalizedStatus === 'completed' || normalizedStatus === 'done') {
+    if ((normalizedStatus === 'completed' || normalizedStatus === 'done') && currentOrder.uiScenario === 'vpn-service') {
       paymentStage = 'result-ready';
       step = 'payment';
     }
@@ -1258,15 +1259,32 @@
   }
 
   async function selectTopbarAuth() {
-    if (!isAuthenticated) {
-      authButtonLoading = true;
-      await ensureDialogComponentsLoaded();
-      authDialogOpen = true;
-      await tick();
-      authButtonLoading = false;
+    if (isAuthenticated) {
       return;
     }
+
+    authButtonLoading = true;
+    await ensureDialogComponentsLoaded();
+    authDialogOpen = true;
+    await tick();
+    authButtonLoading = false;
+  }
+
+  async function openTopbarProfile() {
     if (!currentProfile) {
+      return;
+    }
+
+    await goto(localizeAppPath(buildProfilePath(currentProfile.primaryHandle), activeLocale));
+  }
+
+  async function openTopbarProfileSetup() {
+    if (!isAuthenticated) {
+      await selectTopbarAuth();
+      return;
+    }
+
+    if (!currentProfile || !profileNeedsSetup) {
       return;
     }
 
@@ -1421,7 +1439,7 @@
     currentOrder = order;
     resetTransactionState();
 
-    if (order.status === 'completed') {
+    if (order.status === 'completed' && order.uiScenario === 'vpn-service') {
       if (preferredView === 'stages') {
         stagePreviewOpen = true;
         step = 'executing';
@@ -1496,6 +1514,26 @@
 
   function openOrder(order: OrderView) {
     showOrderFlow(order);
+  }
+
+  async function createServiceFromOrder(order: OrderView, event?: Event) {
+    event?.preventDefault();
+    event?.stopPropagation();
+
+    if (!browser || !currentProfile?.primaryHandle) {
+      return;
+    }
+
+    sessionStorage.setItem(
+      SERVICE_PREFILL_STORAGE_KEY,
+      JSON.stringify({
+        title: order.title,
+        description: order.description?.trim() || order.title,
+        tags: order.labels ?? []
+      })
+    );
+
+    await goto(`${localizeAppPath(buildProfilePath(currentProfile.primaryHandle), activeLocale)}?compose=service`);
   }
 
   function loadMoreOrders() {
@@ -1644,6 +1682,35 @@
     }
   }
 
+  async function saveCurrentOrderDocument(content: string) {
+    if (!currentOrder) {
+      return;
+    }
+
+    const updated = await saveWorkspaceOrderDocument({
+      orderId: currentOrder.id,
+      content,
+      fetchFn: fetch,
+      orderApiBaseUrl: orderApiBaseUrl(),
+      localeText
+    });
+
+    if (!updated) {
+      return;
+    }
+
+    const nextOrderWithActor = applyActorIdentityFallback(
+      {
+        ...currentOrder,
+        ...updated,
+        id: currentOrder.id
+      },
+      currentOrder
+    );
+    currentOrder = nextOrderWithActor;
+    upsertOrder(nextOrderWithActor);
+  }
+
   function startOrderPolling(order: OrderView) {
     if (!pollAbortController || pollAbortController.signal.aborted) {
       pollAbortController = new AbortController();
@@ -1676,14 +1743,35 @@
     });
   }
 
-  async function createOrder(payload: DraftOrder, options?: { background?: boolean }) {
+  async function createOrder(payload: DraftOrder, options?: { background?: boolean; focusInQueue?: boolean }) {
     const isBackground = options?.background === true;
-    if (!isBackground) {
-      step = 'submitting';
+    const focusInQueue = options?.focusInQueue === true;
+    let optimisticOrderId: string | null = null;
+    if (!isBackground || focusInQueue) {
+      optimisticOrderId = `local-${crypto.randomUUID()}`;
+      currentOrder = applyActorIdentityFallback({
+        id: optimisticOrderId,
+        title: payload.title || payload.description || localeText.defaults.taskTitle,
+        description: payload.description,
+        status: 'queued',
+        solver: '',
+        currency: payload.currency || localeText.defaults.defaultCurrency,
+        createdAt: new Date().toISOString(),
+        labels: payload.tags,
+        templatePromptTemplate: payload.templatePromptTemplate,
+        templateVariables: payload.templateVariables,
+        templateVariableValues: payload.templateVariableValues,
+        document: {
+          format: 'markdown',
+          content: payload.description || payload.title || localeText.defaults.taskTitle
+        }
+      });
+      resetTransactionState();
+      step = 'executing';
     }
 
     let tempOrderId: string | undefined;
-    if (isBackground) {
+    if (isBackground && !focusInQueue) {
       tempOrderId = `temp-${crypto.randomUUID()}`;
       const tempOrder: OrderView = {
         id: tempOrderId,
@@ -1693,7 +1781,10 @@
         solver: localeText.labels?.solver ?? '',
         currency: payload.currency || 'USDC',
         createdAt: new Date().toISOString(),
-        labels: payload.tags
+        labels: payload.tags,
+        templatePromptTemplate: payload.templatePromptTemplate,
+        templateVariables: payload.templateVariables,
+        templateVariableValues: payload.templateVariableValues
       };
       upsertOrder(tempOrder);
     }
@@ -1732,7 +1823,8 @@
     }
 
     if (result.kind === 'error') {
-      if (!isBackground) {
+      if (!isBackground || focusInQueue) {
+        currentOrder = null;
         errorMessage = result.message || localeText.errors.fallback;
         step = 'error';
       }
@@ -1756,6 +1848,10 @@
           : null;
     const ownerOrder = {
       ...result.order,
+      document: result.order.document ?? {
+        format: 'markdown' as const,
+        content: payload.description || payload.title || localeText.defaults.taskTitle
+      },
       ...(orderOwnerActorHandle
         ? {
             actorHandle: orderOwnerActorHandle,
@@ -1787,7 +1883,10 @@
             templatePricingMode: activeTemplate.pricingMode,
             templatePricingValue: activeTemplate.pricingValue,
             templateFeeUsd: templateAmounts?.feeUsd,
-            templateNetUsd: templateAmounts?.netUsd
+            templateNetUsd: templateAmounts?.netUsd,
+            templatePromptTemplate: payload.templatePromptTemplate,
+            templateVariables: payload.templateVariables,
+            templateVariableValues: payload.templateVariableValues
           }
         : {})
     };
@@ -1796,6 +1895,11 @@
 
     upsertOrder(ownerOrderWithActor);
     startOrderPolling(ownerOrderWithActor);
+
+    if (optimisticOrderId) {
+      createdOrders = createdOrders.filter((order) => order.id !== optimisticOrderId);
+      persistOrders();
+    }
 
     if (browser && activeTemplate && templateAmounts && templateAmounts.feeUsd > 0) {
       const isSelfTemplate = orderOwnerProfile?.id === activeTemplate.profileId;
@@ -1845,16 +1949,15 @@
       }
     }
 
-    if (!isBackground) {
+    if (!isBackground || focusInQueue) {
       currentOrder = ownerOrderWithActor;
-      resetTransactionState();
       step = 'executing';
     }
 
     return true;
   }
 
-  async function submitDraft(form: DraftOrder, options?: { background?: boolean }) {
+  async function submitDraft(form: DraftOrder, options?: { background?: boolean; focusInQueue?: boolean }) {
     const normalized = normalizeDraftOrder(form, localeText);
     const created = await createOrder(normalized, options);
 
@@ -1873,7 +1976,7 @@
   }
 
   function handleSubmit() {
-    void submitDraft(draft);
+    void submitDraft(draft, { background: true, focusInQueue: true });
   }
 
   async function queueTaskBelow() {
@@ -2315,8 +2418,11 @@
     signInLabel={localeText.topbar.signIn}
     signedInLabel={localeText.topbar.signedIn}
     authenticatedLabel={authenticatedLabel}
-    authenticatedSecondaryLabel={authState.isConnected ? walletNetworkLabel : null}
+    authenticatedSecondaryLabel={null}
     authenticatedAvatarUrl={authState.isConnected ? walletAvatarUrl : null}
+    authMenuLabel={localeText.profile.title}
+    openProfileLabel={profileNeedsSetup ? localeText.profile.onboardingTitle : localeText.profile.title}
+    signOutLabel={localeText.profile.signOut}
     isAuthenticated={isAuthenticated}
     isAuthLoading={authButtonLoading}
     isDarkTheme={isDarkTheme}
@@ -2337,6 +2443,9 @@
     }}
     onThemeChange={(theme) => { themeMode = theme; }}
     onAuth={selectTopbarAuth}
+    onOpenProfile={openTopbarProfile}
+    onSignOut={() => { void signOutProfileSession(); }}
+    onAuthDoubleClick={() => { void openTopbarProfileSetup(); }}
     onLocale={selectTopbarLocale}
   />
 
@@ -2394,9 +2503,11 @@
           onLoadMoreOrders={loadMoreOrders}
           matchedTasksLabel={localeText.create.matchedTasks}
           addFileLabel={localeText.create.addFile}
+          addDescriptionLabel={localeText.create.addDescription}
           addExecutionEstimateLabel={localeText.create.addExecutionEstimate}
           fileCountLabel={localeText.create.fileCount}
           composerHints={localeText.create.composerHints}
+          richEditorDescription={localeText.create.richEditorDescription}
           timeLeftLabel={localeText.labels.timeLeft}
           openTaskLabel={localeText.labels.openOrderLink}
           summaryLabel={localeText.labels.summary}
@@ -2414,6 +2525,7 @@
           onStopOrder={handleStopOrder}
           onDeleteOrder={handleDeleteOrder}
           onOpenOrder={openOrder}
+          onCreateServiceFromOrder={createServiceFromOrder}
           onDescriptionChange={updateDescription}
           onTemplateVariableChange={updateTemplateVariableValue}
           onTagsChange={updateTags}
@@ -2461,61 +2573,63 @@
 
     {#if step === 'executing'}
       <kefine-screen in:softScreenTransition out:softScreenTransition>
-        {#if ExecutingStepComponent}
-          <ExecutingStepComponent
-            currentOrder={currentOrder}
-            execution={executionPresentation}
-            isHydratingTitle={isHydratingRoute && !currentOrder?.title.trim()}
-            isConfirmingStep={confirmStepLoading}
-            commentSubmittingStepId={stepCommentLoadingId}
-            confirmCurrentStepLabel={localeText.buttons.confirmStep}
-            onConfirmCurrentStep={confirmCurrentExecutionStep}
-            onSubmitStepComment={submitStepComment}
-            onWalletLogin={chooseWalletMethod}
-            onPasskeyLogin={choosePasskeyMethod}
-            onAnonymous={chooseAnonymousMethod}
-            onCancel={() => {
-              if (stagePreviewOpen && currentOrder?.status === 'completed') {
-                stagePreviewOpen = false;
-                paymentStage = 'result-ready';
-                step = 'payment';
-                return;
-              }
+        <KefineExecutingStep
+          currentOrder={currentOrder}
+          queuedOrders={[]}
+          execution={executionPresentation}
+          isHydratingTitle={isHydratingRoute && !currentOrder?.title.trim()}
+          isConfirmingStep={confirmStepLoading}
+          commentSubmittingStepId={stepCommentLoadingId}
+          confirmCurrentStepLabel={localeText.buttons.confirmStep}
+          onConfirmCurrentStep={confirmCurrentExecutionStep}
+          onSubmitStepComment={submitStepComment}
+          onSaveDocument={saveCurrentOrderDocument}
+          onWalletLogin={chooseWalletMethod}
+          onPasskeyLogin={choosePasskeyMethod}
+          onAnonymous={chooseAnonymousMethod}
+          onCancel={() => {
+            if (stagePreviewOpen && currentOrder?.status === 'completed') {
+              stagePreviewOpen = false;
+              paymentStage = 'result-ready';
+              step = 'payment';
+              return;
+            }
 
-              cancelExecutingActions();
-            }}
-            forceFinalVpnStep={stagePreviewOpen}
-            authDisplay={authDisplay}
-            walletNetworkLabel={walletNetworkLabel}
-            labels={{
-              solver: localeText.labels.solver,
-              subtasks: localeText.labels.subtasks,
-              chooseMethod: localeText.labels.chooseMethod,
-              cancel: localeText.buttons.cancel,
-              timeLeft: localeText.labels.timeLeft,
-              price: localeText.labels.price,
-              exchangeWaiting: localeText.labels.exchangeWaiting,
-              performers: localeText.labels.performers,
-              notebook: localeText.labels.notebook,
-              iterations: localeText.labels.iterations,
-              interimResult: localeText.labels.interimResult,
-              finalResult: localeText.labels.finalResult,
-              leaveComment: localeText.labels.leaveComment,
-              noNotebookYet: localeText.labels.noNotebookYet
-            }}
-            authLabels={{
-              walletTitle: localeText.auth.walletTitle,
-              passkeyTitle: localeText.auth.passkeyTitle,
-              anonymousTitle: localeText.auth.anonymousTitle,
-              anonymousDetail: localeText.auth.anonymousDetail,
-              walletAccount: localeText.auth.walletAccount
-            }}
-          />
-        {:else}
-          <article class="kefine-card kefine-card--wide kefine-loading-panel" aria-busy="true">
-            <KefineLoadingDocuments ariaLabel="Loading" />
-          </article>
-        {/if}
+            cancelExecutingActions();
+          }}
+          forceFinalVpnStep={stagePreviewOpen}
+          authDisplay={authDisplay}
+          walletNetworkLabel={walletNetworkLabel}
+          labels={{
+            solver: localeText.labels.solver,
+            subtasks: localeText.labels.subtasks,
+            chooseMethod: localeText.labels.chooseMethod,
+            cancel: localeText.buttons.cancel,
+            timeLeft: localeText.labels.timeLeft,
+            price: localeText.labels.price,
+            exchangeWaiting: localeText.labels.exchangeWaiting,
+            performers: localeText.labels.performers,
+            notebook: localeText.labels.notebook,
+            iterations: localeText.labels.iterations,
+            interimResult: localeText.labels.interimResult,
+            finalResult: localeText.labels.finalResult,
+            leaveComment: localeText.labels.leaveComment,
+            noNotebookYet: localeText.labels.noNotebookYet,
+            boardTitle: localeText.labels.taskQueue,
+            treeTitle: localeText.labels.taskTree,
+            feedTitle: localeText.labels.taskFeed,
+            saving: localeText.status.savingDocument,
+            apply: localeText.buttons.apply,
+            richEditorDescription: localeText.create.richEditorDescription
+          }}
+          authLabels={{
+            walletTitle: localeText.auth.walletTitle,
+            passkeyTitle: localeText.auth.passkeyTitle,
+            anonymousTitle: localeText.auth.anonymousTitle,
+            anonymousDetail: localeText.auth.anonymousDetail,
+            walletAccount: localeText.auth.walletAccount
+          }}
+        />
       </kefine-screen>
     {/if}
 

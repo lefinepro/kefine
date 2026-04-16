@@ -57,6 +57,7 @@ module Crater
       property owner_display_name : String?
       property actor_handle : String?
       property actor_did : String?
+      property document_json : String?
 
       def initialize(
         @id : String,
@@ -84,6 +85,7 @@ module Crater
         @owner_display_name : String? = nil,
         @actor_handle : String? = nil,
         @actor_did : String? = nil,
+        @document_json : String? = nil,
         @solver_name : String? = nil,
         @solver_handle : String? = nil,
         @solver_profile_url : String? = nil
@@ -149,6 +151,7 @@ module Crater
               owner_display_name TEXT,
               actor_handle TEXT,
               actor_did TEXT,
+              document_json TEXT,
               solver_name TEXT,
               solver_handle TEXT,
               solver_profile_url TEXT
@@ -167,6 +170,7 @@ module Crater
           db.exec "ALTER TABLE orders ADD COLUMN IF NOT EXISTS owner_display_name TEXT"
           db.exec "ALTER TABLE orders ADD COLUMN IF NOT EXISTS actor_handle TEXT"
           db.exec "ALTER TABLE orders ADD COLUMN IF NOT EXISTS actor_did TEXT"
+          db.exec "ALTER TABLE orders ADD COLUMN IF NOT EXISTS document_json TEXT"
           db.exec "ALTER TABLE orders ADD COLUMN IF NOT EXISTS solver_name TEXT"
           db.exec "ALTER TABLE orders ADD COLUMN IF NOT EXISTS solver_handle TEXT"
           db.exec "ALTER TABLE orders ADD COLUMN IF NOT EXISTS solver_profile_url TEXT"
@@ -281,6 +285,32 @@ module Crater
       order.id
     end
 
+    private def self.build_default_document_json(title : String, description : String?) : String
+      content = description.to_s.strip
+      content = title.strip if content.empty?
+
+      {
+        "format" => "markdown",
+        "content" => content,
+      }.to_json
+    end
+
+    private def self.normalize_document_json(value : JSON::Any?, title : String, description : String?) : String
+      return build_default_document_json(title, description) unless value
+
+      if object = value.as_h?
+        content = to_string(object["content"]?) || description.to_s
+        format = to_string(object["format"]?) || "markdown"
+        return {
+          "format" => format,
+          "content" => content,
+        }.to_json
+      end
+
+      content = to_string(value) || description.to_s
+      build_default_document_json(title, content)
+    end
+
     private def self.persist_order(record : OrderRecord, config : Utils::Config) : Nil
       setup(config)
       database(config).exec(
@@ -291,8 +321,8 @@ module Crater
             template_id, template_slug, template_author_profile_id, template_author_username,
             template_author_display_name, template_pricing_mode, template_pricing_value,
             owner_profile_id, owner_username, owner_display_name, actor_handle, actor_did,
-            solver_name, solver_handle, solver_profile_url
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28)
+            document_json, solver_name, solver_handle, solver_profile_url
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29)
           ON CONFLICT (id) DO UPDATE SET
             status = EXCLUDED.status,
             solver = EXCLUDED.solver,
@@ -318,6 +348,7 @@ module Crater
             owner_display_name = EXCLUDED.owner_display_name,
             actor_handle = EXCLUDED.actor_handle,
             actor_did = EXCLUDED.actor_did,
+            document_json = EXCLUDED.document_json,
             solver_name = EXCLUDED.solver_name,
             solver_handle = EXCLUDED.solver_handle,
             solver_profile_url = EXCLUDED.solver_profile_url
@@ -347,6 +378,7 @@ module Crater
         record.owner_display_name,
         record.actor_handle,
         record.actor_did,
+        record.document_json,
         record.solver_name,
         record.solver_handle,
         record.solver_profile_url
@@ -368,7 +400,7 @@ module Crater
       )
     end
 
-    private def self.hydrate_order(row : {String, String, String, String, String?, String?, String, String?, String, String, String?, String?, String, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?}) : OrderRecord
+    private def self.hydrate_order(row : {String, String, String, String, String?, String?, String, String?, String, String, String?, String?, String, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?}) : OrderRecord
       OrderRecord.new(
         id: row[0],
         status: row[1],
@@ -395,9 +427,10 @@ module Crater
         owner_display_name: row[22],
         actor_handle: row[23],
         actor_did: row[24],
-        solver_name: row[25],
-        solver_handle: row[26],
-        solver_profile_url: row[27]
+        document_json: row[25],
+        solver_name: row[26],
+        solver_handle: row[27],
+        solver_profile_url: row[28]
       )
     end
 
@@ -499,6 +532,7 @@ module Crater
         owner_display_name: to_string(payload["ownerDisplayName"]?) || to_string(source["ownerDisplayName"]?),
         actor_handle: actor_handle,
         actor_did: normalize_did_key(to_string(payload["actorDid"]?) || to_string(source["actorDid"]?)) || system_actor_did(config),
+        document_json: normalize_document_json(payload["document"]? || source["document"]?, title, description),
         solver_name: solver_name,
         solver_handle: solver_handle,
         solver_profile_url: solver_profile_url
@@ -568,7 +602,8 @@ module Crater
         "ownerUsername" => order.owner_username,
         "ownerDisplayName" => order.owner_display_name,
         "actorHandle" => order.actor_handle,
-        "actorDid" => actor_did
+        "actorDid" => actor_did,
+        "document" => JSON.parse(order.document_json || build_default_document_json(order.title, order.description))
       }
 
       object_payload = {
@@ -603,6 +638,7 @@ module Crater
         "ownerDisplayName" => order.owner_display_name,
         "actorHandle" => order.actor_handle,
         "actorDid" => actor_did,
+        "document" => JSON.parse(order.document_json || build_default_document_json(order.title, order.description)),
         "attachment" => result_attachments(order, status, config)
       }
 
@@ -743,11 +779,19 @@ module Crater
       raise Error::InvalidActivity.new("Activity type must be Create") unless activity.type == "Create"
 
       record = parse_order_payload(activity, config)
-      post_to_exchange_inbox(activity, config)
 
       @@lock.synchronize do
         persist_order(record, config)
         persist_activity(JSON.parse(activity.to_json), record.id, config)
+      end
+
+      # Do not block the create response on exchange availability.
+      spawn do
+        begin
+          post_to_exchange_inbox(activity, config)
+        rescue ex
+          STDERR.puts "Failed to deliver order #{record.id} to exchange: #{ex.message}"
+        end
       end
 
       record
@@ -788,17 +832,17 @@ module Crater
       uuid = extract_uuid(normalized_id)
       row = if uuid
               database(config).query_one?(
-                "SELECT id, status, solver, title, description, estimated_cost, currency, execution_estimate, created_at, updated_at, payment_url, ui_scenario, labels_json, template_id, template_slug, template_author_profile_id, template_author_username, template_author_display_name, template_pricing_mode, template_pricing_value, owner_profile_id, owner_username, owner_display_name, actor_handle, actor_did, solver_name, solver_handle, solver_profile_url FROM orders WHERE id = $1 OR id = $2 OR id LIKE $3 ORDER BY CASE WHEN id = $1 THEN 0 WHEN id = $2 THEN 1 ELSE 2 END LIMIT 1",
+                "SELECT id, status, solver, title, description, estimated_cost, currency, execution_estimate, created_at, updated_at, payment_url, ui_scenario, labels_json, template_id, template_slug, template_author_profile_id, template_author_username, template_author_display_name, template_pricing_mode, template_pricing_value, owner_profile_id, owner_username, owner_display_name, actor_handle, actor_did, document_json, solver_name, solver_handle, solver_profile_url FROM orders WHERE id = $1 OR id = $2 OR id LIKE $3 ORDER BY CASE WHEN id = $1 THEN 0 WHEN id = $2 THEN 1 ELSE 2 END LIMIT 1",
                 normalized_id,
                 uuid,
                 "%/#{uuid}",
-                as: {String, String, String, String, String?, String?, String, String?, String, String, String?, String?, String, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?}
+                as: {String, String, String, String, String?, String?, String, String?, String, String, String?, String?, String, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?}
               )
             else
               database(config).query_one?(
-                "SELECT id, status, solver, title, description, estimated_cost, currency, execution_estimate, created_at, updated_at, payment_url, ui_scenario, labels_json, template_id, template_slug, template_author_profile_id, template_author_username, template_author_display_name, template_pricing_mode, template_pricing_value, owner_profile_id, owner_username, owner_display_name, actor_handle, actor_did, solver_name, solver_handle, solver_profile_url FROM orders WHERE id = $1",
+                "SELECT id, status, solver, title, description, estimated_cost, currency, execution_estimate, created_at, updated_at, payment_url, ui_scenario, labels_json, template_id, template_slug, template_author_profile_id, template_author_username, template_author_display_name, template_pricing_mode, template_pricing_value, owner_profile_id, owner_username, owner_display_name, actor_handle, actor_did, document_json, solver_name, solver_handle, solver_profile_url FROM orders WHERE id = $1",
                 normalized_id,
-                as: {String, String, String, String, String?, String?, String, String?, String, String, String?, String?, String, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?}
+                as: {String, String, String, String, String?, String?, String, String?, String, String, String?, String?, String, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?}
               )
             end
       return nil unless row
@@ -854,6 +898,67 @@ module Crater
       JSON.parse(row)
     rescue
       nil
+    end
+
+    def self.activities_for_order(order_id : String, config : Utils::Config = Utils::Config.load, limit : Int32 = EVENT_PAGE_SIZE) : Array(JSON::Any)
+      setup(config)
+      normalized_id = order_id.strip
+      uuid = extract_uuid(normalized_id)
+      rows = if uuid
+               database(config).query_all(
+                 "SELECT activity_json FROM order_activities WHERE order_id = $1 OR order_id = $2 OR order_id LIKE $3 ORDER BY seq ASC LIMIT $4",
+                 normalized_id,
+                 uuid,
+                 "%/#{uuid}",
+                 limit,
+                 as: String
+               )
+             else
+               database(config).query_all(
+                 "SELECT activity_json FROM order_activities WHERE order_id = $1 ORDER BY seq ASC LIMIT $2",
+                 normalized_id,
+                 limit,
+                 as: String
+               )
+             end
+
+      rows.compact_map do |row|
+        JSON.parse(row)
+      rescue
+        nil
+      end
+    end
+
+    def self.update_document(order_id : String, document : JSON::Any, config : Utils::Config = Utils::Config.load) : OrderRecord?
+      @@lock.synchronize do
+        record = find_order(order_id, config)
+        return nil unless record
+
+        record.document_json = normalize_document_json(document, record.title, record.description)
+        record.updated_at = current_time
+        persist_order(record, config)
+
+        persist_activity(
+          JSON.parse(
+            {
+              "@context" => [ActivityPub::CONTEXT],
+              "id" => UUID.random.to_s,
+              "type" => "Update",
+              "actor" => order_actor_did(record, config),
+              "object" => {
+                "id" => record.id,
+                "type" => "Note",
+                "document" => JSON.parse(record.document_json.not_nil!)
+              },
+              "published" => record.updated_at
+            }.to_json
+          ),
+          record.id,
+          config
+        )
+
+        record
+      end
     end
     private def self.normalize_actor_handle(value : String?) : String?
       return nil unless value

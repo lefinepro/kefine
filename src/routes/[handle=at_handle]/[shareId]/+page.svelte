@@ -2,7 +2,6 @@
   import { browser } from '$app/environment';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
-  import { onMount } from 'svelte';
   import { authState, hydrateAuthStateFromSession } from '$lib/auth/auth-store.svelte.js';
   import { loadPasskeySession, passkeySessionStore } from '$lib/auth/passkey-session';
   import KefineServiceEditorPage from '$lib/components/kefine/KefineServiceEditorPage.svelte';
@@ -71,6 +70,45 @@
     );
   }
 
+  function matchesTaskOwnerHandle(orderItem: OrderView, handle: string): boolean {
+    const normalizedHandle = handle.trim().replace(/^@+/, '').toLowerCase();
+    if (!normalizedHandle) {
+      return false;
+    }
+
+    const candidates = [
+      orderItem.actorHandle,
+      orderItem.ownerUsername
+    ]
+      .map((value) => value?.trim().replace(/^@+/, '').toLowerCase())
+      .filter(Boolean);
+
+    return candidates.includes(normalizedHandle);
+  }
+
+  function buildOwnerProfileFallback(orderItem: OrderView, handle: string): Profile {
+    const normalizedHandle = handle.trim().replace(/^@+/, '');
+    const now = new Date().toISOString();
+
+    return {
+      id: orderItem.ownerProfileId || `profile:${normalizedHandle}`,
+      userId: orderItem.ownerProfileId || `user:${normalizedHandle}`,
+      username: normalizedHandle,
+      primaryHandle: normalizedHandle,
+      primaryHandleType: 'publickey',
+      displayName: orderItem.ownerDisplayName?.trim() || normalizedHandle,
+      bio: '',
+      isPublic: true,
+      socialLinks: [],
+      referralPercent: 10,
+      bonusBalanceUsd: 0,
+      followersCount: 0,
+      followingCount: 0,
+      createdAt: now,
+      updatedAt: now
+    };
+  }
+
   function buildDefaultActorProfile(): Profile | null {
     const handle = runtimeConfig.defaultActor.handle?.trim();
     if (!handle || !isDefaultActorHandle(page.params.handle ?? '', handle)) {
@@ -97,74 +135,104 @@
     };
   }
 
-  onMount(() => {
-    async function init() {
-      if (!browser) {
-        return;
-      }
+  async function init() {
+    if (!browser) {
+      return;
+    }
 
-      hydrateAuthStateFromSession();
-      loadPasskeySession();
-      unavailable = false;
-      redirectingTemplate = false;
-      order = null;
-      template = null;
-      grantedKinds = [];
-      ownerProfile = getProfileByUsername(localStorage, page.params.handle ?? '') ?? buildDefaultActorProfile();
-      if (!ownerProfile) {
-        unavailable = true;
-        return;
-      }
+    hydrateAuthStateFromSession();
+    loadPasskeySession();
+    unavailable = false;
+    redirectingTemplate = false;
+    order = null;
+    template = null;
+    grantedKinds = [];
+    const storedOrders = parseStoredOrders(localStorage.getItem('kefine-created-orders-v1'), localeText);
+    const fallbackSharedOrder =
+      storedOrders.find((item) => matchesTaskOwnerHandle(item, page.params.handle ?? '') && matchesTaskSegment(item, page.params.shareId ?? '', item.ownerProfileId || '')) ??
+      storedOrders.find((item) => matchesTaskOwnerHandle(item, page.params.handle ?? '') && (
+        item.shareId?.trim() === (page.params.shareId ?? '').trim() ||
+        item.id.trim() === (page.params.shareId ?? '').trim() ||
+        item.id.trim().endsWith(`/${(page.params.shareId ?? '').trim()}`) ||
+        (item.shareId?.trim().endsWith(`/${(page.params.shareId ?? '').trim()}`) ?? false)
+      )) ??
+      null;
 
-      const walletAddress = authState.address?.trim() || null;
-      const userId = passkeySession?.userId || authState.userId?.trim() || authState.email?.trim().toLowerCase() || walletAddress;
-      viewerProfile = userId
-        ? ensureProfileForSession({
-            storage: localStorage,
-            userId,
-            email: authState.email,
-            displayName: passkeySession?.username || authState.displayName?.trim() || authState.handle?.trim() || authState.email?.split('@')[0] || authState.address || 'user',
-            avatarUrl: undefined,
-            authType: passkeySession ? 'passkey' : authState.authType,
-            walletAddress: authState.address,
-            walletAlias: null
-          })
-        : null;
+    ownerProfile =
+      getProfileByUsername(localStorage, page.params.handle ?? '') ??
+      buildDefaultActorProfile() ??
+      (fallbackSharedOrder ? buildOwnerProfileFallback(fallbackSharedOrder, page.params.handle ?? '') : null);
+    if (!ownerProfile && !fallbackSharedOrder) {
+      unavailable = true;
+      return;
+    }
 
+    const walletAddress = authState.address?.trim() || null;
+    const userId = passkeySession?.userId || authState.userId?.trim() || authState.email?.trim().toLowerCase() || walletAddress;
+    viewerProfile = userId
+      ? ensureProfileForSession({
+          storage: localStorage,
+          userId,
+          email: authState.email,
+          displayName: passkeySession?.username || authState.displayName?.trim() || authState.handle?.trim() || authState.email?.split('@')[0] || authState.address || 'user',
+          avatarUrl: undefined,
+          authType: passkeySession ? 'passkey' : authState.authType,
+          walletAddress: authState.address,
+          walletAlias: null
+        })
+      : null;
+
+    if (ownerProfile) {
       template = await fetchTemplateByHandleAndSlug(runtimeConfig.backend.craterBaseUrl, ownerProfile.primaryHandle, page.params.shareId ?? '');
-      if (template && viewerProfile?.id === ownerProfile.id) {
-        return;
-      }
+    } else {
+      template = null;
+    }
 
-      if (template && (template.visibility ?? (template.isPublished ? 'public' : 'private')) === 'public') {
-        redirectingTemplate = true;
-        void goto(localizeAppPath(buildCanonicalServicePath(ownerProfile.primaryHandle, template.slug, runtimeConfig.defaultActor.handle), activeLocale), { replaceState: true });
-        return;
-      }
+    if (template && ownerProfile && viewerProfile?.id === ownerProfile.id) {
+      return;
+    }
 
-      const ownerProfileId = ownerProfile.id;
-      const storedOrders = parseStoredOrders(localStorage.getItem('kefine-created-orders-v1'), localeText);
-      const sharedOrder =
-        storedOrders.find(
-          (item) => matchesTaskSegment(item, page.params.shareId ?? '', ownerProfileId)
-        ) ?? null;
+    if (template && ownerProfile && (template.visibility ?? (template.isPublished ? 'public' : 'private')) === 'public') {
+      redirectingTemplate = true;
+      void goto(localizeAppPath(buildCanonicalServicePath(ownerProfile.primaryHandle, template.slug, runtimeConfig.defaultActor.handle), activeLocale), { replaceState: true });
+      return;
+    }
 
-      if (!sharedOrder) {
-        unavailable = true;
-        return;
-      }
+    const ownerProfileId = ownerProfile?.id ?? fallbackSharedOrder?.ownerProfileId ?? '';
+    const sharedOrder =
+      storedOrders.find(
+        (item) =>
+          (ownerProfileId && matchesTaskSegment(item, page.params.shareId ?? '', ownerProfileId)) ||
+          matchesTaskOwnerHandle(item, page.params.handle ?? '') &&
+            (
+              item.shareId?.trim() === (page.params.shareId ?? '').trim() ||
+              item.id.trim() === (page.params.shareId ?? '').trim() ||
+              item.id.trim().endsWith(`/${(page.params.shareId ?? '').trim()}`) ||
+              (item.shareId?.trim().endsWith(`/${(page.params.shareId ?? '').trim()}`) ?? false)
+            )
+      ) ?? null;
 
-      order = sharedOrder;
-      if (!userId || !sharedOrder.ownerProfileId || !viewerProfile) {
-        return;
-      }
+    if (!sharedOrder) {
+      unavailable = true;
+      return;
+    }
 
-      grantedKinds = getGrantedTaskAccessKinds({
-        storage: localStorage,
-        orderId: sharedOrder.id,
-        ownerProfileId: sharedOrder.ownerProfileId,
-        buyerProfileId: viewerProfile.id
-      });
+    order = sharedOrder;
+    if (!userId || !sharedOrder.ownerProfileId || !viewerProfile) {
+      return;
+    }
+
+    grantedKinds = getGrantedTaskAccessKinds({
+      storage: localStorage,
+      orderId: sharedOrder.id,
+      ownerProfileId: sharedOrder.ownerProfileId,
+      buyerProfileId: viewerProfile.id
+    });
+  }
+
+  $effect(() => {
+    if (!browser) {
+      return;
     }
 
     const nextLoadKey = [

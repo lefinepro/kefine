@@ -24,6 +24,8 @@ import { kefineLocale, kefineLocaleText, type KefineLocale } from '$lib/constant
   } from '$lib/types/user';
   import { localizeAppPath, readLocaleFromPathname } from '$lib/routing/kefine-locale-routing';
 
+  const SERVICE_PREFILL_STORAGE_KEY = 'kefine-service-prefill-v1';
+
   let {
     profile,
     craterBaseUrl,
@@ -77,39 +79,64 @@ import { kefineLocale, kefineLocaleText, type KefineLocale } from '$lib/constant
   function getDefaultServiceDraft(locale: KefineLocale) {
     if (locale === 'ru') {
       return {
-        title: 'VPN сервис',
-        slug: 'vpn-service',
-        description: 'Настроенный сервис для выдачи VPN-доступа с инструкцией по подключению.',
+        title: 'Staff сервис',
+        slug: 'staff-service',
+        description: 'Сервис для подбора и выдачи исполнителя под регулярные рабочие задачи.',
         promptTemplate:
-          'Create and deliver a VPN access package.\n\nNeed:\n- region: :region\n- protocol: WireGuard or VLESS\n- include setup steps for mobile and desktop',
+          'Find and assign a staff performer for this role.\n\nNeed:\n- role: :role\n- schedule: :schedule\n- responsibilities: :responsibilities\n- include onboarding notes and handoff expectations',
         pricingValue: '15',
-        tags: ['vpn', 'wireguard'],
-        solverCohortQuery: 'vpn'
+        tags: ['staff', 'operations'],
+        solverCohortQuery: 'staff'
       };
     }
 
     if (locale === 'hy') {
       return {
-        title: 'VPN ծառայություն',
-        slug: 'vpn-service',
-        description: 'Պատրաստի ծառայություն VPN հասանելիություն տրամադրելու և միացման քայլերը ուղարկելու համար։',
+        title: 'Staff ծառայություն',
+        slug: 'staff-service',
+        description: 'Ծառայություն կանոնավոր աշխատանքային խնդիրների համար կատարող գտնելու և կազմակերպելու համար։',
         promptTemplate:
-          'Create and deliver a VPN access package.\n\nNeed:\n- region: :region\n- protocol: WireGuard or VLESS\n- include setup steps for mobile and desktop',
+          'Find and assign a staff performer for this role.\n\nNeed:\n- role: :role\n- schedule: :schedule\n- responsibilities: :responsibilities\n- include onboarding notes and handoff expectations',
         pricingValue: '15',
-        tags: ['vpn', 'wireguard'],
-        solverCohortQuery: 'vpn'
+        tags: ['staff', 'operations'],
+        solverCohortQuery: 'staff'
       };
     }
 
     return {
-      title: 'VPN Service',
-      slug: 'vpn-service',
-      description: 'A ready-to-use service for delivering VPN access with connection instructions.',
+      title: 'Staff Service',
+      slug: 'staff-service',
+      description: 'A reusable service for sourcing and assigning a staff performer for recurring work.',
       promptTemplate:
-        'Create and deliver a VPN access package.\n\nNeed:\n- region: :region\n- protocol: WireGuard or VLESS\n- include setup steps for mobile and desktop',
+        'Find and assign a staff performer for this role.\n\nNeed:\n- role: :role\n- schedule: :schedule\n- responsibilities: :responsibilities\n- include onboarding notes and handoff expectations',
       pricingValue: '15',
-      tags: ['vpn', 'wireguard'],
-      solverCohortQuery: 'vpn'
+      tags: ['staff', 'operations'],
+      solverCohortQuery: 'staff'
+    };
+  }
+
+  function buildTaskPrefillDraft(raw: unknown) {
+    if (!raw || typeof raw !== 'object') {
+      return null;
+    }
+
+    const record = raw as Record<string, unknown>;
+    const title = typeof record.title === 'string' ? record.title.trim() : '';
+    const description = typeof record.description === 'string' ? record.description.trim() : '';
+    const tags = Array.isArray(record.tags) ? record.tags.filter((item): item is string => typeof item === 'string') : [];
+
+    if (!title && !description) {
+      return null;
+    }
+
+    return {
+      title: title || 'Service',
+      slug: normalizeProfileResourceSlug(title || description || 'service'),
+      description: description || title,
+      promptTemplate: description || title,
+      pricingValue: '0',
+      tags,
+      solverCohortQuery: tags[0] ?? ''
     };
   }
 
@@ -131,44 +158,52 @@ import { kefineLocale, kefineLocaleText, type KefineLocale } from '$lib/constant
 
     const localized = service ? resolveTemplateLocalizedContent(service, $kefineLocale) : null;
     const defaultDraft = getDefaultServiceDraft($kefineLocale);
+    const taskPrefillDraft =
+      !service && browser
+        ? buildTaskPrefillDraft(JSON.parse(sessionStorage.getItem(SERVICE_PREFILL_STORAGE_KEY) || 'null'))
+        : null;
+    if (!service && browser) {
+      sessionStorage.removeItem(SERVICE_PREFILL_STORAGE_KEY);
+    }
+    const initialDraft = taskPrefillDraft ?? defaultDraft;
     hydratedServiceKey = nextHydratedServiceKey;
-    title = localized?.title ?? service?.title ?? defaultDraft.title;
+    title = localized?.title ?? service?.title ?? initialDraft.title;
     slugInput =
       service?.slug && !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(service.slug)
         ? service.slug
-        : defaultDraft.slug;
-    description = localized?.description ?? service?.description ?? defaultDraft.description;
+        : initialDraft.slug;
+    description = localized?.description ?? service?.description ?? initialDraft.description;
     imageDataUrl = service?.imageDataUrl;
     promptTemplate =
       localized?.promptTemplate ??
       service?.promptTemplate ??
       service?.prefillDescription ??
       service?.prefillTitle ??
-      defaultDraft.promptTemplate;
+      initialDraft.promptTemplate;
     promptVariables = syncPromptVariables(
       localized?.promptTemplate ??
         service?.promptTemplate ??
         service?.prefillDescription ??
         service?.prefillTitle ??
-        defaultDraft.promptTemplate,
+        initialDraft.promptTemplate,
       service?.promptVariables ?? []
     );
     prefillEstimatedCost =
       service?.prefillEstimatedCost !== undefined
         ? String(service.prefillEstimatedCost)
         : service
-          ? String(service.pricingValue)
-          : defaultDraft.pricingValue;
+        ? String(service.pricingValue)
+          : initialDraft.pricingValue;
     prefillCurrency = service?.prefillCurrency ?? 'USD';
     pricingMode = 'fixed';
-    pricingValue = service ? String(service.pricingValue) : defaultDraft.pricingValue;
+    pricingValue = service ? String(service.pricingValue) : initialDraft.pricingValue;
     visibility = service?.visibility ?? (service?.isPublished ? 'public' : 'private');
     bonusEnabled = service?.bonusEnabled ?? false;
     bonusMode = service?.bonusMode ?? 'fixed';
     bonusValue = service ? String(service.bonusValue ?? 0) : '';
     files = service?.prefillFiles.map((file) => ({ ...file })) ?? [];
-    tags = service?.tags ? [...service.tags] : [...defaultDraft.tags];
-    solverCohortQuery = service ? '' : defaultDraft.solverCohortQuery;
+    tags = service?.tags ? [...service.tags] : [...initialDraft.tags];
+    solverCohortQuery = service ? '' : initialDraft.solverCohortQuery;
     preferredSolverIds = [];
     priceEditorOpen = false;
     visibilityEditorOpen = false;

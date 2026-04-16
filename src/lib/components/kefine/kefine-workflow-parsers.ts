@@ -2,6 +2,8 @@ import type { KefineLocaleText } from '$lib/constants/kefine-locale';
 import type {
   DraftOrder,
   ExecutionStage,
+  OrderActivity,
+  OrderDocument,
   OrderExecutor,
   OrderExecutionStep,
   OrderIteration,
@@ -20,6 +22,7 @@ import type {
   VpnResultLink,
   VpnResultStep
 } from '$lib/components/kefine/kefine-workflow';
+import type { ProfileTemplateVariable } from '$lib/types/user';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
@@ -48,6 +51,42 @@ function toNumber(value: unknown): number | undefined {
   }
 
   return undefined;
+}
+
+function toTemplateVariables(value: unknown): ProfileTemplateVariable[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const variables = value
+    .map((item) => {
+      const record = toRecord(item);
+      const key = toStringValue(record?.['key']);
+      if (!key) {
+        return null;
+      }
+
+      return {
+        key,
+        defaultValue: toStringValue(record?.['defaultValue']) || undefined
+      } satisfies ProfileTemplateVariable;
+    })
+    .filter(isDefined);
+
+  return variables.length > 0 ? variables : undefined;
+}
+
+function toStringRecord(value: unknown): Record<string, string> | undefined {
+  const record = toRecord(value);
+  if (!record) {
+    return undefined;
+  }
+
+  const entries = Object.entries(record)
+    .map(([key, item]) => [key.trim(), typeof item === 'string' ? item : ''] as const)
+    .filter(([key]) => key.length > 0);
+
+  return entries.length > 0 ? Object.fromEntries(entries) : undefined;
 }
 
 function detectVpnScenario(payload: DraftOrder): boolean {
@@ -99,6 +138,53 @@ function toBoolean(value: unknown): boolean | undefined {
   }
 
   return undefined;
+}
+
+function toOrderDocument(value: unknown): OrderDocument | undefined {
+  const record = toRecord(value);
+  if (!record) {
+    return undefined;
+  }
+
+  const content = toStringValue(record['content']);
+  if (!content) {
+    return undefined;
+  }
+
+  return {
+    format: 'markdown',
+    content,
+    updatedAt: toStringValue(record['updatedAt']) || undefined
+  };
+}
+
+function toActivities(value: unknown): OrderActivity[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const activities = value
+    .map((item, index) => {
+      const record = toRecord(item);
+      if (!record) {
+        return null;
+      }
+
+      return {
+        id: toStringValue(record['id']) || `activity-${index + 1}`,
+        type: toStringValue(record['type']) || 'Update',
+        published: toStringValue(record['published']) || undefined,
+        actor: toStringValue(record['actor']) || undefined,
+        status:
+          toStringValue(record['status']) ||
+          toStringValue(toRecord(record['object'])?.['status']) ||
+          undefined,
+        payload: record
+      } satisfies OrderActivity;
+    })
+    .filter(isDefined);
+
+  return activities.length > 0 ? activities : undefined;
 }
 
 function toExecutionSteps(value: unknown): OrderExecutionStep[] | undefined {
@@ -622,6 +708,19 @@ function resolveExecutionEstimate(
   return normalizedEstimate || inferExecutionEstimate(title, localeText);
 }
 
+function latestActivityObject(payload: Record<string, unknown> | null): Record<string, unknown> | null {
+  if (!payload || !Array.isArray(payload['activities'])) {
+    return null;
+  }
+
+  const latestActivity = [...payload['activities']]
+    .map((item) => toRecord(item))
+    .filter(isDefined)
+    .at(-1);
+
+  return latestActivity ? unwrapActivityObject(latestActivity) : null;
+}
+
 function unwrapActivityObject(payload: unknown): Record<string, unknown> | null {
   const record = toRecord(payload);
   if (!record) {
@@ -1008,6 +1107,8 @@ export function parseStoredOrders(raw: string | null, localeText: KefineLocaleTe
         iterations: toIterations(order['iterations']),
         resultDocument,
         activitypub: toRecord(order['activitypub']) || undefined,
+        document: toOrderDocument(order['document']),
+        activities: toActivities(order['activities']),
         ownerProfileId: toStringValue(order['ownerProfileId']),
         ownerUsername: toStringValue(order['ownerUsername']),
         ownerDisplayName: toStringValue(order['ownerDisplayName']),
@@ -1024,7 +1125,10 @@ export function parseStoredOrders(raw: string | null, localeText: KefineLocaleTe
         templatePricingMode: toTemplatePricingMode(order['templatePricingMode']),
         templatePricingValue: toNumber(order['templatePricingValue']),
         templateFeeUsd: toNumber(order['templateFeeUsd']),
-        templateNetUsd: toNumber(order['templateNetUsd'])
+        templateNetUsd: toNumber(order['templateNetUsd']),
+        templatePromptTemplate: toStringValue(order['templatePromptTemplate']),
+        templateVariables: toTemplateVariables(order['templateVariables']),
+        templateVariableValues: toStringRecord(order['templateVariableValues'])
       };
     })
     .filter((order) => order.id.length > 0 && !order.id.startsWith('temp-') && !order.id.startsWith('local-'));
@@ -1101,7 +1205,8 @@ export function extractStatusPayload(
   const activityOrObject = unwrapActivityObject(payload);
   if (!activityOrObject) return null;
 
-  const source = activityOrObject;
+  const latestActivity = latestActivityObject(rootPayload);
+  const source = latestActivity ? { ...activityOrObject, ...latestActivity } : activityOrObject;
   const ticket = unwrapTicketPayload(source);
   const paymentLink = findPaymentLink(source) || findPaymentLink(ticket);
   const resultDocument = extractResultDocument(source) || extractResultDocument(ticket);
@@ -1206,6 +1311,8 @@ export function extractStatusPayload(
     iterations,
     resultDocument,
     activitypub: rootPayload || undefined,
+    document: toOrderDocument(source['document']) || toOrderDocument(ticket['document']) || toOrderDocument(rootPayload?.['document']),
+    activities: toActivities(rootPayload?.['activities']),
     ownerProfileId: toStringValue(source['ownerProfileId']) || toStringValue(ticket['ownerProfileId']) || undefined,
     ownerUsername: toStringValue(source['ownerUsername']) || toStringValue(ticket['ownerUsername']) || undefined,
     ownerDisplayName: toStringValue(source['ownerDisplayName']) || toStringValue(ticket['ownerDisplayName']) || undefined,
@@ -1224,7 +1331,11 @@ export function extractStatusPayload(
     templatePricingMode: toTemplatePricingMode(source['templatePricingMode']) || toTemplatePricingMode(ticket['templatePricingMode']),
     templatePricingValue: toNumber(source['templatePricingValue']) ?? toNumber(ticket['templatePricingValue']) ?? undefined,
     templateFeeUsd: toNumber(source['templateFeeUsd']) ?? toNumber(ticket['templateFeeUsd']) ?? undefined,
-    templateNetUsd: toNumber(source['templateNetUsd']) ?? toNumber(ticket['templateNetUsd']) ?? undefined
+    templateNetUsd: toNumber(source['templateNetUsd']) ?? toNumber(ticket['templateNetUsd']) ?? undefined,
+    templatePromptTemplate:
+      toStringValue(source['templatePromptTemplate']) || toStringValue(ticket['templatePromptTemplate']) || undefined,
+    templateVariables: toTemplateVariables(source['templateVariables']) || toTemplateVariables(ticket['templateVariables']),
+    templateVariableValues: toStringRecord(source['templateVariableValues']) || toStringRecord(ticket['templateVariableValues'])
   };
 }
 
@@ -1320,6 +1431,9 @@ export function buildCreatePayload(
     templateAuthorDisplayName: template?.authorDisplayName,
     templatePricingMode: template?.pricingMode,
     templatePricingValue: template?.pricingValue,
+    templatePromptTemplate: payload.templatePromptTemplate || template?.promptTemplate,
+    templateVariables: payload.templateVariables,
+    templateVariableValues: payload.templateVariableValues,
     ownerProfileId: owner?.ownerProfileId,
     ownerUsername: owner?.ownerUsername,
     ownerDisplayName: owner?.ownerDisplayName,

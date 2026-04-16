@@ -2,7 +2,7 @@
   import { browser } from '$app/environment';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
-  import KefineProfileCardInput from '$lib/components/kefine/KefineProfileCardInput.svelte';
+  import KefineServiceEditorPage from '$lib/components/kefine/KefineServiceEditorPage.svelte';
   import KefineProfileHeaderEditor from '$lib/components/kefine/KefineProfileHeaderEditor.svelte';
   import KefineProfileSocialLinksCard from '$lib/components/kefine/KefineProfileSocialLinksCard.svelte';
   import KefineProfileSetupDots from '$lib/components/kefine/KefineProfileSetupDots.svelte';
@@ -74,6 +74,7 @@
   const requestedHandle = $derived(page.params.handle ?? '');
   const activeLocale = $derived(readLocaleFromPathname(page.url.pathname) ?? 'en');
   const isOwner = $derived(Boolean(profile && viewerProfile && profile.id === viewerProfile.id));
+  const showServiceComposer = $derived(isOwner && page.url.searchParams.get('compose') === 'service');
   const runtimeConfig = $derived(resolvePublicRuntimeConfig(page.data.publicConfig));
   const canonicalProfilePath = $derived(profile ? localizeAppPath(buildProfilePath(profile.primaryHandle), activeLocale) : '');
   const setupMetadata = $derived((profile?.metadata ?? {}) as ProfileMetadata);
@@ -100,10 +101,6 @@
       return null;
     }
 
-    if (setupMetadata.profileSetupStep === 'card') {
-      return 'card' as const;
-    }
-
     if (setupMetadata.profileSetupStep === 'socials') {
       return 'socials' as const;
     }
@@ -115,7 +112,7 @@
     return 'identity' as const;
   });
   const onboardingStepIndex = $derived(
-    onboardingStep === 'identity' ? 1 : onboardingStep === 'card' ? 2 : onboardingStep === 'socials' ? 3 : 3
+    onboardingStep === 'identity' ? 1 : onboardingStep === 'socials' ? 3 : 3
   );
   const resolvedTheme = $derived(themeMode === 'auto' ? (systemPrefersDark ? 'dark' : 'light') : themeMode);
   const isDarkTheme = $derived(resolvedTheme === 'dark');
@@ -167,15 +164,6 @@
       href: localizeAppPath('/terms', activeLocale)
     }
   ]);
-  const cardDigits = $derived(cardNumber.replace(/\D+/g, '').slice(0, 16));
-  const cardPreview = $derived(
-    Array.from({ length: 16 }, (_, index) => cardDigits[index] ?? '0')
-      .join('')
-      .replace(/(.{4})/g, '$1 ')
-      .trim()
-  );
-  const cardHolderPreview = $derived(`${firstName.trim()} ${surname.trim()}`.trim() || profile?.displayName || 'LEFINE');
-
   function readProfileNameParts(currentProfile: Profile | null) {
     const metadata = (currentProfile?.metadata ?? {}) as ProfileMetadata;
     if (typeof metadata.firstName === 'string' && typeof metadata.surname === 'string') {
@@ -491,7 +479,7 @@
       return;
     }
 
-    await goto(localizeAppPath(`${buildProfilePath(profile.primaryHandle)}/services/new`, activeLocale));
+    await goto(`${localizeAppPath(buildProfilePath(profile.primaryHandle), activeLocale)}?compose=service`);
   }
 
   async function editTemplate(template: ProfileTemplate) {
@@ -574,7 +562,7 @@
       metadata: nextMetadata(current, {
         firstName: normalizedFirstName,
         surname: normalizedSurname,
-        profileSetupStep: 'card',
+        profileSetupStep: 'socials',
         profileSetupCompleted: false
       })
     }));
@@ -596,7 +584,7 @@
       return;
     }
 
-    const profileSetupStep = step === 1 ? 'identity' : step === 2 ? 'card' : 'socials';
+    const profileSetupStep = step === 1 ? 'identity' : 'socials';
     const updated = updateStoredProfile(localStorage, profile.id, (current) => ({
       ...current,
       metadata: nextMetadata(current, {
@@ -610,97 +598,9 @@
     }
   }
 
-  function skipCardStep() {
-    if (!browser || !profile || !isOwner) {
-      return;
-    }
-
-    const updated = updateStoredProfile(localStorage, profile.id, (current) => ({
-      ...current,
-      metadata: nextMetadata(current, {
-        profileSetupStep: 'socials',
-        profileSetupCompleted: false
-      })
-    }));
-
-    if (updated) {
-      profile = updated;
-    }
-  }
-
   function blockStepSubmitOnEnter(event: KeyboardEvent) {
     if (event.key === 'Enter') {
       event.preventDefault();
-    }
-  }
-
-  async function verifyProfileCard() {
-    if (!browser || !profile || !isOwner) {
-      return;
-    }
-
-    const digits = cardNumber.replace(/\D+/g, '');
-    if (digits.length < 6) {
-      return;
-    }
-
-    const response = await fetch('/api/profile/bin-lookup', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ cardNumber: digits })
-    }).catch(() => null);
-
-    if (!response) {
-      return;
-    }
-
-    const payload = (await response.json().catch(() => null)) as
-      | {
-          bin?: string;
-          scheme?: string | null;
-          cardType?: string | null;
-          bankName?: string | null;
-          countryAlpha2?: string | null;
-          countryName?: string | null;
-          isArmenianBank?: boolean;
-          bonusEligible?: boolean;
-          error?: string;
-        }
-      | null;
-
-    if (!payload || payload.error) {
-      return;
-    }
-
-    const verifiedAt = new Date().toISOString();
-    let updated = updateStoredProfile(localStorage, profile.id, (current) => ({
-      ...current,
-      cardVerification: {
-        status: payload.bonusEligible ? 'verified' : 'rejected',
-        bin: payload.bin ?? digits.slice(0, 8),
-        last4: digits.slice(-4),
-        scheme: payload.scheme ?? undefined,
-        cardType: payload.cardType ?? undefined,
-        bankName: payload.bankName ?? undefined,
-        countryAlpha2: payload.countryAlpha2 ?? undefined,
-        countryName: payload.countryName ?? undefined,
-        isArmenianBank: payload.isArmenianBank === true,
-        verifiedAt,
-        bonusGrantedAt: current.cardVerification?.bonusGrantedAt,
-        rejectionReason: payload.bonusEligible ? undefined : 'Card is not tied to an Armenian bank allowlist issuer.'
-      },
-      metadata: nextMetadata(current, {
-        profileSetupStep: 'socials',
-        profileSetupCompleted: false,
-        cardBonusEligible: payload.bonusEligible === true
-      })
-    }));
-
-    if (updated) {
-      profile = updated;
-      void loadProfilePageState();
     }
   }
 
@@ -876,6 +776,9 @@
       authenticatedLabel={viewerProfile ? `@${viewerProfile.primaryHandle}` : null}
       authenticatedSecondaryLabel={null}
       authenticatedAvatarUrl={null}
+      authMenuLabel={localeText.profile.title}
+      openProfileLabel={localeText.profile.title}
+      signOutLabel={localeText.profile.signOut}
       isAuthenticated={Boolean(viewerProfile)}
       isDarkTheme={isDarkTheme}
       isExpanded={leftNavExpanded}
@@ -901,6 +804,23 @@
           void signOut();
         } else {
           void goto(buildLocaleHomePath(activeLocale));
+        }
+      }}
+      onOpenProfile={() => {
+        if (viewerProfile) {
+          void goto(localizeAppPath(buildProfilePath(viewerProfile.primaryHandle), activeLocale));
+        }
+      }}
+      onSignOut={() => {
+        if (isOwner) {
+          void signOut();
+        } else {
+          void goto(buildLocaleHomePath(activeLocale));
+        }
+      }}
+      onAuthDoubleClick={() => {
+        if (viewerProfile && viewerProfile.metadata?.profileSetupCompleted !== true) {
+          void goto(localizeAppPath(buildProfilePath(viewerProfile.primaryHandle), activeLocale));
         }
       }}
       onLocale={(locale: KefineLocale) => {
@@ -972,48 +892,6 @@
                 </button>
               </lefine-box>
             </section>
-          {:else if onboardingStep === 'card'}
-            <section class="profile-surface profile-step-surface profile-step-surface--card">
-              <KefineProfileHeaderEditor
-                bind:firstName
-                bind:surname
-                bind:username
-                isOwner={true}
-                isSetup={true}
-                isEmbedded={true}
-                displayName={profile.displayName}
-                canonicalProfilePath={canonicalProfilePath}
-                bio={bio}
-                firstNameLabel={localeText.profile.firstName}
-                surnameLabel={localeText.profile.surname}
-                usernameLabel={localeText.profile.username}
-                onFieldKeydown={blockStepSubmitOnEnter}
-              />
-              <lefine-box class="profile-step-dots-wrap">
-                <KefineProfileSetupDots currentStep={2} onSelect={goToOnboardingStep} />
-              </lefine-box>
-              <lefine-box class="profile-card-stage">
-                <article class="profile-bonus-copy">
-                  <small>{localeText.profile.cardStepTitle}</small>
-                  <h2>{localeText.profile.bonusTitle}</h2>
-                  <p>{localeText.profile.bonusText}</p>
-                </article>
-
-                <article class="profile-card-form">
-                  <KefineProfileCardInput
-                    bind:cardNumber
-                    title={localeText.profile.bonusTitle}
-                    description={localeText.profile.bonusText}
-                    holderName={cardHolderPreview}
-                    verifyLabel={localeText.profile.verifyCard}
-                    skipLabel={localeText.profile.skipCard}
-                    status={profile.cardVerification}
-                    onVerify={verifyProfileCard}
-                    onSkip={skipCardStep}
-                  />
-                </article>
-              </lefine-box>
-            </section>
           {:else if onboardingStep === 'socials'}
             <section class="profile-surface profile-step-surface">
               <KefineProfileHeaderEditor
@@ -1054,6 +932,8 @@
               </lefine-box>
             </section>
           {/if}
+        {:else if showServiceComposer}
+          <KefineServiceEditorPage profile={profile} craterBaseUrl={runtimeConfig.backend.craterBaseUrl} />
         {:else}
           <article class="profile-surface profile-details">
             <lefine-box class="profile-section__head">
@@ -1116,22 +996,6 @@
               />
               </lefine-box>
 
-              <section class="profile-section profile-section--bonus">
-                <small>Armenian banks</small>
-                <strong>$100 bonus</strong>
-                <p>{localeText.profile.cardHint}</p>
-                {#if profile.cardVerification}
-                  <lefine-box class="profile-card-verification-note" data-status={profile.cardVerification.status}>
-                    <strong>{profile.cardVerification.bankName ?? 'Unknown bank'}</strong>
-                    <lefine-text>
-                      {profile.cardVerification.countryName ?? 'Unknown country'} · BIN {profile.cardVerification.bin}
-                    </lefine-text>
-                    {#if profile.cardVerification.rejectionReason}
-                      <small>{profile.cardVerification.rejectionReason}</small>
-                    {/if}
-                  </lefine-box>
-                {/if}
-              </section>
             </lefine-box>
 
             {#if isOwner}
@@ -1224,80 +1088,6 @@
       {/if}
     </lefine-box>
 
-    <article class="profile-surface profile-services">
-      <lefine-box class="profile-section__head">
-        <lefine-box>
-          <strong>{localeText.profile.templates}</strong>
-          <p>{localeText.profile.templatesSubtitle}</p>
-        </lefine-box>
-        {#if isOwner}
-          <button type="button" data-variant="ghost" onclick={createTemplate}>
-            {localeText.profile.createTemplate}
-          </button>
-        {/if}
-      </lefine-box>
-
-      {#if isOwner && profileTemplates.length === 0}
-        <button type="button" class="profile-service-cta" onclick={createTemplate}>
-          <strong>{localeText.profile.templateCreateCtaTitle}</strong>
-          <p>{localeText.profile.templateCreateCtaDetail}</p>
-          <lefine-text>{localeText.profile.templateOpenEditor}</lefine-text>
-        </button>
-      {/if}
-
-      {#if visibleProfileTemplates.length > 0}
-        <lefine-box class="profile-template-list">
-          {#each visibleProfileTemplates as template (template.id)}
-            {@const localized = resolveTemplateLocalizedContent(template, $kefineLocale)}
-            {@const title = localized.title}
-            {@const description = localized.description || localized.promptTemplate}
-            {@const visibility = template.visibility ?? (template.isPublished ? 'public' : 'private')}
-            <article class="profile-template-card">
-              <lefine-box class="profile-template-card__body">
-                {#if template.imageDataUrl}
-                  <img class="profile-template-card__image" src={template.imageDataUrl} alt="" />
-                {:else}
-                  <lefine-box
-                    class="profile-template-card__icon"
-                    data-accent={getServiceAccentToken(title)}
-                    aria-hidden="true"
-                  >
-                    <lefine-text>{getServiceInitial(title)}</lefine-text>
-                  </lefine-box>
-                {/if}
-
-                <lefine-box class="profile-template-card__copy">
-                  <strong>{title}</strong>
-                  <p>{description}</p>
-                </lefine-box>
-
-                <a class="profile-template-card__link" href={localizeAppPath(buildCanonicalServicePath(profile.primaryHandle, template.slug, runtimeConfig.defaultActor.handle), activeLocale)}>
-                  {localeText.profile.templateOpen}
-                </a>
-              </lefine-box>
-
-              {#if isOwner}
-                <lefine-box class="profile-template-card__actions">
-                  <lefine-text>{visibility === 'public' ? localeText.profile.templatePublic : localeText.profile.templatePrivate}</lefine-text>
-                  <button type="button" data-variant="ghost" onclick={() => copyTemplateLink(template)}>
-                    {templateCopyId === template.id ? localeText.profile.templateLinkCopied : localeText.profile.templateCopyLink}
-                  </button>
-                  <button type="button" data-variant="ghost" onclick={() => editTemplate(template)}>{localeText.profile.templateOpenEditor}</button>
-                  <button type="button" data-variant="ghost" onclick={() => toggleTemplatePublish(template)}>
-                    {visibility === 'public' ? localeText.profile.templatePrivate : localeText.profile.templatePublic}
-                  </button>
-                  <button type="button" data-variant="ghost" onclick={() => removeTemplate(template.id)}>
-                    {localeText.profile.templateDelete}
-                  </button>
-                </lefine-box>
-              {/if}
-            </article>
-          {/each}
-        </lefine-box>
-      {:else if !isOwner}
-        <p>{localeText.profile.noTemplates}</p>
-      {/if}
-    </article>
   </section>
 {/if}
 
@@ -1492,21 +1282,12 @@
     color: var(--kef-color-muted);
   }
 
-  .profile-bonus-copy,
-  .profile-card-form {
-    display: grid;
-    gap: 0.4rem;
-  }
-
-  .profile-bonus-copy h2,
-  .profile-bonus-copy p,
   .profile-task__head p,
   .profile-section__head p {
     margin: 0;
   }
 
-  .profile-section__head p,
-  .profile-bonus-copy small {
+  .profile-section__head p {
     color: var(--kef-color-muted);
   }
 
@@ -1556,23 +1337,6 @@
     position: relative;
     min-height: calc(100vh - 24rem);
     padding: 1.5rem 1.5rem 2rem;
-  }
-
-  .profile-step-surface--card {
-    align-content: start;
-  }
-
-  .profile-step-dots-wrap {
-    display: flex;
-    justify-content: center;
-    padding-top: 0.1rem;
-  }
-
-  .profile-card-stage {
-    display: grid;
-    grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
-    gap: 1rem;
-    align-items: start;
   }
 
   .profile-identity-input {
@@ -1664,60 +1428,11 @@
     width: 100%;
   }
 
-  .profile-bonus-copy,
-  .profile-card-form,
   .profile-rules__row {
     padding: 1rem;
     border-radius: 1rem;
     background: color-mix(in oklab, var(--kef-color-bg) 45%, var(--kef-color-bg-card));
     border: 1px solid color-mix(in oklab, var(--kef-color-text) 8%, transparent);
-  }
-
-  .profile-card-form {
-    align-content: start;
-    gap: 1rem;
-  }
-
-  .profile-step-surface--card .profile-bonus-copy {
-    align-content: center;
-  }
-
-  .profile-step-surface--card .profile-card-form {
-    width: 100%;
-    margin: 0;
-  }
-
-  .profile-section--bonus {
-    align-content: start;
-  }
-
-  .profile-section--bonus strong,
-  .profile-section--bonus p {
-    margin: 0;
-  }
-
-  .profile-section--bonus small {
-    color: var(--kef-color-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    margin: 0;
-  }
-
-  .profile-card-verification-note {
-    display: grid;
-    gap: 0.35rem;
-    padding: 0.9rem 1rem;
-    border-radius: 1rem;
-    background: color-mix(in oklab, var(--kef-color-bg) 45%, var(--kef-color-bg-card));
-    border: 1px solid color-mix(in oklab, var(--kef-color-text) 8%, transparent);
-  }
-
-  .profile-card-verification-note[data-status='verified'] {
-    background: color-mix(in oklab, var(--kef-color-success) 16%, var(--kef-color-bg-card));
-  }
-
-  .profile-card-verification-note[data-status='rejected'] {
-    background: color-mix(in oklab, var(--kef-color-error) 12%, var(--kef-color-bg-card));
   }
 
   .profile-setup__footer,
@@ -1741,225 +1456,6 @@
   .profile-task__actions {
     justify-content: flex-end;
     flex-wrap: wrap;
-  }
-
-  .profile-services,
-  .profile-template-list,
-  .profile-template-card,
-  .profile-template-card__body,
-  .profile-template-card__copy {
-    display: grid;
-    gap: 0.9rem;
-  }
-
-  .profile-services {
-    margin-top: 0.25rem;
-  }
-
-  .profile-template-card {
-    padding: 1rem;
-    border-radius: 1rem;
-    background: color-mix(in oklab, var(--kef-color-bg) 45%, var(--kef-color-bg-card));
-    border: 1px solid color-mix(in oklab, var(--kef-color-text) 8%, transparent);
-  }
-
-  .profile-template-card__body,
-  .profile-template-card__actions {
-    display: flex;
-    gap: 0.75rem;
-    align-items: flex-start;
-    justify-content: space-between;
-    flex-wrap: wrap;
-  }
-
-  .profile-template-card__copy {
-    flex: 1 1 14rem;
-    min-width: 0;
-    align-content: center;
-  }
-
-  .profile-template-card__copy p,
-  .profile-template-card__copy strong {
-    margin: 0;
-  }
-
-  .profile-template-card__copy p {
-    color: var(--kef-color-muted);
-    line-height: 1.5;
-    line-clamp: 2;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
-  .profile-template-card__image {
-    width: 3rem;
-    height: 3rem;
-    border-radius: 1rem;
-    object-fit: cover;
-    flex: 0 0 auto;
-  }
-
-  .profile-template-card__icon {
-    width: 3rem;
-    height: 3rem;
-    border-radius: 1rem;
-    display: grid;
-    place-items: center;
-    flex: 0 0 auto;
-    color: white;
-    box-shadow: inset 0 1px 0 color-mix(in oklab, white 18%, transparent);
-  }
-
-  .profile-template-card__icon {
-    font-size: 1rem;
-    font-weight: 700;
-    line-height: 1;
-  }
-
-  .profile-template-card__icon[data-accent='gold'] {
-    background:
-      radial-gradient(circle at top left, color-mix(in oklab, white 20%, #d6a23d), transparent 62%),
-      linear-gradient(180deg, color-mix(in oklab, #d6a23d 92%, black 8%), color-mix(in oklab, #d6a23d 72%, black 28%));
-  }
-
-  .profile-template-card__icon[data-accent='coral'] {
-    background:
-      radial-gradient(circle at top left, color-mix(in oklab, white 20%, #d86c4b), transparent 62%),
-      linear-gradient(180deg, color-mix(in oklab, #d86c4b 92%, black 8%), color-mix(in oklab, #d86c4b 72%, black 28%));
-  }
-
-  .profile-template-card__icon[data-accent='rose'] {
-    background:
-      radial-gradient(circle at top left, color-mix(in oklab, white 20%, #cf5b7c), transparent 62%),
-      linear-gradient(180deg, color-mix(in oklab, #cf5b7c 92%, black 8%), color-mix(in oklab, #cf5b7c 72%, black 28%));
-  }
-
-  .profile-template-card__icon[data-accent='plum'] {
-    background:
-      radial-gradient(circle at top left, color-mix(in oklab, white 20%, #7f59c9), transparent 62%),
-      linear-gradient(180deg, color-mix(in oklab, #7f59c9 92%, black 8%), color-mix(in oklab, #7f59c9 72%, black 28%));
-  }
-
-  .profile-template-card__icon[data-accent='sky'] {
-    background:
-      radial-gradient(circle at top left, color-mix(in oklab, white 20%, #4d8fd8), transparent 62%),
-      linear-gradient(180deg, color-mix(in oklab, #4d8fd8 92%, black 8%), color-mix(in oklab, #4d8fd8 72%, black 28%));
-  }
-
-  .profile-template-card__icon[data-accent='teal'] {
-    background:
-      radial-gradient(circle at top left, color-mix(in oklab, white 20%, #2f9d88), transparent 62%),
-      linear-gradient(180deg, color-mix(in oklab, #2f9d88 92%, black 8%), color-mix(in oklab, #2f9d88 72%, black 28%));
-  }
-
-  .profile-template-card__link,
-  .profile-template-card__actions lefine-text {
-    display: inline-flex;
-    align-items: center;
-    min-height: 2.5rem;
-    padding: 0.45rem 0.7rem;
-    border-radius: 999px;
-    background: color-mix(in oklab, var(--kef-color-bg-card) 82%, transparent);
-    border: 1px solid color-mix(in oklab, var(--kef-color-text) 8%, transparent);
-    text-decoration: none;
-    flex: 0 0 auto;
-  }
-
-  .profile-template-card__link {
-    align-self: center;
-    font-weight: 600;
-  }
-
-  .profile-template-card__actions {
-    padding-top: 0.1rem;
-    border-top: 1px solid color-mix(in oklab, var(--kef-color-text) 8%, transparent);
-  }
-
-  .profile-template-card__actions lefine-text {
-    color: var(--kef-color-muted);
-  }
-
-  .profile-service-cta {
-    display: grid;
-    gap: 0.65rem;
-    position: relative;
-    overflow: hidden;
-    text-align: left;
-    padding: 1.55rem 1.4rem;
-    border-radius: 1.6rem;
-    border: 1px solid transparent;
-    background:
-      linear-gradient(180deg, color-mix(in oklab, var(--kef-color-bg-card) 92%, black 8%), color-mix(in oklab, var(--kef-color-bg-card) 84%, black 16%)) padding-box,
-      linear-gradient(
-        135deg,
-        color-mix(in oklab, var(--kef-color-primary) 42%, white 20%),
-        color-mix(in oklab, var(--kef-color-primary) 18%, transparent) 28%,
-        color-mix(in oklab, white 26%, var(--kef-color-primary) 20%) 52%,
-        color-mix(in oklab, var(--kef-color-primary) 48%, black 6%)
-      ) border-box;
-    color: inherit;
-    cursor: pointer;
-    box-shadow:
-      inset 0 1px 0 color-mix(in oklab, white 10%, transparent),
-      inset 0 0 0 1px color-mix(in oklab, var(--kef-color-primary) 14%, transparent),
-      0 18px 40px color-mix(in oklab, black 42%, transparent);
-    transition:
-      transform 160ms ease,
-      box-shadow 160ms ease,
-      border-color 160ms ease;
-  }
-
-  .profile-service-cta::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    pointer-events: none;
-    background:
-      radial-gradient(circle at top left, color-mix(in oklab, var(--kef-color-primary) 26%, transparent), transparent 42%),
-      radial-gradient(circle at right center, color-mix(in oklab, white 10%, transparent), transparent 32%);
-    opacity: 0.9;
-  }
-
-  .profile-service-cta:hover {
-    transform: translateY(-1px);
-    box-shadow:
-      inset 0 1px 0 color-mix(in oklab, white 12%, transparent),
-      inset 0 0 0 1px color-mix(in oklab, var(--kef-color-primary) 18%, transparent),
-      0 24px 54px color-mix(in oklab, black 48%, transparent);
-  }
-
-  .profile-service-cta:focus-visible {
-    outline: none;
-    box-shadow:
-      0 0 0 3px color-mix(in oklab, var(--kef-color-primary) 24%, transparent),
-      inset 0 1px 0 color-mix(in oklab, white 12%, transparent),
-      inset 0 0 0 1px color-mix(in oklab, var(--kef-color-primary) 22%, transparent),
-      0 24px 54px color-mix(in oklab, black 48%, transparent);
-  }
-
-  .profile-service-cta strong {
-    font-size: clamp(1.45rem, 3vw, 2.25rem);
-    line-height: 0.98;
-    letter-spacing: -0.04em;
-    font-weight: 700;
-    color: color-mix(in oklab, var(--kef-color-text) 82%, transparent);
-  }
-
-  .profile-service-cta strong,
-  .profile-service-cta p,
-  .profile-service-cta lefine-text {
-    margin: 0;
-  }
-
-  .profile-service-cta p {
-    color: var(--kef-color-muted);
-  }
-
-  .profile-service-cta lefine-text {
-    color: color-mix(in oklab, white 75%, var(--kef-color-primary));
   }
 
   .profile-rules__row .profile-toggle {
@@ -2005,24 +1501,6 @@
     .profile-section__head {
       align-items: flex-start;
       flex-direction: column;
-    }
-
-    .profile-step-surface--card .profile-card-form,
-    .profile-step-surface--card .profile-bonus-copy {
-      width: 100%;
-    }
-
-    .profile-card-stage {
-      grid-template-columns: 1fr;
-    }
-
-    .profile-template-card__body {
-      align-items: flex-start;
-    }
-
-    .profile-template-card__link {
-      width: 100%;
-      justify-content: center;
     }
 
   }

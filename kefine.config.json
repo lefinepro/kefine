@@ -1,15 +1,10 @@
 {
   "app": {
     "name": "Lefine",
-    "supportEmail": "order@lefine.pro",
+    "supportEmail": "support@lefine.pro",
     "githubUrl": "https://github.com/lefinepro",
     "reownProjectId": "909acf523be03f300ad21cca95d966c8",
-    "socialLinks": {
-      "mastodon": "https://mastodon.social/@lefine",
-      "discord": "https://discord.com/invite/lefine",
-      "linkedin": "https://www.linkedin.com/company/lefine",
-      "telegram": "https://t.me/lefine"
-    },
+    "socialLinks": {},
     "legalUpdatedAt": {
       "en": "March 2026",
       "ru": "Март 2026",
@@ -22,8 +17,8 @@
     "task": "https://dev-proxy.col.pub"
   },
   "backend": {
-    "craterBaseUrl": "https://dev-proxy.col.pub",
-    "exchangeBaseUrl": "https://dev-proxy.col.pub",
+    "craterBaseUrl": "http://127.0.0.1:3001",
+    "exchangeBaseUrl": "https://exchange.lefine.pro",
     "port": 3001,
     "host": "0.0.0.0",
     "environment": "development",
@@ -54,7 +49,7 @@
   "defaultActor": {
     "handle": "api",
     "displayName": "API",
-    "privateKeyPem": ""
+    "privateKey": "pqsk_17d978eb5ac4ed2f554df0056"
   },
   "services": [
     {

@@ -104,14 +104,26 @@ function encodeCompactBytes(bytes: Uint8Array, prefix = ''): string {
 	return `${prefix}${btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')}`;
 }
 
+function decodeBase64Url(encoded: string, errorMessage: string): string {
+	if (!encoded) {
+		return '';
+	}
+
+	try {
+		const padded = encoded + '='.repeat((4 - (encoded.length % 4)) % 4);
+		return atob(padded.replace(/-/g, '+').replace(/_/g, '/'));
+	} catch {
+		throw new Error(errorMessage);
+	}
+}
+
 function decodeCompactBytes(value: string, prefix = ''): Uint8Array {
 	const encoded = prefix ? value.slice(prefix.length) : value;
 	if (!encoded) {
 		return new Uint8Array();
 	}
 
-	const padded = encoded + '='.repeat((4 - (encoded.length % 4)) % 4);
-	const binary = atob(padded.replace(/-/g, '+').replace(/_/g, '/'));
+	const binary = decodeBase64Url(encoded, 'Private key is not a valid compact pqsk key.');
 	return Uint8Array.from(binary, (char) => char.charCodeAt(0));
 }
 
@@ -121,27 +133,39 @@ function decodeKeyString(value: string, prefix: string): string {
 		return '';
 	}
 
-	const padded = encoded + '='.repeat((4 - (encoded.length % 4)) % 4);
-	const binary = atob(padded.replace(/-/g, '+').replace(/_/g, '/'));
+	const binary = decodeBase64Url(encoded, 'Private key is not a valid compact pqsk key.');
 	return Array.from(binary, (char) => String.fromCharCode(char.charCodeAt(0))).join('');
 }
 
-export async function derivePublicKeyFromPrivateKey(privateKey: string): Promise<string> {
+function normalizeMlDsaPrivateKey(privateKey: string): string {
 	const normalizedInput = normalizePrivateKeyInput(privateKey);
 	if (!normalizedInput) {
 		throw new Error('Private key is required.');
 	}
 
-	const normalized = normalizedInput.startsWith(PRIVATE_KEY_PREFIX)
-		? (() => {
-			const decodedText = decodeKeyString(normalizedInput, PRIVATE_KEY_PREFIX);
-			if (decodedText.includes('BEGIN PRIVATE KEY')) {
-				return normalizePrivateKeyInput(decodedText);
-			}
+	if (!normalizedInput.startsWith(PRIVATE_KEY_PREFIX)) {
+		if (!normalizedInput.includes('BEGIN PRIVATE KEY')) {
+			throw new Error('Paste a valid pqsk key or the full PEM private key string.');
+		}
 
-			return encodePem('PRIVATE KEY', decodeCompactBytes(normalizedInput, PRIVATE_KEY_PREFIX));
-		})()
-		: normalizedInput;
+		return normalizedInput;
+	}
+
+	const decodedText = decodeKeyString(normalizedInput, PRIVATE_KEY_PREFIX);
+	if (decodedText.includes('BEGIN PRIVATE KEY')) {
+		return normalizePrivateKeyInput(decodedText);
+	}
+
+	const decodedBytes = decodeCompactBytes(normalizedInput, PRIVATE_KEY_PREFIX);
+	if (!decodedBytes.length) {
+		throw new Error('Private key is not a valid compact pqsk key.');
+	}
+
+	return encodePem('PRIVATE KEY', decodedBytes);
+}
+
+export async function derivePublicKeyFromPrivateKey(privateKey: string): Promise<string> {
+	const normalized = normalizeMlDsaPrivateKey(privateKey);
 
 	if (!normalized.includes('BEGIN PRIVATE KEY')) {
 		throw new Error('Paste a compact pqsk key or the full PEM private key string.');
@@ -164,21 +188,7 @@ export async function derivePublicKeyFromPrivateKey(privateKey: string): Promise
 }
 
 export async function derivePortablePublicKeyFromPrivateKey(privateKey: string): Promise<string> {
-	const normalizedInput = normalizePrivateKeyInput(privateKey);
-	if (!normalizedInput) {
-		throw new Error('Private key is required.');
-	}
-
-	const normalized = normalizedInput.startsWith(PRIVATE_KEY_PREFIX)
-		? (() => {
-			const decodedText = decodeKeyString(normalizedInput, PRIVATE_KEY_PREFIX);
-			if (decodedText.includes('BEGIN PRIVATE KEY')) {
-				return normalizePrivateKeyInput(decodedText);
-			}
-
-			return encodePem('PRIVATE KEY', decodeCompactBytes(normalizedInput, PRIVATE_KEY_PREFIX));
-		})()
-		: normalizedInput;
+	const normalized = normalizeMlDsaPrivateKey(privateKey);
 
 	const privateKeyDer = decodePemBody(normalized);
 	if (privateKeyDer.length < ML_DSA_65_SECRET_KEY_LENGTH) {
