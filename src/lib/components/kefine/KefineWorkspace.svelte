@@ -85,6 +85,7 @@
     readProfiles,
     updateStoredProfile
   } from '$lib/profile/profile-storage';
+  import { buildLocaleHomePath, localizeAppPath, readLocaleFromPathname, stripLocalePrefix } from '$lib/routing/kefine-locale-routing';
 
   const THEME_STORAGE_KEY = 'kefine-theme';
   const BRAND_HOME_NAVIGATION_STORAGE_KEY = 'kefine-brand-home-navigation';
@@ -102,6 +103,7 @@
   } = $props();
   const localeText = $derived($kefineLocaleText);
   const runtimeConfig = $derived(resolvePublicRuntimeConfig(page.data.publicConfig));
+  const activeLocale = $derived(readLocaleFromPathname(page.url.pathname) ?? 'en');
 
   function getNormalizedInitialOrderId() {
     return initialOrderId?.trim() || null;
@@ -488,12 +490,12 @@
     {
       id: 'privacy' as const,
       label: localeText.topbar.legalLinks.privacy,
-      href: '/privacy'
+      href: localizeAppPath('/privacy', activeLocale)
     },
     {
       id: 'terms' as const,
       label: localeText.topbar.legalLinks.terms,
-      href: '/terms'
+      href: localizeAppPath('/terms', activeLocale)
     }
   ]);
   const remainingAmount = $derived(currentOrder?.estimatedCost ?? 0);
@@ -512,8 +514,8 @@
     const isTaskRoute =
       getNormalizedInitialOrderId() !== null ||
       (browser &&
-        (/^\/task\//.test(window.location.pathname.replace(/\/+$/, '')) ||
-          /^\/@[^/]+\/order\/[^/]+/.test(window.location.pathname.replace(/\/+$/, ''))));
+        (/^\/task\//.test(stripLocalePrefix(window.location.pathname).replace(/\/+$/, '')) ||
+          /^\/@[^/]+\/order\/[^/]+/.test(stripLocalePrefix(window.location.pathname).replace(/\/+$/, ''))));
 
     if (isTaskRoute) {
       return title ? `${title} | Lefine` : 'Loading task | Lefine';
@@ -535,14 +537,17 @@
     passkeyLabel: normalizedPasskeyLabel
   });
   const profileUrl = $derived(
-    currentProfile && browser ? `${window.location.origin}${buildProfilePath(currentProfile.primaryHandle)}` : ''
+    currentProfile && browser ? `${window.location.origin}${localizeAppPath(buildProfilePath(currentProfile.primaryHandle), activeLocale)}` : ''
   );
   const activeTemplatePath = $derived.by(() => {
     if (!initialTemplateHandle || !initialTemplateSlug) {
-      return '/';
+      return buildLocaleHomePath(activeLocale);
     }
 
-    return buildCanonicalServicePath(initialTemplateHandle, initialTemplateSlug, runtimeConfig.defaultActor.handle);
+    return localizeAppPath(
+      buildCanonicalServicePath(initialTemplateHandle, initialTemplateSlug, runtimeConfig.defaultActor.handle),
+      activeLocale
+    );
   });
   const isVpnTemplateRoute = $derived.by(() => {
     const handle = initialTemplateHandle?.trim().toLowerCase();
@@ -1012,11 +1017,11 @@
       return;
     }
 
-    if (suppressProfileRedirect && page.url.pathname === '/') {
+    if (suppressProfileRedirect && stripLocalePrefix(page.url.pathname) === '/') {
       return;
     }
 
-    const targetPath = buildProfilePath(currentProfile.primaryHandle);
+    const targetPath = localizeAppPath(buildProfilePath(currentProfile.primaryHandle), activeLocale);
     const nextRedirectKey = `${activeSessionProfileSeed?.userId ?? ''}|${targetPath}`;
 
     if (profileRedirectKey === nextRedirectKey || page.url.pathname === targetPath) {
@@ -1158,7 +1163,7 @@
       getRouteActorHandleFallback();
 
     if (orderId && actorHandle) {
-      nextUrl.pathname = buildActorOrderPath(actorHandle, orderId);
+      nextUrl.pathname = localizeAppPath(buildActorOrderPath(actorHandle, orderId), activeLocale);
       nextUrl.search = '';
       nextUrl.hash =
         step === 'payment' && paymentStage === 'result-ready'
@@ -1173,7 +1178,7 @@
       return;
     }
 
-    if (page.url.pathname !== '/') {
+    if (stripLocalePrefix(page.url.pathname) !== '/') {
       suppressProfileRedirect = false;
       sessionStorage.removeItem(BRAND_HOME_NAVIGATION_STORAGE_KEY);
     }
@@ -1249,6 +1254,7 @@
     markBrandHomeNavigationIntent();
     leftNavExpanded = false;
     newOrder();
+    void goto(buildLocaleHomePath(activeLocale), { replaceState: true });
   }
 
   async function selectTopbarAuth() {
@@ -1264,7 +1270,7 @@
       return;
     }
 
-    await goto(buildProfilePath(currentProfile.primaryHandle));
+    await goto(localizeAppPath(buildProfilePath(currentProfile.primaryHandle), activeLocale));
   }
 
   async function maybeOpenProfileAfterAuth(args: {
@@ -1311,7 +1317,7 @@
         ensuredProfile.metadata?.['profileSetupCompleted'] !== true;
 
       if (shouldOpenProfile && !draftQueued && !currentOrder && !suppressPostAuthProfileRedirect) {
-        await goto(buildProfilePath(ensuredProfile.primaryHandle));
+        await goto(localizeAppPath(buildProfilePath(ensuredProfile.primaryHandle), activeLocale));
       }
       return;
     }
@@ -1334,7 +1340,7 @@
       ensuredProfile.metadata?.['profileSetupCompleted'] !== true;
 
     if (shouldOpenProfile && !draftQueued && !currentOrder && !suppressPostAuthProfileRedirect) {
-      await goto(buildProfilePath(ensuredProfile.primaryHandle));
+      await goto(localizeAppPath(buildProfilePath(ensuredProfile.primaryHandle), activeLocale));
     }
   }
 
@@ -1357,6 +1363,7 @@
 
   function selectTopbarLocale(locale: KefineLocale) {
     setKefineLocale(locale);
+    void goto(buildLocaleHomePath(locale));
   }
 
   function loadCreatedOrders() {
@@ -2325,7 +2332,7 @@
     onBrandClick={handleTopbarBrandClick}
     onOpenEmailDialog={() => {
       if (browser) {
-        window.location.assign('/contact');
+        window.location.assign(localizeAppPath('/contact', activeLocale));
       }
     }}
     onThemeChange={(theme) => { themeMode = theme; }}

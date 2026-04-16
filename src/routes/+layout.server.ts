@@ -1,5 +1,6 @@
 import type { LayoutServerLoad } from './$types';
 import { getPublicRuntimeConfig } from '$lib/server/kefine-config';
+import { readLocaleFromPathname } from '$lib/routing/kefine-locale-routing';
 
 function resolveRequestOrigin(url: URL, request: Request): string {
   const forwardedProto = request.headers.get('x-forwarded-proto')?.split(',')[0]?.trim();
@@ -22,6 +23,7 @@ function resolveRequestOrigin(url: URL, request: Request): string {
 export const load: LayoutServerLoad = ({ url, request }) => {
   return {
     publicConfig: getPublicRuntimeConfig(),
-    requestOrigin: resolveRequestOrigin(url, request)
+    requestOrigin: resolveRequestOrigin(url, request),
+    initialLocale: readLocaleFromPathname(url.pathname) ?? 'en'
   };
 };

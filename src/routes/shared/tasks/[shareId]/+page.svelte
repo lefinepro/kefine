@@ -16,6 +16,7 @@
     getProfileById,
     buildProfilePath
   } from '$lib/profile/profile-storage';
+  import { localizeAppPath, readLocaleFromPathname } from '$lib/routing/kefine-locale-routing';
 
   const localeText: KefineLocaleText =
     (typeof document !== 'undefined' && document.documentElement.lang === 'ru' ? KEFINE_TEXT_RU : KEFINE_TEXT_EN) as
@@ -26,6 +27,7 @@
   let viewerProfile = $state<Profile | null>(null);
   let grantedKinds = $state<TaskAccessMode[]>([]);
   let unavailable = $state(false);
+  const activeLocale = $derived(readLocaleFromPathname(page.url.pathname) ?? 'en');
   const canSeeFullTask = $derived(
     order
       ? viewerProfile?.id === order.ownerProfileId ||
@@ -114,7 +116,7 @@
       <lef-shared-task-head>
         <h1>{order.title}</h1>
         {#if ownerProfile}
-          <a href={buildProfilePath(ownerProfile.primaryHandle || ownerProfile.username)}>{ownerProfile.displayName}</a>
+          <a href={localizeAppPath(buildProfilePath(ownerProfile.primaryHandle || ownerProfile.username), activeLocale)}>{ownerProfile.displayName}</a>
         {/if}
       </lef-shared-task-head>
       <p>{canSeeFullTask ? order.description : `${localeText.profile.buyView} to unlock the full task details.`}</p>

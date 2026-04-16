@@ -12,6 +12,7 @@
   import { readBrowserPublicRuntimeConfig } from '$lib/config/public-config';
   import { parseStoredOrders } from '$lib/components/kefine/kefine-workflow';
   import { fetchTemplateByHandleAndSlug } from '$lib/templates/template-api';
+  import { localizeAppPath, readLocaleFromPathname } from '$lib/routing/kefine-locale-routing';
   import type { OrderView, TaskAccessMode } from '$lib/components/kefine/kefine-workflow';
   import type { Profile, ProfileTemplate } from '$lib/types/user';
   import {
@@ -38,6 +39,7 @@
   let redirectingTemplate = $state(false);
   let loadKey = $state('');
   const runtimeConfig = $derived(readBrowserPublicRuntimeConfig());
+  const activeLocale = $derived(readLocaleFromPathname(page.url.pathname) ?? 'en');
   const isOwnerTemplateView = $derived(Boolean(template && ownerProfile && viewerProfile && ownerProfile.id === viewerProfile.id));
   const canSeeFullTask = $derived(
     order
@@ -136,7 +138,7 @@
 
       if (template && (template.visibility ?? (template.isPublished ? 'public' : 'private')) === 'public') {
         redirectingTemplate = true;
-        void goto(buildCanonicalServicePath(ownerProfile.primaryHandle, template.slug, runtimeConfig.defaultActor.handle), { replaceState: true });
+        void goto(localizeAppPath(buildCanonicalServicePath(ownerProfile.primaryHandle, template.slug, runtimeConfig.defaultActor.handle), activeLocale), { replaceState: true });
         return;
       }
 
@@ -230,7 +232,7 @@
         <lef-shared-task-head>
           <h1>{order.title}</h1>
           {#if ownerProfile}
-            <a href={buildProfilePath(ownerProfile.primaryHandle || ownerProfile.username)}>{ownerProfile.displayName}</a>
+            <a href={localizeAppPath(buildProfilePath(ownerProfile.primaryHandle || ownerProfile.username), activeLocale)}>{ownerProfile.displayName}</a>
           {/if}
         </lef-shared-task-head>
         <p>{canSeeFullTask ? order.description : `${localeText.profile.buyView} to unlock the full task details.`}</p>

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { browser } from '$app/environment';
   import { goto } from '$app/navigation';
   import KefineChipButton from '$lib/components/kefine/KefineChipButton.svelte';
   import KefineChipEditorRow from '$lib/components/kefine/KefineChipEditorRow.svelte';
@@ -21,6 +22,7 @@ import { kefineLocale, kefineLocaleText, type KefineLocale } from '$lib/constant
     ProfileTemplateVariable,
     ProfileTemplateVisibility
   } from '$lib/types/user';
+  import { localizeAppPath, readLocaleFromPathname } from '$lib/routing/kefine-locale-routing';
 
   let {
     profile,
@@ -33,6 +35,7 @@ import { kefineLocale, kefineLocaleText, type KefineLocale } from '$lib/constant
   } = $props();
 
   const localeText = $derived($kefineLocaleText);
+  const activeLocale = $derived(browser ? (readLocaleFromPathname(window.location.pathname) ?? 'en') : 'en');
 
   let title = $state('');
   let slugInput = $state('');
@@ -269,7 +272,7 @@ import { kefineLocale, kefineLocaleText, type KefineLocale } from '$lib/constant
   }
 
   async function closeEditor() {
-    await goto(buildProfilePath(profile.primaryHandle));
+    await goto(localizeAppPath(buildProfilePath(profile.primaryHandle), activeLocale));
   }
 
   async function saveService() {
@@ -312,7 +315,7 @@ import { kefineLocale, kefineLocaleText, type KefineLocale } from '$lib/constant
       return;
     }
 
-    await goto(buildProfileServicePath(profile.primaryHandle, saved.slug), { replaceState: true });
+    await goto(localizeAppPath(buildProfileServicePath(profile.primaryHandle, saved.slug), activeLocale), { replaceState: true });
   }
 
   async function deleteService() {
@@ -325,7 +328,7 @@ import { kefineLocale, kefineLocaleText, type KefineLocale } from '$lib/constant
       return;
     }
 
-    await goto(buildProfilePath(profile.primaryHandle), { replaceState: true });
+    await goto(localizeAppPath(buildProfilePath(profile.primaryHandle), activeLocale), { replaceState: true });
   }
 </script>
 

@@ -1,5 +1,6 @@
 import { writable } from 'svelte/store';
 import { KEFINE_TEXT_EN } from '$lib/constants/kefine-locale-en';
+import { readLocaleFromPathname } from '$lib/routing/kefine-locale-routing';
 
 const LOCALE_STORAGE_KEY = 'kefine-locale';
 
@@ -84,7 +85,7 @@ export function getLocaleText(locale: KefineLocale): KefineLocaleText {
 }
 
 if (typeof window !== 'undefined') {
-  const initialLocale = readLocaleFromStorage() ?? 'en';
+  const initialLocale = readLocaleFromPathname(window.location.pathname) ?? readLocaleFromStorage() ?? 'en';
   if (initialLocale === 'en') {
     kefineLocale.set('en');
     kefineLocaleText.set(KEFINE_TEXT_EN as KefineLocaleText);

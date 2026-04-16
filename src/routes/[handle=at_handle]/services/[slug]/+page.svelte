@@ -6,6 +6,7 @@
   import { loadPasskeySession, passkeySessionStore } from '$lib/auth/passkey-session';
   import { readBrowserPublicRuntimeConfig } from '$lib/config/public-config';
   import { buildCanonicalServicePath, deriveWalletProfileHandle, ensureProfileForSession, getProfileByUsername } from '$lib/profile/profile-storage';
+  import { localizeAppPath, readLocaleFromPathname } from '$lib/routing/kefine-locale-routing';
   import { fetchTemplateByHandleAndSlug } from '$lib/templates/template-api';
   import type { Profile } from '$lib/types/user';
 
@@ -13,6 +14,7 @@
   let profile = $state<Profile | null>(null);
   let loadKey = $state('');
   const runtimeConfig = $derived(readBrowserPublicRuntimeConfig());
+  const activeLocale = $derived(readLocaleFromPathname(page.url.pathname) ?? 'en');
 
   $effect(() => {
     async function init() {
@@ -41,18 +43,18 @@
         : null;
 
       if (!storedProfile || !viewerProfile || storedProfile.id !== viewerProfile.id) {
-        void goto(`/@${page.params.handle}`);
+        void goto(localizeAppPath(`/@${page.params.handle}`, activeLocale));
         return;
       }
 
       const loaded = await fetchTemplateByHandleAndSlug(runtimeConfig.backend.craterBaseUrl, storedProfile.primaryHandle, page.params.slug ?? '');
       if (!loaded) {
-        void goto(`/@${page.params.handle}`);
+        void goto(localizeAppPath(`/@${page.params.handle}`, activeLocale));
         return;
       }
 
       profile = storedProfile;
-      void goto(buildCanonicalServicePath(storedProfile.primaryHandle, loaded.slug, runtimeConfig.defaultActor.handle), { replaceState: true });
+      void goto(localizeAppPath(buildCanonicalServicePath(storedProfile.primaryHandle, loaded.slug, runtimeConfig.defaultActor.handle), activeLocale), { replaceState: true });
     }
 
     if (!browser) {

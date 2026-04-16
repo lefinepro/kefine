@@ -3,6 +3,7 @@
   import { page } from '$app/state';
   import { resolvePublicRuntimeConfig } from '$lib/config/public-config';
   import { kefineLocale, kefineLocaleText } from '$lib/constants/kefine-locale';
+  import { localizeAppPath, readLocaleFromPathname } from '$lib/routing/kefine-locale-routing';
 
   type ContactFact = {
     label: string;
@@ -22,6 +23,7 @@
 
   const localeText = $derived($kefineLocaleText);
   const runtimeConfig = $derived(resolvePublicRuntimeConfig(page.data.publicConfig));
+  const activeLocale = $derived(readLocaleFromPathname(page.url.pathname) ?? 'en');
   const contactEmail = $derived(runtimeConfig.app.supportEmail || runtimeConfig.company.email || 'order@lefine.pro');
   const companyName = $derived(runtimeConfig.company.legalName || runtimeConfig.app.name || 'Lefine');
   let copyState = $state<'idle' | 'copied'>('idle');
@@ -104,12 +106,12 @@
 
   const legalLinks = $derived.by<LegalLink[]>(() => {
     const links: LegalLink[] = [
-      { label: localeText.topbar.legalLinks.privacy, href: '/privacy' },
-      { label: localeText.topbar.legalLinks.terms, href: '/terms' }
+      { label: localeText.topbar.legalLinks.privacy, href: localizeAppPath('/privacy', activeLocale) },
+      { label: localeText.topbar.legalLinks.terms, href: localizeAppPath('/terms', activeLocale) }
     ];
 
     if (officialFacts.length > 0 || runtimeConfig.company.legalDisclaimer) {
-      links.push({ label: localeText.topbar.legalLinks.company, href: '/legal-information' });
+      links.push({ label: localeText.topbar.legalLinks.company, href: localizeAppPath('/legal-information', activeLocale) });
     }
 
     return links;

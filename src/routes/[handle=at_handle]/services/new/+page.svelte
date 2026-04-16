@@ -7,11 +7,13 @@
   import { loadPasskeySession, passkeySessionStore } from '$lib/auth/passkey-session';
   import { readBrowserPublicRuntimeConfig } from '$lib/config/public-config';
   import { deriveWalletProfileHandle, ensureProfileForSession, getProfileByUsername } from '$lib/profile/profile-storage';
+  import { localizeAppPath, readLocaleFromPathname } from '$lib/routing/kefine-locale-routing';
   import type { Profile } from '$lib/types/user';
 
   const passkeySession = $derived($passkeySessionStore);
   let profile = $state<Profile | null>(null);
   const runtimeConfig = $derived(readBrowserPublicRuntimeConfig());
+  const activeLocale = $derived(readLocaleFromPathname(page.url.pathname) ?? 'en');
 
   $effect(() => {
     if (!browser) {
@@ -39,7 +41,7 @@
       : null;
 
     if (!storedProfile || !viewerProfile || storedProfile.id !== viewerProfile.id) {
-      void goto(`/@${page.params.handle}`);
+      void goto(localizeAppPath(`/@${page.params.handle}`, activeLocale));
       return;
     }
 
