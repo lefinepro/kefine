@@ -7,6 +7,7 @@ require "./crater/handlers/actor"
 require "./crater/handlers/inbox"
 require "./crater/handlers/outbox"
 require "./crater/handlers/orders"
+require "./crater/handlers/status"
 require "./crater/handlers/passkeys"
 require "./crater/handlers/privatekey_auth"
 require "./crater/handlers/projects"
@@ -56,6 +57,7 @@ module Crater
     Handlers::Inbox.register(config)
     Handlers::Outbox.register(config)
     Handlers::Orders.register(config)
+    Handlers::Status.register
     Handlers::Passkeys.register(config)
     Handlers::PrivatekeyAuth.register(config)
 
