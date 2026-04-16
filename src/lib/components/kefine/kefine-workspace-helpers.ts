@@ -1,5 +1,6 @@
 import type { DraftOrder, OrderView } from '$lib/components/kefine/kefine-workflow';
 import type { KefineLocaleText } from '$lib/constants/kefine-locale';
+import { stripLocalePrefix } from '$lib/routing/kefine-locale-routing';
 
 export type TaskRouteView = 'result' | 'stages' | null;
 
@@ -147,7 +148,7 @@ function parseTaskRouteValue(rawValue: string): { orderId: string; view: TaskRou
 }
 
 export function readTaskRouteStateFromLocation(location: Location): { orderId: string; view: TaskRouteView } | null {
-  const actorPath = location.pathname.replace(/\/+$/, '');
+  const actorPath = stripLocalePrefix(location.pathname).replace(/\/+$/, '');
   const actorMatch = actorPath.match(CANONICAL_ACTOR_ORDER_PATH_PATTERN) ?? actorPath.match(LEGACY_ACTOR_ORDER_PATH_PATTERN);
   const actorView = location.hash === '#result' ? 'result' : location.hash === '#stages' ? 'stages' : null;
   if (actorMatch?.[2]) {
@@ -168,7 +169,7 @@ export function readTaskRouteStateFromLocation(location: Location): { orderId: s
     return parseTaskRouteValue(hash.slice(prefix.length));
   }
 
-  const rawPath = location.pathname.replace(/\/+$/, '');
+  const rawPath = stripLocalePrefix(location.pathname).replace(/\/+$/, '');
   const taskPrefixes = [GLOBAL_ORDER_PATH_PREFIX, LEGACY_TASK_PATH_PREFIX, LEGACY_ORDER_PATH_PREFIX];
   if (!taskPrefixes.some((prefix) => rawPath.startsWith(prefix))) {
     return null;

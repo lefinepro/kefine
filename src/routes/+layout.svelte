@@ -10,6 +10,7 @@
   import KefineTopbar from '$lib/components/kefine/KefineTopbar.svelte';
   import { resolvePublicRuntimeConfig, setBrowserPublicRuntimeConfig } from '$lib/config/public-config';
   import { kefineLocale, kefineLocaleText, setKefineLocale, type KefineLocale } from '$lib/constants/kefine-locale';
+  import { buildLocaleHomePath, localizeAppPath, readLocaleFromPathname } from '$lib/routing/kefine-locale-routing';
   import { getSeoMeta } from '$lib/seo';
   import type { LayoutData } from './$types';
 
@@ -33,6 +34,7 @@
   const localeText = $derived($kefineLocaleText);
   const passkeySession = $derived($passkeySessionStore);
   const runtimePublicConfig = $derived(resolvePublicRuntimeConfig(data.publicConfig));
+  const activeLocale = $derived(readLocaleFromPathname(page.url.pathname) ?? data.initialLocale ?? 'en');
   const requestOrigin = $derived(data.requestOrigin || page.url.origin);
   const seoUrl = $derived(new URL(`${page.url.pathname}${page.url.search}`, requestOrigin));
   const seo = $derived(getSeoMeta(seoUrl, runtimePublicConfig));
@@ -69,12 +71,12 @@
     {
       id: 'privacy' as const,
       label: localeText.topbar.legalLinks.privacy,
-      href: '/privacy'
+      href: localizeAppPath('/privacy', activeLocale)
     },
     {
       id: 'terms' as const,
       label: localeText.topbar.legalLinks.terms,
-      href: '/terms'
+      href: localizeAppPath('/terms', activeLocale)
     }
   ]);
   const isAuthenticated = $derived(Boolean(passkeySession?.userId || authState.isConnected));
@@ -91,6 +93,14 @@
 
   $effect(() => {
     setBrowserPublicRuntimeConfig(runtimePublicConfig);
+  });
+
+  $effect(() => {
+    if (!browser) {
+      return;
+    }
+
+    setKefineLocale(activeLocale);
   });
 
   onMount(() => {
@@ -125,11 +135,12 @@
   });
 
   function handleSharedBrandClick() {
-    void goto('/');
+    void goto(buildLocaleHomePath(activeLocale));
   }
 
   function handleSharedLocaleChange(locale: KefineLocale) {
     setKefineLocale(locale);
+    void goto(buildLocaleHomePath(locale));
   }
 </script>
 
@@ -190,7 +201,7 @@
     onBrandClick={handleSharedBrandClick}
     onOpenEmailDialog={() => {
       if (browser) {
-        window.location.assign('/contact');
+        window.location.assign(localizeAppPath('/contact', activeLocale));
       }
     }}
     onThemeChange={(theme) => {

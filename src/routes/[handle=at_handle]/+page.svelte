@@ -41,6 +41,7 @@
     ProfileSocialLink,
     ProfileTemplate
   } from '$lib/types/user';
+  import { buildLocaleHomePath, localizeAppPath, readLocaleFromPathname } from '$lib/routing/kefine-locale-routing';
 
   const localeText = $derived($kefineLocaleText);
   const passkeySession = $derived($passkeySessionStore);
@@ -71,9 +72,10 @@
   let systemPrefersDark = $state(false);
 
   const requestedHandle = $derived(page.params.handle ?? '');
+  const activeLocale = $derived(readLocaleFromPathname(page.url.pathname) ?? 'en');
   const isOwner = $derived(Boolean(profile && viewerProfile && profile.id === viewerProfile.id));
   const runtimeConfig = $derived(resolvePublicRuntimeConfig(page.data.publicConfig));
-  const canonicalProfilePath = $derived(profile ? buildProfilePath(profile.primaryHandle) : '');
+  const canonicalProfilePath = $derived(profile ? localizeAppPath(buildProfilePath(profile.primaryHandle), activeLocale) : '');
   const setupMetadata = $derived((profile?.metadata ?? {}) as ProfileMetadata);
   const hasOwnerTasks = $derived((isOwner ? ownerTasks : publicTasks).length > 0);
   const visibleProfileTemplates = $derived(
@@ -124,7 +126,7 @@
       sessionStorage.setItem(BRAND_HOME_NAVIGATION_STORAGE_KEY, '1');
     }
 
-    void goto('/');
+    void goto(buildLocaleHomePath(activeLocale));
   }
 
   const sidebarSocialLinks = $derived([
@@ -157,12 +159,12 @@
     {
       id: 'privacy' as const,
       label: localeText.topbar.legalLinks.privacy,
-      href: '/privacy'
+      href: localizeAppPath('/privacy', activeLocale)
     },
     {
       id: 'terms' as const,
       label: localeText.topbar.legalLinks.terms,
-      href: '/terms'
+      href: localizeAppPath('/terms', activeLocale)
     }
   ]);
   const cardDigits = $derived(cardNumber.replace(/\D+/g, '').slice(0, 16));
@@ -205,12 +207,13 @@
 
   function getTemplateUrl(template: ProfileTemplate): string {
     const path = buildCanonicalServicePath(profile?.primaryHandle || '', template.slug, runtimeConfig.defaultActor.handle);
-    return browser ? `${window.location.origin}${path}` : path;
+    const localizedPath = localizeAppPath(path, activeLocale);
+    return browser ? `${window.location.origin}${localizedPath}` : localizedPath;
   }
 
   function getTaskUrl(order: OrderView): string {
     const handle = profile?.primaryHandle || profile?.username || requestedHandle;
-    return buildProfileTaskPath(handle, order.shareId ?? order.id);
+    return localizeAppPath(buildProfileTaskPath(handle, order.shareId ?? order.id), activeLocale);
   }
 
   function getServiceInitial(title: string): string {
@@ -384,7 +387,7 @@
     profileTemplates = await fetchTemplatesByHandle(runtimeConfig.backend.craterBaseUrl, storedProfile.primaryHandle);
 
     if (buildProfilePath(storedProfile.primaryHandle) !== buildProfilePath(requestedHandle)) {
-      await goto(buildProfilePath(storedProfile.primaryHandle), { replaceState: true });
+      await goto(localizeAppPath(buildProfilePath(storedProfile.primaryHandle), activeLocale), { replaceState: true });
     }
   }
 
@@ -440,8 +443,9 @@
   }
 
   async function navigateToProfileHandle(nextHandle: string) {
-    const nextPath = buildProfilePath(nextHandle);
-    if (buildProfilePath(requestedHandle) !== nextPath) {
+    const currentPath = localizeAppPath(buildProfilePath(requestedHandle), activeLocale);
+    const nextPath = localizeAppPath(buildProfilePath(nextHandle), activeLocale);
+    if (currentPath !== nextPath) {
       await goto(nextPath, { replaceState: true });
     }
   }
@@ -487,7 +491,7 @@
       return;
     }
 
-    await goto(`${buildProfilePath(profile.primaryHandle)}/services/new`);
+    await goto(localizeAppPath(`${buildProfilePath(profile.primaryHandle)}/services/new`, activeLocale));
   }
 
   async function editTemplate(template: ProfileTemplate) {
@@ -495,7 +499,7 @@
       return;
     }
 
-    await goto(buildCanonicalServicePath(profile.primaryHandle, template.slug, runtimeConfig.defaultActor.handle));
+    await goto(localizeAppPath(buildCanonicalServicePath(profile.primaryHandle, template.slug, runtimeConfig.defaultActor.handle), activeLocale));
   }
 
   async function removeTemplate(templateId: string) {
@@ -750,7 +754,7 @@
 
     if (updated) {
       profile = updated;
-      void goto(buildProfilePath(updated.primaryHandle), { replaceState: true });
+      void goto(localizeAppPath(buildProfilePath(updated.primaryHandle), activeLocale), { replaceState: true });
     }
   }
 
@@ -832,7 +836,7 @@
     clearAuthState();
     clearPasskeySession();
     viewerProfile = null;
-    await goto('/');
+    await goto(buildLocaleHomePath(activeLocale));
   }
 </script>
 
@@ -846,7 +850,7 @@
       <lefine-text class="profile-unavailable__code">404</lefine-text>
       <h1>{localeText.profile.profileUnavailable}</h1>
       <p>{localeText.profile.hidden}</p>
-      <a class="profile-unavailable__action" href="/">{localeText.topbar.legalLinks.backToApp}</a>
+      <a class="profile-unavailable__action" href={buildLocaleHomePath(activeLocale)}>{localeText.topbar.legalLinks.backToApp}</a>
     </article>
   </section>
 {:else if profile}
@@ -886,7 +890,7 @@
       onBrandClick={navigateToHomeFromBrand}
       onOpenEmailDialog={() => {
         if (browser) {
-          window.location.assign('/contact');
+          window.location.assign(localizeAppPath('/contact', activeLocale));
         }
       }}
       onThemeChange={(theme) => {
@@ -896,10 +900,13 @@
         if (isOwner) {
           void signOut();
         } else {
-          void goto('/');
+          void goto(buildLocaleHomePath(activeLocale));
         }
       }}
-      onLocale={(locale: KefineLocale) => { setKefineLocale(locale); }}
+      onLocale={(locale: KefineLocale) => {
+        setKefineLocale(locale);
+        void goto(buildLocaleHomePath(locale));
+      }}
     />
 
     {#if !(isOwner && onboardingStep)}
@@ -1264,7 +1271,7 @@
                   <p>{description}</p>
                 </lefine-box>
 
-                <a class="profile-template-card__link" href={buildCanonicalServicePath(profile.primaryHandle, template.slug, runtimeConfig.defaultActor.handle)}>
+                <a class="profile-template-card__link" href={localizeAppPath(buildCanonicalServicePath(profile.primaryHandle, template.slug, runtimeConfig.defaultActor.handle), activeLocale)}>
                   {localeText.profile.templateOpen}
                 </a>
               </lefine-box>
