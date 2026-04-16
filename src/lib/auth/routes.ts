@@ -321,7 +321,8 @@ export async function finishAuthentication(
 }
 
 export async function loginWithPrivateKey(privateKey?: string): Promise<PublicKeyAuthSuccess> {
-	const publicKey = typeof privateKey === 'string' ? await derivePublicKeyFromPrivateKey(privateKey) : '';
+	const publicKey =
+		typeof privateKey === 'string' ? await derivePortablePublicKeyFromPrivateKey(privateKey) : '';
 
 	const payload = await postJson<PublicKeyAuthSuccess>(buildCraterClientUrl('/auth'), {
 		publickey: {

@@ -52,6 +52,44 @@ module Crater
         encode_public_key_string(public_key_pem)
       end
 
+      def public_key_string_to_compact(value : String) : String
+        stripped_value = value.strip
+        return "" if stripped_value.empty?
+
+        if compact_public_key_string?(stripped_value)
+          return Base64.urlsafe_encode(decode_compact_public_key_string(stripped_value).to_slice, padding: false)
+        end
+
+        normalized_public_key = normalize_public_key(stripped_value)
+        return "" if normalized_public_key.empty?
+
+        with_temp_public_key(normalized_public_key) do |path|
+          public_der = run_openssl(["pkey", "-pubin", "-in", path, "-outform", "DER"])
+          public_der ? Base64.urlsafe_encode(public_der.to_slice, padding: false) : ""
+        end
+      end
+
+      def public_key_pem_from_string(value : String) : String?
+        stripped_value = value.strip
+        return nil if stripped_value.empty?
+
+        if compact_public_key_string?(stripped_value)
+          public_der = decode_compact_public_key_string(stripped_value)
+          return nil if public_der.empty?
+
+          with_temp_public_key(public_der) do |path|
+            run_openssl(["pkey", "-pubin", "-inform", "DER", "-in", path, "-pubout"])
+          end
+        else
+          normalized_public_key = normalize_public_key(stripped_value)
+          return nil if normalized_public_key.empty?
+
+          with_temp_public_key(normalized_public_key) do |path|
+            run_openssl(["pkey", "-pubin", "-in", path, "-pubout"])
+          end
+        end
+      end
+
       def normalize_public_key(value : String) : String
         stripped_value = value.strip
         return decode_key_string(stripped_value, PUBLIC_KEY_PREFIX) if stripped_value.starts_with?(PUBLIC_KEY_PREFIX)
@@ -109,16 +147,27 @@ module Crater
         submitted = submitted_value.strip
         return false if submitted.empty?
 
-        configured_public_key = derive_public_key_string(configured_private_key_pem)
-        return false if configured_public_key.empty?
+        submitted_compact_key = public_key_string_to_compact(submitted)
+        return false if submitted_compact_key.empty?
 
-        submitted == configured_public_key
+        configured_public_key = derive_public_key_string(configured_private_key_pem)
+        configured_compact_key = public_key_string_to_compact(configured_public_key)
+        return false if configured_compact_key.empty?
+
+        submitted_compact_key == configured_compact_key
       end
 
       def compact_private_key_string?(value : String) : Bool
         return false unless value.starts_with?(PRIVATE_KEY_PREFIX)
 
         !decode_key_string(value, PRIVATE_KEY_PREFIX).empty?
+      end
+
+      def compact_public_key_string?(value : String) : Bool
+        return false if value.starts_with?(PUBLIC_KEY_PREFIX)
+        return false if value.includes?("BEGIN")
+
+        !decode_compact_public_key_string(value).empty?
       end
 
       private def encode_key_string(value : String, prefix : String) : String
@@ -145,6 +194,27 @@ module Crater
         ensure
           File.delete(path) if File.exists?(path)
         end
+      end
+
+      private def with_temp_public_key(public_key : String, &)
+        path = File.join(Dir.tempdir, "kefine-public-key-#{UUID.random}.key")
+        begin
+          File.write(path, public_key)
+          yield path
+        ensure
+          File.delete(path) if File.exists?(path)
+        end
+      end
+
+      private def decode_compact_public_key_string(value : String) : String
+        stripped = value.strip
+        return "" if stripped.empty?
+
+        padded = stripped + ("=" * ((4 - (stripped.bytesize % 4)) % 4))
+        standard_base64 = padded.tr("-_", "+/")
+        Base64.decode_string(standard_base64)
+      rescue
+        ""
       end
 
       private def run_openssl(args : Array(String)) : String?

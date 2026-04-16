@@ -2372,6 +2372,7 @@
           pinnedServicesSubtitle={localeText.create.pinnedServicesSubtitle}
           afe={{
             title: localeText.afe.title,
+            labels: localeText.afe.labels,
             cards: [
               localeText.afe.cards.afe,
               localeText.afe.cards.task,

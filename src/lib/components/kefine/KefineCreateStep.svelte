@@ -79,6 +79,13 @@
     subtitle: string;
     afe: {
       title: string;
+      labels: {
+        input: string;
+        intake: string;
+        route: string;
+        result: string;
+        delivery: string;
+      };
       cards: Array<{
         title: string;
         detail: string;
@@ -837,12 +844,12 @@
       <lef-afe-flow aria-label={afe.title}>
         <lef-afe-diagram>
           <lef-afe-node-round>
-            <strong>Task</strong>
+            <strong>{afe.labels.input}</strong>
           </lef-afe-node-round>
 
           {#if afeStepCards[0]}
             <lef-afe-link-in aria-hidden="true">
-              <span>in</span>
+              <span>{afe.labels.intake}</span>
             </lef-afe-link-in>
             <lef-afe-node-step>
               <lef-afe-step-head>
@@ -861,7 +868,7 @@
 
           {#if afeStepCards[1]}
             <lef-afe-link-route aria-hidden="true">
-              <span>route</span>
+              <span>{afe.labels.route}</span>
             </lef-afe-link-route>
             <lef-afe-node-step>
               <lef-afe-step-head>
@@ -881,10 +888,10 @@
           {/if}
 
           <lef-afe-link-out aria-hidden="true">
-            <span>result</span>
+            <span>{afe.labels.result}</span>
           </lef-afe-link-out>
           <lef-afe-node-round>
-            <strong>{afeStepCards[2]?.title ?? 'Delivery'}</strong>
+            <strong>{afeStepCards[2]?.title ?? afe.labels.delivery}</strong>
             <lef-delivery-pack aria-hidden="true">
               <lef-delivery-pack-doc></lef-delivery-pack-doc>
               <lef-delivery-pack-box></lef-delivery-pack-box>
@@ -1960,14 +1967,21 @@
     display: grid;
     gap: 0.5rem;
     min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
     position: relative;
   }
 
   textarea[data-part='task-input'] {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
     min-height: clamp(3.3rem, 7vw, 4rem);
     height: clamp(3.3rem, 7vw, 4rem);
     max-height: 18rem;
-    font-size: clamp(1.15rem, 2.7vw, 2.2rem);
+    font-size: clamp(0.98rem, 2.15vw, 1.72rem);
     font-weight: 740;
     line-height: 1.04;
     letter-spacing: -0.02em;
@@ -2008,12 +2022,14 @@
     inset: 0;
     display: flex;
     align-items: center;
+    min-width: 0;
+    max-width: 100%;
     min-height: clamp(3.3rem, 7vw, 4rem);
     padding-inline: clamp(0.72rem, 2.5vw, 0.92rem);
     padding-top: max(0.48rem, calc((clamp(3.3rem, 7vw, 4rem) - 1.04em) / 2));
     padding-bottom: max(0.48rem, calc((clamp(3.3rem, 7vw, 4rem) - 1.04em) / 2));
     color: color-mix(in oklab, var(--kef-on-primary) 78%, transparent);
-    font-size: clamp(1.15rem, 2.7vw, 2.2rem);
+    font-size: clamp(0.98rem, 2.15vw, 1.72rem);
     font-weight: 720;
     opacity: 0;
     pointer-events: none;
@@ -2029,17 +2045,17 @@
 
   textarea[data-part='task-input'][data-size='hero'],
   kefine-task-placeholder[data-size='hero'] {
-    font-size: 2rem;
+    font-size: 1.6rem;
   }
 
   textarea[data-part='task-input'][data-size='balanced'],
   kefine-task-placeholder[data-size='balanced'] {
-    font-size: 1.5rem;
+    font-size: 1.25rem;
   }
 
   textarea[data-part='task-input'][data-size='compact'],
   kefine-task-placeholder[data-size='compact'] {
-    font-size: 1rem;
+    font-size: 0.92rem;
   }
 
   button[data-part='exec-button'] {
@@ -2269,13 +2285,23 @@
       grid-template-columns: minmax(0, 1fr);
     }
 
+    kefine-task-shell {
+      width: 100%;
+    }
+
     textarea[data-part='task-input'][data-size='hero'],
     textarea[data-part='task-input'][data-size='balanced'],
     textarea[data-part='task-input'][data-size='compact'],
     kefine-task-placeholder[data-size='hero'],
     kefine-task-placeholder[data-size='balanced'],
     kefine-task-placeholder[data-size='compact'] {
-      font-size: 0.82rem;
+      font-size: 0.68rem;
+      line-height: 1.08;
+    }
+
+    textarea[data-part='task-input'],
+    kefine-task-placeholder {
+      padding-inline: 0.78rem;
     }
 
     p[data-part='composer-hints'] {
