@@ -13,6 +13,13 @@ export type AuthMethod = 'wallet' | 'passkey' | 'publickey' | 'anonymous' | null
 export type PaymentMethod = 'wallet' | 'linked-wallet' | 'promo' | 'reown' | 'other' | 'deposit' | null;
 export type UiScenario = 'default' | 'vpn-service';
 export type ExecutionStage =
+  | 'queued'
+  | 'matching'
+  | 'assigned'
+  | 'running'
+  | 'review'
+  | 'completed'
+  | 'failed'
   | 'batching'
   | 'competition'
   | 'winner-selected'
@@ -83,12 +90,23 @@ export type OrderView = {
   title: string;
   description: string;
   createdAt: string;
+  assignedAt?: string;
+  startedAt?: string;
   estimatedCost?: number;
   currency: string;
   executionEstimate?: string;
   paymentUrl?: string;
   uiScenario?: Exclude<UiScenario, 'default'>;
   labels?: string[];
+  exchangeStage?: ExecutionStage;
+  executionSteps?: OrderExecutionStep[];
+  activeExecutionStepId?: string;
+  progressPercent?: number;
+  executors?: OrderExecutor[];
+  notebook?: OrderNotebook;
+  interimResult?: OrderResultSection;
+  result?: OrderResultSection;
+  iterations?: OrderIteration[];
   resultDocument?: VpnResultArticle;
   activitypub?: Record<string, unknown>;
   ownerProfileId?: string;
@@ -154,6 +172,89 @@ export type OrderSubtask = {
   state: ProgressState;
 };
 
+export type OrderStepConfirmation = {
+  required: boolean;
+  confirmed: boolean;
+  label?: string;
+  detail?: string;
+};
+
+export type OrderExecutionStep = {
+  id: string;
+  title: string;
+  detail: string;
+  state: ProgressState;
+  confirmation?: OrderStepConfirmation;
+};
+
+export type OrderExecutorStatus = 'waiting' | 'accepted' | 'running' | 'review' | 'completed' | 'failed';
+
+export type OrderExecutor = {
+  id: string;
+  name: string;
+  handle?: string;
+  avatarUrl?: string;
+  rank?: number;
+  status: OrderExecutorStatus;
+  progressPercent?: number;
+  currentNotebookStepId?: string;
+  resultSummary?: string;
+};
+
+export type NotebookBlockType = 'markdown' | 'code' | 'output' | 'artifact' | 'diff' | 'warning';
+
+export type OrderNotebookBlock = {
+  id: string;
+  type: NotebookBlockType;
+  title?: string;
+  content: string;
+  language?: string;
+  href?: string;
+};
+
+export type OrderStepComment = {
+  id: string;
+  content: string;
+  authorName?: string;
+  authorHandle?: string;
+  createdAt?: string;
+};
+
+export type OrderNotebookStep = {
+  id: string;
+  title: string;
+  detail?: string;
+  state: ProgressState;
+  statusLabel?: string;
+  executorId?: string;
+  executorName?: string;
+  createdAt?: string;
+  completedAt?: string;
+  iterationIndex?: number;
+  blocks: OrderNotebookBlock[];
+  comments?: OrderStepComment[];
+  commentThreadId?: string;
+};
+
+export type OrderNotebook = {
+  steps: OrderNotebookStep[];
+};
+
+export type OrderResultSection = {
+  title: string;
+  summary?: string;
+  blocks: OrderNotebookBlock[];
+};
+
+export type OrderIteration = {
+  id: string;
+  title: string;
+  summary?: string;
+  createdAt?: string;
+  current?: boolean;
+  stepCount?: number;
+};
+
 export type StageItem = {
   id: string;
   title: string;
@@ -196,6 +297,9 @@ export type ExecutionPresentation = {
   supportingText: string;
   stageItems: StageItem[];
   subtasks: OrderSubtask[];
+  steps: OrderExecutionStep[];
+  activeStep: OrderExecutionStep | null;
+  progressPercent: number;
   primaryMetric: {
     label: string;
     value: string;
@@ -410,6 +514,44 @@ export function deriveExecutionStage(
   return 'competition';
 }
 
+function deriveGenericExecutionStage(order: OrderView | null): ExecutionStage {
+  if (!order) {
+    return 'queued';
+  }
+
+  if (order.exchangeStage) {
+    return order.exchangeStage;
+  }
+
+  const status = order.status.trim().toLowerCase();
+
+  if (['completed', 'done'].includes(status)) {
+    return 'completed';
+  }
+
+  if (['review', 'awaiting-review', 'pending-confirmation', 'awaiting-confirmation'].includes(status)) {
+    return 'review';
+  }
+
+  if (['executing', 'running', 'in-progress', 'in_progress'].includes(status)) {
+    return 'running';
+  }
+
+  if (['accepted', 'assigned'].includes(status)) {
+    return 'assigned';
+  }
+
+  if (['matching', 'competition'].includes(status)) {
+    return 'matching';
+  }
+
+  if (['failed', 'error', 'rejected', 'stopped'].includes(status)) {
+    return 'failed';
+  }
+
+  return 'queued';
+}
+
 export function buildStageItems(stage: ExecutionStage, localeText: KefineLocaleText): StageItem[] {
   const currentIndex = EXECUTION_STAGE_ORDER.indexOf(stage);
 
@@ -442,37 +584,12 @@ export function buildStageItems(stage: ExecutionStage, localeText: KefineLocaleT
 }
 
 export function buildOrderSubtasks(order: OrderView | null, localeText: KefineLocaleText): OrderSubtask[] {
-  const normalizedTitle = order?.title.trim().toLowerCase() ?? '';
-  if (!normalizedTitle) {
-    return [];
-  }
-
-  const templates =
-    normalizedTitle.includes('deploy') || normalizedTitle.includes('production')
-      ? [
-          localeText.subtasks.prepareConfig,
-          localeText.subtasks.runChecks,
-          localeText.subtasks.publishResult
-        ]
-      : normalizedTitle.includes('optimize') || normalizedTitle.includes('algorithm')
-        ? [
-            localeText.subtasks.profileCode,
-            localeText.subtasks.benchmarkPaths,
-            localeText.subtasks.publishResult
-          ]
-        : normalizedTitle.includes('telegram') || normalizedTitle.includes('access')
-          ? []
-          : [
-              localeText.subtasks.prepareConfig,
-              localeText.subtasks.syncArtifacts,
-              localeText.subtasks.publishResult
-            ];
-
-  return templates.map((item, index) => ({
+  void localeText;
+  return (order?.executionSteps || []).map((item) => ({
     id: item.id,
     title: item.title,
     detail: item.detail,
-    state: index === 0 ? 'completed' : index === 1 ? 'active' : 'upcoming'
+    state: item.state
   }));
 }
 
@@ -482,19 +599,41 @@ export function deriveExecutionPresentation(
   authMethod: AuthMethod,
   paymentReady: boolean
 ): ExecutionPresentation {
-  const stage = deriveExecutionStage(order, authMethod, paymentReady);
+  const isVpnScenario = isVpnOrder(order);
+  const stage = isVpnScenario ? deriveExecutionStage(order, authMethod, paymentReady) : deriveGenericExecutionStage(order);
   const stageConfig = localeText.executionFlow[stage === 'winner-selected' ? 'winnerSelected' : stage];
   const estimate = splitEstimate(order?.executionEstimate, localeText);
-  const isVpnScenario = isVpnOrder(order);
+  const steps = !isVpnScenario ? (order?.executionSteps || []) : buildOrderSubtasks(order, localeText);
+  const activeStep =
+    !isVpnScenario && steps.length > 0
+      ? steps.find((item) => item.id === order?.activeExecutionStepId) ||
+        steps.find((item) => item.state === 'active') ||
+        steps.findLast((item) => item.state === 'completed') ||
+        steps[0]
+      : null;
+  const progressPercent =
+    !isVpnScenario
+      ? Math.max(
+          0,
+          Math.min(
+            100,
+            order?.progressPercent ??
+              (steps.length > 0 ? Math.round((((activeStep ? steps.indexOf(activeStep) : 0) + 1) / steps.length) * 100) : 0)
+          )
+        )
+      : 0;
 
   return {
     scenario: isVpnScenario ? 'vpn-service' : 'default',
     stage,
     eyebrow: localeText.labels.taskStatus,
-    headline: stageConfig.title,
-    supportingText: stageConfig.detail,
-    stageItems: buildStageItems(stage, localeText),
-    subtasks: buildOrderSubtasks(order, localeText),
+    headline: !isVpnScenario ? (activeStep?.title || stageConfig.title) : stageConfig.title,
+    supportingText: !isVpnScenario ? (activeStep?.detail || stageConfig.detail) : stageConfig.detail,
+    stageItems: isVpnScenario ? buildStageItems(stage, localeText) : [],
+    subtasks: [],
+    steps,
+    activeStep,
+    progressPercent,
     primaryMetric: {
       label: localeText.labels.price,
       value: formatAmountValue(order?.estimatedCost),

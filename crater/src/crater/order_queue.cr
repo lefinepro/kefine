@@ -1,4 +1,5 @@
 require "db"
+require "http/client"
 require "json"
 require "mutex"
 require "pg"
@@ -8,6 +9,7 @@ require "uuid"
 
 require "./activitypub/types"
 require "./forgefed/types"
+require "./utils/actor_keys"
 require "./utils/config"
 require "./solver_fetcher"
 
@@ -50,6 +52,11 @@ module Crater
       property template_author_display_name : String?
       property template_pricing_mode : String?
       property template_pricing_value : Float64?
+      property owner_profile_id : String?
+      property owner_username : String?
+      property owner_display_name : String?
+      property actor_handle : String?
+      property actor_did : String?
 
       def initialize(
         @id : String,
@@ -72,6 +79,11 @@ module Crater
         @template_author_display_name : String? = nil,
         @template_pricing_mode : String? = nil,
         @template_pricing_value : Float64? = nil,
+        @owner_profile_id : String? = nil,
+        @owner_username : String? = nil,
+        @owner_display_name : String? = nil,
+        @actor_handle : String? = nil,
+        @actor_did : String? = nil,
         @solver_name : String? = nil,
         @solver_handle : String? = nil,
         @solver_profile_url : String? = nil
@@ -85,6 +97,9 @@ module Crater
     end
 
     class BadRequest < Exception
+    end
+
+    class DeliveryFailed < Exception
     end
 
     SOLVERS = [
@@ -129,6 +144,11 @@ module Crater
               template_author_display_name TEXT,
               template_pricing_mode TEXT,
               template_pricing_value TEXT,
+              owner_profile_id TEXT,
+              owner_username TEXT,
+              owner_display_name TEXT,
+              actor_handle TEXT,
+              actor_did TEXT,
               solver_name TEXT,
               solver_handle TEXT,
               solver_profile_url TEXT
@@ -142,6 +162,11 @@ module Crater
           db.exec "ALTER TABLE orders ADD COLUMN IF NOT EXISTS template_author_display_name TEXT"
           db.exec "ALTER TABLE orders ADD COLUMN IF NOT EXISTS template_pricing_mode TEXT"
           db.exec "ALTER TABLE orders ADD COLUMN IF NOT EXISTS template_pricing_value TEXT"
+          db.exec "ALTER TABLE orders ADD COLUMN IF NOT EXISTS owner_profile_id TEXT"
+          db.exec "ALTER TABLE orders ADD COLUMN IF NOT EXISTS owner_username TEXT"
+          db.exec "ALTER TABLE orders ADD COLUMN IF NOT EXISTS owner_display_name TEXT"
+          db.exec "ALTER TABLE orders ADD COLUMN IF NOT EXISTS actor_handle TEXT"
+          db.exec "ALTER TABLE orders ADD COLUMN IF NOT EXISTS actor_did TEXT"
           db.exec "ALTER TABLE orders ADD COLUMN IF NOT EXISTS solver_name TEXT"
           db.exec "ALTER TABLE orders ADD COLUMN IF NOT EXISTS solver_handle TEXT"
           db.exec "ALTER TABLE orders ADD COLUMN IF NOT EXISTS solver_profile_url TEXT"
@@ -175,9 +200,8 @@ module Crater
     end
 
     private def self.next_solver(config : Utils::Config, fallback_name : String) : {String, String?, String?, String?}
-      # Try to fetch real solver from Exchange
       solver_info = SolverFetcher.fetch_available_solver(config)
-      
+
       if solver_info
         return {
           solver_info.name,
@@ -186,8 +210,7 @@ module Crater
           solver_info.id
         }
       end
-      
-      # Fallback to random solver from hardcoded pool
+
       name = SOLVERS[Random.rand(SOLVERS.size)]
       handle = "@#{name.downcase.gsub(/[^a-z0-9]+/, '-')}"
       {name, handle, nil, nil}
@@ -219,6 +242,45 @@ module Crater
       value.try(&.to_f?)
     end
 
+    private def self.extract_uuid(value : String?) : String?
+      return nil unless value
+
+      normalized = value.strip
+      return normalized if uuid?(normalized)
+
+      match = normalized.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i)
+      match ? match[0] : nil
+    end
+
+    private def self.uuid?(value : String) : Bool
+      !!(value =~ /\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i)
+    end
+
+    private def self.normalize_did_key(value : String?) : String?
+      return nil unless value
+
+      normalized = value.strip
+      return nil if normalized.empty?
+      return normalized if normalized.starts_with?("did:key:")
+
+      "did:key:#{normalized}"
+    end
+
+    private def self.system_actor_did(config : Utils::Config) : String
+      public_key = Utils::ActorKeys.derive_public_key_string(config.resolved_actor_private_key_pem)
+      return "did:key:#{public_key}" unless public_key.empty?
+
+      normalize_did_key(config.actor_username) || "did:key:#{config.actor_username}"
+    end
+
+    private def self.order_actor_did(order : OrderRecord, config : Utils::Config) : String
+      order.actor_did || system_actor_did(config)
+    end
+
+    private def self.order_object_id(order : OrderRecord, config : Utils::Config) : String
+      order.id
+    end
+
     private def self.persist_order(record : OrderRecord, config : Utils::Config) : Nil
       setup(config)
       database(config).exec(
@@ -228,8 +290,9 @@ module Crater
             created_at, updated_at, payment_url, ui_scenario, labels_json,
             template_id, template_slug, template_author_profile_id, template_author_username,
             template_author_display_name, template_pricing_mode, template_pricing_value,
+            owner_profile_id, owner_username, owner_display_name, actor_handle, actor_did,
             solver_name, solver_handle, solver_profile_url
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28)
           ON CONFLICT (id) DO UPDATE SET
             status = EXCLUDED.status,
             solver = EXCLUDED.solver,
@@ -250,6 +313,11 @@ module Crater
             template_author_display_name = EXCLUDED.template_author_display_name,
             template_pricing_mode = EXCLUDED.template_pricing_mode,
             template_pricing_value = EXCLUDED.template_pricing_value,
+            owner_profile_id = EXCLUDED.owner_profile_id,
+            owner_username = EXCLUDED.owner_username,
+            owner_display_name = EXCLUDED.owner_display_name,
+            actor_handle = EXCLUDED.actor_handle,
+            actor_did = EXCLUDED.actor_did,
             solver_name = EXCLUDED.solver_name,
             solver_handle = EXCLUDED.solver_handle,
             solver_profile_url = EXCLUDED.solver_profile_url
@@ -274,6 +342,11 @@ module Crater
         record.template_author_display_name,
         record.template_pricing_mode,
         record.template_pricing_value.try(&.to_s),
+        record.owner_profile_id,
+        record.owner_username,
+        record.owner_display_name,
+        record.actor_handle,
+        record.actor_did,
         record.solver_name,
         record.solver_handle,
         record.solver_profile_url
@@ -283,7 +356,7 @@ module Crater
     private def self.persist_activity(activity : JSON::Any, order_id : String, config : Utils::Config) : Nil
       setup(config)
       activity_hash = activity.as_h?
-      activity_id = activity_hash.try { |hash| to_string(hash["id"]?) } || "#{config.actor_outbox}/activities/#{UUID.random}"
+      activity_id = activity_hash.try { |hash| to_string(hash["id"]?) } || UUID.random.to_s
       published_at = activity_hash.try { |hash| to_string(hash["published"]?) } || current_time
 
       database(config).exec(
@@ -295,7 +368,7 @@ module Crater
       )
     end
 
-    private def self.hydrate_order(row : {String, String, String, String, String?, String?, String, String?, String, String, String?, String?, String, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?}) : OrderRecord
+    private def self.hydrate_order(row : {String, String, String, String, String?, String?, String, String?, String, String, String?, String?, String, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?}) : OrderRecord
       OrderRecord.new(
         id: row[0],
         status: row[1],
@@ -317,9 +390,14 @@ module Crater
         template_author_display_name: row[17],
         template_pricing_mode: row[18],
         template_pricing_value: parse_estimated_cost(row[19]),
-        solver_name: row[20],
-        solver_handle: row[21],
-        solver_profile_url: row[22]
+        owner_profile_id: row[20],
+        owner_username: row[21],
+        owner_display_name: row[22],
+        actor_handle: row[23],
+        actor_did: row[24],
+        solver_name: row[25],
+        solver_handle: row[26],
+        solver_profile_url: row[27]
       )
     end
 
@@ -374,7 +452,10 @@ module Crater
       raw_status = to_string(payload["status"]?) || to_string(source["status"]?)
       status = raw_status && !raw_status.empty? ? raw_status : "queued"
 
-      id = to_string(payload["id"]?) || to_string(source["id"]?) || "#{config.actor_id}/orders/#{UUID.random}"
+      actor_handle = normalize_actor_handle(to_string(payload["actorHandle"]?) || to_string(source["actorHandle"]?) || to_string(payload["ownerUsername"]?) || to_string(source["ownerUsername"]?))
+      owner_username = to_string(payload["ownerUsername"]?) || to_string(source["ownerUsername"]?) || actor_handle
+      generated_id = UUID.random.to_s
+      id = extract_uuid(to_string(payload["id"]?) || to_string(source["id"]?)) || generated_id
       title = to_string(payload["name"]?) || to_string(payload["title"]?) || to_string(source["name"]?) || to_string(source["title"]?) || "Untitled order"
       description = to_string(payload["content"]?) || to_string(payload["description"]?) || to_string(source["content"]?) || to_string(source["description"]?) || ""
       estimated_cost = to_float(payment_link.try(&.["price"]?)) || to_float(payment_link.try(&.["amount"]?)) || to_float(payload["estimatedCost"]?) || to_float(payload["price"]?) || to_float(source["estimatedCost"]?) || to_float(source["price"]?) || 0.0
@@ -385,27 +466,25 @@ module Crater
       is_vpn_order = vpn_service_payload?(title, description, ui_scenario, labels)
       labels = ensure_vpn_label(labels) if is_vpn_order
 
-      if is_vpn_order
-        solver_name = "NordLayer Solver"
-        solver_handle = "@nordlayer-solver"
-        solver_profile_url = nil
-      else
-        solver_result = next_solver(config, title)
-        solver_name = solver_result[0]
-        solver_handle = solver_result[1]
-        solver_profile_url = solver_result[2]
-      end
+      explicit_solver_name = to_string(payload["solverName"]?) || to_string(source["solverName"]?) || to_string(payload["solver"]?) || to_string(source["solver"]?)
+      explicit_solver_handle = to_string(payload["solverHandle"]?) || to_string(source["solverHandle"]?) || to_string(payload["performerHandle"]?) || to_string(source["performerHandle"]?)
+      explicit_solver_profile_url = to_string(payload["solverProfileUrl"]?) || to_string(source["solverProfileUrl"]?) || to_string(payload["performerProfileUrl"]?) || to_string(source["performerProfileUrl"]?)
+
+      solver_name = explicit_solver_name
+      solver_handle = explicit_solver_handle
+      solver_profile_url = explicit_solver_profile_url
+      solver_label = explicit_solver_name || ""
 
       OrderRecord.new(
         id: id,
         status: status,
-        solver: solver_name,
+        solver: solver_label,
         title: title,
         description: description,
         estimated_cost: is_vpn_order ? (estimated_cost > 0 ? estimated_cost : 2.0) : estimated_cost,
         currency: is_vpn_order ? (currency.empty? ? "USD" : currency) : currency,
         execution_estimate: is_vpn_order ? "about 25 minutes" : execution_estimate,
-        payment_url: is_vpn_order ? "#{config.exchange_url}/pay/#{URI.encode_path(id)}" : payment_url,
+        payment_url: payment_url,
         ui_scenario: is_vpn_order ? "vpn-service" : ui_scenario,
         labels: labels,
         template_id: to_string(payload["templateId"]?) || to_string(source["templateId"]?),
@@ -415,6 +494,11 @@ module Crater
         template_author_display_name: to_string(payload["templateAuthorDisplayName"]?) || to_string(source["templateAuthorDisplayName"]?),
         template_pricing_mode: to_string(payload["templatePricingMode"]?) || to_string(source["templatePricingMode"]?),
         template_pricing_value: template_pricing_value,
+        owner_profile_id: to_string(payload["ownerProfileId"]?) || to_string(source["ownerProfileId"]?),
+        owner_username: owner_username,
+        owner_display_name: to_string(payload["ownerDisplayName"]?) || to_string(source["ownerDisplayName"]?),
+        actor_handle: actor_handle,
+        actor_did: normalize_did_key(to_string(payload["actorDid"]?) || to_string(source["actorDid"]?)) || system_actor_did(config),
         solver_name: solver_name,
         solver_handle: solver_handle,
         solver_profile_url: solver_profile_url
@@ -458,14 +542,17 @@ module Crater
     end
 
     def self.activity_object(order : OrderRecord, status : String, config : Utils::Config) : JSON::Any
+      object_id = order_object_id(order, config)
+      actor_did = order_actor_did(order, config)
       ticket_payload = {
         "@context" => [ActivityPub::CONTEXT, ForgeFed::CONTEXT],
-        "id" => "#{order.id}/ticket",
+        "id" => "#{object_id}/ticket",
+        "orderId" => order.id,
         "type" => "Ticket",
         "name" => order.title,
         "content" => order.description,
         "status" => status,
-        "reporter" => config.actor_id,
+        "reporter" => actor_did,
         "labels" => order.labels,
         "estimatedCost" => order.estimated_cost,
         "currency" => order.currency,
@@ -476,7 +563,12 @@ module Crater
         "templateAuthorUsername" => order.template_author_username,
         "templateAuthorDisplayName" => order.template_author_display_name,
         "templatePricingMode" => order.template_pricing_mode,
-        "templatePricingValue" => order.template_pricing_value
+        "templatePricingValue" => order.template_pricing_value,
+        "ownerProfileId" => order.owner_profile_id,
+        "ownerUsername" => order.owner_username,
+        "ownerDisplayName" => order.owner_display_name,
+        "actorHandle" => order.actor_handle,
+        "actorDid" => actor_did
       }
 
       object_payload = {
@@ -485,7 +577,8 @@ module Crater
           ForgeFed::CONTEXT,
           "https://w3id.org/fep/0ea0",
         ],
-        "id" => order.id,
+        "id" => object_id,
+        "orderId" => order.id,
         "type" => "Offer",
         "name" => order.title,
         "content" => order.description,
@@ -505,6 +598,11 @@ module Crater
         "templateAuthorDisplayName" => order.template_author_display_name,
         "templatePricingMode" => order.template_pricing_mode,
         "templatePricingValue" => order.template_pricing_value,
+        "ownerProfileId" => order.owner_profile_id,
+        "ownerUsername" => order.owner_username,
+        "ownerDisplayName" => order.owner_display_name,
+        "actorHandle" => order.actor_handle,
+        "actorDid" => actor_did,
         "attachment" => result_attachments(order, status, config)
       }
 
@@ -512,7 +610,7 @@ module Crater
     end
 
     private def self.result_attachments(order : OrderRecord, status : String, config : Utils::Config)
-      attachments = payment_links(order, status, config)
+      attachments = [] of JSON::Any
 
       if status == "completed" && order.ui_scenario == "vpn-service"
         attachments << JSON.parse(vpn_delivery_attachment(order, config).to_json)
@@ -521,45 +619,17 @@ module Crater
       attachments
     end
 
-    private def self.payment_links(order : OrderRecord, status : String, config : Utils::Config)
-      payment = order.payment_url || "#{config.exchange_url}/pay/#{order.id}"
-      payment_record = {
-        "@context" => [ActivityPub::CONTEXT, ForgeFed::CONTEXT, "https://kefine.app/ns/payment"],
-        "id" => "#{config.actor_outbox}/payment-links/#{order.id}",
-        "type" => "PaymentLink",
-        "name" => status == "completed" ? "Pay invoice" : "Solver price quote",
-        "summary" => "Price published by the assigned solver",
-        "attributedTo" => {
-          "id" => "#{config.actor_id}/solvers/#{URI.encode_path(order.solver.downcase.gsub(' ', '-'))}",
-          "type" => "Service",
-          "name" => order.solver,
-          "preferredUsername" => order.solver.downcase.gsub(/[^a-z0-9]+/, "-"),
-          "inbox" => config.actor_inbox,
-          "outbox" => config.actor_outbox,
-        },
-        "price" => order.estimated_cost,
-        "amount" => order.estimated_cost,
-        "currency" => order.currency,
-        "rel" => ["payment", "price"],
-        "href" => payment,
-        "url" => payment,
-        "mediaType" => "application/payment-link+json",
-      }
-
-      [JSON.parse(payment_record.to_json)]
-    end
-
     private def self.vpn_delivery_attachment(order : OrderRecord, config : Utils::Config)
       vless_uri = "vless://32274730-3454-49e3-b2d9-e6adf153b176@provider.akashprovid.com:32701?encryption=none&flow=xtls-rprx-vision&fp=chrome&pbk=1Lj8mfaT2j_ScjZvTQmAhFrsy9rdmFpNTObdhZxoJzs&security=reality&sid=ea392ae8&sni=github.com&type=tcp#UsServer1"
 
       {
         "@context" => ActivityPub::CONTEXT,
-        "id" => "#{config.actor_outbox}/deliveries/#{URI.encode_path(order.id)}",
+        "id" => "#{order.id}/delivery",
         "type" => "Article",
         "name" => "VPN delivery package",
         "summary" => "Structured VPN connection package and setup guide.",
         "mediaType" => "text/markdown",
-        "attributedTo" => config.actor_id,
+        "attributedTo" => order_actor_did(order, config),
         "url" => "/vless-us1.jsonc",
         "content" => "Provisioned VLESS access package with client setup steps for mobile and desktop.",
         "generator" => {
@@ -613,9 +683,9 @@ module Crater
           ForgeFed::CONTEXT,
           "https://w3id.org/fep/0ea0"
         ],
-        "id" => "#{config.actor_outbox}/activities/#{UUID.random}",
+        "id" => UUID.random.to_s,
         "type" => status == "queued" ? "Create" : "Update",
-        "actor" => config.actor_id,
+        "actor" => order_actor_did(order, config),
         "object" => activity_object(order, status, config),
         "to" => [
           "https://www.w3.org/ns/activitystreams#Public"
@@ -633,21 +703,64 @@ module Crater
       ActivityPub::Activity.from_json(activity_for(record, record.status, config).to_json)
     end
 
-    def self.submit_create(activity : ActivityPub::Activity, config : Utils::Config) : OrderRecord
+    private def self.post_to_exchange_inbox(activity : ActivityPub::Activity, config : Utils::Config) : Nil
+      inbox_url = config.order_queue_inbox
+      response = HTTP::Client.post(
+        inbox_url,
+        headers: HTTP::Headers{
+          "Accept" => "application/activity+json, application/json",
+          "Content-Type" => "application/activity+json"
+        },
+        body: activity.to_json,
+        tls: inbox_url.starts_with?("https://")
+      )
+
+      return if response.status_code >= 200 && response.status_code < 300
+
+      response_body = response.body.to_s.strip
+      reason = response_body.empty? ? "HTTP #{response.status_code}" : "HTTP #{response.status_code}: #{response_body}"
+      raise DeliveryFailed.new("Exchange inbox rejected activity: #{reason}")
+    rescue ex : DeliveryFailed
+      raise ex
+    rescue ex
+      raise DeliveryFailed.new("Failed to deliver activity to exchange inbox: #{ex.message}")
+    end
+
+    def self.receive_create(activity : ActivityPub::Activity, config : Utils::Config) : OrderRecord
       raise Error::InvalidActivity.new("Activity type must be Create") unless activity.type == "Create"
 
       record = parse_order_payload(activity, config)
 
       @@lock.synchronize do
         persist_order(record, config)
-        persist_activity(activity_for(record, record.status, config), record.id, config)
+        persist_activity(JSON.parse(activity.to_json), record.id, config)
       end
 
-      spawn do
-        sleep 3.seconds
-        transition(record.id, "in_progress", config)
-        sleep 3.seconds
-        transition(record.id, "completed", config)
+      record
+    end
+
+    def self.submit_create(activity : ActivityPub::Activity, config : Utils::Config) : OrderRecord
+      raise Error::InvalidActivity.new("Activity type must be Create") unless activity.type == "Create"
+
+      record = parse_order_payload(activity, config)
+      post_to_exchange_inbox(activity, config)
+
+      @@lock.synchronize do
+        persist_order(record, config)
+        persist_activity(JSON.parse(activity.to_json), record.id, config)
+      end
+
+      record
+    end
+
+    def self.submit_update(activity : ActivityPub::Activity, config : Utils::Config) : OrderRecord
+      raise Error::InvalidActivity.new("Activity type must be Update") unless activity.type == "Update"
+
+      record = parse_order_payload(activity, config)
+
+      @@lock.synchronize do
+        persist_order(record, config)
+        persist_activity(JSON.parse(activity.to_json), record.id, config)
       end
 
       record
@@ -664,8 +777,6 @@ module Crater
 
         record.status = status
         record.updated_at = current_time
-        record.payment_url = "#{config.exchange_url}/pay/#{record.id}" if status == "completed"
-
         persist_order(record, config)
         persist_activity(activity_for(record, record.status, config), record.id, config)
       end
@@ -673,11 +784,23 @@ module Crater
 
     def self.find_order(order_id : String, config : Utils::Config = Utils::Config.load) : OrderRecord?
       setup(config)
-      row = database(config).query_one?(
-        "SELECT id, status, solver, title, description, estimated_cost, currency, execution_estimate, created_at, updated_at, payment_url, ui_scenario, labels_json, template_id, template_slug, template_author_profile_id, template_author_username, template_author_display_name, template_pricing_mode, template_pricing_value, solver_name, solver_handle, solver_profile_url FROM orders WHERE id = $1",
-        order_id,
-        as: {String, String, String, String, String?, String?, String, String?, String, String, String?, String?, String, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?}
-      )
+      normalized_id = order_id.strip
+      uuid = extract_uuid(normalized_id)
+      row = if uuid
+              database(config).query_one?(
+                "SELECT id, status, solver, title, description, estimated_cost, currency, execution_estimate, created_at, updated_at, payment_url, ui_scenario, labels_json, template_id, template_slug, template_author_profile_id, template_author_username, template_author_display_name, template_pricing_mode, template_pricing_value, owner_profile_id, owner_username, owner_display_name, actor_handle, actor_did, solver_name, solver_handle, solver_profile_url FROM orders WHERE id = $1 OR id = $2 OR id LIKE $3 ORDER BY CASE WHEN id = $1 THEN 0 WHEN id = $2 THEN 1 ELSE 2 END LIMIT 1",
+                normalized_id,
+                uuid,
+                "%/#{uuid}",
+                as: {String, String, String, String, String?, String?, String, String?, String, String, String?, String?, String, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?}
+              )
+            else
+              database(config).query_one?(
+                "SELECT id, status, solver, title, description, estimated_cost, currency, execution_estimate, created_at, updated_at, payment_url, ui_scenario, labels_json, template_id, template_slug, template_author_profile_id, template_author_username, template_author_display_name, template_pricing_mode, template_pricing_value, owner_profile_id, owner_username, owner_display_name, actor_handle, actor_did, solver_name, solver_handle, solver_profile_url FROM orders WHERE id = $1",
+                normalized_id,
+                as: {String, String, String, String, String?, String?, String, String?, String, String, String?, String?, String, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?}
+              )
+            end
       return nil unless row
 
       hydrate_order(row)
@@ -709,16 +832,34 @@ module Crater
 
     def self.latest_by_order(order_id : String, config : Utils::Config = Utils::Config.load) : JSON::Any?
       setup(config)
-      row = database(config).query_one?(
-        "SELECT activity_json FROM order_activities WHERE order_id = $1 ORDER BY seq DESC LIMIT 1",
-        order_id,
-        as: String
-      )
+      normalized_id = order_id.strip
+      uuid = extract_uuid(normalized_id)
+      row = if uuid
+              database(config).query_one?(
+                "SELECT activity_json FROM order_activities WHERE order_id = $1 OR order_id = $2 OR order_id LIKE $3 ORDER BY CASE WHEN order_id = $1 THEN 0 WHEN order_id = $2 THEN 1 ELSE 2 END, seq DESC LIMIT 1",
+                normalized_id,
+                uuid,
+                "%/#{uuid}",
+                as: String
+              )
+            else
+              database(config).query_one?(
+                "SELECT activity_json FROM order_activities WHERE order_id = $1 ORDER BY seq DESC LIMIT 1",
+                normalized_id,
+                as: String
+              )
+            end
       return nil unless row
 
       JSON.parse(row)
     rescue
       nil
+    end
+    private def self.normalize_actor_handle(value : String?) : String?
+      return nil unless value
+
+      normalized = value.strip.gsub(/^@+/, "").downcase.gsub(/[^a-z0-9._-]+/, "-").gsub(/^[._-]+|[._-]+$/, "")
+      normalized.empty? ? nil : normalized
     end
   end
 end

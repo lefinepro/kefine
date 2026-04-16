@@ -18,7 +18,7 @@ module Crater
       getter log_level : String
       getter actor_handle : String
       getter actor_display_name : String
-      getter actor_private_key_pem : String
+      getter actor_private_key : String
 
       def initialize(
         @port : Int32,
@@ -35,17 +35,25 @@ module Crater
         @log_level : String,
         @actor_handle : String,
         @actor_display_name : String,
-        @actor_private_key_pem : String
+        @actor_private_key : String
       )
       end
 
       def self.load : Config
         raw = load_json_config
         backend = raw["backend"]?.try(&.as_h) || Hash(String, JSON::Any).new
+        origins = raw["origins"]?.try(&.as_h) || Hash(String, JSON::Any).new
         payment = raw["payment"]?.try(&.as_h) || Hash(String, JSON::Any).new
         default_actor = raw["defaultActor"]?.try(&.as_h) || Hash(String, JSON::Any).new
 
-        crater_url = normalize_url(read_env_or_string("CRATER_BASE_URL", backend, "craterBaseUrl", "http://localhost:3001"))
+        crater_url = normalize_url(
+          read_env_or_string(
+            "CRATER_PUBLIC_URL",
+            origins,
+            "primary",
+            read_env_or_string("CRATER_BASE_URL", backend, "craterBaseUrl", "http://localhost:3001")
+          )
+        )
         exchange_url = normalize_url(read_env_or_string("EXCHANGE_BASE_URL", backend, "exchangeBaseUrl", crater_url))
 
         new(
@@ -63,7 +71,7 @@ module Crater
           log_level: read_string(backend, "logLevel", "info"),
           actor_handle: read_string(default_actor, "handle", "api"),
           actor_display_name: read_string(default_actor, "displayName", "API"),
-          actor_private_key_pem: read_env_or_string("KEFINE_PRIVATEKEY_DEFAULT", default_actor, "privateKeyPem", "")
+          actor_private_key: read_env_or_string("KEFINE_PRIVATEKEY_DEFAULT", default_actor, "privateKey", read_string(default_actor, "privateKeyPem", ""))
         )
       end
 
@@ -145,7 +153,7 @@ module Crater
       end
 
       def resolved_actor_private_key_pem : String
-        actor_private_key_pem
+        actor_private_key
       end
     end
   end

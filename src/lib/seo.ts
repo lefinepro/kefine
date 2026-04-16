@@ -98,6 +98,7 @@ export function getSeoMeta(url: URL, sourceConfig: unknown = DEFAULT_PUBLIC_RUNT
   const isTaskFlow =
     pathname === '/create' ||
     pathname === '/api/create' ||
+    pathname === '/api/health' ||
     pathname.startsWith('/task/') ||
     pathname.startsWith('/order/') ||
     isActorOrderPath(pathname) ||
@@ -110,9 +111,9 @@ export function getSeoMeta(url: URL, sourceConfig: unknown = DEFAULT_PUBLIC_RUNT
     pathname.startsWith('/status/') ||
     pathname === '/api/status' ||
     pathname.startsWith('/api/status/') ||
-    pathname === '/api/payment-config' ||
     pathname.startsWith('/api/services') ||
     pathname.startsWith('/passkeys/') ||
+    pathname.startsWith('/api/passkeys/') ||
     pathname.startsWith('/api/kefine/');
 
   if (isTaskFlow) {

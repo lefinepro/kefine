@@ -14,23 +14,15 @@ customDomains = ["dev-proxy.col.pub"]
 locations = [
   "/.well-known",
   "/actor",
-  "/auth",
-  "/api/auth",
-  "/create",
   "/inbox",
   "/nodeinfo",
   "/outbox",
-  "/passkeys",
-  "/pay",
-  "/payment",
-  "/payment-config",
   "/projects",
-  "/status",
   "/templates",
   "/u"
 ]
 healthCheck.type = "http"
-healthCheck.path = "/payment-config"
+healthCheck.path = "/health"
 healthCheck.timeoutSeconds = 3
 healthCheck.maxFailed = 3
 healthCheck.intervalSeconds = 10

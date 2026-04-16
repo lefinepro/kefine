@@ -8,7 +8,6 @@ import type {
 	PublicKeyCredentialRequestOptionsJSON,
 	RegistrationResponseJSON
 } from '@simplewebauthn/types';
-import { getCraterBaseUrl } from '$lib/config/kefine-config';
 import { buildOrderProxyUrl } from '$lib/order-proxy-path';
 import {
   loadGeneratedPrivateKeyCookie,
@@ -273,7 +272,7 @@ async function postJson<T>(input: RequestInfo | URL, body: unknown): Promise<T> 
 }
 
 function buildCraterClientUrl(pathname: string): string {
-	return buildOrderProxyUrl(pathname, getCraterBaseUrl());
+	return buildOrderProxyUrl(pathname, '/api');
 }
 
 export async function performRegistration(

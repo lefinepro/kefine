@@ -18,10 +18,7 @@ module Crater
 
           {
             subject:  resource,
-            aliases:  [
-              "http://#{config.domain}/actor",
-              "http://#{config.domain}/u/#{config.actor_username}",
-            ],
+            aliases:  [config.actor_id, "#{config.crater_url}/actor/#{config.actor_username}"],
             links: [
               {
                 rel:  "self",
