@@ -40,3 +40,14 @@ export async function proxyOrderStepComment(
     context: { orderId, stepId }
   });
 }
+
+export async function proxyOrderDocumentUpdate(
+  request: Request,
+  orderId: string,
+  fetchFn: typeof fetch
+): Promise<Response> {
+  return proxyCraterRequest(request, fetchFn, `/status/${encodeURIComponent(orderId)}/document`, {
+    errorMessage: 'Failed to save task document.',
+    context: { orderId }
+  });
+}

@@ -6,10 +6,12 @@
   import type { AuthMethod, ExecutionPresentation, OrderView } from './kefine-workflow';
   import { scheduleAfter } from '$lib/utils/helpers';
   import KefineWalletProviderGrid from '$lib/components/kefine/KefineWalletProviderGrid.svelte';
+  import KefineTaskTreeFeed from '$lib/components/kefine/KefineTaskTreeFeed.svelte';
   import { KEFINE_AUTH_ICONS } from '$lib/components/kefine/kefine-auth-constants';
 
   let {
     currentOrder,
+    queuedOrders = [],
     execution,
     isHydratingTitle = false,
     forceFinalVpnStep = false,
@@ -22,16 +24,19 @@
     confirmCurrentStepLabel,
     onConfirmCurrentStep,
     onSubmitStepComment,
+    onSaveDocument,
     onWalletLogin,
     onPasskeyLogin,
     onAnonymous,
     onCancel
   }: {
     currentOrder: OrderView | null;
+    queuedOrders?: OrderView[];
     execution: ExecutionPresentation;
     isHydratingTitle?: boolean;
     forceFinalVpnStep?: boolean;
     labels: {
+      boardTitle: string;
       solver: string;
       subtasks: string;
       price: string;
@@ -46,6 +51,11 @@
       finalResult: string;
       leaveComment: string;
       noNotebookYet: string;
+      treeTitle: string;
+      feedTitle: string;
+      saving: string;
+      apply: string;
+      richEditorDescription: string;
     };
     authLabels: {
       walletTitle: string;
@@ -69,6 +79,7 @@
     confirmCurrentStepLabel?: string;
     onConfirmCurrentStep?: (() => void) | null;
     onSubmitStepComment?: ((stepId: string, content: string) => void | Promise<void>) | null;
+    onSaveDocument?: ((content: string) => void | Promise<void>) | null;
     onWalletLogin: () => void;
     onPasskeyLogin: () => void;
     onAnonymous: () => void;
@@ -346,24 +357,24 @@
   });
 </script>
 
-<article class="kefine-card kefine-card--wide kefine-order-flow">
-  <section class="kefine-flow-panel kefine-flow-panel--hero">
-    <lefine-box class="kefine-flow-topline">
-      <button type="button" class="kefine-flow-back" onclick={onCancel} aria-label={labels.cancel}>←</button>
-    </lefine-box>
+{#if isVpnScenario}
+  <article class="kefine-card kefine-card--wide kefine-order-flow">
+    <section class="kefine-flow-panel kefine-flow-panel--hero">
+      <lefine-box class="kefine-flow-topline">
+        <button type="button" class="kefine-flow-back" onclick={onCancel} aria-label={labels.cancel}>←</button>
+      </lefine-box>
 
-    {#if isHydratingTitle}
-      <h2 class="kefine-title-skeleton" aria-label="Loading task title"></h2>
-    {:else}
-      <h2>{currentOrder?.title}</h2>
-    {/if}
+      {#if isHydratingTitle}
+        <h2 class="kefine-title-skeleton" aria-label="Loading task title"></h2>
+      {:else}
+        <h2>{currentOrder?.title}</h2>
+      {/if}
 
-  {#if currentOrder?.description && currentOrder.description !== currentOrder.title}
-      <p class="kefine-flow-copy">{currentOrder.description}</p>
-    {/if}
-  </section>
+      {#if currentOrder?.description && currentOrder.description !== currentOrder.title}
+        <p class="kefine-flow-copy">{currentOrder.description}</p>
+      {/if}
+    </section>
 
-  {#if isVpnScenario}
     <section class="kefine-flow-panel">
       <lefine-box class="kefine-section-head">
         <p>VPN service runbook</p>
@@ -544,372 +555,36 @@
         </lef-result-preview-surface>
       </section>
     {/if}
-  {:else}
-    <section class="kefine-flow-panel">
-      <lefine-box class="kefine-section-head">
-        <p>{execution.eyebrow}</p>
-        <lefine-box class="kefine-flow-badges">
-          <lefine-text class="kefine-flow-badge kefine-flow-badge--timer">
-            <Icon icon="mdi:alarm" width="16" height="16" aria-hidden="true" />
-            <span>{formattedRemaining}</span>
-          </lefine-text>
-        </lefine-box>
-      </lefine-box>
-
-      <lef-flow-progress-panel>
-        <lef-flow-progress-meta>
-          <strong>{genericStepHeadline}</strong>
-          <lefine-text>{genericProgressPercent}%</lefine-text>
-        </lef-flow-progress-meta>
-        <lef-flow-progress-track aria-hidden="true">
-          <progress value={genericProgressPercent} max="100"></progress>
-        </lef-flow-progress-track>
-
-        <lef-flow-stage-copy>
-          <lef-flow-stage-meta>
-            <lef-flow-stage-label>{showExchangeWaiting ? labels.exchangeWaiting : labels.performers}</lef-flow-stage-label>
-          </lef-flow-stage-meta>
-          {#if showExchangeWaiting}
-            <lef-exchange-stage aria-label={execution.headline}>
-              <lef-exchange-scene aria-hidden="true">
-                <lef-exchange-hat>
-                  <lef-exchange-hat-top></lef-exchange-hat-top>
-                  <lef-exchange-hat-brim></lef-exchange-hat-brim>
-                  <lef-exchange-hat-band></lef-exchange-hat-band>
-                </lef-exchange-hat>
-              </lef-exchange-scene>
-            </lef-exchange-stage>
-          {:else if showExecutorQueue}
-            <lef-executor-list>
-              {#each executors as executor}
-                <lef-executor-card data-state={getExecutorTone(executor.status)}>
-                  <lef-executor-rank>#{executor.rank ?? 0}</lef-executor-rank>
-                  <lef-executor-avatar aria-hidden="true">
-                    {getExecutorInitial(executor.name, executor.handle)}
-                  </lef-executor-avatar>
-                  <lef-executor-copy>
-                    <strong>{executor.name}</strong>
-                    {#if executor.handle}
-                      <lefine-text>{executor.handle}</lefine-text>
-                    {/if}
-                    <p>{executor.resultSummary || executor.status}</p>
-                  </lef-executor-copy>
-                  {#if executor.progressPercent !== undefined}
-                    <lef-executor-progress>{executor.progressPercent}%</lef-executor-progress>
-                  {/if}
-                </lef-executor-card>
-              {/each}
-            </lef-executor-list>
-          {:else if showSingleExecutor && executors[0]}
-            <lef-solver-row data-testid="kefine-solver-fallback">
-              <lef-solver-avatar aria-hidden="true">
-                {getExecutorInitial(executors[0].name, executors[0].handle)}
-              </lef-solver-avatar>
-              <lef-solver-copy>
-                <lef-solver-name>
-                  <strong>{executors[0].name}</strong>
-                  {#if executors[0].handle}
-                    <lefine-text>{executors[0].handle}</lefine-text>
-                  {/if}
-                  {#if executors[0].progressPercent !== undefined}
-                    <lef-executor-progress>{executors[0].progressPercent}%</lef-executor-progress>
-                  {/if}
-                </lef-solver-name>
-                {#if executors[0].resultSummary}
-                  <p>{executors[0].resultSummary}</p>
-                {/if}
-              </lef-solver-copy>
-            </lef-solver-row>
-          {:else if currentOrder?.solver}
-            <lef-solver-row data-testid="kefine-solver-fallback">
-              <lef-solver-avatar aria-hidden="true">
-                {getSolverInitial(currentOrder.solverName || currentOrder.solver, currentOrder.solver)}
-              </lef-solver-avatar>
-              <lef-solver-copy>
-                <lef-solver-name>
-                  <strong>{currentOrder.solverName || currentOrder.solver}</strong>
-                  {#if currentOrder.solverHandle}
-                    <lefine-text>{currentOrder.solverHandle}</lefine-text>
-                  {/if}
-                </lef-solver-name>
-              </lef-solver-copy>
-            </lef-solver-row>
-          {/if}
-
-          {#if !showExchangeWaiting && activeGenericStep}
-            <h3>{activeGenericStep.title}</h3>
-            <p>{activeGenericStep.detail}</p>
-            {#if activeGenericStep.confirmation?.required && activeGenericStep.confirmation?.confirmed !== true && onConfirmCurrentStep}
-              <lef-flow-confirm>
-                {#if activeGenericStep.confirmation?.detail}
-                  <p>{activeGenericStep.confirmation.detail}</p>
-                {/if}
-                <button type="button" data-variant="primary" onclick={onConfirmCurrentStep} disabled={isConfirmingStep}>
-                  {isConfirmingStep ? 'Confirming...' : (activeGenericStep.confirmation?.label || confirmCurrentStepLabel || 'Confirm step')}
-                </button>
-              </lef-flow-confirm>
-            {/if}
-          {:else if !showExchangeWaiting}
-            <h3>{execution.headline}</h3>
-            <p>{execution.supportingText}</p>
-          {/if}
-
-        {#if genericSteps.length > 1}
-          <lef-flow-outline-list data-testid="kefine-subtask-list">
-            {#each genericSteps as stepItem, index}
-              <details data-state={stepItem.state} open={stepItem.state === 'active'}>
-                  <summary>
-                    <lef-flow-outline-row>
-                      <strong>Step {index + 1}</strong>
-                      <p>{stepItem.title}</p>
-                    </lef-flow-outline-row>
-                  </summary>
-                  <lef-flow-outline-copy>
-                    <p>{stepItem.detail}</p>
-                  </lef-flow-outline-copy>
-                </details>
-              {/each}
-            </lef-flow-outline-list>
-          {/if}
-
-          {#if showNotebookTimeline && notebookSteps.length > 0}
-            <lef-flow-followup>
-              <lef-notebook-timeline>
-                {#each notebookSteps as notebookStep, index}
-                  <details open={index === notebookSteps.length - 1}>
-                    <summary>
-                      <lef-notebook-summary>
-                        <lef-notebook-step-tag>Step {index + 1}</lef-notebook-step-tag>
-                        <lef-notebook-summary-copy>
-                          <strong>{notebookStep.title}</strong>
-                          {#if notebookStep.executorName}
-                            <lefine-text>{notebookStep.executorName}</lefine-text>
-                          {/if}
-                        </lef-notebook-summary-copy>
-                        <lef-notebook-state data-state={notebookStep.state}>{notebookStep.statusLabel || notebookStep.state}</lef-notebook-state>
-                      </lef-notebook-summary>
-                    </summary>
-
-                    <lef-notebook-body>
-                      {#if notebookStep.detail}
-                        <p>{notebookStep.detail}</p>
-                      {/if}
-
-                      <lef-notebook-blocks>
-                        {#each notebookStep.blocks as block}
-                          <lef-notebook-block data-type={block.type}>
-                            {#if block.title}
-                              <strong>{block.title}</strong>
-                            {/if}
-                            {#if block.type === 'code' || block.type === 'diff' || block.type === 'output'}
-                              <pre>{block.content}</pre>
-                            {:else if block.type === 'artifact' && block.href}
-                              <a href={block.href} target="_blank" rel="noreferrer">{block.title || block.href}</a>
-                              {#if block.content}
-                                <p>{block.content}</p>
-                              {/if}
-                            {:else}
-                              <p>{block.content}</p>
-                            {/if}
-                          </lef-notebook-block>
-                        {/each}
-                      </lef-notebook-blocks>
-
-                      {#if notebookStep.comments?.length}
-                        <lef-step-comments>
-                          {#each notebookStep.comments as comment}
-                            <lef-step-comment>
-                              <strong>{comment.authorName || comment.authorHandle || 'Comment'}</strong>
-                              <p>{comment.content}</p>
-                            </lef-step-comment>
-                          {/each}
-                        </lef-step-comments>
-                      {/if}
-
-                      <lef-step-comment-form>
-                        <label for={`step-comment-${notebookStep.id}`}>{labels.leaveComment}</label>
-                        <textarea
-                          id={`step-comment-${notebookStep.id}`}
-                          rows="3"
-                          value={commentDrafts[notebookStep.id] || ''}
-                          oninput={(event) => {
-                            const target = event.currentTarget as HTMLTextAreaElement;
-                            commentDrafts = { ...commentDrafts, [notebookStep.id]: target.value };
-                          }}
-                        ></textarea>
-                        <button
-                          type="button"
-                          onclick={() => submitStepComment(notebookStep.id)}
-                          disabled={!commentDrafts[notebookStep.id]?.trim() || commentSubmittingStepId === notebookStep.id}
-                        >
-                          {commentSubmittingStepId === notebookStep.id ? 'Sending...' : labels.leaveComment}
-                        </button>
-                      </lef-step-comment-form>
-                    </lef-notebook-body>
-                  </details>
-                {/each}
-              </lef-notebook-timeline>
-            </lef-flow-followup>
-          {/if}
-
-          {#if hasInterimResult && currentOrder?.interimResult}
-            <lef-flow-followup>
-              <lef-result-section>
-                <lef-result-head>
-                  <strong>{labels.interimResult}</strong>
-                  <p>{currentOrder.interimResult.title}</p>
-                </lef-result-head>
-                {#each currentOrder.interimResult.blocks as block}
-                  <lef-notebook-block data-type={block.type}>
-                    {#if block.type === 'code' || block.type === 'diff' || block.type === 'output'}
-                      <pre>{block.content}</pre>
-                    {:else}
-                      <p>{block.content}</p>
-                    {/if}
-                  </lef-notebook-block>
-                {/each}
-              </lef-result-section>
-            </lef-flow-followup>
-          {/if}
-
-          {#if hasFinalResult && currentOrder?.result}
-            <lef-flow-followup>
-              <lef-result-section>
-                <lef-result-head>
-                  <strong>{labels.finalResult}</strong>
-                  <p>{currentOrder.result.title}</p>
-                </lef-result-head>
-                {#each currentOrder.result.blocks as block}
-                  <lef-notebook-block data-type={block.type}>
-                    {#if block.type === 'code' || block.type === 'diff' || block.type === 'output'}
-                      <pre>{block.content}</pre>
-                    {:else}
-                      <p>{block.content}</p>
-                    {/if}
-                  </lef-notebook-block>
-                {/each}
-              </lef-result-section>
-            </lef-flow-followup>
-          {/if}
-
-          {#if currentOrder?.iterations?.length}
-            <lef-flow-followup>
-              <lef-iterations-list>
-                {#each currentOrder.iterations as iteration}
-                  <lef-iteration-card data-current={iteration.current ? 'true' : 'false'}>
-                    <strong>{iteration.title}</strong>
-                    {#if iteration.summary}
-                      <p>{iteration.summary}</p>
-                    {/if}
-                    {#if iteration.stepCount !== undefined}
-                      <lefine-text>{iteration.stepCount} steps</lefine-text>
-                    {/if}
-                  </lef-iteration-card>
-                {/each}
-              </lef-iterations-list>
-            </lef-flow-followup>
-          {/if}
-        </lef-flow-stage-copy>
-      </lef-flow-progress-panel>
-    </section>
-  {/if}
-
-</article>
+  </article>
+{:else}
+  <kefine-task-stage>
+      <KefineTaskTreeFeed
+        {currentOrder}
+        {queuedOrders}
+        {commentSubmittingStepId}
+        onSubmitStepComment={onSubmitStepComment}
+        onSaveDocument={onSaveDocument}
+        labels={{
+          boardTitle: currentOrder?.title || labels.boardTitle,
+          saving: labels.saving,
+          leaveComment: labels.leaveComment,
+          apply: labels.apply,
+          richEditorDescription: labels.richEditorDescription
+        }}
+      />
+  </kefine-task-stage>
+{/if}
 
 <style>
-  lef-flow-confirm {
-    display: grid;
-    gap: 0.65rem;
-    margin-top: 1rem;
-    padding: 0.9rem 1rem;
-    border-radius: 0.9rem;
-    border: 1px solid color-mix(in oklab, var(--kef-line) 22%, transparent);
-    background: color-mix(in oklab, var(--kef-bg-card) 94%, #efe3bc 6%);
-  }
-
-  lef-flow-confirm p {
-    margin: 0;
-    color: var(--lefine-text-soft);
-  }
-
-  lef-flow-confirm button {
-    justify-self: start;
-  }
-
-  lef-flow-outline-list {
-    display: grid;
-    gap: 0.45rem;
-    margin-top: 1rem;
-  }
-
-  lef-flow-outline-list details {
-    border-radius: 0.8rem;
-    border: 1px solid color-mix(in oklab, var(--kef-line) 34%, transparent);
-    background:
-      linear-gradient(180deg, color-mix(in oklab, var(--kef-bg-card) 96%, #efe3bc 4%), color-mix(in oklab, var(--kef-bg-card) 100%, transparent));
-    overflow: hidden;
-  }
-
-  lef-flow-outline-list summary {
-    list-style: none;
-    cursor: pointer;
-    padding: 0.78rem 0.9rem;
-  }
-
-  lef-flow-outline-list summary::-webkit-details-marker {
-    display: none;
-  }
-
-  lef-flow-outline-row {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    gap: 0.7rem;
-    align-items: baseline;
-  }
-
-  lef-flow-outline-row strong {
-    color: var(--lefine-text-soft);
-    font-size: 0.78rem;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-  }
-
-  lef-flow-outline-row p {
-    margin: 0;
-    color: var(--lefine-text);
-  }
-
-  lef-flow-outline-copy {
+  kefine-task-stage {
     display: block;
-    padding: 0 0.9rem 0.9rem;
-    border-top: 1px solid color-mix(in oklab, var(--kef-line) 16%, transparent);
+    width: min(100%, 72rem);
+    margin: 0 auto;
   }
 
-  lef-flow-outline-copy p {
-    margin: 0.72rem 0 0;
-    color: var(--lefine-text-soft);
-  }
-
-  lef-flow-outline-list details[data-state='completed'] {
-    border-color: color-mix(in oklab, #8fb47a 34%, transparent);
-  }
-
-  lef-flow-outline-list details[data-state='active'] {
-    border-color: color-mix(in oklab, #7c9ab5 40%, transparent);
-  }
-
-  lef-exchange-stage,
-  lef-executor-list,
-  lef-notebook-timeline,
-  lef-iterations-list {
+  lef-exchange-stage {
     display: grid;
     gap: 0.9rem;
-  }
-
-  lef-flow-followup {
-    display: grid;
-    gap: 0.9rem;
-    margin-top: 1rem;
   }
 
   lef-exchange-stage {
@@ -972,165 +647,6 @@
     border-radius: 999px;
     background: color-mix(in oklab, #c2a06d 72%, transparent);
     box-shadow: 0 0 0 1px color-mix(in oklab, #3f2f20 14%, transparent);
-  }
-
-  lef-result-head p,
-  lef-iteration-card p,
-  lef-step-comment p,
-  lef-executor-copy p {
-    margin: 0.35rem 0 0;
-    color: var(--lefine-text-soft);
-  }
-
-  lef-executor-card,
-  lef-iteration-card,
-  lef-result-section {
-    display: grid;
-    gap: 0.75rem;
-    padding: 0.95rem 1rem;
-    border-radius: 0.9rem;
-    border: 1px solid color-mix(in oklab, var(--kef-line) 26%, transparent);
-    background: color-mix(in oklab, var(--kef-bg-card) 96%, #efe3bc 4%);
-  }
-
-  lef-executor-card {
-    grid-template-columns: auto auto minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 0.8rem;
-  }
-
-  lef-executor-rank,
-  lef-executor-progress,
-  lef-notebook-step-tag,
-  lef-notebook-state {
-    font-size: 0.78rem;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--lefine-text-soft);
-  }
-
-  lef-executor-avatar {
-    display: grid;
-    place-items: center;
-    width: 2.3rem;
-    height: 2.3rem;
-    border-radius: 999px;
-    border: 1px solid color-mix(in oklab, var(--kef-line) 30%, transparent);
-    background: color-mix(in oklab, var(--kef-bg-card) 92%, #fff5dd 8%);
-    font-weight: 700;
-  }
-
-  lef-executor-copy strong,
-  lef-result-head strong,
-  lef-step-comment strong,
-  lef-iteration-card strong {
-    display: block;
-  }
-
-  lef-executor-card[data-state='active'],
-  lef-notebook-state[data-state='active'] {
-    border-color: color-mix(in oklab, #7c9ab5 30%, transparent);
-  }
-
-  lef-executor-card[data-state='completed'],
-  lef-iteration-card[data-current='true'] {
-    border-color: color-mix(in oklab, #8fb47a 32%, transparent);
-  }
-
-  lef-executor-card[data-state='failed'] {
-    border-color: color-mix(in oklab, #a26767 34%, transparent);
-  }
-
-  lef-notebook-timeline details {
-    border-radius: 0.95rem;
-    border: 1px solid color-mix(in oklab, var(--kef-line) 28%, transparent);
-    background: color-mix(in oklab, var(--kef-bg-card) 97%, #efe3bc 3%);
-    overflow: hidden;
-  }
-
-  lef-notebook-timeline summary {
-    list-style: none;
-    cursor: pointer;
-    padding: 0.9rem 1rem;
-  }
-
-  lef-notebook-timeline summary::-webkit-details-marker {
-    display: none;
-  }
-
-  lef-notebook-summary {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    gap: 0.8rem;
-    align-items: center;
-  }
-
-  lef-notebook-body {
-    display: grid;
-    gap: 0.9rem;
-    padding: 0 1rem 1rem;
-    border-top: 1px solid color-mix(in oklab, var(--kef-line) 16%, transparent);
-  }
-
-  lef-notebook-body > p {
-    margin: 0.8rem 0 0;
-    color: var(--lefine-text-soft);
-  }
-
-  lef-notebook-blocks,
-  lef-step-comments {
-    display: grid;
-    gap: 0.65rem;
-  }
-
-  lef-notebook-block,
-  lef-step-comment {
-    display: grid;
-    gap: 0.45rem;
-    padding: 0.8rem 0.9rem;
-    border-radius: 0.8rem;
-    background: color-mix(in oklab, var(--kef-bg-card) 92%, #f8edd0 8%);
-    border: 1px solid color-mix(in oklab, var(--kef-line) 18%, transparent);
-  }
-
-  lef-notebook-block p,
-  lef-step-comment p {
-    margin: 0;
-  }
-
-  lef-notebook-block pre {
-    margin: 0;
-    padding: 0.85rem;
-    overflow: auto;
-    border-radius: 0.75rem;
-    background: color-mix(in oklab, #1d160f 92%, transparent);
-    color: #f7ebcf;
-    font-size: 0.9rem;
-  }
-
-  lef-step-comment-form {
-    display: grid;
-    gap: 0.6rem;
-  }
-
-  lef-step-comment-form label {
-    font-size: 0.84rem;
-    color: var(--lefine-text-soft);
-  }
-
-  lef-step-comment-form textarea {
-    width: 100%;
-    min-height: 5.5rem;
-    padding: 0.8rem 0.9rem;
-    border-radius: 0.8rem;
-    border: 1px solid color-mix(in oklab, var(--kef-line) 28%, transparent);
-    background: color-mix(in oklab, var(--kef-bg-card) 96%, #faf1d9 4%);
-    color: var(--lefine-text);
-    resize: vertical;
-  }
-
-  lef-step-comment-form button {
-    justify-self: start;
   }
 
   @keyframes kefine-hat-search {

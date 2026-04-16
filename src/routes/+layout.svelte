@@ -185,6 +185,9 @@
     authenticatedLabel={authenticatedLabel}
     authenticatedSecondaryLabel={null}
     authenticatedAvatarUrl={null}
+    authMenuLabel={localeText.profile.title}
+    openProfileLabel={localeText.profile.title}
+    signOutLabel={localeText.profile.signOut}
     isAuthenticated={isAuthenticated}
     isDarkTheme={isDarkTheme}
     isExpanded={topbarExpanded}
@@ -208,6 +211,9 @@
       themeMode = theme;
     }}
     onAuth={handleSharedBrandClick}
+    onOpenProfile={handleSharedBrandClick}
+    onSignOut={handleSharedBrandClick}
+    onAuthDoubleClick={handleSharedBrandClick}
     onLocale={handleSharedLocaleChange}
   />
 

@@ -16,6 +16,8 @@
     executionLabel,
     relatedItemsLabel,
     windowLabel,
+    createServiceLabel = 'Transform to service',
+    serviceVariablesLabel = 'Service variables',
     stopTaskLabel = '',
     deleteTaskLabel = '',
     itemTestId,
@@ -25,7 +27,9 @@
     deleteTestId,
     showStop = false,
     showDelete = false,
+    showCreateService = false,
     onOpen,
+    onCreateService,
     onOpenKeydown,
     onStop,
     onDelete,
@@ -43,6 +47,8 @@
     executionLabel: string;
     relatedItemsLabel: string;
     windowLabel: string;
+    createServiceLabel?: string;
+    serviceVariablesLabel?: string;
     stopTaskLabel?: string;
     deleteTaskLabel?: string;
     itemTestId: string;
@@ -52,7 +58,9 @@
     deleteTestId?: string;
     showStop?: boolean;
     showDelete?: boolean;
+    showCreateService?: boolean;
     onOpen: () => void;
+    onCreateService?: (event: MouseEvent) => void;
     onOpenKeydown: (event: KeyboardEvent) => void;
     onStop?: (event: MouseEvent) => void;
     onDelete?: (event: MouseEvent) => void;
@@ -62,12 +70,25 @@
     onStopPointerCancel?: () => void;
   } = $props();
 
+  function formatTemplateVariableLabel(key: string): string {
+    const normalized = key.trim().replace(/[_-]+/g, ' ');
+    if (!normalized) {
+      return 'Variable';
+    }
+
+    return normalized.replace(/\b\w/g, (char) => char.toUpperCase());
+  }
+
   const formattedStatus = $derived(formatKefineOrderStatus(order.status));
   const formattedTime = $derived(formatKefineOrderTime(order, timeLeftLabel));
   const hasDescription = $derived(Boolean(order.description?.trim() && order.description !== order.title));
   const hasLabels = $derived((order.labels?.length ?? 0) > 0);
+  const hasServiceVariables = $derived((order.templateVariables?.length ?? 0) > 0);
   const hasSolverInfo = $derived(Boolean(order.solver?.trim() || order.solverHandle?.trim()));
-  const hasExpandedSections = $derived(hasDescription || hasSolverInfo || hasLabels || Boolean(order.executionEstimate));
+  const hasExpandedSections = $derived(
+    hasDescription || hasSolverInfo || hasLabels || hasServiceVariables || Boolean(order.executionEstimate)
+  );
+  const canMakeTemplate = $derived(order.status === 'completed' || order.status === 'done');
 </script>
 
 <li>
@@ -109,6 +130,18 @@
           <Icon icon="mdi:arrow-top-right" width="15" height="15" aria-hidden="true" />
           <lefine-text>{openTaskLabel}</lefine-text>
         </button>
+
+        {#if showCreateService && canMakeTemplate}
+          <button
+            type="button"
+            data-part="create-service"
+            aria-label={`${createServiceLabel}: ${order.title}`}
+            onclick={onCreateService}
+          >
+            <Icon icon="mdi:wand-sparkles" width="15" height="15" aria-hidden="true" />
+            <lefine-text>{createServiceLabel}</lefine-text>
+          </button>
+        {/if}
 
         {#if showStop}
           <button
@@ -192,6 +225,20 @@
                 <li>#{label}</li>
               {/each}
             </kefine-order-tag-list>
+          </details>
+        {/if}
+
+        {#if hasServiceVariables}
+          <details>
+            <summary>{serviceVariablesLabel}</summary>
+            <kefine-order-detail-grid>
+              {#each order.templateVariables ?? [] as variable (`${order.id}-${variable.key}`)}
+                <kefine-order-detail-row>
+                  <dt>{formatTemplateVariableLabel(variable.key)}</dt>
+                  <dd>{order.templateVariableValues?.[variable.key] ?? variable.defaultValue ?? '-'}</dd>
+                </kefine-order-detail-row>
+              {/each}
+            </kefine-order-detail-grid>
           </details>
         {/if}
       </kefine-order-sections>
@@ -328,6 +375,7 @@
   }
 
   button[data-part='open-task'],
+  button[data-part='create-service'],
   button[data-part='status-toggle'],
   button[data-part='delete-task'] {
     min-height: 2rem;
@@ -344,6 +392,10 @@
 
   button[data-part='open-task'] {
     color: color-mix(in oklab, var(--lefine-text) 90%, #456c8e 10%);
+  }
+
+  button[data-part='create-service'] {
+    color: color-mix(in oklab, var(--lefine-text) 90%, #8a5a22 10%);
   }
 
   button[data-part='delete-task'] {

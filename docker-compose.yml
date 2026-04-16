@@ -25,7 +25,7 @@ services:
     environment:
       DATABASE_URL: postgresql://kefine:kefine@postgres:5432/kefine
       KEFINE_PRIVATEKEY_DEFAULT: ${KEFINE_PRIVATEKEY_DEFAULT:-}
-      EXCHANGE_BASE_URL: https://exchange.lefine.pro
+      EXCHANGE_BASE_URL: ${EXCHANGE_BASE_URL:-https://exchange.lefine.pro}
     working_dir: /app
     command: ["crystal", "run", "src/crater.cr"]
     volumes:
@@ -50,7 +50,7 @@ services:
         condition: service_healthy
     environment:
       CRATER_BASE_URL: http://crater:3001
-      EXCHANGE_BASE_URL: https://exchange.lefine.pro
+      EXCHANGE_BASE_URL: ${EXCHANGE_BASE_URL:-https://exchange.lefine.pro}
     ports:
       - "5173:5173"
 

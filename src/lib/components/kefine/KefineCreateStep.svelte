@@ -3,6 +3,7 @@
   import type { DraftOrder, OrderView, TemplatePresentation } from './kefine-workflow';
   import { scheduleAfter } from '$lib/utils/helpers';
   import KefineOrderListItem from '$lib/components/kefine/KefineOrderListItem.svelte';
+  import KefineRichTaskEditorDialog from '$lib/components/kefine/KefineRichTaskEditorDialog.svelte';
 
   const PLACEHOLDER_TYPE_DELAY_MS = 58;
   const PLACEHOLDER_DELETE_DELAY_MS = 34;
@@ -32,15 +33,18 @@
     hasMoreOrders,
     matchedTasksLabel,
     addFileLabel,
+    addDescriptionLabel,
     addExecutionEstimateLabel,
     fileCountLabel,
     composerHints,
+    richEditorDescription,
     timeLeftLabel,
     openTaskLabel,
     summaryLabel,
     executionLabel,
     relatedItemsLabel,
     windowLabel,
+    createServiceLabel = 'Transform to service',
     statusLabel,
     stopTaskLabel,
     deleteTaskLabel,
@@ -51,6 +55,7 @@
     onStopOrder,
     onDeleteOrder,
     onOpenOrder,
+    onCreateServiceFromOrder,
     onLoadMoreOrders,
     onDescriptionChange,
     onTemplateVariableChange,
@@ -103,15 +108,18 @@
     hasMoreOrders: boolean;
     matchedTasksLabel: string;
     addFileLabel: string;
+    addDescriptionLabel: string;
     addExecutionEstimateLabel: string;
     fileCountLabel: (count: number) => string;
     composerHints: string;
+    richEditorDescription: string;
     timeLeftLabel: string;
     openTaskLabel: string;
     summaryLabel: string;
     executionLabel: string;
     relatedItemsLabel: string;
     windowLabel: string;
+    createServiceLabel?: string;
     statusLabel: string;
     stopTaskLabel: string;
     deleteTaskLabel: string;
@@ -122,6 +130,7 @@
     onStopOrder: (order: OrderView, event: Event) => void;
     onDeleteOrder: (order: OrderView, event: Event) => void;
     onOpenOrder: (order: OrderView) => void;
+    onCreateServiceFromOrder?: (order: OrderView, event: Event) => void;
     onLoadMoreOrders: () => void;
     onDescriptionChange?: (value: string) => void;
     onTemplateVariableChange?: (key: string, value: string) => void;
@@ -144,8 +153,12 @@
   let filePreviews = $state<Map<number, string>>(new Map());
   let touchStopTimers = new Map<string, () => void>();
   let touchStopTriggered = new Set<string>();
+  let queuePopoverOpen = $state(false);
+  let queuePressTriggered = $state(false);
+  let richEditorOpen = $state(false);
   let cancelPlaceholderTick: (() => void) | null = null;
   let cancelLoadMoreReset: (() => void) | null = null;
+  let cancelQueuePress: (() => void) | null = null;
   let placeholderVariantIndex = $state(0);
   let placeholderCharIndex = $state(0);
   let placeholderDeleting = $state(false);
@@ -285,6 +298,8 @@
       cancelPlaceholderTick = null;
       cancelLoadMoreReset?.();
       cancelLoadMoreReset = null;
+      cancelQueuePress?.();
+      cancelQueuePress = null;
 
       for (const cancelTimer of touchStopTimers.values()) {
         cancelTimer();
@@ -302,6 +317,12 @@
       return;
     }
 
+    if ((event.ctrlKey || event.metaKey) && !(template && draft.templatePromptTemplate)) {
+      event.preventDefault();
+      richEditorOpen = true;
+      return;
+    }
+
     if (event.shiftKey) {
       return;
     }
@@ -315,6 +336,71 @@
     event.preventDefault();
     onSubmit();
   }
+
+  function clearQueuePress() {
+    cancelQueuePress?.();
+    cancelQueuePress = null;
+  }
+
+  function startQueuePress(event: PointerEvent) {
+    if (event.button !== 0) {
+      return;
+    }
+
+    clearQueuePress();
+    queuePressTriggered = false;
+    cancelQueuePress = scheduleAfter(520, () => {
+      queuePressTriggered = true;
+      queuePopoverOpen = true;
+      cancelQueuePress = null;
+    });
+  }
+
+  function handleSubmitPressEnd() {
+    clearQueuePress();
+  }
+
+  function handleSubmitButtonClick(event: MouseEvent) {
+    if (queuePressTriggered) {
+      queuePressTriggered = false;
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
+    queuePopoverOpen = false;
+    onSubmit();
+  }
+
+  function handleQueueTaskClick() {
+    queuePopoverOpen = false;
+    void onQueueTask();
+  }
+
+  function handleRichEditorApply(nextValue: string) {
+    onDescriptionChange?.(nextValue);
+    resizeTaskInput(nextValue);
+  }
+
+  $effect(() => {
+    if (!browser || !queuePopoverOpen) {
+      return;
+    }
+
+    const handleWindowPointerDown = (event: PointerEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest('[data-part="queue-popover"], [data-part="exec-button"]')) {
+        return;
+      }
+
+      queuePopoverOpen = false;
+    };
+
+    globalThis.addEventListener('pointerdown', handleWindowPointerDown);
+    return () => {
+      globalThis.removeEventListener('pointerdown', handleWindowPointerDown);
+    };
+  });
 
   function isImageFile(file: File): boolean {
     return file.type.startsWith('image/');
@@ -636,10 +722,23 @@
         data-part="exec-button"
         data-testid="kefine-submit-task"
         aria-label={executeAria}
-        onclick={onSubmit}
+        aria-haspopup="dialog"
+        aria-expanded={queuePopoverOpen}
+        onclick={handleSubmitButtonClick}
+        onpointerdown={startQueuePress}
+        onpointerup={handleSubmitPressEnd}
+        onpointerleave={handleSubmitPressEnd}
+        onpointercancel={handleSubmitPressEnd}
       >
         <kefine-exec-arrow aria-hidden="true">➵</kefine-exec-arrow>
       </button>
+      {#if queuePopoverOpen}
+        <kefine-submit-popover data-part="queue-popover" role="dialog" aria-label={backgroundExecuteAria}>
+          <button type="button" data-part="queue-popover-action" onclick={handleQueueTaskClick}>
+            {backgroundExecuteAria}
+          </button>
+        </kefine-submit-popover>
+      {/if}
     </fieldset>
 
     <kefine-composer-strip aria-label={composerHints}>
@@ -648,6 +747,9 @@
         {#if draft.files.length > 0}
           <strong>{fileCountLabel(draft.files.length)}</strong>
         {/if}
+      </button>
+      <button type="button" data-part="composer-chip" onclick={() => { richEditorOpen = !richEditorOpen; }}>
+        <lefine-text>{addDescriptionLabel}</lefine-text>
       </button>
       {#if executionEditorOpen}
         <kefine-execution-editor>
@@ -728,8 +830,15 @@
       </kefine-file-list>
     {/if}
 
-    <p id="kefine-composer-hints" data-part="composer-hints">{composerHints}</p>
+    <p id="kefine-composer-hints" data-part="composer-hints" hidden>{composerHints}</p>
   </lef-create-form>
+
+  <KefineRichTaskEditorDialog
+    open={richEditorOpen}
+    value={draft.description}
+    description={richEditorDescription}
+    onApply={handleRichEditorApply}
+  />
 
   {#if (isSearching && matchedOrders.length > 0) || totalOrders > 0}
     <section data-part="recent" aria-label={isSearching ? matchedTasksLabel : solverLabel}>
@@ -747,13 +856,16 @@
               {executionLabel}
               {relatedItemsLabel}
               {windowLabel}
+              {createServiceLabel}
               {deleteTaskLabel}
+              showCreateService={true}
               showDelete={true}
               itemTestId={`kefine-search-order-${order.id}`}
               openTestId={`kefine-open-search-order-${order.id}`}
               etaTestId={`kefine-order-eta-${order.id}`}
               deleteTestId={`kefine-delete-search-order-${order.id}`}
               onOpen={() => onOpenOrder(order)}
+              onCreateService={(event) => onCreateServiceFromOrder?.(order, event)}
               onOpenKeydown={(event) => handleOpenOrderKeydown(order, event)}
               onDelete={(event) => handleDeleteClick(order, event)}
             />
@@ -773,8 +885,10 @@
                 {executionLabel}
                 {relatedItemsLabel}
                 {windowLabel}
+                {createServiceLabel}
                 {stopTaskLabel}
                 {deleteTaskLabel}
+                showCreateService={true}
                 showStop={true}
                 showDelete={true}
                 itemTestId={`kefine-order-item-${order.id}`}
@@ -783,6 +897,7 @@
                 stopTestId={`kefine-stop-order-${order.id}`}
                 deleteTestId={`kefine-delete-order-${order.id}`}
                 onOpen={() => onOpenOrder(order)}
+                onCreateService={(event) => onCreateServiceFromOrder?.(order, event)}
                 onOpenKeydown={(event) => handleOpenOrderKeydown(order, event)}
                 onStop={(event) => handleStopClick(order, event)}
                 onDelete={(event) => handleDeleteClick(order, event)}
@@ -1945,6 +2060,7 @@
   }
 
   fieldset[data-part='exec-row'] {
+    position: relative;
     display: grid;
     grid-template-columns: minmax(0, 1fr) 4.05rem;
     gap: clamp(0.45rem, 2vw, 0.75rem);
@@ -2089,7 +2205,6 @@
     gap: 0.5rem;
     align-items: center;
     padding: 0.05rem 0 0.2rem;
-    border-bottom: 1px dashed color-mix(in oklab, var(--kef-line) 52%, transparent);
   }
 
   button[data-part='composer-chip'],
@@ -2179,6 +2294,36 @@
     margin: 0;
     color: var(--lefine-text-soft);
     font-size: 0.85rem;
+  }
+
+  kefine-submit-popover {
+    position: absolute;
+    right: 0.28rem;
+    top: calc(100% + 0.35rem);
+    z-index: 4;
+    display: grid;
+    gap: 0.4rem;
+    min-width: min(16rem, calc(100vw - 3rem));
+    padding: 0.45rem;
+    border-radius: 0.7rem;
+    border: 1px solid color-mix(in oklab, var(--kef-line-strong) 72%, transparent);
+    background: color-mix(in oklab, var(--kef-bg-card) 96%, white 4%);
+    box-shadow: 0 12px 24px color-mix(in oklab, var(--lefine-text) 14%, transparent);
+  }
+
+  button[data-part='queue-popover-action'] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.6rem;
+    padding: 0.6rem 0.85rem;
+    border-radius: 0.55rem;
+    border: 1px solid color-mix(in oklab, var(--kef-line-strong) 64%, transparent);
+    background: color-mix(in oklab, var(--kef-bg-soft) 84%, var(--kef-bg-card) 16%);
+    color: var(--lefine-text);
+    font: inherit;
+    font-weight: 600;
+    text-align: center;
   }
 
   section[data-part='recent'] {
@@ -2304,8 +2449,9 @@
       padding-inline: 0.78rem;
     }
 
-    p[data-part='composer-hints'] {
-      display: none;
+    kefine-submit-popover {
+      left: 0.28rem;
+      right: 0.28rem;
     }
 
     lef-service-card {
