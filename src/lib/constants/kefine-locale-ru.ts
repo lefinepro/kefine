@@ -66,33 +66,39 @@ export const KEFINE_TEXT_RU = {
     },
     contactPage: {
       title: 'Связаться с нами',
-      description: 'Используйте email для вопросов по support, заказам, оплате и документам.',
+      description: 'Используйте email для вопросов по поддержке, заказам, оплате и документам.',
       openEmail: 'Открыть почтовый клиент',
       openGithub: 'Открыть GitHub',
       statusLabel: 'Статус',
-      statusValue: 'Доступно для заказов и support',
+      statusValue: 'Доступно для заказов и поддержки',
       supportFeature: 'Поддержка заказов',
       paymentFeature: 'Платежи и инвойсы',
       docsFeature: 'Документы и правовые запросы',
-      responseFeature: 'Ответ по email',
-      privacyCard: 'Privacy и юридические условия',
+      responseFeature: 'Ответ по электронной почте',
+      privacyCard: 'Конфиденциальность и юридические условия',
       mailClientHint: 'Открыть почтовый клиент по умолчанию',
       contactsTitle: 'Контакты',
       servicesTitle: 'Сервисы',
-      emailFact: 'Email',
+      emailFact: 'Электронная почта',
       phoneFact: 'Телефон',
       countryFact: 'Страна'
     }
   },
   create: {
     title: 'Опишите техническую задачу',
-    subtitle: 'Укажите срок выполнения. Lefine найдёт solver’а, подтвердит маршрут и ETA, а затем доставит результат.',
-    placeholder: 'Опишите задачу по VPN или DevOps...',
+    subtitle: 'Укажите срок выполнения. Lefine найдёт исполнителя, подтвердит маршрут и ETA, а затем доставит результат.',
+    placeholder: 'Опишите любую техническую задачу...',
     placeholderVariants: [
-      'Развернуть приватный VPN для команды',
-      'Настроить WireGuard endpoint с ротацией',
-      'Автоматизировать staging deploy pipeline',
-      'Исправить CI/CD rollback flow'
+      'Исправить сломанный rollback в CI/CD',
+      'Настроить мониторинг и алерты для прод-сервиса',
+      'Собрать Telegram-бота для заявок в поддержку',
+      'Оптимизировать медленный запрос в PostgreSQL',
+      'Реализовать OAuth-вход в веб-приложении',
+      'Развернуть приватный VPN для удалённой команды',
+      'Вынести endpoint из монолита в отдельный сервис',
+      'Написать парсер ответов API и экспорт отчётов',
+      'Собрать landing page для технического продукта',
+      'Разобраться с падением мобильного приложения после релиза'
     ],
     executeAria: 'Выполнить задачу',
     backgroundExecuteAria: 'Отправить задачу в фоне',
@@ -157,7 +163,7 @@ export const KEFINE_TEXT_RU = {
     hoursUnit: 'ч',
     minutesUnit: 'мин',
     subtasks: 'Подзадачи',
-    exchangeWaiting: 'Exchange',
+    exchangeWaiting: 'Биржа',
     performers: 'Исполнители',
     notebook: 'Ноутбук выполнения',
     iterations: 'Итерации',
@@ -189,7 +195,7 @@ export const KEFINE_TEXT_RU = {
     stopTask: 'Остановить задачу',
     socialLogin: 'Соцлогин',
     passkeyLogin: 'Passkey вход',
-    actor: 'Actor',
+    actor: 'Актор',
     payWithPromo: 'Оплатить промокодом',
     anonymous: 'Анонимно',
     cancel: 'Отменить',
@@ -220,12 +226,12 @@ export const KEFINE_TEXT_RU = {
     signedIn: 'Вы вошли в систему. Можете отправить задачу.',
     reown: 'Reown',
     passkey: 'Passkey',
-    walletTitle: 'Wallet / Social',
-    walletDetail: 'Используйте MetaMask, WalletConnect, Email или Google, чтобы выбрать аккаунт плательщика.',
+    walletTitle: 'Кошелёк / соцсети',
+    walletDetail: 'Используйте MetaMask, WalletConnect, email или Google, чтобы выбрать аккаунт плательщика.',
     passkeyTitle: 'Passkey',
-    privateKeyTitle: 'Private key',
+    privateKeyTitle: 'Приватный ключ',
     privateKeyDescription: 'Вставьте compact pqsk key или полный PEM private key. Строка с экранированными \\n тоже поддерживается. Браузер локально выводит ML-DSA public key и отправляет только public key string.',
-    privateKeyGenerateLabel: 'Создать actor',
+    privateKeyGenerateLabel: 'Создать актор',
     passkeyDetail: 'Используйте аккаунт платформы или продолжите через email, если профиля ещё нет.',
     anonymousTitle: 'Гость',
     anonymousDetail: 'Продолжить без профиля и оплатить через депозит.',
@@ -233,17 +239,17 @@ export const KEFINE_TEXT_RU = {
     walletNetworkEthereum: 'Ethereum',
     walletNetworkGnosis: 'Gnosis',
     walletNetworkAvalanche: 'Avalanche',
-    walletNetworkAvalancheFuji: 'Avalanche Testnet',
+    walletNetworkAvalancheFuji: 'Тестовая сеть Avalanche',
     anonymousHint: 'Анонимная оплата доступна.'
   },
   executionFlow: {
     queued: {
-      title: 'Задача отправлена на exchange',
+      title: 'Задача отправлена на биржу',
       detail: 'Задача зарегистрирована и ожидает исполнителя.'
     },
     matching: {
       title: 'Идёт поиск исполнителя',
-      detail: 'Exchange подбирает доступных исполнителей для этой задачи.'
+      detail: 'Биржа подбирает доступных исполнителей для этой задачи.'
     },
     assigned: {
       title: 'Исполнители найдены',
@@ -349,19 +355,26 @@ export const KEFINE_TEXT_RU = {
   },
   afe: {
     title: '',
+    labels: {
+      input: 'Задача',
+      intake: 'вход',
+      route: 'маршрут',
+      result: 'результат',
+      delivery: 'Доставка'
+    },
     cards: {
       afe: {
         title: 'Что такое Lefine?',
         detail:
-          'Lefine — это Automated Freelance Marketplace (AFM), где вы описываете нужную работу, а Lefine находит правильный путь, чтобы доставить результат.'
+          'Lefine — это автоматизированный маркетплейс фриланса (AFM), где вы описываете нужную работу, а Lefine находит лучший путь, чтобы доставить результат.'
       },
       task: {
         title: 'Бриф',
         detail: 'Опишите работу и укажите срок.'
       },
       quote: {
-        title: 'Квота',
-        detail: 'Solver подтверждает маршрут и ETA.'
+        title: 'Котировка',
+        detail: 'Исполнитель подтверждает маршрут и ETA.'
       },
       delivery: {
         title: 'Доставка',
@@ -371,7 +384,7 @@ export const KEFINE_TEXT_RU = {
   },
   errors: {
     backendUnavailableTitle: 'Crater не настроен',
-    backendUnavailableDetail: 'Проверка backend health не прошла. Запустите crater или исправьте настроенный crater URL.',
+    backendUnavailableDetail: 'Проверка состояния backend не прошла. Запустите crater или исправьте настроенный crater URL.',
     orderRequired: 'Текст задачи обязателен',
     loadGeneric: 'Не удалось создать задачу',
     unknown: 'Неизвестная ошибка',
@@ -396,7 +409,7 @@ export const KEFINE_TEXT_RU = {
     title: 'Написать в Lefine',
     description: 'Заполните сообщение, и мы откроем почтовый клиент с готовым черновиком.',
     nameLabel: 'Имя',
-    emailLabel: 'Email',
+    emailLabel: 'Электронная почта',
     messageLabel: 'Сообщение'
   },
   profile: {
@@ -408,11 +421,11 @@ export const KEFINE_TEXT_RU = {
     identityTitle: 'Личные данные',
     cardStepTitle: 'Бонус за карту',
     socialsStepTitle: 'Социальные сети',
-    firstName: 'First Name',
-    surname: 'Surname',
+    firstName: 'Имя',
+    surname: 'Фамилия',
     identityLeadTitle: 'Задайте публичную идентичность профиля',
     identityLeadText:
-      'First Name и Surname определяют, как профиль выглядит в публичных ссылках, завершённых задачах и поверхностях подписки.',
+      'Имя и фамилия определяют, как профиль выглядит в публичных ссылках, завершённых задачах и поверхностях подписки.',
     firstNameHint: 'Укажите реальное имя или рабочее имя. Это основная часть вашей публичной идентичности.',
     surnameHint: 'Добавьте фамилию, чтобы профиль выглядел завершённым и вызывал больше доверия у участников.',
     bioHint: 'Кратко опишите свой стек, специализацию или то, что пользователю важно понять о вашем профиле.',
@@ -423,7 +436,7 @@ export const KEFINE_TEXT_RU = {
     setupHint: 'Завершите шаги один раз, после этого останется обычная страница профиля.',
     bonusTitle: 'Получите бонус $100',
     bonusText: 'Проверьте банковскую карту, связанную с армянским банком. После BIN-проверки бонус будет начислен на баланс профиля.',
-    username: 'Username',
+    username: 'Имя пользователя',
     displayName: 'Отображаемое имя',
     bio: 'Краткая информация',
     publicToggle: 'Сделать профиль публичным',
@@ -514,7 +527,7 @@ export const KEFINE_TEXT_RU = {
     templateFeePreview: 'Комиссия автора',
     templateNetPreview: 'Остаток заказа',
     templateLinkCopied: 'Ссылка сервиса скопирована',
-    templateSlug: 'URL сервиса',
+    templateSlug: 'Адрес сервиса',
     templateSlugHint: 'Необязательно. Оставьте пустым, чтобы сохранить UUID-ссылку.'
   }
 } as const;

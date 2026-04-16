@@ -63,12 +63,18 @@ export const KEFINE_TEXT_HY = {
     ...KEFINE_TEXT_EN.create,
     title: 'Նկարագրեք տեխնիկական առաջադրանք',
     subtitle: 'Նշեք կատարման ժամկետը։ Lefine-ը գտնում է solver, հաստատում ուղին ու ETA-ն, հետո հանձնում արդյունքը։',
-    placeholder: 'Նկարագրեք VPN կամ DevOps առաջադրանքը...',
+    placeholder: 'Նկարագրեք ցանկացած տեխնիկական առաջադրանք...',
     placeholderVariants: [
-      'Թիմի համար տեղակայել մասնավոր VPN',
-      'Կարգավորել WireGuard endpoint պտտմամբ',
-      'Ավտոմատացնել staging deploy pipeline-ը',
-      'Ուղղել CI/CD rollback flow-ը'
+      'Ուղղել կոտրված rollback-ը CI/CD-ում',
+      'Կարգավորել մոնիթորինգ և alert-ներ production ծառայության համար',
+      'Ստեղծել Telegram bot support դիմումների համար',
+      'Արագացնել դանդաղ PostgreSQL query-ը',
+      'Ավելացնել OAuth մուտք web հավելվածում',
+      'Տեղակայել մասնավոր VPN հեռավար թիմի համար',
+      'Դուրս բերել endpoint-ը monolith-ից առանձին service',
+      'Գրել API պատասխանների parser և report export',
+      'Ստեղծել landing page տեխնիկական արտադրանքի համար',
+      'Գտնել mobile հավելվածի crash-ի պատճառը release-ից հետո'
     ],
     executeAria: 'Ուղարկել առաջադրանքը',
     backgroundExecuteAria: 'Ուղարկել առաջադրանքը ֆոնային ռեժիմով',
@@ -213,6 +219,13 @@ export const KEFINE_TEXT_HY = {
   afe: {
     ...KEFINE_TEXT_EN.afe,
     title: '',
+    labels: {
+      input: 'Առաջադրանք',
+      intake: 'մուտք',
+      route: 'ուղի',
+      result: 'արդյունք',
+      delivery: 'Առաքում'
+    },
     cards: {
       afe: {
         title: 'Ի՞նչ է Lefine-ը',

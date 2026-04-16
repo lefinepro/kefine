@@ -87,12 +87,18 @@ export const KEFINE_TEXT_EN = {
   create: {
     title: 'Describe a technical task',
     subtitle: 'Set the execution time. Lefine finds a solver, confirms the route and ETA, and delivers the result.',
-    placeholder: 'Describe the VPN or DevOps task...',
+    placeholder: 'Describe any technical task...',
     placeholderVariants: [
-      'Deploy private VPN for the team',
-      'Set up a WireGuard endpoint with rotation',
-      'Automate the staging deploy pipeline',
-      'Fix the CI/CD rollback flow'
+      'Fix a broken CI/CD rollback flow',
+      'Set up monitoring and alerts for a production service',
+      'Build a Telegram bot for support requests',
+      'Optimize a slow PostgreSQL query path',
+      'Implement OAuth login in a web app',
+      'Deploy a private VPN for a remote team',
+      'Migrate a monolith endpoint to a separate service',
+      'Write a parser for API responses and export reports',
+      'Create a landing page for a technical product',
+      'Debug a mobile app crash after release'
     ],
     executeAria: 'Execute task',
     backgroundExecuteAria: 'Send task in background',
@@ -348,6 +354,13 @@ export const KEFINE_TEXT_EN = {
   },
   afe: {
     title: '',
+    labels: {
+      input: 'Task',
+      intake: 'in',
+      route: 'route',
+      result: 'result',
+      delivery: 'Delivery'
+    },
     cards: {
       afe: {
         title: 'What is Lefine?',
