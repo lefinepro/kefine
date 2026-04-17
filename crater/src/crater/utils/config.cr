@@ -69,8 +69,8 @@ module Crater
           payment_token_symbol: read_string(payment, "tokenSymbol", "USDC"),
           payment_token_decimals: read_int(payment, "tokenDecimals", 6),
           log_level: read_string(backend, "logLevel", "info"),
-          actor_handle: read_string(default_actor, "handle", "api"),
-          actor_display_name: read_string(default_actor, "displayName", "API"),
+          actor_handle: read_string(default_actor, "handle", "staff"),
+          actor_display_name: read_string(default_actor, "displayName", "Staff"),
           actor_private_key: read_env_or_string("KEFINE_PRIVATEKEY_DEFAULT", default_actor, "privateKey", read_string(default_actor, "privateKeyPem", ""))
         )
       end
@@ -121,12 +121,12 @@ module Crater
       end
 
       def actor_id : String
-        "#{crater_url}/actor"
+        "#{crater_url}/actor/#{actor_username}"
       end
 
       def actor_username : String
         normalized = actor_handle.downcase.gsub(/[^a-z0-9._-]+/, "-").gsub(/^[._-]+|[._-]+$/, "")
-        normalized.empty? ? "api" : normalized
+        normalized.empty? ? "staff" : normalized
       end
 
       def domain : String
@@ -137,11 +137,11 @@ module Crater
       end
 
       def actor_inbox : String
-        "#{crater_url}/inbox"
+        "#{crater_url}/inbox/#{actor_username}"
       end
 
       def actor_outbox : String
-        "#{crater_url}/outbox"
+        "#{crater_url}/outbox/#{actor_username}"
       end
 
       def order_queue_inbox : String
