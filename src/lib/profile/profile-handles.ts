@@ -45,7 +45,7 @@ export function buildProfileServicePath(username: string, slug: string): string 
 
 export function isDefaultActorHandle(username: string, defaultActorHandle?: string | null): boolean {
   const normalizedUsername = normalizeProfileUsername(username);
-  const normalizedDefaultActorHandle = normalizeProfileUsername(defaultActorHandle || 'api');
+  const normalizedDefaultActorHandle = normalizeProfileUsername(defaultActorHandle || 'staff');
   return normalizedUsername === normalizedDefaultActorHandle;
 }
 

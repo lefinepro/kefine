@@ -17,8 +17,6 @@
   const THEME_STORAGE_KEY = 'kefine-theme';
   const ROUTES_WITH_OWN_TOPBAR = new Set([
     '/',
-    '/[slug]',
-    '/services/[slug]',
     '/task/[id]',
     '/order/[id]',
     '/[actor=actor_handle]/orders/[id]',
@@ -65,6 +63,12 @@
       label: localeText.topbar.socialLinks.telegram.label,
       href: runtimePublicConfig.app.socialLinks.telegram,
       icon: 'telegram' as const
+    },
+    {
+      id: 'github' as const,
+      label: localeText.topbar.githubLabel,
+      href: runtimePublicConfig.app.socialLinks.github,
+      icon: 'github' as const
     }
   ]);
   const sidebarLegalLinks = $derived([
@@ -173,8 +177,6 @@
     socialLabel={localeText.topbar.socialLabel}
     legalLabel={localeText.topbar.legalLabel}
     mailLabel={localeText.topbar.mailLabel}
-    githubLabel={localeText.topbar.githubLabel}
-    githubUrl={runtimePublicConfig.app.githubUrl}
     themeLabel={topbarThemeActionLabel}
     themeMode={themeMode}
     themeAutoLabel={localeText.topbar.theme.auto}
@@ -204,7 +206,7 @@
     onBrandClick={handleSharedBrandClick}
     onOpenEmailDialog={() => {
       if (browser) {
-        window.location.assign(localizeAppPath('/contact', activeLocale));
+        window.location.assign(localizeAppPath(`/@${runtimePublicConfig.defaultActor.handle}`, activeLocale));
       }
     }}
     onThemeChange={(theme) => {

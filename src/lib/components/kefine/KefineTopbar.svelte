@@ -6,14 +6,14 @@
   import type { KefineTopbarIconName } from '$lib/components/kefine/KefineTopbarIcon.svelte';
 
   type SocialLink = {
-    id: 'mastodon' | 'discord' | 'linkedin' | 'telegram';
+    id: 'mastodon' | 'discord' | 'linkedin' | 'telegram' | 'github';
     label: string;
     href: string;
     icon: KefineTopbarIconName;
   };
 
   type LegalLink = {
-    id: 'privacy' | 'terms' | 'company' | 'contact';
+    id: 'privacy' | 'terms';
     label: string;
     href: string;
   };
@@ -27,8 +27,6 @@
     socialLabel,
     legalLabel,
     mailLabel,
-    githubLabel,
-    githubUrl,
     themeLabel,
     themeMode,
     themeAutoLabel,
@@ -53,7 +51,6 @@
     socialLinks,
     showSocialLinks = false,
     showEmailButton = true,
-    showGithubButton = true,
     showAuthButton = true,
     legalLinks,
     onExpandedChange,
@@ -74,8 +71,6 @@
     socialLabel: string;
     legalLabel: string;
     mailLabel: string;
-    githubLabel: string;
-    githubUrl: string;
     themeLabel: string;
     themeMode: 'light' | 'dark' | 'auto';
     themeAutoLabel: string;
@@ -100,7 +95,6 @@
     socialLinks: SocialLink[];
     showSocialLinks?: boolean;
     showEmailButton?: boolean;
-    showGithubButton?: boolean;
     showAuthButton?: boolean;
     legalLinks: LegalLink[];
     onExpandedChange: (expanded: boolean) => void;
@@ -164,7 +158,7 @@
   function handleBrandDoubleClick() {
     cancelBrandClick?.();
     cancelBrandClick = null;
-    onAuthDoubleClick();
+    onBrandClick();
   }
 
   function handleEmailClick() {
@@ -429,18 +423,6 @@
               >
                 <KefineTopbarIcon name="email" size={20} />
               </button>
-            {/if}
-            {#if showGithubButton}
-              <a
-                data-part="icon"
-                href={githubUrl}
-                target="_blank"
-                rel="noreferrer"
-                aria-label={githubLabel}
-                title={githubLabel}
-              >
-                <KefineTopbarIcon name="github" size={20} />
-              </a>
             {/if}
           </kefine-sidebar-toolbar>
         </kefine-sidebar-stack>

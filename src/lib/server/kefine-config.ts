@@ -4,7 +4,6 @@ import {
   DEFAULT_PUBLIC_RUNTIME_CONFIG,
   normalizeText,
   resolvePublicRuntimeConfig,
-  type KefineCompanyPublicConfig,
   type KefineDefaultActorPublicConfig,
   type KefinePinnedServiceConfig,
   type KefinePublicRuntimeConfig
@@ -12,15 +11,9 @@ import {
 
 type KefineFullConfig = {
   app: KefinePublicRuntimeConfig['app'];
-  company: KefineCompanyPublicConfig;
   services: KefinePinnedServiceConfig[];
   defaultActor: KefineDefaultActorPublicConfig & {
     privateKey: string;
-  };
-  origins: {
-    primary: string;
-    legal: string;
-    task: string;
   };
   backend: {
     craterBaseUrl: string;
@@ -42,16 +35,10 @@ type KefineFullConfig = {
 
 const DEFAULT_CONFIG: KefineFullConfig = {
   app: DEFAULT_PUBLIC_RUNTIME_CONFIG.app,
-  company: DEFAULT_PUBLIC_RUNTIME_CONFIG.company,
   services: DEFAULT_PUBLIC_RUNTIME_CONFIG.services,
   defaultActor: {
     ...DEFAULT_PUBLIC_RUNTIME_CONFIG.defaultActor,
     privateKey: ''
-  },
-  origins: {
-    primary: 'https://lefine.pro',
-    legal: 'https://lefine.pro',
-    task: 'https://lefine.pro'
   },
   backend: {
     craterBaseUrl: 'http://localhost:3001',
@@ -103,18 +90,15 @@ export function getKefineConfig(): KefineFullConfig {
   const objectSource = source && typeof source === 'object' ? (source as Record<string, unknown>) : {};
   const publicConfig = resolvePublicRuntimeConfig({
     app: objectSource.app,
-    company: objectSource.company,
     services: objectSource.services,
     defaultActor: objectSource.defaultActor
   });
   const defaultActor = (objectSource.defaultActor ?? {}) as Record<string, unknown>;
-  const origins = (objectSource.origins ?? {}) as Record<string, unknown>;
   const backend = (objectSource.backend ?? {}) as Record<string, unknown>;
   const payment = (objectSource.payment ?? {}) as Record<string, unknown>;
 
   cachedConfig = {
     app: publicConfig.app,
-    company: publicConfig.company,
     services: publicConfig.services,
     defaultActor: {
       handle: publicConfig.defaultActor.handle,
@@ -129,11 +113,6 @@ export function getKefineConfig(): KefineFullConfig {
           )
         )
       )
-    },
-    origins: {
-      primary: normalizeText(origins.primary, DEFAULT_CONFIG.origins.primary),
-      legal: normalizeText(origins.legal, DEFAULT_CONFIG.origins.legal),
-      task: normalizeText(origins.task, DEFAULT_CONFIG.origins.task)
     },
     backend: {
       craterBaseUrl: normalizeText(
@@ -166,7 +145,6 @@ export function getPublicRuntimeConfig(): KefinePublicRuntimeConfig {
   const config = getKefineConfig();
   return {
     app: config.app,
-    company: config.company,
     services: config.services,
     defaultActor: {
       handle: config.defaultActor.handle,

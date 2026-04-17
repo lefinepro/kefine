@@ -118,7 +118,12 @@ export function mergeOrdersById(
 
   return [
     ...orders.slice(0, index),
-    { ...current, ...order, id: current.id },
+    {
+      ...current,
+      ...order,
+      ...(order.taskIcon?.trim() ? { taskIcon: order.taskIcon.trim() } : current.taskIcon ? { taskIcon: current.taskIcon } : {}),
+      id: current.id
+    },
     ...orders.slice(index + 1)
   ];
 }

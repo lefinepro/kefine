@@ -1,7 +1,6 @@
 {
   "app": {
     "name": "Lefine",
-    "supportEmail": "support@lefine.pro",
     "githubUrl": "https://github.com/lefinepro",
     "reownProjectId": "909acf523be03f300ad21cca95d966c8",
     "socialLinks": {},
@@ -10,11 +9,6 @@
       "ru": "Март 2026",
       "hy": "Մարտ 2026"
     }
-  },
-  "origins": {
-    "primary": "https://dev-proxy.col.pub",
-    "legal": "https://dev-proxy.col.pub",
-    "task": "https://dev-proxy.col.pub"
   },
   "backend": {
     "craterBaseUrl": "http://127.0.0.1:3001",
@@ -47,15 +41,8 @@
     "legalDisclaimer": ""
   },
   "defaultActor": {
-    "handle": "api",
-    "displayName": "API",
+    "handle": "staff",
+    "displayName": "Staff",
     "privateKey": "pqsk_17d978eb5ac4ed2f554df0056"
-  },
-  "services": [
-    {
-      "handle": "api",
-      "slug": "vpn-service",
-      "isPinned": true
-    }
-  ]
+  }
 }

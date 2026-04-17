@@ -23,6 +23,7 @@ function mergeActorIdentity(previous: OrderView, next: OrderView): OrderView {
   return {
     ...previous,
     ...next,
+    ...(next.taskIcon?.trim() ? { taskIcon: next.taskIcon.trim() } : previous.taskIcon ? { taskIcon: previous.taskIcon } : {}),
     ...(actorHandle ? { actorHandle: actorHandle.replace(/^@+/, '') } : {}),
     ...(actorDid ? { actorDid } : {})
   };
@@ -250,6 +251,9 @@ export async function submitWorkspaceOrder(args: {
           if (requestPayload.executionEstimate) {
             formData.append('executionEstimate', requestPayload.executionEstimate);
           }
+          if (requestPayload.taskIcon) {
+            formData.append('taskIcon', requestPayload.taskIcon);
+          }
           if (requestPayload.uiScenario) {
             formData.append('uiScenario', requestPayload.uiScenario);
           }
@@ -309,6 +313,7 @@ export async function submitWorkspaceOrder(args: {
       kind: 'remote',
       order: {
         id: parsed.orderId,
+        taskIcon: parsed.taskIcon || args.payload.taskIcon,
         solver: parsed.solver || '',
         solverName: parsed.solverName,
         solverHandle: parsed.solverHandle,

@@ -3,7 +3,10 @@
   import Icon from '@iconify/svelte';
   import { cubicOut } from 'svelte/easing';
   import type { TransitionConfig } from 'svelte/transition';
+  import KefineTaskCloneMenu from '$lib/components/kefine/KefineTaskCloneMenu.svelte';
+  import KefineTaskSettingsMenu from '$lib/components/kefine/KefineTaskSettingsMenu.svelte';
   import type { AuthMethod, ExecutionPresentation, OrderView } from './kefine-workflow';
+  import type { TaskCloneFormat } from './kefine-task-clone';
   import { scheduleAfter } from '$lib/utils/helpers';
   import KefineWalletProviderGrid from '$lib/components/kefine/KefineWalletProviderGrid.svelte';
   import KefineTaskTreeFeed from '$lib/components/kefine/KefineTaskTreeFeed.svelte';
@@ -19,12 +22,17 @@
     authLabels,
     authDisplay,
     walletNetworkLabel,
+    canSaveCloneLocally = false,
+    canManageTask = false,
     isConfirmingStep = false,
     commentSubmittingStepId = null,
     confirmCurrentStepLabel,
     onConfirmCurrentStep,
     onSubmitStepComment,
     onSaveDocument,
+    onExportClone,
+    onSaveCloneLocally,
+    onUpdateTaskSettings,
     onWalletLogin,
     onPasskeyLogin,
     onAnonymous,
@@ -74,12 +82,17 @@
       passkeyLabel: string | null;
     };
     walletNetworkLabel: string;
+    canSaveCloneLocally?: boolean;
+    canManageTask?: boolean;
     isConfirmingStep?: boolean;
     commentSubmittingStepId?: string | null;
     confirmCurrentStepLabel?: string;
     onConfirmCurrentStep?: (() => void) | null;
     onSubmitStepComment?: ((stepId: string, content: string) => void | Promise<void>) | null;
     onSaveDocument?: ((content: string) => void | Promise<void>) | null;
+    onExportClone?: ((format: TaskCloneFormat) => void) | null;
+    onSaveCloneLocally?: ((runLocally: boolean) => void) | null;
+    onUpdateTaskSettings?: ((patch: Partial<Pick<OrderView, 'shareId' | 'isPublicTask'>>) => void) | null;
     onWalletLogin: () => void;
     onPasskeyLogin: () => void;
     onAnonymous: () => void;
@@ -210,6 +223,11 @@
   const genericStepHeadline = $derived(
     activeGenericStep ? activeGenericStep.title : execution.headline
   );
+  const taskMonogram = $derived.by(() => {
+    const source = currentOrder?.title?.trim() || '';
+    const match = source.match(/[A-Za-zА-Яа-яԱ-Ֆա-ֆ0-9]/u);
+    return (match?.[0] ?? source.charAt(0) ?? 'T').toUpperCase();
+  });
 
   function resolveTimerAnchorTimestamp(...timestamps: Array<string | undefined>) {
     const candidates = timestamps
@@ -362,12 +380,28 @@
     <section class="kefine-flow-panel kefine-flow-panel--hero">
       <lefine-box class="kefine-flow-topline">
         <button type="button" class="kefine-flow-back" onclick={onCancel} aria-label={labels.cancel}>←</button>
+        <lefine-box class="kefine-flow-topline-actions">
+          {#if currentOrder && canManageTask && onUpdateTaskSettings}
+            <KefineTaskSettingsMenu order={currentOrder} onApply={onUpdateTaskSettings} />
+          {/if}
+          {#if currentOrder && onExportClone}
+            <KefineTaskCloneMenu
+              order={currentOrder}
+              canSaveLocally={canSaveCloneLocally}
+              onExport={onExportClone}
+              onSaveLocally={onSaveCloneLocally ?? undefined}
+            />
+          {/if}
+        </lefine-box>
       </lefine-box>
 
       {#if isHydratingTitle}
         <h2 class="kefine-title-skeleton" aria-label="Loading task title"></h2>
       {:else}
-        <h2>{currentOrder?.title}</h2>
+        <h2>
+          <span data-part="task-icon">{taskMonogram}</span>
+          {currentOrder?.title}
+        </h2>
       {/if}
 
       {#if currentOrder?.description && currentOrder.description !== currentOrder.title}
@@ -561,9 +595,14 @@
       <KefineTaskTreeFeed
         {currentOrder}
         {queuedOrders}
+        canSaveCloneLocally={canSaveCloneLocally}
+        canManageTask={canManageTask}
         {commentSubmittingStepId}
         onSubmitStepComment={onSubmitStepComment}
         onSaveDocument={onSaveDocument}
+        onExportClone={onExportClone}
+        onSaveCloneLocally={onSaveCloneLocally}
+        onUpdateTaskSettings={onUpdateTaskSettings}
         labels={{
           boardTitle: currentOrder?.title || labels.boardTitle,
           saving: labels.saving,
@@ -576,10 +615,40 @@
 {/if}
 
 <style>
+  h2 [data-part='task-icon'] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.9rem;
+    height: 1.9rem;
+    margin-right: 0.55rem;
+    border-radius: 0.52rem;
+    border: 1px solid color-mix(in oklab, #c79a57 42%, transparent);
+    background: linear-gradient(180deg, color-mix(in oklab, #f2dfb4 84%, white), color-mix(in oklab, #d0a364 84%, #c4934c));
+    color: #3b2819;
+    font-size: 0.92rem;
+    font-weight: 800;
+    line-height: 1;
+    vertical-align: 0.18rem;
+    box-shadow: 0 0.35rem 0.9rem color-mix(in oklab, #000 10%, transparent);
+  }
+
+  :global(:root[data-kefine-theme='dark']) h2 [data-part='task-icon'] {
+    border-color: color-mix(in oklab, #d7ad68 48%, transparent);
+    background: linear-gradient(180deg, color-mix(in oklab, #f3dfb0 88%, #6f4d25), color-mix(in oklab, #b9853e 88%, #5d4020));
+    color: #20150e;
+  }
+
   kefine-task-stage {
     display: block;
     width: min(100%, 72rem);
     margin: 0 auto;
+  }
+
+  .kefine-flow-topline-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
   }
 
   lef-exchange-stage {

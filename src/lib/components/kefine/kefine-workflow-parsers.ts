@@ -1080,6 +1080,7 @@ export function parseStoredOrders(raw: string | null, localeText: KefineLocaleTe
 
       return {
         id: toStringValue(order['id']) || '',
+        ...(toStringValue(order['taskIcon']) ? { taskIcon: toStringValue(order['taskIcon']) as string } : {}),
         solver: toStringValue(order['solver']) || '',
         status: toStringValue(order['status']) || 'queued',
         title,
@@ -1136,6 +1137,7 @@ export function parseStoredOrders(raw: string | null, localeText: KefineLocaleTe
 
 export function readCreateResponse(body: unknown): {
   orderId: string;
+  taskIcon?: string;
   solver?: string;
   solverName?: string;
   solverHandle?: string;
@@ -1168,6 +1170,7 @@ export function readCreateResponse(body: unknown): {
 
   return {
     orderId,
+    taskIcon: toStringValue(body['taskIcon']) || undefined,
     solver: toStringValue(body['solver']) || undefined,
     solverName: toStringValue(body['solverName']) || undefined,
     solverHandle: toStringValue(body['solverHandle']) || undefined,
@@ -1318,6 +1321,9 @@ export function extractStatusPayload(
     ownerDisplayName: toStringValue(source['ownerDisplayName']) || toStringValue(ticket['ownerDisplayName']) || undefined,
     actorHandle: toStringValue(source['actorHandle']) || toStringValue(ticket['actorHandle']) || undefined,
     actorDid: toStringValue(source['actorDid']) || toStringValue(ticket['actorDid']) || undefined,
+    ...(toStringValue(source['taskIcon']) || toStringValue(ticket['taskIcon'])
+      ? { taskIcon: (toStringValue(source['taskIcon']) || toStringValue(ticket['taskIcon'])) as string }
+      : {}),
     shareId: toStringValue(source['shareId']) || toStringValue(ticket['shareId']) || undefined,
     isClosedCompleted: source['isClosedCompleted'] === true || ticket['isClosedCompleted'] === true,
     isPublicTask: source['isPublicTask'] === true || ticket['isPublicTask'] === true,
@@ -1416,6 +1422,7 @@ export function buildCreatePayload(
   return {
     name: payload.title,
     title: payload.title,
+    taskIcon: payload.taskIcon || undefined,
     content: payload.description,
     description: payload.description,
     estimatedCost: toNumber(payload.estimatedCost) || 0,
