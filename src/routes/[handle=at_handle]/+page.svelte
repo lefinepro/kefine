@@ -2,7 +2,6 @@
   import { browser } from '$app/environment';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
-  import KefineServiceEditorPage from '$lib/components/kefine/KefineServiceEditorPage.svelte';
   import KefineProfileHeaderEditor from '$lib/components/kefine/KefineProfileHeaderEditor.svelte';
   import KefineProfileSocialLinksCard from '$lib/components/kefine/KefineProfileSocialLinksCard.svelte';
   import KefineProfileSetupDots from '$lib/components/kefine/KefineProfileSetupDots.svelte';
@@ -12,19 +11,12 @@
   import { authState, clearAuthState, hydrateAuthStateFromSession } from '$lib/auth/auth-store.svelte.js';
   import { clearPasskeySession, loadPasskeySession, passkeySessionStore } from '$lib/auth/passkey-session';
   import { parseStoredOrders, type OrderView, type TaskAccessMode } from '$lib/components/kefine/kefine-workflow';
+  import { buildActorOrderPath } from '$lib/components/kefine/kefine-workspace-helpers';
   import { resolvePublicRuntimeConfig } from '$lib/config/public-config';
-  import {
-    deleteTemplateFromCrater,
-    fetchTemplatesByHandle,
-    saveTemplateToCrater
-  } from '$lib/templates/template-api';
-  import { resolveTemplateLocalizedContent } from '$lib/templates/template-content';
   import { kefineLocale, kefineLocaleText, setKefineLocale, type KefineLocale } from '$lib/constants/kefine-locale';
   import {
     addProfileBonus,
-    buildCanonicalServicePath,
     buildProfilePath,
-    buildProfileTaskPath,
     deriveWalletProfileHandle,
     ensureProfileForSession,
     followProfile,
@@ -38,8 +30,7 @@
   import type {
     Profile,
     ProfileMetadata,
-    ProfileSocialLink,
-    ProfileTemplate
+    ProfileSocialLink
   } from '$lib/types/user';
   import { buildLocaleHomePath, localizeAppPath, readLocaleFromPathname } from '$lib/routing/kefine-locale-routing';
 
@@ -55,8 +46,6 @@
   let publicTasks = $state<OrderView[]>([]);
   let ownerTasks = $state<OrderView[]>([]);
   let copyState = $state<'idle' | 'profile' | 'task'>('idle');
-  let profileTemplates = $state<ProfileTemplate[]>([]);
-  let templateCopyId = $state<string | null>(null);
 
   let displayName = $state('');
   let username = $state('');
@@ -74,14 +63,10 @@
   const requestedHandle = $derived(page.params.handle ?? '');
   const activeLocale = $derived(readLocaleFromPathname(page.url.pathname) ?? 'en');
   const isOwner = $derived(Boolean(profile && viewerProfile && profile.id === viewerProfile.id));
-  const showServiceComposer = $derived(isOwner && page.url.searchParams.get('compose') === 'service');
   const runtimeConfig = $derived(resolvePublicRuntimeConfig(page.data.publicConfig));
   const canonicalProfilePath = $derived(profile ? localizeAppPath(buildProfilePath(profile.primaryHandle), activeLocale) : '');
   const setupMetadata = $derived((profile?.metadata ?? {}) as ProfileMetadata);
   const hasOwnerTasks = $derived((isOwner ? ownerTasks : publicTasks).length > 0);
-  const visibleProfileTemplates = $derived(
-    isOwner ? profileTemplates : profileTemplates.filter((item) => item.visibility === 'public' || item.isPublished === true)
-  );
 
   const hasIdentityStepCompleted = $derived(
     Boolean(firstName.trim() || surname.trim() || profile?.displayName.trim() || username.trim())
@@ -150,6 +135,12 @@
       label: localeText.topbar.socialLinks.telegram.label,
       href: runtimeConfig.app.socialLinks.telegram,
       icon: 'telegram' as const
+    },
+    {
+      id: 'github' as const,
+      label: localeText.topbar.githubLabel,
+      href: runtimeConfig.app.socialLinks.github,
+      icon: 'github' as const
     }
   ]);
   const sidebarLegalLinks = $derived([
@@ -193,31 +184,9 @@
     return { id, type: 'website', label: 'Website', value: '' };
   }
 
-  function getTemplateUrl(template: ProfileTemplate): string {
-    const path = buildCanonicalServicePath(profile?.primaryHandle || '', template.slug, runtimeConfig.defaultActor.handle);
-    const localizedPath = localizeAppPath(path, activeLocale);
-    return browser ? `${window.location.origin}${localizedPath}` : localizedPath;
-  }
-
   function getTaskUrl(order: OrderView): string {
     const handle = profile?.primaryHandle || profile?.username || requestedHandle;
-    return localizeAppPath(buildProfileTaskPath(handle, order.shareId ?? order.id), activeLocale);
-  }
-
-  function getServiceInitial(title: string): string {
-    const normalized = title.trim();
-    if (!normalized) {
-      return 'S';
-    }
-
-    const match = normalized.match(/[A-Za-zА-Яа-яԱ-Ֆա-ֆ0-9]/u);
-    return (match?.[0] ?? normalized[0] ?? 'S').toUpperCase();
-  }
-
-  function getServiceAccentToken(title: string): string {
-    const seed = Array.from(title.trim()).reduce((sum, char) => sum + char.charCodeAt(0), 0);
-    const accents = ['gold', 'coral', 'rose', 'plum', 'sky', 'teal'];
-    return accents[seed % accents.length] ?? 'gold';
+    return localizeAppPath(buildActorOrderPath(handle, order.shareId ?? order.id), activeLocale);
   }
 
   function syncDraftStateFromProfile(nextProfile: Profile | null) {
@@ -372,7 +341,6 @@
         (order.status === 'completed' || order.status === 'done' || order.isClosedCompleted === true)
     );
     publicTasks = ownerTasks.filter((order) => order.isPublicTask === true && order.status !== 'stopped');
-    profileTemplates = await fetchTemplatesByHandle(runtimeConfig.backend.craterBaseUrl, storedProfile.primaryHandle);
 
     if (buildProfilePath(storedProfile.primaryHandle) !== buildProfilePath(requestedHandle)) {
       await goto(localizeAppPath(buildProfilePath(storedProfile.primaryHandle), activeLocale), { replaceState: true });
@@ -397,20 +365,6 @@
     window.setTimeout(() => {
       if (copyState === kind) {
         copyState = 'idle';
-      }
-    }, 1400);
-  }
-
-  async function copyTemplateLink(template: ProfileTemplate) {
-    if (!browser || !navigator.clipboard) {
-      return;
-    }
-
-    await navigator.clipboard.writeText(getTemplateUrl(template));
-    templateCopyId = template.id;
-    window.setTimeout(() => {
-      if (templateCopyId === template.id) {
-        templateCopyId = null;
       }
     }, 1400);
   }
@@ -472,75 +426,6 @@
       await navigateToProfileHandle(updated.primaryHandle);
       void loadProfilePageState();
     }
-  }
-
-  async function createTemplate() {
-    if (!browser || !profile || !isOwner) {
-      return;
-    }
-
-    await goto(`${localizeAppPath(buildProfilePath(profile.primaryHandle), activeLocale)}?compose=service`);
-  }
-
-  async function editTemplate(template: ProfileTemplate) {
-    if (!browser || !profile || !isOwner) {
-      return;
-    }
-
-    await goto(localizeAppPath(buildCanonicalServicePath(profile.primaryHandle, template.slug, runtimeConfig.defaultActor.handle), activeLocale));
-  }
-
-  async function removeTemplate(templateId: string) {
-    if (!browser || !profile || !isOwner) {
-      return;
-    }
-
-    const deleted = await deleteTemplateFromCrater(runtimeConfig.backend.craterBaseUrl, templateId);
-    if (!deleted) {
-      return;
-    }
-
-    profileTemplates = await fetchTemplatesByHandle(runtimeConfig.backend.craterBaseUrl, profile.primaryHandle);
-  }
-
-  async function toggleTemplatePublish(template: ProfileTemplate) {
-    if (!browser || !profile || !isOwner) {
-      return;
-    }
-
-    const saved = await saveTemplateToCrater(runtimeConfig.backend.craterBaseUrl, {
-      id: template.id,
-      authorHandle: profile.primaryHandle,
-      authorProfileId: profile.id,
-      authorDisplayName: profile.displayName,
-      slug: template.slug,
-      title: template.title,
-      description: template.description,
-      imageDataUrl: template.imageDataUrl,
-      baseLocale: template.baseLocale,
-      promptTemplate: template.promptTemplate,
-      promptVariables: template.promptVariables,
-      translations: template.translations,
-      prefillTitle: template.prefillTitle,
-      prefillDescription: template.prefillDescription,
-      prefillEstimatedCost: template.prefillEstimatedCost,
-      prefillCurrency: template.prefillCurrency,
-      prefillFiles: template.prefillFiles,
-      tags: template.tags,
-      pricingMode: template.pricingMode,
-      pricingValue: template.pricingValue,
-      visibility: (template.visibility ?? (template.isPublished ? 'public' : 'private')) === 'public' ? 'private' : 'public',
-      isPublished: (template.visibility ?? (template.isPublished ? 'public' : 'private')) !== 'public',
-      bonusEnabled: template.bonusEnabled ?? false,
-      bonusMode: template.bonusMode ?? 'fixed',
-      bonusValue: template.bonusValue ?? 0
-    });
-
-    if (!saved) {
-      return;
-    }
-
-    profileTemplates = await fetchTemplatesByHandle(runtimeConfig.backend.craterBaseUrl, profile.primaryHandle);
   }
 
   async function saveIdentityStep() {
@@ -764,8 +649,6 @@
       socialLabel={localeText.topbar.socialLabel}
       legalLabel={localeText.topbar.legalLabel}
       mailLabel={localeText.topbar.mailLabel}
-      githubLabel={localeText.topbar.githubLabel}
-      githubUrl={runtimeConfig.app.githubUrl}
       themeLabel={topbarThemeActionLabel}
       themeMode={themeMode}
       themeAutoLabel={localeText.topbar.theme.auto}
@@ -793,7 +676,7 @@
       onBrandClick={navigateToHomeFromBrand}
       onOpenEmailDialog={() => {
         if (browser) {
-          window.location.assign(localizeAppPath('/contact', activeLocale));
+          window.location.assign(localizeAppPath(`/@${runtimeConfig.defaultActor.handle}`, activeLocale));
         }
       }}
       onThemeChange={(theme) => {
@@ -932,8 +815,6 @@
               </lefine-box>
             </section>
           {/if}
-        {:else if showServiceComposer}
-          <KefineServiceEditorPage profile={profile} craterBaseUrl={runtimeConfig.backend.craterBaseUrl} />
         {:else}
           <article class="profile-surface profile-details">
             <lefine-box class="profile-section__head">

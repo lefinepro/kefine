@@ -11,7 +11,6 @@
     getLegalPageContent(
       $kefineLocale,
       'privacy',
-      runtimeConfig.company,
       runtimeConfig.app.legalUpdatedAt[$kefineLocale]
     )
   );

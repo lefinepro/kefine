@@ -1,5 +1,6 @@
 require "kemal"
 require "json"
+require "log"
 require "../order_queue"
 require "../activitypub/types"
 require "./inbox"
@@ -21,27 +22,46 @@ module Crater
       end
 
       private def self.create_order(env, config : Utils::Config)
+        request_id = Random::Secure.hex(6)
         payload = begin
           read_create_payload(env)
         rescue ex : JSON::ParseException
+          Log.warn { "[orders:create #{request_id}] invalid JSON payload: #{ex.message}" }
           env.response.status_code = 400
           return({error: "Invalid request body", reason: ex.message}.to_json)
+        end
+
+        payload_object = payload.as_h? || {} of String => JSON::Any
+        Log.info do
+          "[orders:create #{request_id}] title=#{(payload_object["title"]? || payload_object["name"]?).try(&.as_s?) || "-"} " \
+          "uiScenario=#{payload_object["uiScenario"]?.try(&.as_s?) || "-"} " \
+          "ownerProfileId=#{payload_object["ownerProfileId"]?.try(&.as_s?) || "-"} " \
+          "actorHandle=#{payload_object["actorHandle"]?.try(&.as_s?) || "-"}"
         end
 
         record = begin
           OrderQueue.submit_rest(payload, config)
         rescue ex : OrderQueue::BadRequest
+          Log.warn { "[orders:create #{request_id}] bad request: #{ex.message}" }
           env.response.status_code = 400
           return({error: ex.message}.to_json)
         rescue ex : OrderQueue::Error::InvalidActivity
+          Log.warn { "[orders:create #{request_id}] invalid activity: #{ex.message}" }
           env.response.status_code = 400
           return({error: ex.message}.to_json)
         rescue ex : OrderQueue::DeliveryFailed
+          Log.error { "[orders:create #{request_id}] exchange delivery failed: #{ex.message}" }
           env.response.status_code = 502
           return({error: "Failed to deliver order to exchange", reason: ex.message}.to_json)
         rescue ex : Exception
+          Log.error(exception: ex) { "[orders:create #{request_id}] unexpected failure" }
           env.response.status_code = 500
           return({error: "Failed to create order", reason: ex.message}.to_json)
+        end
+
+        Log.info do
+          "[orders:create #{request_id}] accepted orderId=#{record.id} status=#{record.status} " \
+          "solver=#{record.solver_name || record.solver} actorHandle=#{record.actor_handle || "-"}"
         end
 
         env.response.status_code = 202

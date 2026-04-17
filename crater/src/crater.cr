@@ -11,10 +11,8 @@ require "./crater/handlers/status"
 require "./crater/handlers/passkeys"
 require "./crater/handlers/privatekey_auth"
 require "./crater/handlers/projects"
-require "./crater/handlers/templates"
 require "./crater/middleware/cors"
 require "./crater/middleware/logger"
-require "./crater/template_store"
 require "./crater/utils/config"
 require "./crater/utils/actor_keys"
 
@@ -42,8 +40,6 @@ module Crater
     puts "[crater] public key string: #{actor_public_key_string.empty? ? "unavailable" : actor_public_key_string}"
     puts "[crater] actor address: #{actor_address || "unavailable"}"
 
-    TemplateStore.setup(config)
-
     # Middleware
     add_handler CorsHandler.new
     add_handler RequestLogger.new
@@ -63,7 +59,6 @@ module Crater
 
     # ForgeFed project endpoints
     Handlers::Projects.register(config)
-    Handlers::Templates.register(config)
 
     get "/health" do |env|
       env.response.content_type = "application/json"

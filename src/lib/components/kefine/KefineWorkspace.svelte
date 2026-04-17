@@ -32,6 +32,11 @@
   import KefineLoadingDocuments from '$lib/components/kefine/KefineLoadingDocuments.svelte';
   import KefineExecutingStep from '$lib/components/kefine/KefineExecutingStep.svelte';
   import {
+    buildTaskCloneFile,
+    cloneOrderToDraft,
+    type TaskCloneFormat
+  } from '$lib/components/kefine/kefine-task-clone';
+  import {
     ORDER_STORAGE_KEY,
     POLL_INTERVAL_MS,
     POLL_LIMIT,
@@ -43,7 +48,6 @@
     type PaymentStage,
     type ResultSurface,
     type TaskAccessMode,
-    type TemplatePresentation,
     deriveExecutionPresentation,
     deriveResultSurface,
     resolveExecutionEstimate,
@@ -72,13 +76,9 @@
     submitWorkspaceOrderStepComment
   } from '$lib/components/kefine/kefine-workspace-orders';
   import { waitForDelay } from '$lib/utils/helpers';
-  import { renderPromptTemplate, resolveTemplateLocalizedContent, syncPromptVariables } from '$lib/templates/template-content';
-  import { fetchPublicTemplates, fetchTemplateByHandleAndSlug } from '$lib/templates/template-api';
-  import type { Profile, ProfileTemplate } from '$lib/types/user';
+  import type { Profile } from '$lib/types/user';
   import {
     addProfileBonus,
-    buildCanonicalServicePath,
-    calculateTemplateAmounts,
     buildProfilePath,
     ensureProfileForSession,
     getProfileById,
@@ -91,17 +91,14 @@
 
   const THEME_STORAGE_KEY = 'kefine-theme';
   const BRAND_HOME_NAVIGATION_STORAGE_KEY = 'kefine-brand-home-navigation';
+  const CLONE_DRAFT_STORAGE_KEY = 'kefine-clone-draft-v1';
 
   let {
     initialActorHandle,
-    initialOrderId,
-    initialTemplateHandle,
-    initialTemplateSlug
+    initialOrderId
   }: {
     initialActorHandle?: string;
     initialOrderId?: string;
-    initialTemplateHandle?: string;
-    initialTemplateSlug?: string;
   } = $props();
   const localeText = $derived($kefineLocaleText);
   const runtimeConfig = $derived(resolvePublicRuntimeConfig(page.data.publicConfig));
@@ -165,7 +162,7 @@
 
     return normalized.replace(/\b\w/g, (char) => char.toUpperCase());
   }
-
+ 
   function runWhenIdle(task: () => void) {
     if (!browser) {
       return () => {};
@@ -196,6 +193,10 @@
   }
 
   type LazyComponent = any;
+  type PendingCloneAction = {
+    order: OrderView;
+    runLocally: boolean;
+  };
 
   async function ensureFlowStepComponentsLoaded() {
     if (SubmittingStepComponent && ErrorStepComponent && PaymentStepComponent) {
@@ -232,6 +233,7 @@
   let step = $state<FlowStep>(getNormalizedInitialOrderId() ? 'executing' : 'create');
   let draft = $state<DraftOrder>(createEmptyDraft());
   let draftQueued = $state<DraftOrder | null>(null);
+  let pendingCloneAction = $state<PendingCloneAction | null>(null);
   let currentOrder = $state<OrderView | null>(
     getNormalizedInitialOrderId()
       ? {
@@ -268,15 +270,8 @@
   let isHydratingRoute = $state(Boolean(getNormalizedInitialOrderId()));
   let currentProfile = $state<Profile | null>(null);
   let temporaryProfile = $state<Profile | null>(null);
-  let activeTemplate = $state<ProfileTemplate | null>(null);
-  let publicTemplates = $state<ProfileTemplate[]>([]);
-  let templateUnavailable = $state(false);
   let craterHealthState = $state<'checking' | 'ok' | 'failed'>('checking');
-  let templateLoadKey = $state('');
-  let publicTemplateLoadKey = $state('');
-  let profileRedirectKey = $state('');
   let suppressProfileRedirect = $state(false);
-  let autoTemplateSubmitKey = $state('');
   let suppressPostAuthProfileRedirect = $state(false);
   let resultDocumentRefreshKey = $state('');
   const activePollTokens = new Map<string, symbol>();
@@ -378,7 +373,6 @@
   });
   const profileNeedsSetup = $derived(currentProfile?.metadata?.['profileSetupCompleted'] !== true);
   const ORDER_PAGE_SIZE = 12;
-  const SERVICE_PREFILL_STORAGE_KEY = 'kefine-service-prefill-v1';
   let visibleOrdersLimit = $state(ORDER_PAGE_SIZE);
   const visibleOrders = $derived(createdOrders.slice(0, visibleOrdersLimit));
   const hasMoreOrders = $derived(visibleOrdersLimit < createdOrders.length);
@@ -404,63 +398,7 @@
         .some((value) => value.toLowerCase().includes(query));
     });
   });
-  const templatePresentation = $derived.by((): TemplatePresentation | null => {
-    if (!activeTemplate) {
-      return null;
-    }
-
-    return {
-      id: activeTemplate.id,
-      slug: activeTemplate.slug,
-      title: resolveTemplateLocalizedContent(activeTemplate, $kefineLocale).title,
-      description: resolveTemplateLocalizedContent(activeTemplate, $kefineLocale).description,
-      authorProfileId: activeTemplate.profileId,
-      authorHandle: activeTemplate.authorHandle ?? initialTemplateHandle ?? '',
-      authorDisplayName: activeTemplate.authorDisplayName ?? activeTemplate.authorHandle ?? initialTemplateHandle ?? '',
-      pricingMode: activeTemplate.pricingMode,
-      pricingValue: activeTemplate.pricingValue,
-      prefillFiles: activeTemplate.prefillFiles,
-      promptTemplate: resolveTemplateLocalizedContent(activeTemplate, $kefineLocale).promptTemplate,
-      promptVariables: syncPromptVariables(
-        resolveTemplateLocalizedContent(activeTemplate, $kefineLocale).promptTemplate,
-        activeTemplate.promptVariables ?? []
-      )
-    };
-  });
-  const pinnedCreateServices = $derived.by(() => {
-    const pinnedEntries = runtimeConfig.services.filter((item) => item.isPinned);
-    if (pinnedEntries.length === 0) {
-      return [];
-    }
-
-    const templatesByKey = new Map(
-      publicTemplates.map((item) => [`${(item.authorHandle ?? '').trim().toLowerCase()}::${item.slug.trim().toLowerCase()}`, item] as const)
-    );
-
-    return pinnedEntries.flatMap((entry) => {
-        const template = templatesByKey.get(`${entry.handle.trim().toLowerCase()}::${entry.slug.trim().toLowerCase()}`);
-        if (!template || !template.authorHandle) {
-          return [{
-            id: `config:${entry.handle}:${entry.slug}`,
-            href: buildCanonicalServicePath(entry.handle, entry.slug, runtimeConfig.defaultActor.handle),
-            imageDataUrl: undefined,
-            title: formatPinnedServiceTitle(entry.slug),
-            description: `Open service @${entry.handle}/${entry.slug}`,
-            authorHandle: entry.handle
-          }];
-        }
-
-        const localized = resolveTemplateLocalizedContent(template, $kefineLocale);
-        return [{
-          id: template.id,
-          href: buildCanonicalServicePath(template.authorHandle, template.slug, runtimeConfig.defaultActor.handle),
-          imageDataUrl: template.imageDataUrl,
-          title: localized.title,
-          description: localized.description || localized.promptTemplate,
-          authorHandle: template.authorHandle
-        }];
-      });
-  });
+  const pinnedCreateServices = $derived.by(() => []);
   const sidebarSocialLinks = $derived([
     {
       id: 'mastodon' as const,
@@ -485,6 +423,12 @@
       label: localeText.topbar.socialLinks.telegram.label,
       href: runtimeConfig.app.socialLinks.telegram,
       icon: 'telegram' as const
+    },
+    {
+      id: 'github' as const,
+      label: localeText.topbar.githubLabel,
+      href: runtimeConfig.app.socialLinks.github,
+      icon: 'github' as const
     }
   ]);
   const sidebarLegalLinks = $derived([
@@ -540,21 +484,18 @@
   const profileUrl = $derived(
     currentProfile && browser ? `${window.location.origin}${localizeAppPath(buildProfilePath(currentProfile.primaryHandle), activeLocale)}` : ''
   );
-  const activeTemplatePath = $derived.by(() => {
-    if (!initialTemplateHandle || !initialTemplateSlug) {
-      return buildLocaleHomePath(activeLocale);
-    }
-
-    return localizeAppPath(
-      buildCanonicalServicePath(initialTemplateHandle, initialTemplateSlug, runtimeConfig.defaultActor.handle),
-      activeLocale
-    );
-  });
-  const isVpnTemplateRoute = $derived.by(() => {
-    const handle = initialTemplateHandle?.trim().toLowerCase();
-    const slug = initialTemplateSlug?.trim().toLowerCase();
-    return Boolean(handle && slug && handle === runtimeConfig.defaultActor.handle.trim().toLowerCase() && slug === 'vpn-service');
-  });
+  const canSaveCurrentOrderLocally = $derived(
+    Boolean(
+      currentOrder &&
+        currentProfile &&
+        currentOrder.isPublicTask === true &&
+        currentOrder.ownerProfileId &&
+        currentOrder.ownerProfileId !== currentProfile.id
+    )
+  );
+  const canManageCurrentOrder = $derived(
+    Boolean(currentOrder && currentProfile && currentOrder.ownerProfileId === currentProfile.id)
+  );
   const completedOwnedOrders = $derived(
     currentProfile
       ? createdOrders.filter(
@@ -813,6 +754,8 @@
     if (routeOrderId) {
       isHydratingRoute = true;
       void openOrderById(routeOrderId, routeState?.view ?? null);
+    } else {
+      restoreCloneDraftPrefill();
     }
 
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
@@ -876,83 +819,6 @@
   });
 
   $effect(() => {
-    if (!browser) {
-      return;
-    }
-
-    const nextTemplateLoadKey = `${initialTemplateHandle ?? ''}|${initialTemplateSlug ?? ''}|${$kefineLocale}`;
-    if (templateLoadKey === nextTemplateLoadKey) {
-      return;
-    }
-
-    templateLoadKey = nextTemplateLoadKey;
-    void loadActiveTemplate();
-  });
-
-  $effect(() => {
-    const pinnedEntries = runtimeConfig.services.filter((item) => item.isPinned);
-    const nextPublicTemplateLoadKey = `${runtimeConfig.backend.craterBaseUrl}|${pinnedEntries.map((item) => `${item.handle}:${item.slug}`).join('|')}`;
-
-    if (publicTemplateLoadKey === nextPublicTemplateLoadKey) {
-      return;
-    }
-
-    publicTemplateLoadKey = nextPublicTemplateLoadKey;
-
-    if (!browser || pinnedEntries.length === 0) {
-      publicTemplates = [];
-      return;
-    }
-
-    const cancelIdleTemplatesLoad = runWhenIdle(() => {
-      void (async () => {
-        publicTemplates = await fetchPublicTemplates(runtimeConfig.backend.craterBaseUrl, 48);
-      })();
-    });
-
-    return () => {
-      cancelIdleTemplatesLoad();
-    };
-  });
-
-  async function loadActiveTemplate() {
-    if (!browser || !initialTemplateHandle || !initialTemplateSlug) {
-      activeTemplate = null;
-      templateUnavailable = false;
-      autoTemplateSubmitKey = '';
-      draft.templateFiles = [];
-      return;
-    }
-
-    const template = await fetchTemplateByHandleAndSlug(runtimeConfig.backend.craterBaseUrl, initialTemplateHandle, initialTemplateSlug);
-    if (!template || (template.visibility ?? (template.isPublished ? 'public' : 'private')) !== 'public') {
-      activeTemplate = null;
-      templateUnavailable = true;
-      autoTemplateSubmitKey = '';
-      return;
-    }
-
-    activeTemplate = template;
-    templateUnavailable = false;
-    autoTemplateSubmitKey = '';
-    const localized = resolveTemplateLocalizedContent(template, $kefineLocale);
-    const promptVariables = syncPromptVariables(localized.promptTemplate, template.promptVariables ?? []);
-    const templateVariableValues = Object.fromEntries(
-      promptVariables.map((item) => [item.key, item.defaultValue ?? ''])
-    );
-    draft = {
-      ...createEmptyDraft(),
-      title: localized.title,
-      description: renderPromptTemplate(localized.promptTemplate, templateVariableValues),
-      estimatedCost: template.prefillEstimatedCost !== undefined ? String(template.prefillEstimatedCost) : '',
-      currency: template.prefillCurrency || 'USD',
-      templateFiles: [...template.prefillFiles],
-      templatePromptTemplate: localized.promptTemplate,
-      templateVariables: promptVariables,
-      templateVariableValues
-    };
-  }
-  $effect(() => {
     if (browser) {
       document.documentElement.setAttribute('data-kefine-theme', resolvedTheme);
       localStorage.setItem(THEME_STORAGE_KEY, themeMode);
@@ -1005,50 +871,11 @@
   });
 
   $effect(() => {
-    if (!browser || !currentProfile) {
+    if (!browser || !isAuthenticated || (!draftQueued && !pendingCloneAction) || !currentProfile) {
       return;
     }
 
-    const routeState = readTaskRouteState();
-    if (isVpnTemplateRoute) {
-      return;
-    }
-
-    if (step !== 'create' || draftQueued || currentOrder || routeState) {
-      return;
-    }
-
-    if (suppressProfileRedirect && stripLocalePrefix(page.url.pathname) === '/') {
-      return;
-    }
-
-    const targetPath = localizeAppPath(buildProfilePath(currentProfile.primaryHandle), activeLocale);
-    const nextRedirectKey = `${activeSessionProfileSeed?.userId ?? ''}|${targetPath}`;
-
-    if (profileRedirectKey === nextRedirectKey || page.url.pathname === targetPath) {
-      return;
-    }
-
-    profileRedirectKey = nextRedirectKey;
-    void goto(targetPath, { replaceState: true });
-  });
-
-  $effect(() => {
-    if (!browser || !isVpnTemplateRoute || !activeTemplate || templateUnavailable) {
-      return;
-    }
-
-    if (step !== 'create' || draftQueued || currentOrder || isHydratingRoute || readTaskRouteState()) {
-      return;
-    }
-
-    const nextAutoTemplateSubmitKey = `${activeTemplate.id}|${$kefineLocale}`;
-    if (autoTemplateSubmitKey === nextAutoTemplateSubmitKey) {
-      return;
-    }
-
-    autoTemplateSubmitKey = nextAutoTemplateSubmitKey;
-    void submitDraft(draft);
+    void continueAfterAuth();
   });
   $effect(() => {
     if (isPasskeyActive) {
@@ -1155,16 +982,16 @@
     if (isHydratingRoute) return;
 
     const nextUrl = new URL(window.location.href);
-    const orderId =
+    const orderRouteId =
       (step === 'executing' || step === 'payment') && currentOrder?.id
-        ? currentOrder.id
+        ? currentOrder.shareId?.trim() || currentOrder.id
         : null;
     const actorHandle =
       currentOrder?.actorHandle?.trim() ||
       getRouteActorHandleFallback();
 
-    if (orderId && actorHandle) {
-      nextUrl.pathname = localizeAppPath(buildActorOrderPath(actorHandle, orderId), activeLocale);
+    if (orderRouteId && actorHandle) {
+      nextUrl.pathname = localizeAppPath(buildActorOrderPath(actorHandle, orderRouteId), activeLocale);
       nextUrl.search = '';
       nextUrl.hash =
         step === 'payment' && paymentStage === 'result-ready'
@@ -1184,7 +1011,7 @@
       sessionStorage.removeItem(BRAND_HOME_NAVIGATION_STORAGE_KEY);
     }
 
-    nextUrl.pathname = activeTemplatePath;
+    nextUrl.pathname = buildLocaleHomePath(activeLocale);
     nextUrl.search = '';
     nextUrl.hash = '';
 
@@ -1334,7 +1161,7 @@
         !existingProfile ||
         ensuredProfile.metadata?.['profileSetupCompleted'] !== true;
 
-      if (shouldOpenProfile && !draftQueued && !currentOrder && !suppressPostAuthProfileRedirect) {
+      if (shouldOpenProfile && !draftQueued && !pendingCloneAction && !currentOrder && !suppressPostAuthProfileRedirect) {
         await goto(localizeAppPath(buildProfilePath(ensuredProfile.primaryHandle), activeLocale));
       }
       return;
@@ -1357,7 +1184,7 @@
       !existingProfile ||
       ensuredProfile.metadata?.['profileSetupCompleted'] !== true;
 
-    if (shouldOpenProfile && !draftQueued && !currentOrder && !suppressPostAuthProfileRedirect) {
+    if (shouldOpenProfile && !draftQueued && !pendingCloneAction && !currentOrder && !suppressPostAuthProfileRedirect) {
       await goto(localizeAppPath(buildProfilePath(ensuredProfile.primaryHandle), activeLocale));
     }
   }
@@ -1377,6 +1204,7 @@
     passkeyDialogOpen = false;
     privateKeyDialogOpen = false;
     currentProfile = null;
+    pendingCloneAction = null;
   }
 
   function selectTopbarLocale(locale: KefineLocale) {
@@ -1516,24 +1344,106 @@
     showOrderFlow(order);
   }
 
-  async function createServiceFromOrder(order: OrderView, event?: Event) {
-    event?.preventDefault();
-    event?.stopPropagation();
-
-    if (!browser || !currentProfile?.primaryHandle) {
+  function downloadCloneFile(order: OrderView, format: TaskCloneFormat) {
+    if (!browser) {
       return;
     }
 
-    sessionStorage.setItem(
-      SERVICE_PREFILL_STORAGE_KEY,
-      JSON.stringify({
-        title: order.title,
-        description: order.description?.trim() || order.title,
-        tags: order.labels ?? []
-      })
-    );
+    const file = buildTaskCloneFile(order, format);
+    const href = URL.createObjectURL(new Blob([file.content], { type: file.mimeType }));
+    const anchor = document.createElement('a');
+    anchor.href = href;
+    anchor.download = file.filename;
+    document.body.append(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(href);
+  }
 
-    await goto(`${localizeAppPath(buildProfilePath(currentProfile.primaryHandle), activeLocale)}?compose=service`);
+  function saveCloneDraftPrefill(nextDraft: DraftOrder) {
+    if (!browser) {
+      return;
+    }
+
+    sessionStorage.setItem(CLONE_DRAFT_STORAGE_KEY, JSON.stringify(nextDraft));
+  }
+
+  function restoreCloneDraftPrefill() {
+    if (!browser) {
+      return false;
+    }
+
+    const raw = sessionStorage.getItem(CLONE_DRAFT_STORAGE_KEY);
+    if (!raw) {
+      return false;
+    }
+
+    sessionStorage.removeItem(CLONE_DRAFT_STORAGE_KEY);
+
+    try {
+      const parsed = JSON.parse(raw) as Partial<DraftOrder> | null;
+      if (!parsed || typeof parsed !== 'object') {
+        return false;
+      }
+
+      draft = {
+        ...createEmptyDraft(),
+        ...(typeof parsed.taskIcon === 'string' && parsed.taskIcon.trim() ? { taskIcon: parsed.taskIcon.trim() } : {}),
+        title: typeof parsed.title === 'string' ? parsed.title : '',
+        description: typeof parsed.description === 'string' ? parsed.description : '',
+        tags: Array.isArray(parsed.tags) ? parsed.tags.filter((item): item is string => typeof item === 'string') : [],
+        estimatedCost: typeof parsed.estimatedCost === 'string' ? parsed.estimatedCost : '',
+        currency: typeof parsed.currency === 'string' ? parsed.currency : 'USD',
+        executionEstimate: typeof parsed.executionEstimate === 'string' ? parsed.executionEstimate : ''
+      };
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async function saveForeignTaskLocally(order: OrderView, runLocally: boolean) {
+    const nextDraft = normalizeDraftOrder(cloneOrderToDraft(order), localeText);
+
+    if (runLocally) {
+      await createOrder(nextDraft, { background: true, focusInQueue: true });
+      return;
+    }
+
+    saveCloneDraftPrefill(nextDraft);
+    draft = nextDraft;
+    draftQueued = null;
+    currentOrder = null;
+    pendingCloneAction = null;
+    resetTransactionState();
+    step = 'create';
+    await goto(buildLocaleHomePath(activeLocale));
+  }
+
+  async function handleExportClone(format: TaskCloneFormat) {
+    if (!currentOrder) {
+      return;
+    }
+
+    downloadCloneFile(currentOrder, format);
+  }
+
+  async function handleSaveCloneLocally(runLocally: boolean) {
+    if (!currentOrder) {
+      return;
+    }
+
+    if (!isAuthenticated) {
+      pendingCloneAction = {
+        order: currentOrder,
+        runLocally
+      };
+      suppressPostAuthProfileRedirect = true;
+      await selectTopbarAuth();
+      return;
+    }
+
+    await saveForeignTaskLocally(currentOrder, runLocally);
   }
 
   function loadMoreOrders() {
@@ -1751,6 +1661,7 @@
       optimisticOrderId = `local-${crypto.randomUUID()}`;
       currentOrder = applyActorIdentityFallback({
         id: optimisticOrderId,
+        ...(payload.taskIcon?.trim() ? { taskIcon: payload.taskIcon.trim() } : {}),
         title: payload.title || payload.description || localeText.defaults.taskTitle,
         description: payload.description,
         status: 'queued',
@@ -1775,6 +1686,7 @@
       tempOrderId = `temp-${crypto.randomUUID()}`;
       const tempOrder: OrderView = {
         id: tempOrderId,
+        ...(payload.taskIcon?.trim() ? { taskIcon: payload.taskIcon.trim() } : {}),
         title: payload.title || payload.description,
         description: payload.description,
         status: 'queued',
@@ -1791,7 +1703,6 @@
 
     const result = await submitWorkspaceOrder({
       payload,
-      template: templatePresentation,
       owner: {
         ownerProfileId: currentProfile?.id,
         ownerUsername: currentProfile?.primaryHandle,
@@ -1831,14 +1742,6 @@
       return false;
     }
 
-    const templateAmounts =
-      activeTemplate
-        ? calculateTemplateAmounts({
-            orderEstimatedCost: result.order.estimatedCost ?? 0,
-            pricingMode: activeTemplate.pricingMode,
-            pricingValue: activeTemplate.pricingValue
-          })
-        : null;
     const orderOwnerProfile = currentProfile ?? (await ensureTemporaryOrderProfile({ createIfMissing: true }));
     const orderOwnerActorHandle =
       authState.authType === 'publickey' && normalizedActorHandle
@@ -1848,6 +1751,11 @@
           : null;
     const ownerOrder = {
       ...result.order,
+      ...(result.order.taskIcon?.trim()
+        ? { taskIcon: result.order.taskIcon.trim() }
+        : payload.taskIcon?.trim()
+          ? { taskIcon: payload.taskIcon.trim() }
+          : {}),
       document: result.order.document ?? {
         format: 'markdown' as const,
         content: payload.description || payload.title || localeText.defaults.taskTitle
@@ -1872,22 +1780,6 @@
               join: { enabled: false, priceUsd: 0 }
             }
           }
-        : {}),
-      ...(activeTemplate
-        ? {
-            templateId: activeTemplate.id,
-            templateSlug: activeTemplate.slug,
-            templateAuthorProfileId: activeTemplate.profileId,
-            templateAuthorUsername: activeTemplate.authorHandle,
-            templateAuthorDisplayName: activeTemplate.authorDisplayName,
-            templatePricingMode: activeTemplate.pricingMode,
-            templatePricingValue: activeTemplate.pricingValue,
-            templateFeeUsd: templateAmounts?.feeUsd,
-            templateNetUsd: templateAmounts?.netUsd,
-            templatePromptTemplate: payload.templatePromptTemplate,
-            templateVariables: payload.templateVariables,
-            templateVariableValues: payload.templateVariableValues
-          }
         : {})
     };
 
@@ -1901,37 +1793,7 @@
       persistOrders();
     }
 
-    if (browser && activeTemplate && templateAmounts && templateAmounts.feeUsd > 0) {
-      const isSelfTemplate = orderOwnerProfile?.id === activeTemplate.profileId;
-      if (!isSelfTemplate) {
-        addProfileBonus({
-          storage: localStorage,
-          profileId: activeTemplate.profileId,
-          amountUsd: templateAmounts.feeUsd,
-          source: 'template-order',
-          note: `Template fee from order ${ownerOrderWithActor.title}`,
-          orderId: ownerOrderWithActor.id
-        });
-      }
-    }
-
-    if (browser && activeTemplate && orderOwnerProfile && activeTemplate.bonusEnabled) {
-      const bonusAmount =
-        activeTemplate.bonusMode === 'percent'
-          ? Number((((ownerOrderWithActor.estimatedCost ?? 0) * activeTemplate.bonusValue) / 100).toFixed(2))
-          : Number(activeTemplate.bonusValue.toFixed(2));
-
-      if (bonusAmount > 0) {
-        addProfileBonus({
-          storage: localStorage,
-          profileId: orderOwnerProfile.id,
-          amountUsd: bonusAmount,
-          source: 'service-bonus',
-          note: `Service bonus from ${activeTemplate.title}`,
-          orderId: ownerOrderWithActor.id
-        });
-      }
-    } else if (browser && orderOwnerProfile) {
+    if (browser && orderOwnerProfile) {
       const follow = readProfileFollows(localStorage).find((item) => item.followerProfileId === orderOwnerProfile.id);
       if (follow) {
         const targetProfile = getProfileById(localStorage, follow.targetProfileId);
@@ -1963,16 +1825,24 @@
 
     if (created && options?.background) {
       draft = createEmptyDraft();
-      loadActiveTemplate();
     }
   }
 
   async function continueAfterAuth() {
-    if (!isAuthenticated || !draftQueued) return;
+    if (!isAuthenticated) return;
 
-    const queued = draftQueued;
-    draftQueued = null;
-    await createOrder(queued);
+    if (draftQueued) {
+      const queued = draftQueued;
+      draftQueued = null;
+      await createOrder(queued);
+      return;
+    }
+
+    if (pendingCloneAction) {
+      const queuedClone = pendingCloneAction;
+      pendingCloneAction = null;
+      await saveForeignTaskLocally(queuedClone.order, queuedClone.runLocally);
+    }
   }
 
   function handleSubmit() {
@@ -1997,15 +1867,9 @@
   }
 
   function updateTemplateVariableValue(key: string, value: string) {
-    const nextValues = {
+    draft.templateVariableValues = {
       ...draft.templateVariableValues,
       [key]: value
-    };
-
-    draft = {
-      ...draft,
-      templateVariableValues: nextValues,
-      description: renderPromptTemplate(draft.templatePromptTemplate ?? '', nextValues)
     };
   }
 
@@ -2039,8 +1903,8 @@
 
   function newOrder() {
     draft = createEmptyDraft();
-    loadActiveTemplate();
     draftQueued = null;
+    pendingCloneAction = null;
     currentOrder = null;
     resetTransactionState();
     step = 'create';
@@ -2175,7 +2039,7 @@
 
   function updateProfileTask(
     orderId: string,
-    patch: Partial<Pick<OrderView, 'isPublicTask' | 'accessRules'>>
+    patch: Partial<Pick<OrderView, 'shareId' | 'isPublicTask' | 'accessRules'>>
   ) {
     createdOrders = createdOrders.map((order) => (order.id === orderId ? { ...order, ...patch } : order));
     if (currentOrder?.id === orderId) {
@@ -2200,7 +2064,7 @@
       expiresAt: new Date(session.expiresAt)
     });
 
-    if (draftQueued) {
+    if (draftQueued || pendingCloneAction) {
       void continueAfterAuth();
       return;
     }
@@ -2261,7 +2125,7 @@
         status: 'connected'
       });
 
-      if (draftQueued) {
+      if (draftQueued || pendingCloneAction) {
         void continueAfterAuth();
         return;
       }
@@ -2308,7 +2172,7 @@
         status: 'connected'
       });
 
-      if (draftQueued) {
+      if (draftQueued || pendingCloneAction) {
         void continueAfterAuth();
         return;
       }
@@ -2408,8 +2272,6 @@
     socialLabel={localeText.topbar.socialLabel}
     legalLabel={localeText.topbar.legalLabel}
     mailLabel={localeText.topbar.mailLabel}
-    githubLabel={localeText.topbar.githubLabel}
-    githubUrl={runtimeConfig.app.githubUrl}
     themeLabel={topbarThemeActionLabel}
     themeMode={themeMode}
     themeAutoLabel={localeText.topbar.theme.auto}
@@ -2438,7 +2300,7 @@
     onBrandClick={handleTopbarBrandClick}
     onOpenEmailDialog={() => {
       if (browser) {
-        window.location.assign(localizeAppPath('/contact', activeLocale));
+        window.location.assign(localizeAppPath(`/@${runtimeConfig.defaultActor.handle}`, activeLocale));
       }
     }}
     onThemeChange={(theme) => { themeMode = theme; }}
@@ -2458,22 +2320,12 @@
           <p>{localeText.errors.backendUnavailableDetail}</p>
         </article>
       </kefine-screen>
-    {:else if templateUnavailable}
-      <kefine-screen in:softScreenTransition out:softScreenTransition>
-        <article class="kefine-card kefine-card--wide kefine-template-unavailable">
-          <h2>{localeText.profile.profileUnavailable}</h2>
-          <p>{localeText.profile.noPublicTasks}</p>
-        </article>
-      </kefine-screen>
     {:else if step === 'create'}
       <kefine-screen in:softScreenTransition out:softScreenTransition>
         <KefineCreateStep
           draft={draft}
-          template={templatePresentation}
-          serviceSetup={templatePresentation ? {
-            title: localeText.create.serviceSetupTitle,
-            subtitle: localeText.create.serviceSetupSubtitle
-          } : null}
+          template={null}
+          serviceSetup={null}
           title={localeText.create.title}
           subtitle={localeText.create.subtitle}
           pinnedServices={pinnedCreateServices}
@@ -2525,7 +2377,7 @@
           onStopOrder={handleStopOrder}
           onDeleteOrder={handleDeleteOrder}
           onOpenOrder={openOrder}
-          onCreateServiceFromOrder={createServiceFromOrder}
+          onCreateServiceFromOrder={() => {}}
           onDescriptionChange={updateDescription}
           onTemplateVariableChange={updateTemplateVariableValue}
           onTagsChange={updateTags}
@@ -2577,6 +2429,8 @@
           currentOrder={currentOrder}
           queuedOrders={[]}
           execution={executionPresentation}
+          canSaveCloneLocally={canSaveCurrentOrderLocally}
+          canManageTask={canManageCurrentOrder}
           isHydratingTitle={isHydratingRoute && !currentOrder?.title.trim()}
           isConfirmingStep={confirmStepLoading}
           commentSubmittingStepId={stepCommentLoadingId}
@@ -2584,6 +2438,9 @@
           onConfirmCurrentStep={confirmCurrentExecutionStep}
           onSubmitStepComment={submitStepComment}
           onSaveDocument={saveCurrentOrderDocument}
+          onExportClone={handleExportClone}
+          onSaveCloneLocally={handleSaveCloneLocally}
+          onUpdateTaskSettings={(patch) => currentOrder && updateProfileTask(currentOrder.id, patch)}
           onWalletLogin={chooseWalletMethod}
           onPasskeyLogin={choosePasskeyMethod}
           onAnonymous={chooseAnonymousMethod}

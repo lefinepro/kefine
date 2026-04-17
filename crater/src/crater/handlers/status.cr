@@ -1,5 +1,6 @@
 require "kemal"
 require "json"
+require "log"
 require "../order_queue"
 
 module Crater
@@ -80,6 +81,7 @@ module Crater
       private def self.render_status(env, order_id : String) : String
         record = OrderQueue.find_order(order_id)
         if record.nil?
+          Log.warn { "[status] order not found id=#{order_id}" }
           env.response.status_code = 404
           return({error: "Order not found", orderId: order_id}.to_json)
         end
@@ -90,6 +92,10 @@ module Crater
           JSON.parse(%({"format":"markdown","content":""}))
         end
         activities = OrderQueue.activities_for_order(record.id)
+        Log.info do
+          "[status] orderId=#{record.id} status=#{record.status} solver=#{record.solver_name || record.solver} " \
+          "activities=#{activities.size} updatedAt=#{record.updated_at}"
+        end
 
         {
           orderId: record.id,

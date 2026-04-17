@@ -9,7 +9,6 @@
   const PLACEHOLDER_DELETE_DELAY_MS = 34;
   const PLACEHOLDER_PAUSE_MS = 1150;
   const PLACEHOLDER_NEXT_DELAY_MS = 250;
-
   let {
     draft,
     template,
@@ -858,7 +857,7 @@
               {windowLabel}
               {createServiceLabel}
               {deleteTaskLabel}
-              showCreateService={true}
+              showCreateService={false}
               showDelete={true}
               itemTestId={`kefine-search-order-${order.id}`}
               openTestId={`kefine-open-search-order-${order.id}`}
@@ -888,7 +887,7 @@
                 {createServiceLabel}
                 {stopTaskLabel}
                 {deleteTaskLabel}
-                showCreateService={true}
+                showCreateService={false}
                 showStop={true}
                 showDelete={true}
                 itemTestId={`kefine-order-item-${order.id}`}
@@ -2081,7 +2080,8 @@
   kefine-task-shell {
     margin: 0;
     display: grid;
-    gap: 0.5rem;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
     min-width: 0;
     max-width: 100%;
     overflow: hidden;

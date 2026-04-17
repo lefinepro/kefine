@@ -1,5 +1,7 @@
 <script lang="ts">
   import Icon from '@iconify/svelte';
+  import KefineTaskCloneMenu from '$lib/components/kefine/KefineTaskCloneMenu.svelte';
+  import KefineTaskSettingsMenu from '$lib/components/kefine/KefineTaskSettingsMenu.svelte';
   import KefineRichTaskEditorDialog from '$lib/components/kefine/KefineRichTaskEditorDialog.svelte';
   import {
     appendTaskNodeComment,
@@ -9,14 +11,20 @@
     type TaskThreadNode
   } from '$lib/components/kefine/kefine-task-feed';
   import type { OrderView } from '$lib/components/kefine/kefine-workflow';
+  import type { TaskCloneFormat } from '$lib/components/kefine/kefine-task-clone';
 
   let {
     currentOrder,
     queuedOrders = [],
     labels,
+    canSaveCloneLocally = false,
+    canManageTask = false,
     commentSubmittingStepId = null,
     onSubmitStepComment,
-    onSaveDocument
+    onSaveDocument,
+    onExportClone,
+    onSaveCloneLocally,
+    onUpdateTaskSettings
   }: {
     currentOrder: OrderView | null;
     queuedOrders?: OrderView[];
@@ -27,9 +35,14 @@
       apply: string;
       richEditorDescription: string;
     };
+    canSaveCloneLocally?: boolean;
+    canManageTask?: boolean;
     commentSubmittingStepId?: string | null;
     onSubmitStepComment?: ((stepId: string, content: string) => Promise<void> | void) | null;
     onSaveDocument?: ((content: string) => Promise<void> | void) | null;
+    onExportClone?: ((format: TaskCloneFormat) => void) | null;
+    onSaveCloneLocally?: ((runLocally: boolean) => void) | null;
+    onUpdateTaskSettings?: ((patch: Partial<Pick<OrderView, 'shareId' | 'isPublicTask'>>) => void) | null;
   } = $props();
 
   let commentDrafts = $state<Record<string, string>>({});
@@ -40,6 +53,11 @@
     queuedOrders.filter((order) => !currentOrder || order.id !== currentOrder.id).map(buildQueuedTaskRoot)
   );
   const currentThread = $derived(buildTaskThreadNodes(currentOrder));
+  const taskMonogram = $derived.by(() => {
+    const source = currentOrder?.title?.trim() || labels.boardTitle.trim();
+    const match = source.match(/[A-Za-zА-Яа-яԱ-Ֆա-ֆ0-9]/u);
+    return (match?.[0] ?? source.charAt(0) ?? 'T').toUpperCase();
+  });
 
   function nodeTone(node: TaskThreadNode): string {
     if (node.mode === 'loading') return 'loading';
@@ -307,10 +325,26 @@
 
 <kefine-thread-stage>
   <kefine-thread-head>
-    <strong>{currentOrder?.title || labels.boardTitle}</strong>
-    {#if commentSubmittingStepId}
-      <kefine-thread-status>{labels.saving}</kefine-thread-status>
-    {/if}
+    <kefine-thread-title>
+      <span data-part="task-monogram" aria-hidden="true">{taskMonogram}</span>
+      <strong>{currentOrder?.title || labels.boardTitle}</strong>
+    </kefine-thread-title>
+    <kefine-thread-head-actions>
+      {#if commentSubmittingStepId}
+        <kefine-thread-status>{labels.saving}</kefine-thread-status>
+      {/if}
+      {#if currentOrder && canManageTask && onUpdateTaskSettings}
+        <KefineTaskSettingsMenu order={currentOrder} onApply={onUpdateTaskSettings} />
+      {/if}
+      {#if currentOrder && onExportClone}
+        <KefineTaskCloneMenu
+          order={currentOrder}
+          canSaveLocally={canSaveCloneLocally}
+          onExport={onExportClone}
+          onSaveLocally={onSaveCloneLocally ?? undefined}
+        />
+      {/if}
+    </kefine-thread-head-actions>
   </kefine-thread-head>
 
   <kefine-thread aria-label={currentOrder?.title || labels.boardTitle}>
@@ -362,9 +396,22 @@
 
   kefine-thread-head {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     gap: 1rem;
+  }
+
+  kefine-thread-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.7rem;
+    min-width: 0;
+  }
+
+  kefine-thread-head-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.8rem;
   }
 
   kefine-thread-head strong {
@@ -372,6 +419,29 @@
     font-size: clamp(1.35rem, 2vw, 2.1rem);
     line-height: 1.08;
     letter-spacing: -0.02em;
+  }
+
+  kefine-thread-head [data-part='task-monogram'] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 1.95rem;
+    height: 1.95rem;
+    border-radius: 0.52rem;
+    border: 1px solid color-mix(in oklab, #c79a57 42%, transparent);
+    background: linear-gradient(180deg, color-mix(in oklab, #f2dfb4 84%, white), color-mix(in oklab, #d0a364 84%, #c4934c));
+    color: #3b2819;
+    font-size: 0.94rem;
+    font-weight: 800;
+    line-height: 1;
+    box-shadow: 0 0.35rem 0.9rem color-mix(in oklab, #000 10%, transparent);
+  }
+
+  :global(:root[data-kefine-theme='dark']) kefine-thread-head [data-part='task-monogram'] {
+    border-color: color-mix(in oklab, #d7ad68 48%, transparent);
+    background: linear-gradient(180deg, color-mix(in oklab, #f3dfb0 88%, #6f4d25), color-mix(in oklab, #b9853e 88%, #5d4020));
+    color: #20150e;
   }
 
   kefine-thread-status {
@@ -424,20 +494,21 @@
   kefine-thread-dot {
     position: relative;
     z-index: 1;
-    width: 0.72rem;
-    height: 0.72rem;
+    width: 1rem;
+    height: 1rem;
     border-radius: 999px;
     border: 1px solid color-mix(in oklab, #a77c38 54%, #e9d4a6);
     background: radial-gradient(circle at 30% 30%, #f6e7bd, #d8b16f);
-    box-shadow: 0 0 0 0.18rem color-mix(in oklab, var(--kef-bg, #f7ecd4) 92%, transparent);
-    margin-top: 0.2rem;
+    box-shadow: 0 0 0 0.2rem color-mix(in oklab, var(--kef-bg, #f7ecd4) 92%, transparent);
+    margin-top: 0.08rem;
   }
 
   kefine-thread-dot::after {
     content: '';
     position: absolute;
-    inset: 0.12rem;
+    inset: 0.16rem;
     border-radius: 999px;
+    background: color-mix(in oklab, #fff7e5 82%, #d8b16f);
   }
 
   kefine-thread-node[data-tone='completed'] kefine-thread-dot {
@@ -457,14 +528,18 @@
 
   kefine-thread-node[data-tone='active'] kefine-thread-dot,
   kefine-thread-node[data-tone='loading'] kefine-thread-dot {
-    background: color-mix(in oklab, #f6e7bd 68%, transparent);
+    border-color: color-mix(in oklab, #d3a45c 72%, #f6e7bd);
+    background: radial-gradient(circle at 30% 30%, #fff1c9, #d8a657);
+    box-shadow:
+      0 0 0 0.22rem color-mix(in oklab, var(--kef-bg, #f7ecd4) 90%, transparent),
+      0 0 0.7rem color-mix(in oklab, #d8a657 22%, transparent);
   }
 
   kefine-thread-node[data-tone='active'] kefine-thread-dot::after,
   kefine-thread-node[data-tone='loading'] kefine-thread-dot::after {
     background: conic-gradient(
       from 0deg,
-      color-mix(in oklab, #b9853e 96%, white) 0deg 210deg,
+      color-mix(in oklab, #8f5d1d 98%, #fbe8bc) 0deg 220deg,
       transparent 210deg 360deg
     );
     animation: kefine-thread-dot-spin 1.1s linear infinite;
@@ -651,6 +726,45 @@
 
   kefine-thread-comment-actions button:disabled {
     opacity: 0.58;
+  }
+
+  :global(:root[data-kefine-theme='dark']) kefine-thread-dot {
+    border-color: color-mix(in oklab, #d3a45c 78%, #f3deb4);
+    background: radial-gradient(circle at 30% 30%, #f3dfb0, #b9853e);
+    box-shadow: 0 0 0 0.2rem color-mix(in oklab, var(--kef-bg, #16110d) 82%, #3a2817 18%);
+  }
+
+  :global(:root[data-kefine-theme='dark']) kefine-thread-node[data-tone='active'] kefine-thread-dot,
+  :global(:root[data-kefine-theme='dark']) kefine-thread-node[data-tone='loading'] kefine-thread-dot {
+    border-color: color-mix(in oklab, #f0c980 82%, #6b4822);
+    background: radial-gradient(circle at 30% 30%, #ffe8b3, #c88a38);
+    box-shadow:
+      0 0 0 0.22rem color-mix(in oklab, var(--kef-bg, #16110d) 80%, #3a2817 20%),
+      0 0 0.8rem color-mix(in oklab, #f0c980 24%, transparent);
+  }
+
+  :global(:root[data-kefine-theme='dark']) kefine-thread-node[data-tone='active'] kefine-thread-dot::after,
+  :global(:root[data-kefine-theme='dark']) kefine-thread-node[data-tone='loading'] kefine-thread-dot::after {
+    background: conic-gradient(
+      from 0deg,
+      #4a2c0d 0deg 220deg,
+      #fff3d6 220deg 270deg,
+      transparent 270deg 360deg
+    );
+  }
+
+  :global(:root[data-kefine-theme='dark']) kefine-thread-comment-entry [data-part='comment-trigger'] {
+    border-color: color-mix(in oklab, #d3a45c 58%, var(--kef-border, #6e5539));
+    background: color-mix(in oklab, #4a3420 34%, var(--kef-bg-card, #21170f));
+    color: color-mix(in oklab, #f7e7c2 92%, white);
+    opacity: 0.96;
+    box-shadow: 0 0.45rem 1rem color-mix(in oklab, #000 24%, transparent);
+  }
+
+  :global(:root[data-kefine-theme='dark']) kefine-thread-comment-entry [data-part='comment-trigger']:hover {
+    border-color: color-mix(in oklab, #e3b468 78%, var(--kef-primary, #b97a28));
+    background: color-mix(in oklab, var(--kef-primary, #b97a28) 28%, var(--kef-bg-card, #21170f));
+    color: #fff6df;
   }
 
   @keyframes kefine-thread-rise {

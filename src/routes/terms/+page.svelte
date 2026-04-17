@@ -11,7 +11,6 @@
     getLegalPageContent(
       $kefineLocale,
       'terms',
-      runtimeConfig.company,
       runtimeConfig.app.legalUpdatedAt[$kefineLocale]
     )
   );

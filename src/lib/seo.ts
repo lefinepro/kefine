@@ -37,14 +37,6 @@ function resolveLegalMeta(pathname: string): { id: LegalPageId; title: string; d
     };
   }
 
-  if (pathname === '/legal-information') {
-    return {
-      id: 'company',
-      title: 'Legal Information | Lefine',
-      description: 'Review Lefine company details, contact information, payment disclosures, and legal notices.'
-    };
-  }
-
   return null;
 }
 
@@ -52,13 +44,13 @@ function buildOrganizationJsonLd(origin: string, publicConfig: KefinePublicRunti
   return {
     '@context': 'https://schema.org',
     '@type': 'Organization',
-    name: publicConfig.company.legalName || publicConfig.app.name,
+    name: publicConfig.defaultActor.displayName || publicConfig.app.name,
     url: origin,
     logo: `${origin}/favicon.png`,
     contactPoint: {
       '@type': 'ContactPoint',
       contactType: 'customer support',
-      email: publicConfig.company.email || publicConfig.app.supportEmail
+      email: publicConfig.app.supportEmail
     }
   };
 }
@@ -111,7 +103,6 @@ export function getSeoMeta(url: URL, sourceConfig: unknown = DEFAULT_PUBLIC_RUNT
     pathname.startsWith('/status/') ||
     pathname === '/api/status' ||
     pathname.startsWith('/api/status/') ||
-    pathname.startsWith('/api/services') ||
     pathname.startsWith('/passkeys/') ||
     pathname.startsWith('/api/passkeys/') ||
     pathname.startsWith('/api/kefine/');

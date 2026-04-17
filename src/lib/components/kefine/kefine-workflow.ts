@@ -82,6 +82,7 @@ export type OrderActivity = {
 };
 
 export type DraftOrder = {
+  taskIcon?: string;
   title: string;
   description: string;
   tags: string[];
@@ -97,6 +98,7 @@ export type DraftOrder = {
 
 export type OrderView = {
   id: string;
+  taskIcon?: string;
   solver: string;
   solverName?: string;
   solverHandle?: string;
