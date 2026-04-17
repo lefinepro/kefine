@@ -278,7 +278,7 @@ module Crater
     end
 
     private def self.order_actor_did(order : OrderRecord, config : Utils::Config) : String
-      order.actor_did || system_actor_did(config)
+      config.actor_id
     end
 
     private def self.order_object_id(order : OrderRecord, config : Utils::Config) : String
@@ -741,6 +741,7 @@ module Crater
 
     private def self.post_to_exchange_inbox(activity : ActivityPub::Activity, config : Utils::Config) : Nil
       inbox_url = config.order_queue_inbox
+      Log.info { "[order_queue:deliver] posting activity=#{activity.type} id=#{activity.id} to=#{inbox_url}" }
       response = HTTP::Client.post(
         inbox_url,
         headers: HTTP::Headers{
@@ -754,11 +755,13 @@ module Crater
       return if response.status_code >= 200 && response.status_code < 300
 
       response_body = response.body.to_s.strip
+      Log.warn { "[order_queue:deliver] exchange rejected activity=#{activity.id} status=#{response.status_code} body=#{response_body}" }
       reason = response_body.empty? ? "HTTP #{response.status_code}" : "HTTP #{response.status_code}: #{response_body}"
       raise DeliveryFailed.new("Exchange inbox rejected activity: #{reason}")
     rescue ex : DeliveryFailed
       raise ex
     rescue ex
+      Log.error(exception: ex) { "[order_queue:deliver] failed activity=#{activity.id} to=#{inbox_url}" }
       raise DeliveryFailed.new("Failed to deliver activity to exchange inbox: #{ex.message}")
     end
 
@@ -779,17 +782,21 @@ module Crater
       raise Error::InvalidActivity.new("Activity type must be Create") unless activity.type == "Create"
 
       record = parse_order_payload(activity, config)
+      Log.info { "[order_queue:submit_create] parsed id=#{record.id} status=#{record.status} title=#{record.title.inspect}" }
 
       @@lock.synchronize do
         persist_order(record, config)
         persist_activity(JSON.parse(activity.to_json), record.id, config)
       end
+      Log.info { "[order_queue:submit_create] persisted id=#{record.id} status=#{record.status}" }
 
       # Do not block the create response on exchange availability.
       spawn do
         begin
           post_to_exchange_inbox(activity, config)
+          Log.info { "[order_queue:submit_create] delivered id=#{record.id} activity=#{activity.id}" }
         rescue ex
+          Log.error { "[order_queue:submit_create] delivery failed id=#{record.id}: #{ex.message}" }
           STDERR.puts "Failed to deliver order #{record.id} to exchange: #{ex.message}"
         end
       end

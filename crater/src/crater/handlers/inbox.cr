@@ -11,36 +11,50 @@ module Crater
 
       def self.register(config : Utils::Config)
         post "/inbox" do |env|
-          body = env.request.body.try(&.gets_to_end) || ""
-
-          activity = begin
-            ActivityPub::Activity.from_json(body)
-          rescue JSON::ParseException
-            env.response.status_code = 400
-            next({error: "Invalid JSON body"}.to_json)
-          end
-
-          env.response.content_type = "application/json"
-
-          order = begin
-            accept_activity(activity, config)
-          rescue ex : OrderQueue::Error::InvalidActivity
-            env.response.status_code = 400
-            next({error: ex.message}.to_json)
-          rescue ex : Exception
-            env.response.status_code = 500
-            next({error: "Failed to queue order", reason: ex.message}.to_json)
-          end
-
-          env.response.status_code = 202
-          {
-            accepted: true,
-            orderId: order.id,
-            status: order.status,
-            solver: order.solver,
-            uiScenario: order.ui_scenario
-          }.to_json
+          handle_inbox(env, config)
         end
+
+        post "/inbox/:username" do |env|
+          username = env.params.url["username"]
+          if username != config.actor_username
+            env.response.status_code = 404
+            next({error: "Actor inbox not found"}.to_json)
+          end
+
+          handle_inbox(env, config)
+        end
+      end
+
+      private def self.handle_inbox(env, config : Utils::Config)
+        body = env.request.body.try(&.gets_to_end) || ""
+
+        activity = begin
+          ActivityPub::Activity.from_json(body)
+        rescue JSON::ParseException
+          env.response.status_code = 400
+          return({error: "Invalid JSON body"}.to_json)
+        end
+
+        env.response.content_type = "application/json"
+
+        order = begin
+          accept_activity(activity, config)
+        rescue ex : OrderQueue::Error::InvalidActivity
+          env.response.status_code = 400
+          return({error: ex.message}.to_json)
+        rescue ex : Exception
+          env.response.status_code = 500
+          return({error: "Failed to queue order", reason: ex.message}.to_json)
+        end
+
+        env.response.status_code = 202
+        {
+          accepted: true,
+          orderId: order.id,
+          status: order.status,
+          solver: order.solver,
+          uiScenario: order.ui_scenario
+        }.to_json
       end
 
       def self.accept_activity(activity : ActivityPub::Activity, config : Utils::Config) : OrderQueue::OrderRecord
