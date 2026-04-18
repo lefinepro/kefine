@@ -12,6 +12,7 @@ require "./utils/config"
 module Crater
   module RepositoryStore
     DEFAULT_BRANCH = "main"
+    AD_HOC_ORDER_PREFIX = "__repo__:"
     ISSUE_ARTIFACT_EXTENSIONS = {".patch", ".diff", ".org"}
     ISSUE_ARTIFACT_MEDIA_TYPES = {"application/x-git-patch", "text/x-diff", "text/org", "application/org"}
 
@@ -144,6 +145,11 @@ module Crater
       File.join(repositories_root, "#{slug}.git")
     end
 
+    private def self.bare_repo_path_for_owner(owner_handle : String, clone_name : String) : String
+      segments = clone_name.split('/').reject(&.empty?).map { |segment| slugify(segment) }
+      File.join(repositories_root, normalize_handle(owner_handle), "#{segments.join("/")}.git")
+    end
+
     private def self.public_clone_url(slug : String, visibility : String, config : Utils::Config) : String?
       return nil unless visibility == "public"
 
@@ -179,9 +185,34 @@ module Crater
 
     private def self.owner_handle_for(record : RepositoryRecord, config : Utils::Config) : String
       order = OrderQueue.find_order(record.order_id, config)
-      return normalize_handle(config.actor_username) unless order
+      unless order
+        owner = ad_hoc_owner_handle(record.order_id)
+        return owner.not_nil! if owner
+
+        return normalize_handle(config.actor_username)
+      end
 
       owner_handle_for_order(order, config)
+    end
+
+    private def self.ad_hoc_order_id(owner_handle : String, clone_name : String) : String
+      "#{AD_HOC_ORDER_PREFIX}#{normalize_handle(owner_handle)}/#{clone_name}"
+    end
+
+    private def self.ad_hoc_owner_handle(order_id : String?) : String?
+      value = order_id.to_s
+      return nil unless value.starts_with?(AD_HOC_ORDER_PREFIX)
+
+      owner_and_path = value.sub(AD_HOC_ORDER_PREFIX, "")
+      owner = owner_and_path.split('/', 2)[0]?
+      presence(owner)
+    end
+
+    private def self.normalize_clone_name(value : String) : String
+      segments = value.split('/').map { |segment| slugify(segment) }.reject(&.empty?)
+      raise "Repository path is invalid." if segments.empty?
+
+      segments.join("/")
     end
 
     private def self.project_public_clone_url(record : RepositoryRecord, config : Utils::Config) : String?
@@ -227,6 +258,13 @@ module Crater
       return if status.success?
 
       raise "git #{args.join(' ')} failed: #{presence(error.to_s.strip) || presence(output.to_s.strip) || status.exit_code}"
+    end
+
+    private def self.init_empty_bare_repository(record : RepositoryRecord) : Nil
+      FileUtils.rm_rf(record.repo_path)
+      FileUtils.mkdir_p(File.dirname(record.repo_path))
+      run_git!(["init", "--bare", "--initial-branch=#{record.default_branch}", record.repo_path])
+      run_git!(["--git-dir", record.repo_path, "update-server-info"])
     end
 
     private def self.meta_issue_readme_content : String
@@ -460,6 +498,37 @@ module Crater
             repository.slug == normalized_clone_name
           )
       end
+    end
+
+    def self.ensure_ad_hoc_for_owner_and_clone_name(owner_handle : String, clone_name : String, config : Utils::Config = Utils::Config.load) : RepositoryRecord
+      normalized_owner = normalize_handle(owner_handle)
+      normalized_clone_name = normalize_clone_name(clone_name)
+      existing = find_by_owner_and_project_clone_name(normalized_owner, normalized_clone_name, config)
+      return existing if existing
+
+      now = current_time
+      tail = normalized_clone_name.split('/').last
+      slug_source = normalized_clone_name.gsub("/", "-")
+      slug = unique_slug(slug_source, "#{normalized_owner}-#{slug_source}", config)
+      record = RepositoryRecord.new(
+        id: UUID.random.to_s,
+        project_id: normalized_clone_name,
+        order_id: ad_hoc_order_id(normalized_owner, normalized_clone_name),
+        slug: slug,
+        name: tail,
+        visibility: "private",
+        default_branch: DEFAULT_BRANCH,
+        server_uuid: UUID.random.to_s,
+        public_clone_url: nil,
+        ssh_clone_url: ssh_clone_url_for_path("/@#{normalized_owner}/#{normalized_clone_name}.git", config),
+        repo_path: bare_repo_path_for_owner(normalized_owner, normalized_clone_name),
+        created_at: now,
+        updated_at: now
+      )
+
+      persist(record, config)
+      init_empty_bare_repository(record)
+      record
     end
 
     def self.owner_handle(record : RepositoryRecord, config : Utils::Config = Utils::Config.load) : String

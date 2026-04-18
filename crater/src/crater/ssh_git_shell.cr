@@ -37,7 +37,7 @@ module Crater
       normalized = request_path.strip
       return nil unless normalized.ends_with?(".git")
 
-      if match = normalized.match(/\A\/?@([^\/]+)\/([^\/]+)\.git\z/)
+      if match = normalized.match(/\A\/?@([^\/]+)\/(.+)\.git\z/)
         return RepositoryStore.find_by_owner_and_project_clone_name(match[1], match[2], config)
       end
 
@@ -46,6 +46,19 @@ module Crater
       end
 
       nil
+    end
+
+    private def self.ensure_repository_for_push(actor_handle : String, request_path : String, config : Utils::Config) : RepositoryStore::RepositoryRecord?
+      repository = resolve_repository(request_path, config)
+      return repository if repository
+
+      normalized = request_path.strip
+      return nil unless match = normalized.match(/\A\/?@([^\/]+)\/(.+)\.git\z/)
+
+      owner_handle = normalize_actor(match[1])
+      return nil unless owner_handle == actor_handle
+
+      RepositoryStore.ensure_ad_hoc_for_owner_and_clone_name(owner_handle, match[2], config)
     end
 
     private def self.authorized?(service : String, actor_handle : String, repository : RepositoryStore::RepositoryRecord, config : Utils::Config) : Bool
@@ -67,7 +80,12 @@ module Crater
       deny("SSH key is not registered for @#{actor_handle}.") unless key
 
       service, request_path = parse_original_command(ENV["SSH_ORIGINAL_COMMAND"]?)
-      repository = resolve_repository(request_path, config)
+      repository =
+        if service == "git-receive-pack"
+          ensure_repository_for_push(actor_handle, request_path, config)
+        else
+          resolve_repository(request_path, config)
+        end
       deny("Repository not found.") unless repository
       deny("Access denied.") unless authorized?(service, actor_handle, repository, config)
 
