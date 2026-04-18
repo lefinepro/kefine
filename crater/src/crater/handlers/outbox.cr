@@ -12,18 +12,23 @@ module Crater
           render_outbox(env, config)
         end
 
-        get "/outbox/:username" do |env|
-          username = env.params.url["username"]
-          if username != config.actor_username
-            env.response.status_code = 404
-            next({error: "Actor outbox not found"}.to_json)
-          end
+        get "/actor/:username/outbox" do |env|
+          render_outbox(env, config, env.params.url["username"])
+        end
 
-          render_outbox(env, config)
+        get "/actors/by-key/:suffix/outbox" do |env|
+          render_outbox_for_actor_uri(env, "#{config.crater_url}/actors/by-key/#{env.params.url["suffix"].downcase.gsub(/[^a-z0-9]+/, "-").gsub(/^-+|-+$/, "")}")
         end
       end
 
-      private def self.render_outbox(env, config : Utils::Config)
+      private def self.render_outbox(env, config : Utils::Config, username_override : String? = nil)
+        env.response.content_type = "application/activity+json"
+        username = username_override || config.actor_username
+        actor_uri = "#{config.crater_url}/actor/#{username.downcase.gsub(/[^a-z0-9._-]+/, "-").gsub(/^[._-]+|[._-]+$/, "")}"
+        render_outbox_for_actor_uri(env, actor_uri, username_override.nil?)
+      end
+
+      private def self.render_outbox_for_actor_uri(env, actor_uri : String, use_global_collection : Bool = false)
         env.response.content_type = "application/activity+json"
 
         page = env.params.query["page"]?
@@ -35,31 +40,31 @@ module Crater
             return({error: "Invalid page parameter"}.to_json)
           end
 
-          activities = OrderQueue.activity_page(parsed_page)
-          total_items = OrderQueue.total_items
+          activities = use_global_collection ? OrderQueue.activity_page(parsed_page) : OrderQueue.activity_page_for_actor(actor_uri, parsed_page)
+          total_items = use_global_collection ? OrderQueue.total_items : OrderQueue.total_items_for_actor(actor_uri)
           has_more = (parsed_page * OrderQueue::EVENT_PAGE_SIZE) < total_items
 
           return({
             "@context"     => ActivityPub::CONTEXT,
-            "id"           => "#{config.actor_outbox}?page=#{parsed_page}",
+            "id"           => "#{actor_uri}/outbox?page=#{parsed_page}",
             "type"         => "OrderedCollectionPage",
-            "partOf"       => config.actor_outbox,
+            "partOf"       => "#{actor_uri}/outbox",
             "orderedItems" => activities,
             "totalItems"   => total_items,
-            "first"        => "#{config.actor_outbox}?page=1",
-            "next"         => has_more ? "#{config.actor_outbox}?page=#{parsed_page + 1}" : nil,
-            "prev"         => parsed_page > 1 ? "#{config.actor_outbox}?page=#{parsed_page - 1}" : nil,
+            "first"        => "#{actor_uri}/outbox?page=1",
+            "next"         => has_more ? "#{actor_uri}/outbox?page=#{parsed_page + 1}" : nil,
+            "prev"         => parsed_page > 1 ? "#{actor_uri}/outbox?page=#{parsed_page - 1}" : nil,
           }.to_json)
         end
 
-        total_items = OrderQueue.total_items
+        total_items = use_global_collection ? OrderQueue.total_items : OrderQueue.total_items_for_actor(actor_uri)
 
         {
           "@context"   => ActivityPub::CONTEXT,
-          "id"         => config.actor_outbox,
+          "id"         => "#{actor_uri}/outbox",
           "type"       => "OrderedCollection",
           "totalItems" => total_items,
-          "first"      => total_items > 0 ? "#{config.actor_outbox}?page=1" : nil,
+          "first"      => total_items > 0 ? "#{actor_uri}/outbox?page=1" : nil,
         }.to_json
       end
     end

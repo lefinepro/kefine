@@ -11,6 +11,7 @@ import type {
   OrderNotebookBlock,
   OrderNotebookStep,
   OrderResultSection,
+  OrderRepository,
   OrderStepComment,
   OrderView,
   PaymentQuote,
@@ -138,6 +139,47 @@ function toBoolean(value: unknown): boolean | undefined {
   }
 
   return undefined;
+}
+
+function toRepository(value: unknown): OrderRepository | undefined {
+  const record = toRecord(value);
+  if (!record) {
+    return undefined;
+  }
+
+  const id = toStringValue(record['id']);
+  const slug = toStringValue(record['slug']);
+  const visibility = toStringValue(record['visibility']);
+  if (!id || !slug || (visibility !== 'public' && visibility !== 'private')) {
+    return undefined;
+  }
+
+  return {
+    id,
+    projectId: toStringValue(record['projectId']) || undefined,
+    orderId: toStringValue(record['orderId']) || undefined,
+    ownerHandle: toStringValue(record['ownerHandle']) || undefined,
+    slug,
+    name: toStringValue(record['name']) || undefined,
+    visibility,
+    defaultBranch: toStringValue(record['defaultBranch']) || undefined,
+    serverUuid: toStringValue(record['serverUuid']) || undefined,
+    projectCloneUrl: toStringValue(record['projectCloneUrl']) || undefined,
+    projectPublicCloneUrl: toStringValue(record['projectPublicCloneUrl']) || undefined,
+    projectSshCloneUrl: toStringValue(record['projectSshCloneUrl']) || undefined,
+    projectArchiveUrl: toStringValue(record['projectArchiveUrl']) || undefined,
+    publicCloneUrl: toStringValue(record['publicCloneUrl']) || undefined,
+    sshCloneUrl: toStringValue(record['sshCloneUrl']) || undefined,
+    repositoryUrl:
+      toStringValue(record['repositoryUrl']) ||
+      toStringValue(record['url']) ||
+      toStringValue(record['resourceUrl']) ||
+      undefined,
+    projectUrl: toStringValue(record['projectUrl']) || undefined,
+    patchTrackerUrl: toStringValue(record['patchTrackerUrl']) || undefined,
+    createdAt: toStringValue(record['createdAt']) || undefined,
+    updatedAt: toStringValue(record['updatedAt']) || undefined
+  };
 }
 
 function toOrderDocument(value: unknown): OrderDocument | undefined {
@@ -1115,6 +1157,9 @@ export function parseStoredOrders(raw: string | null, localeText: KefineLocaleTe
         ownerDisplayName: toStringValue(order['ownerDisplayName']),
         actorHandle: toStringValue(order['actorHandle']),
         actorDid: toStringValue(order['actorDid']),
+        vcsEnabled: toBoolean(order['vcsEnabled']) || Boolean(order['repository']),
+        projectId: toStringValue(order['projectId']),
+        repository: toRepository(order['repository']),
         shareId: toStringValue(order['shareId']),
         isClosedCompleted: order['isClosedCompleted'] === true,
         isPublicTask: order['isPublicTask'] === true,
@@ -1147,6 +1192,9 @@ export function readCreateResponse(body: unknown): {
   ownerDisplayName?: string;
   actorHandle?: string;
   actorDid?: string;
+  vcsEnabled?: boolean;
+  projectId?: string;
+  repository?: OrderRepository;
   status?: string;
   uiScenario?: Exclude<UiScenario, 'default'>;
   exchangeStage?: ExecutionStage;
@@ -1180,6 +1228,9 @@ export function readCreateResponse(body: unknown): {
     ownerDisplayName: toStringValue(body['ownerDisplayName']) || undefined,
     actorHandle: toStringValue(body['actorHandle']) || extractActorHandleFromOrderReference(orderId) || undefined,
     actorDid: toStringValue(body['actorDid']) || undefined,
+    vcsEnabled: toBoolean(body['vcsEnabled']) || Boolean(body['repository']),
+    projectId: toStringValue(body['projectId']) || undefined,
+    repository: toRepository(body['repository']),
     status: toStringValue(body['status']) || 'queued',
     uiScenario: toUiScenario(body['uiScenario']),
     exchangeStage: findExchangeStage(body, body),
@@ -1321,6 +1372,13 @@ export function extractStatusPayload(
     ownerDisplayName: toStringValue(source['ownerDisplayName']) || toStringValue(ticket['ownerDisplayName']) || undefined,
     actorHandle: toStringValue(source['actorHandle']) || toStringValue(ticket['actorHandle']) || undefined,
     actorDid: toStringValue(source['actorDid']) || toStringValue(ticket['actorDid']) || undefined,
+    vcsEnabled:
+      toBoolean(source['vcsEnabled']) ||
+      toBoolean(ticket['vcsEnabled']) ||
+      toBoolean(rootPayload?.['vcsEnabled']) ||
+      Boolean(toRepository(source['repository']) || toRepository(ticket['repository']) || toRepository(rootPayload?.['repository'])),
+    projectId: toStringValue(source['projectId']) || toStringValue(ticket['projectId']) || undefined,
+    repository: toRepository(source['repository']) || toRepository(ticket['repository']) || toRepository(rootPayload?.['repository']),
     ...(toStringValue(source['taskIcon']) || toStringValue(ticket['taskIcon'])
       ? { taskIcon: (toStringValue(source['taskIcon']) || toStringValue(ticket['taskIcon'])) as string }
       : {}),
@@ -1445,6 +1503,7 @@ export function buildCreatePayload(
     ownerUsername: owner?.ownerUsername,
     ownerDisplayName: owner?.ownerDisplayName,
     actorHandle: owner?.actorHandle,
-    actorDid: owner?.actorDid
+    actorDid: owner?.actorDid,
+    vcsEnabled: false
   };
 }

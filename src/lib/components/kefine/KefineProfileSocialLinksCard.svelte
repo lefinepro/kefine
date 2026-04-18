@@ -1,25 +1,19 @@
 <script lang="ts">
   import Icon from '@iconify/svelte';
-  import { getCardBrandPresentation, resolveProfileAccountPresentation } from '$lib/profile/profile-accounts';
+  import { resolveProfileAccountPresentation } from '$lib/profile/profile-accounts';
   import type { ProfileSocialLink } from '$lib/types/user';
 
   let {
-    title,
     valuePlaceholder,
-    cardPlaceholder = '0000 0000 0000 0000',
     emptyText = '',
     isOwner,
     links = $bindable<ProfileSocialLink[]>([]),
-    cardNumber = $bindable(''),
     onRemove
   }: {
-    title: string;
     valuePlaceholder: string;
-    cardPlaceholder?: string;
     emptyText?: string;
     isOwner: boolean;
     links: ProfileSocialLink[];
-    cardNumber?: string;
     onRemove?: (id: string) => void;
   } = $props();
 
@@ -33,23 +27,10 @@
   function markFaviconFailed(id: string) {
     failedFavicons = { ...failedFavicons, [id]: true };
   }
-
-  const cardPresentation = $derived(getCardBrandPresentation(cardNumber));
 </script>
 
 <lef-profile-social-card>
-  <lef-profile-social-head>
-    <strong>{title}</strong>
-  </lef-profile-social-head>
-
   <lef-profile-social-list>
-    <lef-profile-social-row data-kind="card">
-      <lef-profile-social-leading>
-        <Icon icon={cardPresentation.icon} width="18" height="18" aria-hidden="true" />
-      </lef-profile-social-leading>
-      <input bind:value={cardNumber} placeholder={cardPlaceholder} aria-label="Bank card number" />
-    </lef-profile-social-row>
-
     {#each links as link (link.id)}
       {@const account = resolveProfileAccountPresentation(link.type, link.value, link.label)}
       <lef-profile-social-row>
@@ -115,7 +96,6 @@
     gap: 1rem;
   }
 
-  lef-profile-social-head,
   lef-profile-social-row,
   lef-profile-social-links,
   lef-profile-social-leading {
@@ -124,27 +104,11 @@
     align-items: center;
   }
 
-  lef-profile-social-head {
-    justify-content: flex-start;
-    position: relative;
-    z-index: 2;
-  }
-
   lef-profile-social-row {
     padding: 1rem;
     border-radius: 1rem;
     background: color-mix(in oklab, var(--kef-color-bg) 45%, var(--kef-color-bg-card));
     border: 1px solid color-mix(in oklab, var(--kef-color-text) 8%, transparent);
-  }
-
-  lef-profile-social-row[data-kind='card'] {
-    border-color: color-mix(in oklab, var(--kef-color-primary) 18%, transparent);
-    background:
-      linear-gradient(
-        135deg,
-        color-mix(in oklab, var(--kef-color-primary) 12%, var(--kef-color-bg-card)),
-        color-mix(in oklab, var(--kef-color-bg-card) 92%, var(--kef-color-bg))
-      );
   }
 
   lef-profile-social-leading {

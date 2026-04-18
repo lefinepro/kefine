@@ -9,17 +9,19 @@
     onApply
   }: {
     order: OrderView | null;
-    onApply: (patch: Partial<Pick<OrderView, 'shareId' | 'isPublicTask'>>) => void;
+    onApply: (patch: Partial<Pick<OrderView, 'shareId' | 'isPublicTask' | 'vcsEnabled'>>) => void | Promise<void>;
   } = $props();
 
   let menuOpen = $state(false);
   let rootElement = $state<HTMLElement | null>(null);
   let slugDraft = $state('');
   let isPublicDraft = $state(false);
+  let vcsEnabledDraft = $state(false);
 
   function syncDrafts() {
     slugDraft = order?.shareId?.trim() && order.shareId !== order.id ? order.shareId.trim() : '';
     isPublicDraft = order?.isPublicTask === true;
+    vcsEnabledDraft = order?.vcsEnabled === true || Boolean(order?.repository);
   }
 
   function closeMenu() {
@@ -46,7 +48,8 @@
     const normalizedSlug = normalizeProfileResourceSlug(slugDraft);
     onApply({
       shareId: normalizedSlug || order.id,
-      isPublicTask: isPublicDraft
+      isPublicTask: isPublicDraft,
+      vcsEnabled: vcsEnabledDraft
     });
     closeMenu();
   }
@@ -110,6 +113,10 @@
         <label data-part="toggle">
           <input bind:checked={isPublicDraft} type="checkbox" />
           <lefine-text>Make public</lefine-text>
+        </label>
+        <label data-part="toggle">
+          <input bind:checked={vcsEnabledDraft} type="checkbox" />
+          <lefine-text>Enable VCS</lefine-text>
         </label>
         <button type="button" data-part="apply" onclick={applySettings}>Save</button>
       </kefine-task-settings-section>

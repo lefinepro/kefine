@@ -1,6 +1,47 @@
-import type { DraftOrder, OrderNotebookBlock, OrderResultSection, OrderView, TaskAccessMode } from '$lib/components/kefine/kefine-workflow';
+import type {
+  DraftOrder,
+  OrderNotebookBlock,
+  OrderRepository,
+  OrderResultSection,
+  OrderView,
+  TaskAccessMode
+} from '$lib/components/kefine/kefine-workflow';
 
 export type TaskCloneFormat = 'txt' | 'md' | 'org';
+
+export type TaskRepositoryCloneTarget = {
+  label: string;
+  url: string;
+};
+
+export type TaskRepositoryArchiveTargets = {
+  zip: string;
+  tarGz: string;
+  tarZst: string;
+};
+
+export function getTaskRepositoryArchiveTargets(order: OrderView): TaskRepositoryArchiveTargets | null {
+  const repository = getTaskRepository(order);
+  const zipUrl = repository?.projectArchiveUrl?.trim() || null;
+  if (!zipUrl) {
+    return null;
+  }
+
+  if (zipUrl.endsWith('.zip')) {
+    const base = zipUrl.slice(0, -4);
+    return {
+      zip: zipUrl,
+      tarGz: `${base}.tar.gz`,
+      tarZst: `${base}.tar.zst`
+    };
+  }
+
+  return {
+    zip: zipUrl,
+    tarGz: `${zipUrl}.tar.gz`,
+    tarZst: `${zipUrl}.tar.zst`
+  };
+}
 
 type TaskCloneFile = {
   filename: string;
@@ -87,6 +128,12 @@ function buildTaskClonePackage(order: OrderView): TaskClonePackage {
     ['Public', order.isPublicTask === true ? 'yes' : 'no'],
     ['Tags', order.labels?.length ? order.labels.map((tag) => `#${tag}`).join(', ') : '-']
   ];
+
+  if (order.repository) {
+    metadata.push(['Repository', normalizeLine(order.repository.slug)]);
+    metadata.push(['Repository visibility', normalizeLine(order.repository.visibility)]);
+    metadata.push(['Repository branch', normalizeLine(order.repository.defaultBranch)]);
+  }
 
   const access = (['view', 'watch', 'join'] as const)
     .map((mode) => formatAccessRule(order, mode))
@@ -233,5 +280,93 @@ export function cloneOrderToDraft(order: OrderView): DraftOrder {
     templatePromptTemplate: '',
     templateVariables: [],
     templateVariableValues: {}
+  };
+}
+
+export function getTaskRepository(order: OrderView): OrderRepository | null {
+  return order.repository ?? null;
+}
+
+function preferredProjectPathId(order: OrderView, repository: OrderRepository | null): string | null {
+  const routeScopedId = order.shareId?.trim() || order.id?.trim();
+  if (routeScopedId) {
+    return routeScopedId;
+  }
+
+  const projectId = order.projectId?.trim() || repository?.projectId?.trim();
+  return projectId || null;
+}
+
+function preferredActorHandle(order: OrderView, repository: OrderRepository | null): string | null {
+  const handle = order.actorHandle?.trim() || order.ownerUsername?.trim() || repository?.ownerHandle?.trim();
+  return handle ? handle.replace(/^@+/, '') : null;
+}
+
+function currentSshOriginHost(): string | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  return window.location.host?.trim() || null;
+}
+
+function hostFromCloneUrl(url: string | undefined): string | null {
+  const raw = url?.trim();
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const parsed = new URL(raw);
+    return parsed.host || null;
+  } catch {
+    const normalized = raw.replace(/^ssh:\/\/(?:git@)?/, '');
+    const host = normalized.split('/')[0]?.trim();
+    return host || null;
+  }
+}
+
+export function getTaskRepositoryCanonicalName(order: OrderView): string | null {
+  const repository = getTaskRepository(order);
+  const actorHandle = preferredActorHandle(order, repository);
+  const projectPathId = preferredProjectPathId(order, repository);
+  if (!actorHandle || !projectPathId) {
+    return null;
+  }
+
+  return `@${actorHandle}/${projectPathId}.git`;
+}
+
+function ensureGitSuffix(url: string): string {
+  const trimmed = url.trim();
+  if (!trimmed) {
+    return '';
+  }
+
+  return trimmed.endsWith('.git') ? trimmed : `${trimmed}.git`;
+}
+
+export function getTaskRepositoryCloneTarget(order: OrderView): TaskRepositoryCloneTarget | null {
+  const repository = getTaskRepository(order);
+  const canonicalName = getTaskRepositoryCanonicalName(order);
+  if (!repository || !canonicalName) {
+    return null;
+  }
+
+  const preferredHost =
+    currentSshOriginHost() ||
+    hostFromCloneUrl(repository.projectCloneUrl) ||
+    hostFromCloneUrl(repository.projectSshCloneUrl) ||
+    hostFromCloneUrl(repository.sshCloneUrl) ||
+    hostFromCloneUrl(repository.projectPublicCloneUrl) ||
+    hostFromCloneUrl(repository.publicCloneUrl);
+  const url = ensureGitSuffix(preferredHost ? `ssh://git@${preferredHost}/${canonicalName}` : '');
+  if (!url) {
+    return null;
+  }
+
+  return {
+    label: 'SSH clone',
+    url
   };
 }

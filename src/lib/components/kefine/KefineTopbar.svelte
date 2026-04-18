@@ -192,6 +192,15 @@
     onAuthDoubleClick();
   }
 
+  function handleAuthKeydown(event: KeyboardEvent) {
+    if (event.key !== 'Enter' && event.key !== ' ') {
+      return;
+    }
+
+    event.preventDefault();
+    handleAuthClick();
+  }
+
   function handleThemeButtonClick() {
     themePickerOpen = !themePickerOpen;
     localePickerOpen = false;
@@ -474,33 +483,26 @@
 
     {#if showAuthButton}
       <button
-        type="button"
         data-part="auth"
+        type="button"
         data-scrolled={hasScrolled}
         data-variant={isAuthenticated ? 'ghost' : 'primary'}
         data-loading={isAuthLoading}
         disabled={isAuthLoading}
         onclick={handleAuthClick}
         ondblclick={handleAuthDoubleClick}
+        onkeydown={handleAuthKeydown}
       >
         {#if isAuthLoading}
           <lef-auth-loading aria-hidden="true"></lef-auth-loading>
-          <lefine-text>{signInLabel}</lefine-text>
-        {:else if isAuthenticated}
-          <lefine-text data-part="auth-content">
-            {#if authenticatedAvatarUrl}
-              <img data-part="auth-avatar" src={authenticatedAvatarUrl} alt="" aria-hidden="true" />
-            {/if}
-            <lefine-text data-part="auth-copy">
-              <strong>{authenticatedLabel ?? signedInLabel}</strong>
-              {#if authenticatedSecondaryLabel}
-                <small>{authenticatedSecondaryLabel}</small>
-              {/if}
-            </lefine-text>
-          </lefine-text>
-        {:else}
-          {signInLabel}
         {/if}
+        <lefine-text>
+          {#if isAuthenticated}
+            {authenticatedSecondaryLabel ?? authenticatedLabel ?? signedInLabel}
+          {:else}
+            {signInLabel}
+          {/if}
+        </lefine-text>
       </button>
 
       <kefine-auth-popover
@@ -827,11 +829,26 @@
   button[data-part='auth'] {
     position: relative;
     z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
     anchor-name: --kefine-auth-anchor;
     width: auto;
     min-width: 0;
-    padding-inline: 0.9rem;
+    max-width: min(18rem, calc(100vw - 5rem));
+    min-height: 2.5rem;
+    padding: 0.42rem 0.8rem;
+    border: var(--kef-border-width-soft) solid color-mix(in oklab, var(--kef-border) 72%, transparent);
+    border-radius: calc(var(--kef-radius-ui) - 0.04rem);
+    background: color-mix(in oklab, var(--kef-bg-card) 94%, var(--kef-bg));
+    color: color-mix(in oklab, var(--lefine-text) 96%, transparent);
+    font: inherit;
+    cursor: pointer;
     pointer-events: auto;
+    justify-content: flex-start;
+    align-items: center;
+    overflow: hidden;
+    white-space: nowrap;
     transition:
       background-color var(--kef-motion-fast) var(--kef-ease-soft),
       box-shadow var(--kef-motion-fast) var(--kef-ease-soft),
@@ -887,6 +904,7 @@
     background: color-mix(in oklab, var(--kef-bg-card) 98%, var(--kef-bg));
     box-shadow: 0 10px 24px color-mix(in oklab, #544536 8%, transparent);
     color: inherit;
+    pointer-events: auto;
   }
 
   kefine-auth-popover::backdrop {
@@ -923,12 +941,6 @@
     color: color-mix(in oklab, var(--kef-primary) 92%, #4f3d30);
   }
 
-  lefine-text[data-part='auth-content'] {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.65rem;
-  }
-
   lef-auth-loading {
     width: 0.92rem;
     height: 0.92rem;
@@ -938,34 +950,18 @@
     animation: kefine-auth-spin 0.78s linear infinite;
   }
 
-  img[data-part='auth-avatar'] {
-    width: 1.9rem;
-    height: 1.9rem;
-    border-radius: 999px;
-    flex: 0 0 auto;
-    box-shadow: 0 0 0 1px color-mix(in oklab, var(--kef-line-on-primary) 72%, transparent);
-  }
-
-  lefine-text[data-part='auth-copy'] {
-    display: grid;
-    gap: 0.04rem;
-    text-align: left;
-    min-width: 0;
-  }
-
-  lefine-text[data-part='auth-copy'] strong,
-  lefine-text[data-part='auth-copy'] small {
+  button[data-part='auth'] > lefine-text {
     display: block;
-    max-width: 16rem;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-
-  lefine-text[data-part='auth-copy'] small {
-    opacity: 0.78;
-    font-size: 0.72rem;
-    font-weight: 600;
+    font-size: 0.95rem;
+    font-weight: 620;
+    line-height: 1.15;
+    text-align: left;
   }
 
   @keyframes kefine-auth-spin {
@@ -975,6 +971,11 @@
   }
 
   @media (max-width: 760px) {
+    button[data-part='auth'] {
+      max-width: min(14rem, calc(100vw - 4.25rem));
+      padding-inline: 0.72rem;
+    }
+
     kefine-topbar {
       top: 0;
       left: 0;
@@ -1040,10 +1041,10 @@
     }
 
     button[data-part='auth'] {
-      max-width: calc(100vw - 6rem);
-      padding-inline: 0.75rem;
-      white-space: normal;
-      text-align: center;
+      max-width: min(14rem, calc(100vw - 4.25rem));
+      padding-inline: 0.72rem;
+      white-space: nowrap;
+      text-align: left;
     }
   }
 </style>

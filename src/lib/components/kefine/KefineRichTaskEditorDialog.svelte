@@ -658,16 +658,16 @@
 {#if open}
   <kefine-rich-editor data-compact={compact}>
     <kefine-rich-editor-toolbar>
-      <kefine-rich-editor-modes>
-        {#if !compact}
+      {#if !compact}
+        <kefine-rich-editor-modes>
           <button type="button" data-active={editorMode === 'visual'} onclick={() => setEditorMode('visual')}>
             Visual
           </button>
-        {/if}
-        <button type="button" data-active={editorMode === 'source'} onclick={() => setEditorMode('source')}>
-          Org
-        </button>
-      </kefine-rich-editor-modes>
+          <button type="button" data-active={editorMode === 'source'} onclick={() => setEditorMode('source')}>
+            Org
+          </button>
+        </kefine-rich-editor-modes>
+      {/if}
       {#if !compact}
         <kefine-rich-editor-hint>{description}</kefine-rich-editor-hint>
       {/if}

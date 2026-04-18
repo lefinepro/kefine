@@ -5,6 +5,7 @@
   import KefineRichTaskEditorDialog from '$lib/components/kefine/KefineRichTaskEditorDialog.svelte';
   import {
     appendTaskNodeComment,
+    appendTaskNodeInsert,
     buildQueuedTaskRoot,
     buildTaskThreadNodes,
     replaceTaskNodeComment,
@@ -24,7 +25,8 @@
     onSaveDocument,
     onExportClone,
     onSaveCloneLocally,
-    onUpdateTaskSettings
+    onUpdateTaskSettings,
+    onPauseSearch
   }: {
     currentOrder: OrderView | null;
     queuedOrders?: OrderView[];
@@ -42,12 +44,13 @@
     onSaveDocument?: ((content: string) => Promise<void> | void) | null;
     onExportClone?: ((format: TaskCloneFormat) => void) | null;
     onSaveCloneLocally?: ((runLocally: boolean) => void) | null;
-    onUpdateTaskSettings?: ((patch: Partial<Pick<OrderView, 'shareId' | 'isPublicTask'>>) => void) | null;
+    onUpdateTaskSettings?: ((patch: Partial<Pick<OrderView, 'shareId' | 'isPublicTask' | 'vcsEnabled'>>) => void | Promise<void>) | null;
+    onPauseSearch?: (() => void | Promise<void>) | null;
   } = $props();
 
   let commentDrafts = $state<Record<string, string>>({});
   let openCommentComposerId = $state<string | null>(null);
-  let commentMetaActionByNodeId = $state<Record<string, 'comment' | 'file' | 'tag'>>({});
+  let commentMetaActionByNodeId = $state<Record<string, 'comment' | 'file' | 'tag' | 'vcs' | 'insert'>>({});
 
   const nextOrders = $derived.by(() =>
     queuedOrders.filter((order) => !currentOrder || order.id !== currentOrder.id).map(buildQueuedTaskRoot)
@@ -74,7 +77,7 @@
     };
   }
 
-  function openCommentComposerWithAction(nodeId: string, action: 'comment' | 'file' | 'tag'): void {
+  function openCommentComposerWithAction(nodeId: string, action: 'comment' | 'file' | 'tag' | 'vcs' | 'insert'): void {
     openCommentComposerId = nodeId;
     commentMetaActionByNodeId = {
       ...commentMetaActionByNodeId,
@@ -106,9 +109,17 @@
     openCommentComposer(node.id);
   }
 
-  function openNodeCommentComposerWithAction(node: TaskThreadNode, action: 'comment' | 'file' | 'tag'): void {
+  function openNodeCommentComposerWithAction(node: TaskThreadNode, action: 'comment' | 'file' | 'tag' | 'vcs' | 'insert'): void {
     ensureEditableDraft(node);
     openCommentComposerWithAction(node.id, action);
+  }
+
+  async function enableVcsForCurrentOrder(): Promise<void> {
+    if (!currentOrder || !onUpdateTaskSettings || currentOrder.vcsEnabled === true || currentOrder.repository) {
+      return;
+    }
+
+    await onUpdateTaskSettings({ vcsEnabled: true });
   }
 
   function handleNodeActivate(node: TaskThreadNode, event: MouseEvent | KeyboardEvent): void {
@@ -157,7 +168,12 @@
       return;
     }
 
-    if (isBackendStepNode(node) && onSubmitStepComment && node.stepId) {
+    const action = commentMetaActionByNodeId[node.id] || 'comment';
+
+    if (action === 'insert' && onSaveDocument && currentOrder) {
+      const nextContent = appendTaskNodeInsert(currentOrder, node.stepId || node.id, content);
+      await onSaveDocument(nextContent);
+    } else if (isBackendStepNode(node) && onSubmitStepComment && node.stepId) {
       await onSubmitStepComment(node.stepId, content);
     } else if (onSaveDocument && currentOrder) {
       const nextContent = node.comments?.length
@@ -185,6 +201,25 @@
       [nodeId]: value
     };
   }
+
+  function isExchangeSearchNode(node: TaskThreadNode): boolean {
+    return Boolean(currentOrder && node.stepId === `${currentOrder.id}-exchange-search`);
+  }
+
+  function canPauseSearch(node: TaskThreadNode): boolean {
+    return Boolean(
+      onPauseSearch &&
+      currentOrder &&
+      isExchangeSearchNode(node) &&
+      currentOrder.status !== 'stopped' &&
+      currentOrder.status !== 'completed' &&
+      currentOrder.status !== 'done'
+    );
+  }
+
+  function showNodeActions(node: TaskThreadNode, child: boolean): boolean {
+    return Boolean(node.commentable && !child);
+  }
 </script>
 
 {#snippet threadNode(node: TaskThreadNode, index: number, child = false)}
@@ -198,6 +233,17 @@
   >
     <kefine-thread-rail aria-hidden="true">
       <kefine-thread-dot></kefine-thread-dot>
+      {#if canPauseSearch(node)}
+        <button
+          type="button"
+          data-part="rail-dot-action"
+          aria-label="Pause exchange search"
+          title="Pause exchange search"
+          onclick={() => void onPauseSearch?.()}
+        >
+          <Icon icon="mdi:pause" width="14" height="14" aria-hidden="true" />
+        </button>
+      {/if}
     </kefine-thread-rail>
     <kefine-thread-copy
       data-clickable={node.commentable ? 'true' : undefined}
@@ -206,10 +252,12 @@
       onkeydown={(event: KeyboardEvent) => handleNodeKeydown(node, event)}
     >
       <kefine-thread-line>
-        <strong>{node.title}</strong>
-        {#if node.meta}
-          <lefine-text>{node.meta}</lefine-text>
-        {/if}
+        <kefine-thread-line-copy>
+          <strong>{node.title}</strong>
+          {#if node.meta}
+            <lefine-text>{node.meta}</lefine-text>
+          {/if}
+        </kefine-thread-line-copy>
       </kefine-thread-line>
       {#if node.detail}
         <p>{node.detail}</p>
@@ -248,54 +296,89 @@
         </kefine-thread-comments>
       {/if}
 
-      {#if node.commentable}
+      {#if node.children?.length}
+        <kefine-thread-branch>
+          {#each node.children as child, childIndex}
+            {@render threadNode(child, index + childIndex + 1, true)}
+          {/each}
+        </kefine-thread-branch>
+      {/if}
+
+      {#if showNodeActions(node, child)}
         <kefine-thread-comment-entry>
-          {#if openCommentComposerId === node.id}
-            <kefine-thread-comment-plus-menu>
-              <button
-                type="button"
-                data-part="comment-trigger"
-                aria-label={labels.leaveComment}
-                title={labels.leaveComment}
-                onclick={() => openNodeCommentComposerWithAction(node, 'comment')}
-              >
-                <Icon icon="mdi:plus" width="18" height="18" aria-hidden="true" />
-              </button>
-              <button
-                type="button"
-                data-part="comment-trigger-action"
-                onclick={() => openNodeCommentComposerWithAction(node, 'file')}
-              >
-                <Icon icon="mdi:paperclip" width="16" height="16" aria-hidden="true" />
-                <lefine-text>Add file</lefine-text>
-              </button>
-              <button
-                type="button"
-                data-part="comment-trigger-action"
-                onclick={() => openNodeCommentComposerWithAction(node, 'tag')}
-              >
-                <Icon icon="mdi:tag-plus-outline" width="16" height="16" aria-hidden="true" />
-                <lefine-text>Add tag</lefine-text>
-              </button>
-            </kefine-thread-comment-plus-menu>
-          {:else}
+          <kefine-thread-comment-plus-menu>
             <button
               type="button"
-              data-part="comment-trigger"
-              aria-label={labels.leaveComment}
-              title={labels.leaveComment}
-              onclick={() => openNodeCommentComposer(node)}
+              data-part="comment-trigger-action"
+              onclick={() => openNodeCommentComposerWithAction(node, 'comment')}
             >
-              <Icon icon="mdi:plus" width="18" height="18" aria-hidden="true" />
+              <Icon icon="mdi:comment-text-outline" width="16" height="16" aria-hidden="true" />
+              <lefine-text>Comment</lefine-text>
             </button>
+            <button
+              type="button"
+              data-part="comment-trigger-action"
+              onclick={() => openNodeCommentComposerWithAction(node, 'file')}
+            >
+              <Icon icon="mdi:paperclip" width="16" height="16" aria-hidden="true" />
+              <lefine-text>Add file</lefine-text>
+            </button>
+            <button
+              type="button"
+              data-part="comment-trigger-action"
+              onclick={() => openNodeCommentComposerWithAction(node, 'tag')}
+            >
+              <Icon icon="mdi:tag-plus-outline" width="16" height="16" aria-hidden="true" />
+              <lefine-text>Add tag</lefine-text>
+            </button>
+            {#if currentOrder && !currentOrder.vcsEnabled && !currentOrder.repository && onUpdateTaskSettings}
+              <button
+                type="button"
+                data-part="comment-trigger-action"
+                onclick={() => void enableVcsForCurrentOrder()}
+              >
+                <Icon icon="mdi:source-repository" width="16" height="16" aria-hidden="true" />
+                <lefine-text>Create git repo</lefine-text>
+              </button>
+            {/if}
+          </kefine-thread-comment-plus-menu>
+
+          {#if openCommentComposerId === node.id && commentMetaActionByNodeId[node.id] === 'insert'}
+            <kefine-thread-side-popover>
+              <kefine-thread-side-insert>
+                <KefineRichTaskEditorDialog
+                  open={true}
+                  compact={true}
+                  enableMeta={false}
+                  autoOpenTagEditor={commentMetaActionByNodeId[node.id] === 'tag'}
+                  autoOpenFilePicker={commentMetaActionByNodeId[node.id] === 'file'}
+                  value={commentDrafts[node.id] ?? ''}
+                  description={labels.richEditorDescription}
+                  placeholder={labels.leaveComment}
+                  onApply={(nextValue) => updateCommentDraft(node.id, nextValue)}
+                />
+                <kefine-thread-comment-actions>
+                  {#if isCommentSubmitting(node)}
+                    <lefine-text>{labels.saving}</lefine-text>
+                  {/if}
+                  <button
+                    type="button"
+                    disabled={isCommentSubmitting(node) || !(commentDrafts[node.id] ?? '').trim()}
+                    onclick={() => void submitComment(node)}
+                  >
+                    {labels.apply}
+                  </button>
+                </kefine-thread-comment-actions>
+              </kefine-thread-side-insert>
+            </kefine-thread-side-popover>
           {/if}
 
-          {#if openCommentComposerId === node.id}
+          {#if openCommentComposerId === node.id && commentMetaActionByNodeId[node.id] !== 'insert'}
             <kefine-thread-comment-form>
               <KefineRichTaskEditorDialog
                 open={true}
                 compact={true}
-                enableMeta={true}
+                enableMeta={false}
                 autoOpenTagEditor={commentMetaActionByNodeId[node.id] === 'tag'}
                 autoOpenFilePicker={commentMetaActionByNodeId[node.id] === 'file'}
                 value={commentDrafts[node.id] ?? ''}
@@ -318,6 +401,18 @@
             </kefine-thread-comment-form>
           {/if}
         </kefine-thread-comment-entry>
+
+        {#if !canPauseSearch(node)}
+          <button
+            type="button"
+            data-part="next-step-trigger"
+            aria-label="Add step below"
+            title="Add step below"
+            onclick={() => openNodeCommentComposerWithAction(node, 'insert')}
+          >
+            <Icon icon="mdi:plus" width="18" height="18" aria-hidden="true" />
+          </button>
+        {/if}
       {/if}
     </kefine-thread-copy>
   </kefine-thread-node>
@@ -503,6 +598,28 @@
     margin-top: 0.08rem;
   }
 
+  button[data-part='rail-dot-action'] {
+    position: absolute;
+    top: 0.08rem;
+    z-index: 3;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1rem;
+    min-width: 1rem;
+    min-height: 1rem;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: color-mix(in oklab, #6b4518 88%, #fff4df);
+    font: inherit;
+  }
+
+  button[data-part='rail-dot-action']:hover {
+    color: color-mix(in oklab, var(--kef-primary, #b97a28) 82%, #fff4df);
+  }
+
   kefine-thread-dot::after {
     content: '';
     position: absolute;
@@ -553,19 +670,41 @@
 
   kefine-thread-copy[data-clickable='true'] {
     cursor: pointer;
+    margin: -0.3rem -0.45rem -0.4rem;
+    padding: 0.3rem 0.45rem 0.4rem;
+    border-radius: 0.95rem;
+    transition: background-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+  }
+
+  kefine-thread-copy[data-clickable='true']:hover {
+    background: color-mix(in oklab, var(--kef-bg-hover, #eadcbc) 46%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in oklab, var(--kef-primary, #b97a28) 12%, transparent);
+  }
+
+  kefine-thread-copy[data-clickable='true']:active {
+    transform: translateY(1px);
   }
 
   kefine-thread-copy[data-clickable='true']:focus-visible {
     outline: 2px solid color-mix(in oklab, var(--kef-primary, #b97a28) 36%, transparent);
-    outline-offset: 0.35rem;
-    border-radius: 0.8rem;
+    outline-offset: 0.2rem;
+    border-radius: 0.95rem;
+    background: color-mix(in oklab, var(--kef-bg-hover, #eadcbc) 36%, transparent);
   }
 
   kefine-thread-line {
     display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.7rem;
+  }
+
+  kefine-thread-line-copy {
+    display: flex;
     flex-wrap: wrap;
     align-items: baseline;
     gap: 0.55rem;
+    min-width: 0;
   }
 
   kefine-thread-line strong {
@@ -625,10 +764,37 @@
   }
 
   kefine-thread-comment-entry {
+    position: relative;
     display: grid;
     gap: 0.6rem;
     margin-top: 0.1rem;
-    justify-items: start;
+  }
+
+  button[data-part='next-step-trigger'] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    justify-self: start;
+    width: 2rem;
+    min-width: 2rem;
+    min-height: 2rem;
+    margin-top: 0.15rem;
+    padding: 0;
+    border: 1px dashed color-mix(in oklab, var(--kef-border, #e0c999) 80%, transparent);
+    border-radius: 999px;
+    background: color-mix(in oklab, var(--kef-bg-card, #f7ecd4) 78%, white 22%);
+    color: color-mix(in oklab, var(--lefine-text, #453323) 78%, transparent);
+    font: inherit;
+    box-shadow: 0 0 0 0.18rem color-mix(in oklab, var(--kef-bg, #f7ecd4) 92%, transparent);
+    transition:
+      border-color var(--kef-motion-fast) var(--kef-ease-soft),
+      background-color var(--kef-motion-fast) var(--kef-ease-soft),
+      transform var(--kef-motion-fast) var(--kef-ease-soft);
+  }
+
+  button[data-part='next-step-trigger']:hover {
+    border-color: color-mix(in oklab, var(--kef-primary, #b97a28) 34%, var(--kef-border, #e0c999));
+    background: color-mix(in oklab, var(--kef-primary, #b97a28) 8%, white);
   }
 
   kefine-thread-comment-plus-menu {
@@ -638,42 +804,10 @@
     gap: 0.45rem;
   }
 
-  kefine-thread-comment-entry [data-part='comment-trigger'] {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 2.25rem;
-    min-height: 2.25rem;
-    padding: 0;
-    border: 1px dashed color-mix(in oklab, var(--kef-border, #e0c999) 80%, transparent);
-    border-radius: 999px;
-    background: color-mix(in oklab, var(--kef-bg-card, #f7ecd4) 74%, white 26%);
-    color: color-mix(in oklab, var(--lefine-text, #453323) 78%, transparent);
-    font: inherit;
-    opacity: 0.84;
-    transform: translateY(0);
-    pointer-events: auto;
-    transition:
-      opacity var(--kef-motion-fast) var(--kef-ease-soft),
-      transform var(--kef-motion-fast) var(--kef-ease-soft),
-      border-color var(--kef-motion-fast) var(--kef-ease-soft),
-      background-color var(--kef-motion-fast) var(--kef-ease-soft);
-  }
-
-  kefine-thread-node[data-commentable='true']:hover kefine-thread-comment-entry [data-part='comment-trigger'],
-  kefine-thread-node[data-commentable='true']:focus-within kefine-thread-comment-entry [data-part='comment-trigger'],
-  kefine-thread-node[data-comment-open='true'] kefine-thread-comment-entry [data-part='comment-trigger'] {
-    opacity: 1;
-  }
-
-  kefine-thread-comment-entry [data-part='comment-trigger']:hover {
-    border-color: color-mix(in oklab, var(--kef-primary, #b97a28) 34%, var(--kef-border, #e0c999));
-    background: color-mix(in oklab, var(--kef-primary, #b97a28) 8%, white);
-  }
-
   kefine-thread-comment-entry [data-part='comment-trigger-action'] {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 0.45rem;
     min-height: 2.1rem;
     padding: 0.4rem 0.8rem;
@@ -684,6 +818,7 @@
     font: inherit;
     font-size: 0.86rem;
     font-weight: 500;
+    line-height: 1;
   }
 
   kefine-thread-comment-entry [data-part='comment-trigger-action']:hover {
@@ -698,6 +833,23 @@
     border: 1px solid color-mix(in oklab, var(--kef-border, #e0c999) 78%, transparent);
     border-radius: 1rem;
     background: color-mix(in oklab, var(--kef-bg-card, #f7ecd4) 94%, white 6%);
+  }
+
+  kefine-thread-side-insert {
+    display: grid;
+    gap: 0.6rem;
+    padding: 0.75rem 0.85rem;
+    border: 1px solid color-mix(in oklab, var(--kef-border, #e0c999) 78%, transparent);
+    border-radius: 1rem;
+    background: color-mix(in oklab, var(--kef-bg-card, #f7ecd4) 94%, white 6%);
+    width: min(22rem, calc(100vw - 3rem));
+  }
+
+  kefine-thread-side-popover {
+    position: absolute;
+    top: calc(100% + 0.25rem);
+    left: 0;
+    z-index: 6;
   }
 
   kefine-thread-comment-actions {
@@ -734,6 +886,37 @@
     box-shadow: 0 0 0 0.2rem color-mix(in oklab, var(--kef-bg, #16110d) 82%, #3a2817 18%);
   }
 
+  :global(:root[data-kefine-theme='dark']) button[data-part='rail-dot-action'] {
+    color: #2a1808;
+  }
+
+  :global(:root[data-kefine-theme='dark']) button[data-part='next-step-trigger'] {
+    border-color: color-mix(in oklab, #d3a45c 36%, var(--kef-border, #6e5539));
+    background: color-mix(in oklab, var(--kef-bg-card, #22170f) 92%, #3a2818 8%);
+    color: #eadcc7;
+    box-shadow: 0 0 0 0.18rem color-mix(in oklab, var(--kef-bg, #16110d) 84%, #3a2817 16%);
+  }
+
+  :global(:root[data-kefine-theme='dark']) kefine-thread-comment-entry [data-part='comment-trigger-action'] {
+    border-color: color-mix(in oklab, #d3a45c 30%, var(--kef-border, #6e5539));
+    background: color-mix(in oklab, var(--kef-bg-card, #22170f) 88%, #3a2818 12%);
+    color: #eadcc7;
+  }
+
+  button[data-part='next-step-trigger'] :global(svg),
+  kefine-thread-comment-entry [data-part='comment-trigger-action'] :global(svg) {
+    display: block;
+    flex: 0 0 auto;
+  }
+
+  @media (max-width: 72rem) {
+    kefine-thread-side-popover {
+      position: static;
+      margin-top: 0.35rem;
+      margin-left: 0;
+    }
+  }
+
   :global(:root[data-kefine-theme='dark']) kefine-thread-node[data-tone='active'] kefine-thread-dot,
   :global(:root[data-kefine-theme='dark']) kefine-thread-node[data-tone='loading'] kefine-thread-dot {
     border-color: color-mix(in oklab, #f0c980 82%, #6b4822);
@@ -751,20 +934,6 @@
       #fff3d6 220deg 270deg,
       transparent 270deg 360deg
     );
-  }
-
-  :global(:root[data-kefine-theme='dark']) kefine-thread-comment-entry [data-part='comment-trigger'] {
-    border-color: color-mix(in oklab, #d3a45c 58%, var(--kef-border, #6e5539));
-    background: color-mix(in oklab, #4a3420 34%, var(--kef-bg-card, #21170f));
-    color: color-mix(in oklab, #f7e7c2 92%, white);
-    opacity: 0.96;
-    box-shadow: 0 0.45rem 1rem color-mix(in oklab, #000 24%, transparent);
-  }
-
-  :global(:root[data-kefine-theme='dark']) kefine-thread-comment-entry [data-part='comment-trigger']:hover {
-    border-color: color-mix(in oklab, #e3b468 78%, var(--kef-primary, #b97a28));
-    background: color-mix(in oklab, var(--kef-primary, #b97a28) 28%, var(--kef-bg-card, #21170f));
-    color: #fff6df;
   }
 
   @keyframes kefine-thread-rise {

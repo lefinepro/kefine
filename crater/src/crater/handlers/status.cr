@@ -2,11 +2,13 @@ require "kemal"
 require "json"
 require "log"
 require "../order_queue"
+require "../repository_store"
+require "../utils/config"
 
 module Crater
   module Handlers
     module Status
-      def self.register
+      def self.register(config : Utils::Config = Utils::Config.load)
         get "/status/:id" do |env|
           env.response.content_type = "application/json"
 
@@ -76,6 +78,28 @@ module Crater
 
           next update_document(env, order_id)
         end
+
+        patch "/status/:id/settings" do |env|
+          env.response.content_type = "application/json"
+          order_id = env.params.url["id"]?
+          if order_id.nil? || order_id.empty?
+            env.response.status_code = 400
+            next({error: "Missing order id"}.to_json)
+          end
+
+          next update_settings(env, order_id, config)
+        end
+
+        patch "/api/status/:id/settings" do |env|
+          env.response.content_type = "application/json"
+          order_id = env.params.url["id"]?
+          if order_id.nil? || order_id.empty?
+            env.response.status_code = 400
+            next({error: "Missing order id"}.to_json)
+          end
+
+          next update_settings(env, order_id, config)
+        end
       end
 
       private def self.render_status(env, order_id : String) : String
@@ -92,6 +116,16 @@ module Crater
           JSON.parse(%({"format":"markdown","content":""}))
         end
         activities = OrderQueue.activities_for_order(record.id)
+        existing_repository = RepositoryStore.find_by_order(record.id)
+        vcs_enabled = record.vcs_enabled || !existing_repository.nil?
+        repository = if vcs_enabled
+                       begin
+                         existing_repository || RepositoryStore.ensure_for_order(record)
+                       rescue ex
+                         Log.error(exception: ex) { "[status] failed to load repository for orderId=#{record.id}" }
+                         nil
+                       end
+                     end
         Log.info do
           "[status] orderId=#{record.id} status=#{record.status} solver=#{record.solver_name || record.solver} " \
           "activities=#{activities.size} updatedAt=#{record.updated_at}"
@@ -123,8 +157,11 @@ module Crater
           ownerDisplayName: record.owner_display_name,
           actorHandle: record.actor_handle,
           actorDid: record.actor_did,
+          vcsEnabled: vcs_enabled,
           document: document,
           activities: activities,
+          projectId: repository.try(&.project_id),
+          repository: repository ? RepositoryStore.to_json_payload(repository) : nil,
           createdAt: record.created_at,
           updatedAt: record.updated_at
         }.to_json
@@ -144,6 +181,33 @@ module Crater
         if record.nil?
           env.response.status_code = 404
           return({error: "Order not found", orderId: order_id}.to_json)
+        end
+
+        render_status(env, record.id)
+      end
+
+      private def self.update_settings(env, order_id : String, config : Utils::Config) : String
+        payload = begin
+          body = env.request.body.try(&.gets_to_end) || ""
+          JSON.parse(body)
+        rescue ex : JSON::ParseException
+          env.response.status_code = 400
+          return({error: "Invalid request body", reason: ex.message}.to_json)
+        end
+
+        vcs_enabled = payload.as_h?.try(&.["vcsEnabled"]?).try(&.as_bool?)
+        record = OrderQueue.update_settings(order_id, vcs_enabled, config)
+        if record.nil?
+          env.response.status_code = 404
+          return({error: "Order not found", orderId: order_id}.to_json)
+        end
+
+        if record.vcs_enabled
+          begin
+            RepositoryStore.ensure_for_order(record, config)
+          rescue ex
+            Log.error(exception: ex) { "[status] failed to initialize repository for orderId=#{record.id} after enabling vcs" }
+          end
         end
 
         render_status(env, record.id)

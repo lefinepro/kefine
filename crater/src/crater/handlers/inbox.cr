@@ -14,13 +14,11 @@ module Crater
           handle_inbox(env, config)
         end
 
-        post "/inbox/:username" do |env|
-          username = env.params.url["username"]
-          if username != config.actor_username
-            env.response.status_code = 404
-            next({error: "Actor inbox not found"}.to_json)
-          end
+        post "/actor/:username/inbox" do |env|
+          handle_inbox(env, config)
+        end
 
+        post "/actors/by-key/:suffix/inbox" do |env|
           handle_inbox(env, config)
         end
       end
