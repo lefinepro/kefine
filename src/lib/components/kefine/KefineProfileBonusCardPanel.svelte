@@ -66,7 +66,7 @@
     {#if status}
       <kefine-profile-bonus-status data-status={status.status}>
         <strong>{status.bankName ?? 'Unknown bank'}</strong>
-        <span>{status.countryName ?? 'Unknown country'} · BIN {status.bin}</span>
+        <lefine-text>{status.countryName ?? 'Unknown country'} · BIN {status.bin}</lefine-text>
         {#if status.rejectionReason}
           <small>{status.rejectionReason}</small>
         {/if}
@@ -107,14 +107,14 @@
   kefine-profile-bonus-summary p,
   kefine-profile-bonus-summary small,
   kefine-profile-bonus-status strong,
-  kefine-profile-bonus-status span,
+  kefine-profile-bonus-status lefine-text,
   kefine-profile-bonus-status small {
     margin: 0;
   }
 
   kefine-profile-bonus-copy small,
   kefine-profile-bonus-summary small,
-  kefine-profile-bonus-status span,
+  kefine-profile-bonus-status lefine-text,
   kefine-profile-bonus-status small {
     color: var(--kef-color-muted, #7a6a57);
   }

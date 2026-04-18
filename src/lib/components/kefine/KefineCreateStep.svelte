@@ -908,7 +908,7 @@
             {/each}
           </ul>
           {#if hasMoreOrders}
-            <div bind:this={recentLoadTrigger} data-part="recent-load-trigger" aria-hidden="true"></div>
+            <lefine-box bind:this={recentLoadTrigger} data-part="recent-load-trigger" aria-hidden="true"></lefine-box>
           {/if}
         </section>
       {/if}
@@ -963,7 +963,7 @@
 
           {#if afeStepCards[0]}
             <lef-afe-link-in aria-hidden="true">
-              <span>{afe.labels.intake}</span>
+              <lefine-text>{afe.labels.intake}</lefine-text>
             </lef-afe-link-in>
             <lef-afe-node-step>
               <lef-afe-step-head>
@@ -982,7 +982,7 @@
 
           {#if afeStepCards[1]}
             <lef-afe-link-route aria-hidden="true">
-              <span>{afe.labels.route}</span>
+              <lefine-text>{afe.labels.route}</lefine-text>
             </lef-afe-link-route>
             <lef-afe-node-step>
               <lef-afe-step-head>
@@ -1002,7 +1002,7 @@
           {/if}
 
           <lef-afe-link-out aria-hidden="true">
-            <span>{afe.labels.result}</span>
+            <lefine-text>{afe.labels.result}</lefine-text>
           </lef-afe-link-out>
           <lef-afe-node-round>
             <strong>{afeStepCards[2]?.title ?? afe.labels.delivery}</strong>
@@ -1311,9 +1311,9 @@
   lef-afe-node-step strong,
   lef-afe-node-step p,
   lef-afe-step-head,
-  lef-afe-link-in span,
-  lef-afe-link-route span,
-  lef-afe-link-out span {
+  lef-afe-link-in lefine-text,
+  lef-afe-link-route lefine-text,
+  lef-afe-link-out lefine-text {
     margin: 0;
   }
 
@@ -1726,9 +1726,9 @@
     color: #23170f;
   }
 
-  lef-afe-link-in span,
-  lef-afe-link-route span,
-  lef-afe-link-out span {
+  lef-afe-link-in lefine-text,
+  lef-afe-link-route lefine-text,
+  lef-afe-link-out lefine-text {
     position: absolute;
     top: -1.1rem;
     left: 50%;
@@ -1835,9 +1835,9 @@
   :global(:root[data-kefine-theme='dark']) lef-afe-link-in,
   :global(:root[data-kefine-theme='dark']) lef-afe-link-route,
   :global(:root[data-kefine-theme='dark']) lef-afe-link-out,
-  :global(:root[data-kefine-theme='dark']) lef-afe-link-in span,
-  :global(:root[data-kefine-theme='dark']) lef-afe-link-route span,
-  :global(:root[data-kefine-theme='dark']) lef-afe-link-out span {
+  :global(:root[data-kefine-theme='dark']) lef-afe-link-in lefine-text,
+  :global(:root[data-kefine-theme='dark']) lef-afe-link-route lefine-text,
+  :global(:root[data-kefine-theme='dark']) lef-afe-link-out lefine-text {
     color: #1c120b;
   }
 
@@ -1869,9 +1869,9 @@
       transform: translateX(50%) rotate(135deg);
     }
 
-    lef-afe-link-in span,
-    lef-afe-link-route span,
-    lef-afe-link-out span {
+    lef-afe-link-in lefine-text,
+    lef-afe-link-route lefine-text,
+    lef-afe-link-out lefine-text {
       top: 50%;
       left: 1rem;
       transform: translateY(-50%);
@@ -2358,7 +2358,7 @@
     padding: clamp(0.3rem, 2vw, 0.5rem);
   }
 
-  div[data-part='recent-load-trigger'] {
+  lefine-box[data-part='recent-load-trigger'] {
     width: 100%;
     height: 1px;
   }
