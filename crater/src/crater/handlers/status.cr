@@ -196,17 +196,31 @@ module Crater
         end
 
         vcs_enabled = payload.as_h?.try(&.["vcsEnabled"]?).try(&.as_bool?)
+        git_settings_payload = payload.as_h?.try(&.["gitSettings"]?)
         record = OrderQueue.update_settings(order_id, vcs_enabled, config)
         if record.nil?
           env.response.status_code = 404
           return({error: "Order not found", orderId: order_id}.to_json)
         end
 
+        repository = RepositoryStore.find_by_order(record.id, config)
         if record.vcs_enabled
           begin
-            RepositoryStore.ensure_for_order(record, config)
+            repository = RepositoryStore.ensure_for_order(record, config)
           rescue ex
             Log.error(exception: ex) { "[status] failed to initialize repository for orderId=#{record.id} after enabling vcs" }
+          end
+        end
+
+        if repository && git_settings_payload
+          begin
+            RepositoryStore.update_git_settings(
+              repository,
+              RepositoryStore::GitSettings.from_json(git_settings_payload.to_json),
+              config
+            )
+          rescue ex
+            Log.error(exception: ex) { "[status] failed to update git settings for orderId=#{record.id}" }
           end
         end
 

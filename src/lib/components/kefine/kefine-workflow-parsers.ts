@@ -10,6 +10,8 @@ import type {
   OrderNotebook,
   OrderNotebookBlock,
   OrderNotebookStep,
+  RepositoryGitAclRule,
+  RepositoryGitSettings,
   OrderResultSection,
   OrderRepository,
   OrderStepComment,
@@ -141,6 +143,53 @@ function toBoolean(value: unknown): boolean | undefined {
   return undefined;
 }
 
+function toGitAccessGroup(value: unknown): 'admin' | 'exchange' | 'agents' | 'authenticated' | undefined {
+  return value === 'admin' || value === 'exchange' || value === 'agents' || value === 'authenticated' ? value : undefined;
+}
+
+function toRepositoryGitSettings(value: unknown): RepositoryGitSettings | undefined {
+  const record = toRecord(value);
+  if (!record) {
+    return undefined;
+  }
+
+  const aclRules = Array.isArray(record['aclRules'])
+    ? record['aclRules']
+        .map((item) => {
+          const rule = toRecord(item);
+          const id = toStringValue(rule?.['id']);
+          const branchPattern = toStringValue(rule?.['branchPattern']);
+          const allowedGroups = Array.isArray(rule?.['allowedGroups'])
+            ? rule['allowedGroups'].map((group) => toGitAccessGroup(group)).filter(isDefined)
+            : [];
+
+          if (!id || !branchPattern || allowedGroups.length === 0) {
+            return null;
+          }
+
+          return {
+            id,
+            branchPattern,
+            allowedGroups
+          } satisfies RepositoryGitAclRule;
+        })
+        .filter(isDefined)
+    : [];
+
+  const exchangeRunDefault = toBoolean(record['exchangeRunDefault']);
+  const exchangeActor = toStringValue(record['exchangeActor']);
+  if (exchangeRunDefault === undefined || !exchangeActor) {
+    return undefined;
+  }
+
+  return {
+    exchangeRunDefault,
+    exchangeActor,
+    agentSourceUrl: toStringValue(record['agentSourceUrl']) || undefined,
+    aclRules
+  };
+}
+
 function toRepository(value: unknown): OrderRepository | undefined {
   const record = toRecord(value);
   if (!record) {
@@ -177,6 +226,7 @@ function toRepository(value: unknown): OrderRepository | undefined {
       undefined,
     projectUrl: toStringValue(record['projectUrl']) || undefined,
     patchTrackerUrl: toStringValue(record['patchTrackerUrl']) || undefined,
+    gitSettings: toRepositoryGitSettings(record['gitSettings']) || undefined,
     createdAt: toStringValue(record['createdAt']) || undefined,
     updatedAt: toStringValue(record['updatedAt']) || undefined
   };

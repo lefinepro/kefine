@@ -33,8 +33,10 @@
     --kef-line-success: color-mix(in oklab, var(--kef-success) 26%, var(--kef-line));
     --kef-line-warning: color-mix(in oklab, var(--kef-warning) 26%, var(--kef-line));
     --kef-line-error: color-mix(in oklab, var(--kef-error) 26%, var(--kef-line));
-    --kef-ring-focus: 0 0 0 2px color-mix(in oklab, var(--kef-primary) 14%, transparent);
-    --kef-shadow: 0 8px 22px color-mix(in oklab, #2f241a 6%, transparent);
+    --kef-ring-focus:
+      0 0 0 1px color-mix(in oklab, var(--kef-primary) 18%, transparent),
+      inset 0 0 0 1px color-mix(in oklab, white 28%, transparent);
+    --kef-shadow: 0 8px 18px color-mix(in oklab, #2f241a 4%, transparent);
     --kef-motion-fast: 220ms;
     --kef-motion-base: 360ms;
     --kef-motion-slow: 620ms;
@@ -78,8 +80,10 @@
     --kef-line-success: color-mix(in oklab, var(--kef-success) 26%, var(--kef-line));
     --kef-line-warning: color-mix(in oklab, var(--kef-warning) 26%, var(--kef-line));
     --kef-line-error: color-mix(in oklab, var(--kef-error) 26%, var(--kef-line));
-    --kef-ring-focus: 0 0 0 2px color-mix(in oklab, var(--kef-primary) 14%, transparent);
-    --kef-shadow: 0 8px 22px color-mix(in oklab, #2f241a 6%, transparent);
+    --kef-ring-focus:
+      0 0 0 1px color-mix(in oklab, var(--kef-primary) 18%, transparent),
+      inset 0 0 0 1px color-mix(in oklab, white 28%, transparent);
+    --kef-shadow: 0 8px 18px color-mix(in oklab, #2f241a 4%, transparent);
   }
 
   :root[data-kefine-theme='dark'] {
@@ -117,8 +121,10 @@
     --kef-line-success: color-mix(in oklab, var(--kef-success) 28%, var(--kef-line));
     --kef-line-warning: color-mix(in oklab, var(--kef-warning) 28%, var(--kef-line));
     --kef-line-error: color-mix(in oklab, var(--kef-error) 28%, var(--kef-line));
-    --kef-ring-focus: 0 0 0 2px color-mix(in oklab, var(--kef-primary) 16%, transparent);
-    --kef-shadow: 0 20px 52px color-mix(in oklab, #000000 38%, transparent);
+    --kef-ring-focus:
+      0 0 0 1px color-mix(in oklab, var(--kef-primary) 22%, transparent),
+      inset 0 0 0 1px color-mix(in oklab, white 12%, transparent);
+    --kef-shadow: 0 18px 40px color-mix(in oklab, #000000 26%, transparent);
   }
   .kefine-shell {
     min-height: 100vh;
@@ -436,8 +442,9 @@
     border: var(--kef-border-width-strong) solid color-mix(in oklab, var(--kef-line) 82%, white);
     padding: 1.2rem 1.35rem;
     box-shadow:
-      0 18px 40px color-mix(in oklab, var(--lefine-text) 7%, transparent),
-      0 4px 12px color-mix(in oklab, var(--lefine-text) 3%, transparent);
+      inset 0 1px 0 color-mix(in oklab, white 24%, transparent),
+      0 12px 26px color-mix(in oklab, var(--lefine-text) 5%, transparent),
+      0 2px 6px color-mix(in oklab, var(--lefine-text) 2%, transparent);
     display: grid;
     gap: 0.95rem;
     position: relative;

@@ -395,21 +395,30 @@ function resolveSystemNodeInserts(order: OrderView, nodeKey: string): TaskThread
     return undefined;
   }
 
-  return inserts.map((block, index) =>
-    blockNode(
-      `${nodeKey}-insert-${index + 1}`,
-      `Update ${index + 1}`,
+  return inserts.map((block, index) => {
+    const normalizedContent = block.content.trim();
+    const isBranchInsert = /^branch:\s+/i.test(normalizedContent);
+    const stepId = `${nodeKey}-insert-${index + 1}`;
+
+    return blockNode(
+      stepId,
+      isBranchInsert ? `Branch ${index + 1}` : `Update ${index + 1}`,
       undefined,
       'upcoming',
-      [block],
-      'pending',
+      [
+        {
+          ...block,
+          content: isBranchInsert ? normalizedContent.replace(/^branch:\s+/i, '').trim() : block.content
+        }
+      ],
+      isBranchInsert ? 'branch' : 'pending',
       {
         commentable: true,
-        stepId: `${nodeKey}-insert-${index + 1}`,
-        comments: resolveSystemNodeComments(order, `${nodeKey}-insert-${index + 1}`)
+        stepId,
+        comments: resolveSystemNodeComments(order, stepId)
       }
-    )
-  );
+    );
+  });
 }
 
 function resolveRootTitle(order: OrderView): string {

@@ -34,6 +34,7 @@
     onSaveCloneLocally,
     onUpdateTaskSettings,
     onPauseSearch,
+    onResumeSearch,
     onWalletLogin,
     onPasskeyLogin,
     onAnonymous,
@@ -93,8 +94,9 @@
     onSaveDocument?: ((content: string) => void | Promise<void>) | null;
     onExportClone?: ((format: TaskCloneFormat) => void) | null;
     onSaveCloneLocally?: ((runLocally: boolean) => void) | null;
-    onUpdateTaskSettings?: ((patch: Partial<Pick<OrderView, 'shareId' | 'isPublicTask' | 'vcsEnabled'>>) => void | Promise<void>) | null;
+    onUpdateTaskSettings?: ((patch: Partial<Pick<OrderView, 'shareId' | 'isPublicTask' | 'vcsEnabled' | 'repository'>> & { gitSettings?: import('./kefine-workflow').RepositoryGitSettings }) => void | Promise<void>) | null;
     onPauseSearch?: (() => void | Promise<void>) | null;
+    onResumeSearch?: (() => void | Promise<void>) | null;
     onWalletLogin: () => void;
     onPasskeyLogin: () => void;
     onAnonymous: () => void;
@@ -631,6 +633,7 @@
         onSaveCloneLocally={onSaveCloneLocally}
         onUpdateTaskSettings={onUpdateTaskSettings}
         onPauseSearch={onPauseSearch}
+        onResumeSearch={onResumeSearch}
         labels={{
           boardTitle: currentOrder?.title || labels.boardTitle,
           saving: labels.saving,

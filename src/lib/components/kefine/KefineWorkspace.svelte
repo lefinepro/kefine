@@ -1260,6 +1260,21 @@
     }
   }
 
+  function resumeOrder(order: OrderView) {
+    const resumedOrder: OrderView = {
+      ...order,
+      status: 'queued'
+    };
+
+    upsertOrder(resumedOrder);
+
+    if (currentOrder?.id === order.id) {
+      currentOrder = resumedOrder;
+    }
+
+    startOrderPolling(resumedOrder);
+  }
+
   function readTaskRouteState() {
     if (!browser) return null;
     return readTaskRouteStateFromLocation(window.location);
@@ -2051,7 +2066,7 @@
   }
 
   async function handleUpdateTaskSettings(
-    patch: Partial<Pick<OrderView, 'shareId' | 'isPublicTask' | 'vcsEnabled'>>
+    patch: Partial<Pick<OrderView, 'shareId' | 'isPublicTask' | 'vcsEnabled' | 'repository'>> & { gitSettings?: import('./kefine-workflow').RepositoryGitSettings }
   ) {
     if (!currentOrder) {
       return;
@@ -2059,13 +2074,14 @@
 
     updateProfileTask(currentOrder.id, patch);
 
-    if (patch.vcsEnabled === undefined) {
+    if (patch.vcsEnabled === undefined && !patch.gitSettings) {
       return;
     }
 
     const updated = await updateWorkspaceOrderSettings({
       orderId: currentOrder.id,
       vcsEnabled: patch.vcsEnabled,
+      gitSettings: patch.gitSettings,
       fetchFn: fetch,
       orderApiBaseUrl: orderApiBaseUrl(),
       localeText
@@ -2471,6 +2487,11 @@
           onPauseSearch={() => {
             if (currentOrder) {
               stopOrder(currentOrder);
+            }
+          }}
+          onResumeSearch={() => {
+            if (currentOrder) {
+              resumeOrder(currentOrder);
             }
           }}
           onWalletLogin={chooseWalletMethod}

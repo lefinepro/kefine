@@ -29,10 +29,24 @@ export type ExecutionStage =
 export type PaymentStage = 'payment-method-select' | 'deposit-pending' | 'paid' | 'result-ready';
 export type ProgressState = 'completed' | 'active' | 'upcoming';
 export type TaskAccessMode = 'view' | 'watch' | 'join';
+export type GitAccessGroup = 'admin' | 'exchange' | 'agents' | 'authenticated';
 
 export type TaskAccessRule = {
   enabled: boolean;
   priceUsd: number;
+};
+
+export type RepositoryGitAclRule = {
+  id: string;
+  branchPattern: string;
+  allowedGroups: GitAccessGroup[];
+};
+
+export type RepositoryGitSettings = {
+  exchangeRunDefault: boolean;
+  exchangeActor: string;
+  agentSourceUrl?: string;
+  aclRules: RepositoryGitAclRule[];
 };
 
 export type VpnResultLink = {
@@ -100,6 +114,7 @@ export type OrderRepository = {
   repositoryUrl?: string;
   projectUrl?: string;
   patchTrackerUrl?: string;
+  gitSettings?: RepositoryGitSettings;
   createdAt?: string;
   updatedAt?: string;
 };
