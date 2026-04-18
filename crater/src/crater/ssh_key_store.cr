@@ -79,22 +79,23 @@ module Crater
       "'" + value.gsub("'", %q('"'"')) + "'"
     end
 
+    private def self.authorized_keys_quote(value : String) : String
+      "\"" + value + "\""
+    end
+
     private def self.resolve_shell_command(config : Utils::Config, actor_handle : String) : String
       configured = config.git_ssh_shell_command
-      command =
-        if configured && !configured.empty?
-          "#{configured} --actor #{actor_handle}"
-        else
-          executable = Process.executable_path || "crater"
-          "#{shell_quote(executable)} ssh-shell --actor #{shell_quote(actor_handle)}"
-        end
-
-      shell_quote(command)
+      if configured && !configured.empty?
+        "#{configured} --actor #{actor_handle}"
+      else
+        executable = Process.executable_path || "crater"
+        "#{shell_quote(executable)} ssh-shell --actor #{shell_quote(actor_handle)}"
+      end
     end
 
     private def self.authorized_keys_line(record : KeyRecord, config : Utils::Config) : String
       restrictions = [
-        %(command=#{resolve_shell_command(config, record.actor_handle)}),
+        %(command=#{authorized_keys_quote(resolve_shell_command(config, record.actor_handle))}),
         "no-agent-forwarding",
         "no-port-forwarding",
         "no-pty",
@@ -113,6 +114,7 @@ module Crater
       Dir.mkdir_p(dir) unless Dir.exists?(dir)
       lines = list(config).map { |record| authorized_keys_line(record, config) }
       File.write(path, lines.join('\n') + (lines.empty? ? "" : "\n"))
+      File.chmod(path, 0o600)
     end
 
     def self.find_by_actor(actor_handle : String, config : Utils::Config = Utils::Config.load) : KeyRecord?

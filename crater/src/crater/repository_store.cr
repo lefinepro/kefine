@@ -454,7 +454,11 @@ module Crater
 
       list(config).find do |repository|
         owner_handle_for(repository, config) == normalized_owner &&
-          (repository.project_id == normalized_clone_name || repository.slug == normalized_clone_name)
+          (
+            repository.project_id == normalized_clone_name ||
+            repository.order_id == normalized_clone_name ||
+            repository.slug == normalized_clone_name
+          )
       end
     end
 
@@ -475,6 +479,11 @@ module Crater
     def self.ensure_for_order(order : OrderQueue::OrderRecord, config : Utils::Config = Utils::Config.load) : RepositoryRecord
       existing = find_by_order(order.id, config)
       if existing
+        if existing.project_id != order.id
+          existing.project_id = order.id
+          existing.updated_at = current_time
+          persist(existing, config)
+        end
         seed_repository(existing, order, config)
         return existing
       end
@@ -484,7 +493,7 @@ module Crater
       slug = unique_slug(slugify(order.title), order.id, config)
       record = RepositoryRecord.new(
         id: UUID.random.to_s,
-        project_id: UUID.random.to_s,
+        project_id: order.id,
         order_id: order.id,
         slug: slug,
         name: order.title,
