@@ -33,6 +33,7 @@
     onExportClone,
     onSaveCloneLocally,
     onUpdateTaskSettings,
+    onPauseSearch,
     onWalletLogin,
     onPasskeyLogin,
     onAnonymous,
@@ -92,7 +93,8 @@
     onSaveDocument?: ((content: string) => void | Promise<void>) | null;
     onExportClone?: ((format: TaskCloneFormat) => void) | null;
     onSaveCloneLocally?: ((runLocally: boolean) => void) | null;
-    onUpdateTaskSettings?: ((patch: Partial<Pick<OrderView, 'shareId' | 'isPublicTask'>>) => void) | null;
+    onUpdateTaskSettings?: ((patch: Partial<Pick<OrderView, 'shareId' | 'isPublicTask' | 'vcsEnabled'>>) => void | Promise<void>) | null;
+    onPauseSearch?: (() => void | Promise<void>) | null;
     onWalletLogin: () => void;
     onPasskeyLogin: () => void;
     onAnonymous: () => void;
@@ -138,10 +140,11 @@
   const notebookSteps = $derived(currentOrder?.notebook?.steps ?? []);
   const latestNotebookStep = $derived(notebookSteps.at(-1) ?? null);
   const solverIdentity = $derived.by(() => {
-    const name = (currentOrder?.solverName || currentOrder?.solver || '').trim();
+    const rawName = (currentOrder?.solverName || currentOrder?.solver || '').trim();
     const handle = (currentOrder?.solverHandle || '').trim();
     const profileUrl = (currentOrder?.solverProfileUrl || '').trim();
-    const normalizedName = name.toLowerCase();
+    const normalizedName = rawName.toLowerCase();
+    const normalizedHandle = handle.toLowerCase();
     const placeholderNames = new Set([
       '',
       'nordlayer solver',
@@ -149,15 +152,39 @@
       'solver',
       'default solver',
       'saved',
-      'save'
+      'save',
+      'https://exchange.lefine.pro',
+      'https://lefine.pro'
     ]);
 
-    const isReal = Boolean((handle || profileUrl) && !placeholderNames.has(normalizedName));
+    const genericProfile = (() => {
+      if (!profileUrl) return false;
+      try {
+        const url = new URL(profileUrl);
+        const segments = url.pathname.split('/').filter(Boolean);
+        return (url.host === 'exchange.lefine.pro' || url.host === 'lefine.pro') && segments.length <= 1;
+      } catch {
+        return false;
+      }
+    })();
+
+    const fallbackName = handle
+      ? handle
+          .replace(/^@/, '')
+          .split('@')[0]
+          .replace(/[-_]+/g, ' ')
+          .trim()
+      : rawName;
+    const name = rawName && !placeholderNames.has(normalizedName) ? rawName : fallbackName;
+    const normalizedDisplayName = name.toLowerCase();
+    const showHandle = Boolean(handle) && normalizedDisplayName !== normalizedHandle;
+    const isReal = Boolean((handle || profileUrl) && !placeholderNames.has(normalizedName) && !genericProfile);
 
     return {
       name,
       handle,
       profileUrl,
+      showHandle,
       isReal
     };
   });
@@ -441,7 +468,7 @@
           {#if solverIdentity.isReal}
             <lef-solver-row>
               <lef-solver-avatar aria-hidden="true">
-                {getSolverInitial(solverIdentity.handle || solverIdentity.name, solverIdentity.name)}
+                {getSolverInitial(solverIdentity.name, solverIdentity.name)}
               </lef-solver-avatar>
               <lef-solver-copy>
                 <lef-solver-name>
@@ -460,7 +487,7 @@
                         </a>
                       </lef-icon-action>
                     {/if}
-                    {#if solverIdentity.handle}
+                    {#if solverIdentity.showHandle}
                       <lef-icon-action>
                         <button
                           type="button"
@@ -479,7 +506,7 @@
                     {/if}
                   </lef-solver-actions>
                 </lef-solver-name>
-                {#if solverIdentity.handle}
+                {#if solverIdentity.showHandle}
                   <lefine-text>{solverIdentity.handle}</lefine-text>
                 {/if}
               </lef-solver-copy>
@@ -603,6 +630,7 @@
         onExportClone={onExportClone}
         onSaveCloneLocally={onSaveCloneLocally}
         onUpdateTaskSettings={onUpdateTaskSettings}
+        onPauseSearch={onPauseSearch}
         labels={{
           boardTitle: currentOrder?.title || labels.boardTitle,
           saving: labels.saving,
@@ -649,6 +677,86 @@
     display: inline-flex;
     align-items: center;
     gap: 0.6rem;
+  }
+
+  lef-solver-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    gap: 0.85rem;
+    width: 100%;
+    margin-bottom: 0.85rem;
+  }
+
+  lef-solver-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.4rem;
+    height: 2.4rem;
+    border-radius: 0.72rem;
+    flex: 0 0 2.4rem;
+  }
+
+  lef-solver-copy {
+    display: grid;
+    gap: 0.3rem;
+    min-width: 0;
+  }
+
+  lef-solver-name {
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    min-width: 0;
+  }
+
+  lef-solver-name strong {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  lef-solver-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex: 0 0 auto;
+  }
+
+  lef-icon-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+  }
+
+  lef-solver-copy > lefine-text {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    line-height: 1.35;
+    color: color-mix(in oklab, currentColor 82%, transparent);
+  }
+
+  @media (max-width: 40rem) {
+    lef-solver-name {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    lef-solver-actions {
+      justify-content: flex-start;
+    }
+
+    lef-solver-name strong {
+      white-space: normal;
+    }
   }
 
   lef-exchange-stage {

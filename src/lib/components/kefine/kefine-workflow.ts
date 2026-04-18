@@ -81,6 +81,29 @@ export type OrderActivity = {
   payload: Record<string, unknown>;
 };
 
+export type OrderRepository = {
+  id: string;
+  projectId?: string;
+  orderId?: string;
+  ownerHandle?: string;
+  slug: string;
+  name?: string;
+  visibility: 'public' | 'private';
+  defaultBranch?: string;
+  serverUuid?: string;
+  projectCloneUrl?: string;
+  projectPublicCloneUrl?: string;
+  projectSshCloneUrl?: string;
+  projectArchiveUrl?: string;
+  publicCloneUrl?: string;
+  sshCloneUrl?: string;
+  repositoryUrl?: string;
+  projectUrl?: string;
+  patchTrackerUrl?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
 export type DraftOrder = {
   taskIcon?: string;
   title: string;
@@ -133,6 +156,9 @@ export type OrderView = {
   ownerDisplayName?: string;
   actorHandle?: string;
   actorDid?: string;
+  vcsEnabled?: boolean;
+  projectId?: string;
+  repository?: OrderRepository;
   shareId?: string;
   isClosedCompleted?: boolean;
   isPublicTask?: boolean;

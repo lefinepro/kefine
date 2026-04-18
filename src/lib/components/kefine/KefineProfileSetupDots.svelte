@@ -1,15 +1,15 @@
 <script lang="ts">
   let {
     currentStep,
+    steps = [1, 2, 3],
     onSelect
   }: {
-    currentStep: 1 | 2 | 3;
-    onSelect?: (step: 1 | 2 | 3) => void;
+    currentStep: number;
+    steps?: number[];
+    onSelect?: (step: number) => void;
   } = $props();
 
-  const steps = [1, 2, 3] as const;
-
-  function handleSelect(step: 1 | 2 | 3) {
+  function handleSelect(step: number) {
     onSelect?.(step);
   }
 </script>

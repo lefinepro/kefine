@@ -268,11 +268,26 @@
       inset 0 1px 0 color-mix(in oklab, white 26%, transparent),
       0 8px 18px color-mix(in oklab, var(--lefine-text) 4%, transparent);
     overflow: hidden;
+    transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease, background-color 140ms ease;
+  }
+
+  li > details:hover {
+    border-color: color-mix(in oklab, var(--kef-primary, #b97a28) 36%, transparent);
+    box-shadow:
+      inset 0 0 0 1px color-mix(in oklab, var(--kef-primary, #b97a28) 20%, transparent),
+      inset 0 1px 0 color-mix(in oklab, white 28%, transparent),
+      0 12px 24px color-mix(in oklab, var(--lefine-text) 9%, transparent);
+    transform: translateY(-1px);
   }
 
   summary {
     list-style: none;
     cursor: pointer;
+  }
+
+  summary:hover kefine-order-row,
+  summary:focus-visible kefine-order-row {
+    background: color-mix(in oklab, var(--kef-bg-hover, #eadcbc) 42%, transparent);
   }
 
   summary::-webkit-details-marker {

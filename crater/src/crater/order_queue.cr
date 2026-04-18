@@ -57,7 +57,9 @@ module Crater
       property owner_display_name : String?
       property actor_handle : String?
       property actor_did : String?
+      property vcs_enabled : Bool
       property document_json : String?
+      property attachment_json : String?
 
       def initialize(
         @id : String,
@@ -85,7 +87,9 @@ module Crater
         @owner_display_name : String? = nil,
         @actor_handle : String? = nil,
         @actor_did : String? = nil,
+        @vcs_enabled : Bool = false,
         @document_json : String? = nil,
+        @attachment_json : String? = nil,
         @solver_name : String? = nil,
         @solver_handle : String? = nil,
         @solver_profile_url : String? = nil
@@ -151,7 +155,9 @@ module Crater
               owner_display_name TEXT,
               actor_handle TEXT,
               actor_did TEXT,
+              vcs_enabled BOOLEAN NOT NULL DEFAULT FALSE,
               document_json TEXT,
+              attachment_json TEXT,
               solver_name TEXT,
               solver_handle TEXT,
               solver_profile_url TEXT
@@ -170,7 +176,9 @@ module Crater
           db.exec "ALTER TABLE orders ADD COLUMN IF NOT EXISTS owner_display_name TEXT"
           db.exec "ALTER TABLE orders ADD COLUMN IF NOT EXISTS actor_handle TEXT"
           db.exec "ALTER TABLE orders ADD COLUMN IF NOT EXISTS actor_did TEXT"
+          db.exec "ALTER TABLE orders ADD COLUMN IF NOT EXISTS vcs_enabled BOOLEAN NOT NULL DEFAULT FALSE"
           db.exec "ALTER TABLE orders ADD COLUMN IF NOT EXISTS document_json TEXT"
+          db.exec "ALTER TABLE orders ADD COLUMN IF NOT EXISTS attachment_json TEXT"
           db.exec "ALTER TABLE orders ADD COLUMN IF NOT EXISTS solver_name TEXT"
           db.exec "ALTER TABLE orders ADD COLUMN IF NOT EXISTS solver_handle TEXT"
           db.exec "ALTER TABLE orders ADD COLUMN IF NOT EXISTS solver_profile_url TEXT"
@@ -230,6 +238,17 @@ module Crater
       value.as_f? || value.as_i64?.try(&.to_f) || value.as_s?.try(&.to_f?)
     end
 
+    private def self.to_bool(value : JSON::Any?) : Bool?
+      return nil unless value
+
+      value.as_bool? || value.as_s?.try do |string_value|
+        normalized = string_value.strip.downcase
+        next true if {"true", "1", "yes", "on"}.includes?(normalized)
+        next false if {"false", "0", "no", "off"}.includes?(normalized)
+        nil
+      end
+    end
+
     private def self.serialize_labels(labels : Array(String)) : String
       labels.to_json
     end
@@ -244,6 +263,26 @@ module Crater
 
     private def self.parse_estimated_cost(value : String?) : Float64?
       value.try(&.to_f?)
+    end
+
+    private def self.normalize_attachment_json(value : JSON::Any?) : String?
+      attachments = value.try(&.as_a?)
+      return nil unless attachments
+
+      normalized = attachments.compact_map do |item|
+        item.as_h? ? JSON.parse(item.to_json) : nil
+      end
+      return nil if normalized.empty?
+
+      normalized.to_json
+    end
+
+    private def self.deserialize_attachments(value : String?) : Array(JSON::Any)
+      return [] of JSON::Any if value.nil? || value.empty?
+
+      JSON.parse(value).as_a
+    rescue
+      [] of JSON::Any
     end
 
     private def self.extract_uuid(value : String?) : String?
@@ -278,7 +317,10 @@ module Crater
     end
 
     private def self.order_actor_did(order : OrderRecord, config : Utils::Config) : String
-      config.actor_id
+      actor_handle = normalize_actor_handle(order.actor_handle || order.owner_username)
+      return "#{config.crater_url}/actor/#{actor_handle}" if actor_handle
+
+      normalize_did_key(order.actor_did) || system_actor_did(config)
     end
 
     private def self.order_object_id(order : OrderRecord, config : Utils::Config) : String
@@ -321,8 +363,8 @@ module Crater
             template_id, template_slug, template_author_profile_id, template_author_username,
             template_author_display_name, template_pricing_mode, template_pricing_value,
             owner_profile_id, owner_username, owner_display_name, actor_handle, actor_did,
-            document_json, solver_name, solver_handle, solver_profile_url
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29)
+            vcs_enabled, document_json, attachment_json, solver_name, solver_handle, solver_profile_url
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31)
           ON CONFLICT (id) DO UPDATE SET
             status = EXCLUDED.status,
             solver = EXCLUDED.solver,
@@ -348,7 +390,9 @@ module Crater
             owner_display_name = EXCLUDED.owner_display_name,
             actor_handle = EXCLUDED.actor_handle,
             actor_did = EXCLUDED.actor_did,
+            vcs_enabled = EXCLUDED.vcs_enabled,
             document_json = EXCLUDED.document_json,
+            attachment_json = EXCLUDED.attachment_json,
             solver_name = EXCLUDED.solver_name,
             solver_handle = EXCLUDED.solver_handle,
             solver_profile_url = EXCLUDED.solver_profile_url
@@ -378,7 +422,9 @@ module Crater
         record.owner_display_name,
         record.actor_handle,
         record.actor_did,
+        record.vcs_enabled,
         record.document_json,
+        record.attachment_json,
         record.solver_name,
         record.solver_handle,
         record.solver_profile_url
@@ -400,7 +446,7 @@ module Crater
       )
     end
 
-    private def self.hydrate_order(row : {String, String, String, String, String?, String?, String, String?, String, String, String?, String?, String, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?}) : OrderRecord
+    private def self.hydrate_order(row : {String, String, String, String, String?, String?, String, String?, String, String, String?, String?, String, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, Bool, String?, String?, String?, String?, String?}) : OrderRecord
       OrderRecord.new(
         id: row[0],
         status: row[1],
@@ -427,10 +473,12 @@ module Crater
         owner_display_name: row[22],
         actor_handle: row[23],
         actor_did: row[24],
-        document_json: row[25],
-        solver_name: row[26],
-        solver_handle: row[27],
-        solver_profile_url: row[28]
+        vcs_enabled: row[25],
+        document_json: row[26],
+        attachment_json: row[27],
+        solver_name: row[28],
+        solver_handle: row[29],
+        solver_profile_url: row[30]
       )
     end
 
@@ -498,6 +546,7 @@ module Crater
       payment_url = to_string(payment_link.try(&.["href"]?)) || to_string(payment_link.try(&.["url"]?))
       is_vpn_order = vpn_service_payload?(title, description, ui_scenario, labels)
       labels = ensure_vpn_label(labels) if is_vpn_order
+      vcs_enabled = to_bool(payload["vcsEnabled"]?) || to_bool(source["vcsEnabled"]?) || false
 
       explicit_solver_name = to_string(payload["solverName"]?) || to_string(source["solverName"]?) || to_string(payload["solver"]?) || to_string(source["solver"]?)
       explicit_solver_handle = to_string(payload["solverHandle"]?) || to_string(source["solverHandle"]?) || to_string(payload["performerHandle"]?) || to_string(source["performerHandle"]?)
@@ -532,7 +581,9 @@ module Crater
         owner_display_name: to_string(payload["ownerDisplayName"]?) || to_string(source["ownerDisplayName"]?),
         actor_handle: actor_handle,
         actor_did: normalize_did_key(to_string(payload["actorDid"]?) || to_string(source["actorDid"]?)) || system_actor_did(config),
+        vcs_enabled: vcs_enabled,
         document_json: normalize_document_json(payload["document"]? || source["document"]?, title, description),
+        attachment_json: normalize_attachment_json(payload["attachment"]? || source["attachment"]?),
         solver_name: solver_name,
         solver_handle: solver_handle,
         solver_profile_url: solver_profile_url
@@ -578,6 +629,7 @@ module Crater
     def self.activity_object(order : OrderRecord, status : String, config : Utils::Config) : JSON::Any
       object_id = order_object_id(order, config)
       actor_did = order_actor_did(order, config)
+      attachments = combined_attachments(order, status, config)
       ticket_payload = {
         "@context" => [ActivityPub::CONTEXT, ForgeFed::CONTEXT],
         "id" => "#{object_id}/ticket",
@@ -603,7 +655,8 @@ module Crater
         "ownerDisplayName" => order.owner_display_name,
         "actorHandle" => order.actor_handle,
         "actorDid" => actor_did,
-        "document" => JSON.parse(order.document_json || build_default_document_json(order.title, order.description))
+        "document" => JSON.parse(order.document_json || build_default_document_json(order.title, order.description)),
+        "attachment" => attachments
       }
 
       object_payload = {
@@ -639,10 +692,16 @@ module Crater
         "actorHandle" => order.actor_handle,
         "actorDid" => actor_did,
         "document" => JSON.parse(order.document_json || build_default_document_json(order.title, order.description)),
-        "attachment" => result_attachments(order, status, config)
+        "attachment" => attachments
       }
 
       JSON.parse(object_payload.to_json)
+    end
+
+    private def self.combined_attachments(order : OrderRecord, status : String, config : Utils::Config)
+      attachments = deserialize_attachments(order.attachment_json)
+      attachments.concat(result_attachments(order, status, config))
+      attachments
     end
 
     private def self.result_attachments(order : OrderRecord, status : String, config : Utils::Config)
@@ -839,17 +898,17 @@ module Crater
       uuid = extract_uuid(normalized_id)
       row = if uuid
               database(config).query_one?(
-                "SELECT id, status, solver, title, description, estimated_cost, currency, execution_estimate, created_at, updated_at, payment_url, ui_scenario, labels_json, template_id, template_slug, template_author_profile_id, template_author_username, template_author_display_name, template_pricing_mode, template_pricing_value, owner_profile_id, owner_username, owner_display_name, actor_handle, actor_did, document_json, solver_name, solver_handle, solver_profile_url FROM orders WHERE id = $1 OR id = $2 OR id LIKE $3 ORDER BY CASE WHEN id = $1 THEN 0 WHEN id = $2 THEN 1 ELSE 2 END LIMIT 1",
+                "SELECT id, status, solver, title, description, estimated_cost, currency, execution_estimate, created_at, updated_at, payment_url, ui_scenario, labels_json, template_id, template_slug, template_author_profile_id, template_author_username, template_author_display_name, template_pricing_mode, template_pricing_value, owner_profile_id, owner_username, owner_display_name, actor_handle, actor_did, vcs_enabled, document_json, attachment_json, solver_name, solver_handle, solver_profile_url FROM orders WHERE id = $1 OR id = $2 OR id LIKE $3 ORDER BY CASE WHEN id = $1 THEN 0 WHEN id = $2 THEN 1 ELSE 2 END LIMIT 1",
                 normalized_id,
                 uuid,
                 "%/#{uuid}",
-                as: {String, String, String, String, String?, String?, String, String?, String, String, String?, String?, String, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?}
+                as: {String, String, String, String, String?, String?, String, String?, String, String, String?, String?, String, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, Bool, String?, String?, String?, String?, String?}
               )
             else
               database(config).query_one?(
-                "SELECT id, status, solver, title, description, estimated_cost, currency, execution_estimate, created_at, updated_at, payment_url, ui_scenario, labels_json, template_id, template_slug, template_author_profile_id, template_author_username, template_author_display_name, template_pricing_mode, template_pricing_value, owner_profile_id, owner_username, owner_display_name, actor_handle, actor_did, document_json, solver_name, solver_handle, solver_profile_url FROM orders WHERE id = $1",
+                "SELECT id, status, solver, title, description, estimated_cost, currency, execution_estimate, created_at, updated_at, payment_url, ui_scenario, labels_json, template_id, template_slug, template_author_profile_id, template_author_username, template_author_display_name, template_pricing_mode, template_pricing_value, owner_profile_id, owner_username, owner_display_name, actor_handle, actor_did, vcs_enabled, document_json, attachment_json, solver_name, solver_handle, solver_profile_url FROM orders WHERE id = $1",
                 normalized_id,
-                as: {String, String, String, String, String?, String?, String, String?, String, String, String?, String?, String, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?}
+                as: {String, String, String, String, String?, String?, String, String?, String, String, String?, String?, String, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, String?, Bool, String?, String?, String?, String?, String?}
               )
             end
       return nil unless row
@@ -879,6 +938,39 @@ module Crater
       rescue
         nil
       end
+    end
+
+    def self.total_items_for_actor(actor_uri : String, config : Utils::Config = Utils::Config.load) : Int32
+      setup(config)
+      database(config).query_all(
+        "SELECT activity_json FROM order_activities ORDER BY seq DESC",
+        as: String
+      ).count do |row|
+        begin
+          JSON.parse(row).as_h?.try { |activity| to_string(activity["actor"]?) == actor_uri } == true
+        rescue
+          false
+        end
+      end
+    end
+
+    def self.activity_page_for_actor(actor_uri : String, page : Int32, config : Utils::Config = Utils::Config.load) : Array(JSON::Any)
+      return [] of JSON::Any if page < 1
+
+      all = database(config).query_all(
+        "SELECT activity_json FROM order_activities ORDER BY seq DESC",
+        as: String
+      ).compact_map do |row|
+        activity = JSON.parse(row)
+        next nil unless activity.as_h?.try { |value| to_string(value["actor"]?) == actor_uri } == true
+
+        activity
+      rescue
+        nil
+      end
+
+      start = (page - 1) * EVENT_PAGE_SIZE
+      all[start, EVENT_PAGE_SIZE]? || [] of JSON::Any
     end
 
     def self.latest_by_order(order_id : String, config : Utils::Config = Utils::Config.load) : JSON::Any?
@@ -964,6 +1056,18 @@ module Crater
           config
         )
 
+        record
+      end
+    end
+
+    def self.update_settings(order_id : String, vcs_enabled : Bool?, config : Utils::Config = Utils::Config.load) : OrderRecord?
+      @@lock.synchronize do
+        record = find_order(order_id, config)
+        return nil unless record
+
+        record.vcs_enabled = vcs_enabled.not_nil! unless vcs_enabled.nil?
+        record.updated_at = current_time
+        persist_order(record, config)
         record
       end
     end

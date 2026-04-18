@@ -16,6 +16,8 @@ module Crater
       getter payment_token_symbol : String
       getter payment_token_decimals : Int32
       getter log_level : String
+      getter git_authorized_keys_path : String?
+      getter git_ssh_shell_command : String?
       getter actor_handle : String
       getter actor_display_name : String
       getter actor_private_key : String
@@ -33,6 +35,8 @@ module Crater
         @payment_token_symbol : String,
         @payment_token_decimals : Int32,
         @log_level : String,
+        @git_authorized_keys_path : String?,
+        @git_ssh_shell_command : String?,
         @actor_handle : String,
         @actor_display_name : String,
         @actor_private_key : String
@@ -69,6 +73,8 @@ module Crater
           payment_token_symbol: read_string(payment, "tokenSymbol", "USDC"),
           payment_token_decimals: read_int(payment, "tokenDecimals", 6),
           log_level: read_string(backend, "logLevel", "info"),
+          git_authorized_keys_path: read_env_or_optional_string("KEFINE_GIT_AUTHORIZED_KEYS_PATH", backend, "gitAuthorizedKeysPath"),
+          git_ssh_shell_command: read_env_or_optional_string("KEFINE_GIT_SSH_SHELL_COMMAND", backend, "gitSshShellCommand"),
           actor_handle: read_string(default_actor, "handle", "staff"),
           actor_display_name: read_string(default_actor, "displayName", "Staff"),
           actor_private_key: read_env_or_string("KEFINE_PRIVATEKEY_DEFAULT", default_actor, "privateKey", read_string(default_actor, "privateKeyPem", ""))
@@ -92,6 +98,21 @@ module Crater
         return value.not_nil! unless value.nil? || value.empty?
 
         read_string(source, key, fallback)
+      end
+
+      private def self.read_optional_string(source : Hash(String, JSON::Any), key : String) : String?
+        value = source[key]?.try(&.raw)
+        return nil unless value.is_a?(String)
+
+        normalized = value.strip
+        normalized.empty? ? nil : normalized
+      end
+
+      private def self.read_env_or_optional_string(env_key : String, source : Hash(String, JSON::Any), key : String) : String?
+        value = ENV[env_key]?.try(&.strip)
+        return value.not_nil! unless value.nil? || value.empty?
+
+        read_optional_string(source, key)
       end
 
       private def self.read_int(source : Hash(String, JSON::Any), key : String, fallback : Int32) : Int32
@@ -137,11 +158,11 @@ module Crater
       end
 
       def actor_inbox : String
-        "#{crater_url}/inbox/#{actor_username}"
+        "#{actor_id}/inbox"
       end
 
       def actor_outbox : String
-        "#{crater_url}/outbox/#{actor_username}"
+        "#{actor_id}/outbox"
       end
 
       def order_queue_inbox : String

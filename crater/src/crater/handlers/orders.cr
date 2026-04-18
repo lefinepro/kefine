@@ -2,6 +2,7 @@ require "kemal"
 require "json"
 require "log"
 require "../order_queue"
+require "../repository_store"
 require "../activitypub/types"
 require "./inbox"
 require "../utils/config"
@@ -9,6 +10,10 @@ require "../utils/config"
 module Crater
   module Handlers
     module Orders
+      ISSUE_ARTIFACT_EXTENSIONS = {".patch", ".diff", ".org"}
+      ISSUE_ARTIFACT_MEDIA_TYPES = {"application/x-git-patch", "text/x-diff", "text/org", "application/org", "text/plain"}
+      ISSUE_ARTIFACT_CONTENT_MAX_BYTES = 512 * 1024
+
       def self.register(config : Utils::Config)
         post "/create" do |env|
           env.response.content_type = "application/json"
@@ -64,6 +69,15 @@ module Crater
           "solver=#{record.solver_name || record.solver} actorHandle=#{record.actor_handle || "-"}"
         end
 
+        repository = if record.vcs_enabled
+                       begin
+                         RepositoryStore.ensure_for_order(record, config)
+                       rescue ex
+                         Log.error(exception: ex) { "[orders:create #{request_id}] failed to initialize repository for orderId=#{record.id}" }
+                         nil
+                       end
+                     end
+
         env.response.status_code = 202
         {
           accepted: true,
@@ -78,7 +92,10 @@ module Crater
           ownerDisplayName: record.owner_display_name,
           actorHandle: record.actor_handle,
           actorDid: record.actor_did,
-          uiScenario: record.ui_scenario
+          vcsEnabled: record.vcs_enabled,
+          uiScenario: record.ui_scenario,
+          projectId: repository.try(&.project_id),
+          repository: repository ? RepositoryStore.to_json_payload(repository) : nil
         }.to_json
       end
 
@@ -97,17 +114,10 @@ module Crater
         files = env.params.files.values
 
         attachment_items = files.map do |file|
-          media_type = file.headers["Content-Type"]?.to_s
-          media_type = "application/octet-stream" if media_type.nil? || media_type.empty?
-          {
-            "type" => "Document",
-            "name" => file.filename.to_s,
-            "mediaType" => media_type,
-            "size" => file.size.try(&.to_i64) || 0_i64,
-          }
+          build_attachment_payload(file)
         end
 
-        payload = {} of String => String | Int64 | Array(String) | Array(Hash(String, String | Int64))
+        payload = {} of String => String | Int64 | Array(String) | Array(Hash(String, String | Int64 | String))
         add_string_field(payload, "name", params["name"]?)
         add_string_field(payload, "title", params["title"]?)
         add_string_field(payload, "content", params["content"]?)
@@ -121,6 +131,7 @@ module Crater
         add_string_field(payload, "ownerDisplayName", params["ownerDisplayName"]?)
         add_string_field(payload, "actorHandle", params["actorHandle"]?)
         add_string_field(payload, "actorDid", params["actorDid"]?)
+        add_string_field(payload, "vcsEnabled", params["vcsEnabled"]?)
 
         labels = parse_json_array(params["labels"]?)
         payload["labels"] = labels unless labels.empty?
@@ -129,7 +140,63 @@ module Crater
         JSON.parse(payload.to_json)
       end
 
-      private def self.add_string_field(payload, key : String, value : String?) : Nil
+      private def self.build_attachment_payload(file : Kemal::FileUpload) : Hash(String, String | Int64 | String)
+        filename = file.filename.to_s
+        media_type = normalized_media_type(filename, file.headers["Content-Type"]?.to_s)
+        issue_artifact = issue_artifact?(filename, media_type)
+        size = file.size.try(&.to_i64) || ::File.size(file.tempfile.path).to_i64
+
+        attachment = {
+          "type" => issue_artifact ? issue_artifact_type(filename, media_type) : "Document",
+          "name" => filename,
+          "mediaType" => media_type,
+          "size" => size,
+        } of String => String | Int64 | String
+
+        content = read_issue_artifact_content(file, filename, issue_artifact)
+        attachment["content"] = content if content
+        attachment
+      end
+
+      private def self.read_issue_artifact_content(file : Kemal::FileUpload, filename : String, issue_artifact : Bool) : String?
+        return nil unless issue_artifact
+
+        size = file.size.try(&.to_i64) || 0_i64
+        if size > ISSUE_ARTIFACT_CONTENT_MAX_BYTES
+          Log.warn { "[orders:create] skipping inline issue artifact content for #{filename} because size=#{size} exceeds #{ISSUE_ARTIFACT_CONTENT_MAX_BYTES}" }
+          return nil
+        end
+
+        ::File.read(file.tempfile.path)
+      rescue ex
+        Log.warn { "[orders:create] failed to read issue artifact #{filename}: #{ex.message}" }
+        nil
+      end
+
+      private def self.issue_artifact?(filename : String, media_type : String) : Bool
+        extension = ::File.extname(filename).downcase
+        ISSUE_ARTIFACT_EXTENSIONS.includes?(extension) || ISSUE_ARTIFACT_MEDIA_TYPES.includes?(media_type.downcase)
+      end
+
+      private def self.issue_artifact_type(filename : String, media_type : String) : String
+        extension = ::File.extname(filename).downcase
+        return "IssueDocument" if extension == ".org" || media_type.downcase == "text/org" || media_type.downcase == "application/org"
+
+        "Patch"
+      end
+
+      private def self.normalized_media_type(filename : String, raw_media_type : String?) : String
+        media_type = raw_media_type.to_s.strip
+        return media_type unless media_type.empty?
+
+        extension = ::File.extname(filename).downcase
+        return "application/x-git-patch" if {".patch", ".diff"}.includes?(extension)
+        return "text/org" if extension == ".org"
+
+        "application/octet-stream"
+      end
+
+      private def self.add_string_field(payload : Hash(String, String | Int64 | Array(String) | Array(Hash(String, String | Int64 | String))), key : String, value : String?) : Nil
         return if value.nil? || value.empty?
 
         payload[key] = value

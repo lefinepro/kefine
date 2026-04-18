@@ -12,5 +12,25 @@ export function getPublicRuntimeConfig(): KefinePublicRuntimeConfig {
 export function getCraterBaseUrl(): string {
   const runtimeConfig =
     typeof window === 'undefined' ? resolvePublicRuntimeConfig({}) : readBrowserPublicRuntimeConfig();
-  return normalizeText(runtimeConfig.backend.craterBaseUrl);
+  const configured = normalizeText(runtimeConfig.backend.craterBaseUrl);
+  if (typeof window === 'undefined') {
+    return configured;
+  }
+
+  try {
+    const parsed = new URL(configured);
+    const hostname = parsed.hostname.trim().toLowerCase();
+    if (
+      hostname === 'localhost' ||
+      hostname === '127.0.0.1' ||
+      hostname === '0.0.0.0' ||
+      hostname === '[::1]'
+    ) {
+      return window.location.origin;
+    }
+  } catch {
+    return configured;
+  }
+
+  return configured;
 }

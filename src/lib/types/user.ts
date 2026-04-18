@@ -108,6 +108,7 @@ export interface ProfileMetadata extends Record<string, unknown> {
   profileSetupStep?: 'identity' | 'card' | 'socials' | 'done';
   profileSetupCompleted?: boolean;
   cardBonusEligible?: boolean;
+  sshPublicKey?: string;
 }
 
 export interface Profile {

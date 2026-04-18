@@ -11,6 +11,7 @@
   import type { TransitionConfig } from 'svelte/transition';
   import { authState, clearAuthState, hydrateAuthStateFromSession, replaceAuthState, updateAuthState } from '$lib/auth/auth-store.svelte.js';
   import {
+    clearPasskeySession,
     loadPasskeySession,
     passkeySessionStore,
     setPasskeySession
@@ -73,7 +74,8 @@
     pollWorkspaceOrder,
     saveWorkspaceOrderDocument,
     submitWorkspaceOrder,
-    submitWorkspaceOrderStepComment
+    submitWorkspaceOrderStepComment,
+    updateWorkspaceOrderSettings
   } from '$lib/components/kefine/kefine-workspace-orders';
   import { waitForDelay } from '$lib/utils/helpers';
   import type { Profile } from '$lib/types/user';
@@ -898,8 +900,7 @@
     const privateKeyReady = selectedAuthMethod === 'publickey' && authState.isConnected;
     const passkeyReady = selectedAuthMethod === 'passkey' && isPasskeyActive;
     if (step === 'executing' && currentOrder?.uiScenario === 'vpn-service' && !stagePreviewOpen && (walletReady || privateKeyReady || passkeyReady)) {
-      paymentStage = 'result-ready';
-      step = 'payment';
+      return;
     }
   });
 
@@ -1198,6 +1199,7 @@
     }
 
     clearAuthState();
+    clearPasskeySession();
     selectedAuthMethod = null;
     paymentMethod = null;
     authDialogOpen = false;
@@ -2039,13 +2041,50 @@
 
   function updateProfileTask(
     orderId: string,
-    patch: Partial<Pick<OrderView, 'shareId' | 'isPublicTask' | 'accessRules'>>
+    patch: Partial<Pick<OrderView, 'shareId' | 'isPublicTask' | 'accessRules' | 'vcsEnabled' | 'repository' | 'projectId'>>
   ) {
     createdOrders = createdOrders.map((order) => (order.id === orderId ? { ...order, ...patch } : order));
     if (currentOrder?.id === orderId) {
       currentOrder = { ...currentOrder, ...patch };
     }
     persistOrders();
+  }
+
+  async function handleUpdateTaskSettings(
+    patch: Partial<Pick<OrderView, 'shareId' | 'isPublicTask' | 'vcsEnabled'>>
+  ) {
+    if (!currentOrder) {
+      return;
+    }
+
+    updateProfileTask(currentOrder.id, patch);
+
+    if (patch.vcsEnabled === undefined) {
+      return;
+    }
+
+    const updated = await updateWorkspaceOrderSettings({
+      orderId: currentOrder.id,
+      vcsEnabled: patch.vcsEnabled,
+      fetchFn: fetch,
+      orderApiBaseUrl: orderApiBaseUrl(),
+      localeText
+    });
+
+    if (!updated) {
+      return;
+    }
+
+    const nextOrderWithActor = applyActorIdentityFallback(
+      {
+        ...currentOrder,
+        ...updated,
+        id: currentOrder.id
+      },
+      currentOrder
+    );
+    currentOrder = nextOrderWithActor;
+    upsertOrder(nextOrderWithActor);
   }
 
   function loginWithPasskey(session: PasskeyAuthSuccess) {
@@ -2077,11 +2116,6 @@
       walletAddress: authState.address,
       walletAlias: null
     });
-
-    if (currentOrder && step === 'executing') {
-      stagePreviewOpen = false;
-      step = 'payment';
-    }
 
     suppressPostAuthProfileRedirect = false;
   }
@@ -2140,9 +2174,6 @@
         force: true
       });
 
-      if (currentOrder && step === 'executing') {
-        step = 'payment';
-      }
       privateKeyInput = '';
     } catch (error) {
       console.error('[publickey] choosePrivateKeyMethod', error);
@@ -2177,9 +2208,6 @@
         return;
       }
 
-      if (currentOrder && step === 'executing') {
-        step = 'payment';
-      }
     } catch (error) {
       console.error('[publickey] chooseGeneratedPrivateKeyMethod', error);
       errorMessage = error instanceof Error ? error.message : localeText.errors.fallback;
@@ -2196,7 +2224,6 @@
     selectedAuthMethod = 'passkey';
     paymentMethod = 'linked-wallet';
     if (isPasskeyActive) {
-      step = 'payment';
       return;
     }
 
@@ -2440,7 +2467,12 @@
           onSaveDocument={saveCurrentOrderDocument}
           onExportClone={handleExportClone}
           onSaveCloneLocally={handleSaveCloneLocally}
-          onUpdateTaskSettings={(patch) => currentOrder && updateProfileTask(currentOrder.id, patch)}
+          onUpdateTaskSettings={handleUpdateTaskSettings}
+          onPauseSearch={() => {
+            if (currentOrder) {
+              stopOrder(currentOrder);
+            }
+          }}
           onWalletLogin={chooseWalletMethod}
           onPasskeyLogin={choosePasskeyMethod}
           onAnonymous={chooseAnonymousMethod}

@@ -11,10 +11,17 @@ require "./crater/handlers/status"
 require "./crater/handlers/passkeys"
 require "./crater/handlers/privatekey_auth"
 require "./crater/handlers/projects"
+require "./crater/handlers/git_http"
+require "./crater/handlers/forgefed_resources"
+require "./crater/handlers/ssh_keys"
 require "./crater/middleware/cors"
 require "./crater/middleware/logger"
 require "./crater/utils/config"
 require "./crater/utils/actor_keys"
+require "./crater/repository_store"
+require "./crater/forgefed_store"
+require "./crater/ssh_key_store"
+require "./crater/ssh_git_shell"
 
 module Crater
   VERSION = "0.1.0"
@@ -53,12 +60,15 @@ module Crater
     Handlers::Inbox.register(config)
     Handlers::Outbox.register(config)
     Handlers::Orders.register(config)
-    Handlers::Status.register
+    Handlers::Status.register(config)
     Handlers::Passkeys.register(config)
     Handlers::PrivatekeyAuth.register(config)
 
     # ForgeFed project endpoints
     Handlers::Projects.register(config)
+    Handlers::GitHttp.register(config)
+    Handlers::ForgeFedResources.register(config)
+    Handlers::SshKeys.register(config)
 
     get "/health" do |env|
       env.response.content_type = "application/json"
@@ -72,4 +82,13 @@ module Crater
   end
 end
 
-Crater.run
+config = Crater::Utils::Config.load
+
+case ARGV.first?
+when "authorized-keys"
+  Crater::SshKeyStore.print_authorized_keys(STDOUT, config)
+when "ssh-shell"
+  Crater::SshGitShell.run(config, ARGV[1..])
+else
+  Crater.run
+end

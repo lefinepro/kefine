@@ -53,7 +53,7 @@
   let isPublic = $state(false);
   let referralPercent = $state(10);
   let socialLinks = $state<ProfileSocialLink[]>([]);
-  let cardNumber = $state('');
+  let sshPublicKey = $state('');
   let firstName = $state('');
   let surname = $state('');
   let leftNavExpanded = $state(false);
@@ -97,7 +97,7 @@
     return 'identity' as const;
   });
   const onboardingStepIndex = $derived(
-    onboardingStep === 'identity' ? 1 : onboardingStep === 'socials' ? 3 : 3
+    onboardingStep === 'identity' ? 1 : onboardingStep === 'socials' ? 2 : 2
   );
   const resolvedTheme = $derived(themeMode === 'auto' ? (systemPrefersDark ? 'dark' : 'light') : themeMode);
   const isDarkTheme = $derived(resolvedTheme === 'dark');
@@ -199,7 +199,7 @@
     if (viewerProfile && nextProfile && viewerProfile.id === nextProfile.id && socialLinks.length === 0) {
       socialLinks = [createEmptySocialLink()];
     }
-    cardNumber = '';
+    sshPublicKey = typeof nextProfile?.metadata?.sshPublicKey === 'string' ? nextProfile.metadata.sshPublicKey : '';
     const nameParts = readProfileNameParts(nextProfile);
     firstName = nameParts.firstName;
     surname = nameParts.surname;
@@ -355,6 +355,36 @@
     socialLinks = socialLinks.filter((link) => link.id !== id);
   }
 
+  async function syncSshPublicKey(handle: string, publicKey: string) {
+    if (!browser) {
+      return;
+    }
+
+    const url = `/actor/${encodeURIComponent(handle)}/keys/ssh`;
+    if (publicKey.trim()) {
+      const response = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({
+          publicKey: publicKey.trim()
+        })
+      });
+      if (!response.ok) {
+        throw new Error('Failed to save SSH public key on the server.');
+      }
+      return;
+    }
+
+    const response = await fetch(url, {
+      method: 'DELETE'
+    });
+    if (!response.ok) {
+      throw new Error('Failed to delete SSH public key on the server.');
+    }
+  }
+
   async function copyLink(value: string, kind: 'profile' | 'task') {
     if (!browser || !navigator.clipboard) {
       return;
@@ -416,11 +446,13 @@
         .filter((link) => link.value),
       metadata: nextMetadata(current, {
         firstName: firstName.trim(),
-        surname: surname.trim()
+        surname: surname.trim(),
+        sshPublicKey: sshPublicKey.trim()
       })
     }));
 
     if (updated) {
+      await syncSshPublicKey(updated.primaryHandle, sshPublicKey.trim());
       syncOwnedOrderHandles(updated.id, updated.primaryHandle);
       profile = updated;
       await navigateToProfileHandle(updated.primaryHandle);
@@ -464,7 +496,7 @@
     }
   }
 
-  function goToOnboardingStep(step: 1 | 2 | 3) {
+  function goToOnboardingStep(step: 1 | 2) {
     if (!browser || !profile || !isOwner) {
       return;
     }
@@ -751,7 +783,7 @@
                 usernameLabel={localeText.profile.username}
                 onFieldKeydown={blockStepSubmitOnEnter}
               />
-              <KefineProfileSetupDots currentStep={1} onSelect={goToOnboardingStep} />
+              <KefineProfileSetupDots currentStep={1} steps={[1, 2]} onSelect={(step) => goToOnboardingStep(step as 1 | 2)} />
               <textarea
                 class="profile-identity-input"
                 bind:value={bio}
@@ -764,11 +796,11 @@
                 <button
                   type="button"
                   class="profile-setup__arrow"
-                  aria-label={localeText.profile.continueToCard}
+                  aria-label={localeText.profile.continueToSocials}
                   disabled={!hasIdentityStepCompleted}
                   onclick={saveIdentityStep}
                 >
-                  <lefine-text>{localeText.profile.continueToCard}</lefine-text>
+                  <lefine-text>{localeText.profile.continueToSocials}</lefine-text>
                   <svg viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M7 12h10m-4-4 4 4-4 4" />
                   </svg>
@@ -792,15 +824,13 @@
                 usernameLabel={localeText.profile.username}
                 onFieldKeydown={blockStepSubmitOnEnter}
               />
-              <KefineProfileSetupDots currentStep={3} onSelect={goToOnboardingStep} />
+              <KefineProfileSetupDots currentStep={2} steps={[1, 2]} onSelect={(step) => goToOnboardingStep(step as 1 | 2)} />
               <lefine-box class="profile-links-head">
                 <button type="button" class="profile-links-add" aria-label={localeText.profile.addLink} onclick={addSocialLink}>+</button>
                 <strong>{localeText.profile.socialLinks}</strong>
               </lefine-box>
               <KefineProfileSocialLinksCard
                 bind:links={socialLinks}
-                bind:cardNumber
-                title={localeText.profile.socialLinks}
                 valuePlaceholder={localeText.profile.socialUrl}
                 emptyText={localeText.profile.onboardingSubtitle}
                 isOwner={true}
@@ -867,15 +897,25 @@
                   <button type="button" class="profile-links-add" aria-label={localeText.profile.addLink} onclick={addSocialLink}>+</button>
                   <strong>{localeText.profile.socialLinks}</strong>
                 </lefine-box>
-              <KefineProfileSocialLinksCard
-                bind:links={socialLinks}
-                bind:cardNumber
-                title={localeText.profile.socialLinks}
-                valuePlaceholder={localeText.profile.socialUrl}
-                emptyText=""
-                {isOwner}
-              />
+                <KefineProfileSocialLinksCard
+                  bind:links={socialLinks}
+                  valuePlaceholder={localeText.profile.socialUrl}
+                  emptyText=""
+                  {isOwner}
+                />
               </lefine-box>
+
+              {#if isOwner}
+                <lefine-box class="profile-links-column">
+                  <lefine-box class="profile-links-head">
+                    <strong>{localeText.profile.secretData}</strong>
+                  </lefine-box>
+                  <label class="profile-field">
+                    <lefine-text>{localeText.profile.sshPublicKey}</lefine-text>
+                    <textarea bind:value={sshPublicKey} rows="6" placeholder={localeText.profile.sshPublicKeyHint}></textarea>
+                  </label>
+                </lefine-box>
+              {/if}
 
             </lefine-box>
 

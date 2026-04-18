@@ -5,8 +5,9 @@
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
 	import type { Snippet } from 'svelte';
-  import { authState, hydrateAuthStateFromSession } from '$lib/auth/auth-store.svelte.js';
-  import { loadPasskeySession, passkeySessionStore } from '$lib/auth/passkey-session';
+  import { authState, clearAuthState, hydrateAuthStateFromSession } from '$lib/auth/auth-store.svelte.js';
+  import { clearPasskeySession, loadPasskeySession, passkeySessionStore } from '$lib/auth/passkey-session';
+  import { disconnectAppKit } from '$lib/auth/appkit';
   import KefineTopbar from '$lib/components/kefine/KefineTopbar.svelte';
   import { resolvePublicRuntimeConfig, setBrowserPublicRuntimeConfig } from '$lib/config/public-config';
   import { kefineLocale, kefineLocaleText, setKefineLocale, type KefineLocale } from '$lib/constants/kefine-locale';
@@ -142,6 +143,18 @@
     void goto(buildLocaleHomePath(activeLocale));
   }
 
+  async function handleSharedSignOut() {
+    try {
+      await disconnectAppKit();
+    } catch {
+      // ignore disconnect failures for non-wallet sessions
+    }
+
+    clearAuthState();
+    clearPasskeySession();
+    await goto(buildLocaleHomePath(activeLocale));
+  }
+
   function handleSharedLocaleChange(locale: KefineLocale) {
     setKefineLocale(locale);
     void goto(buildLocaleHomePath(locale));
@@ -214,7 +227,9 @@
     }}
     onAuth={handleSharedBrandClick}
     onOpenProfile={handleSharedBrandClick}
-    onSignOut={handleSharedBrandClick}
+    onSignOut={() => {
+      void handleSharedSignOut();
+    }}
     onAuthDoubleClick={handleSharedBrandClick}
     onLocale={handleSharedLocaleChange}
   />

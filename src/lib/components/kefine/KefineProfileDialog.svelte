@@ -192,7 +192,6 @@
         <kefine-profile-card>
           <KefineProfileSocialLinksCard
             bind:links={socialLinks}
-            title={labels.socialLinks}
             valuePlaceholder={labels.socialUrl}
             emptyText=""
             isOwner={true}

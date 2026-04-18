@@ -2,7 +2,7 @@
   import { browser } from '$app/environment';
   import Icon from '@iconify/svelte';
   import type { OrderView } from './kefine-workflow';
-  import type { TaskCloneFormat } from './kefine-task-clone';
+  import { getTaskRepository, getTaskRepositoryArchiveTargets, getTaskRepositoryCloneTarget, type TaskCloneFormat } from './kefine-task-clone';
 
   let {
     order,
@@ -19,6 +19,22 @@
   let menuOpen = $state(false);
   let runLocally = $state(false);
   let rootElement = $state<HTMLElement | null>(null);
+  let copiedValue = $state<string | null>(null);
+  let copiedTimeout = $state<number | null>(null);
+
+  const repository = $derived(order ? getTaskRepository(order) : null);
+  const repositoryCloneTarget = $derived(order ? getTaskRepositoryCloneTarget(order) : null);
+  const repositoryArchiveTargets = $derived(order ? getTaskRepositoryArchiveTargets(order) : null);
+  const repositoryArchiveActions = $derived.by(() =>
+    repositoryArchiveTargets
+      ? [
+          { label: 'zip', href: repositoryArchiveTargets.zip },
+          { label: 'tar.gz', href: repositoryArchiveTargets.tarGz },
+          { label: 'tar.zst', href: repositoryArchiveTargets.tarZst }
+        ]
+      : []
+  );
+  const taskExportActions = ['txt', 'md', 'org'] as const;
 
   function closeMenu() {
     menuOpen = false;
@@ -50,6 +66,24 @@
     closeMenu();
   }
 
+  async function copyText(value: string) {
+    if (!browser || !value.trim()) {
+      return;
+    }
+
+    await navigator.clipboard.writeText(value);
+    copiedValue = value;
+
+    if (copiedTimeout) {
+      window.clearTimeout(copiedTimeout);
+    }
+
+    copiedTimeout = window.setTimeout(() => {
+      copiedValue = null;
+      copiedTimeout = null;
+    }, 1800);
+  }
+
   $effect(() => {
     if (!browser || !menuOpen) {
       return;
@@ -76,6 +110,14 @@
       window.removeEventListener('keydown', handleEscape);
     };
   });
+
+  $effect(() => {
+    return () => {
+      if (copiedTimeout) {
+        window.clearTimeout(copiedTimeout);
+      }
+    };
+  });
 </script>
 
 <kefine-clone-menu bind:this={rootElement}>
@@ -93,12 +135,64 @@
 
   {#if menuOpen && order}
     <kefine-clone-popover role="menu" aria-label="Clone task">
+      {#if repository}
+        <kefine-clone-section>
+          <kefine-clone-heading>
+            <strong>Git repo</strong>
+            <kefine-clone-badges>
+              <span>{repository.visibility}</span>
+              {#if repository.defaultBranch}
+                <span>{repository.defaultBranch}</span>
+              {/if}
+            </kefine-clone-badges>
+          </kefine-clone-heading>
+
+          {#if repository.name}
+            <p data-part="clone-muted">{repository.name}</p>
+          {/if}
+
+          {#if repositoryCloneTarget}
+            <kefine-clone-target>
+              <kefine-clone-target-copy>
+                <strong>{repositoryCloneTarget.label}</strong>
+                <code>{repositoryCloneTarget.url}</code>
+              </kefine-clone-target-copy>
+              <button
+                type="button"
+                data-part="icon-copy"
+                onclick={() => copyText(repositoryCloneTarget.url)}
+                aria-label="Copy clone URL"
+                title="Copy clone URL"
+              >
+                <Icon
+                  icon={copiedValue === repositoryCloneTarget.url ? 'mdi:check' : 'mdi:content-copy'}
+                  width="16"
+                  height="16"
+                  aria-hidden="true"
+                />
+              </button>
+            </kefine-clone-target>
+          {/if}
+        </kefine-clone-section>
+      {/if}
+
+      {#if repositoryArchiveActions.length > 0}
+        <kefine-clone-section>
+          <strong>Repository archive</strong>
+          <kefine-clone-format-grid>
+            {#each repositoryArchiveActions as action}
+              <a href={action.href} rel="noreferrer">{action.label}</a>
+            {/each}
+          </kefine-clone-format-grid>
+        </kefine-clone-section>
+      {/if}
+
       <kefine-clone-section>
-        <strong>Download package</strong>
+        <strong>{repository ? 'Task exports' : 'Download package'}</strong>
         <kefine-clone-format-grid>
-          <button type="button" onclick={() => handleExport('txt')}>txt</button>
-          <button type="button" onclick={() => handleExport('md')}>md</button>
-          <button type="button" onclick={() => handleExport('org')}>org</button>
+          {#each taskExportActions as format}
+            <button type="button" onclick={() => handleExport(format)}>{format}</button>
+          {/each}
         </kefine-clone-format-grid>
       </kefine-clone-section>
 
@@ -145,7 +239,7 @@
     z-index: 15;
     display: grid;
     gap: 0.9rem;
-    width: min(18rem, calc(100vw - 1rem));
+    width: min(24rem, calc(100vw - 1rem));
     max-width: calc(100vw - 1rem);
     padding: 0.95rem;
     border-radius: 1rem;
@@ -160,8 +254,62 @@
     gap: 0.7rem;
   }
 
+  kefine-clone-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.7rem;
+  }
+
   kefine-clone-section strong {
     font-size: 0.9rem;
+  }
+
+  kefine-clone-badges {
+    display: inline-flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.35rem;
+  }
+
+  kefine-clone-badges span {
+    padding: 0.24rem 0.48rem;
+    border-radius: 999px;
+    background: color-mix(in oklab, var(--kef-primary, #b97a28) 20%, white 80%);
+    color: #7f5531;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+  }
+
+  p[data-part='clone-muted'] {
+    margin: -0.15rem 0 0;
+    font-size: 0.85rem;
+    color: color-mix(in oklab, var(--lefine-text, #453323) 74%, transparent);
+  }
+
+  kefine-clone-target {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 0.7rem;
+    padding: 0.75rem;
+    border-radius: 0.85rem;
+    border: 1px solid color-mix(in oklab, var(--kef-border, #e0c999) 78%, transparent);
+    background: color-mix(in oklab, var(--kef-bg-card, #f7ecd4) 84%, white 16%);
+  }
+
+  kefine-clone-target-copy {
+    display: grid;
+    gap: 0.3rem;
+  }
+
+  kefine-clone-target-copy code {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    font-size: 0.8rem;
+    line-height: 1.48;
   }
 
   kefine-clone-format-grid {
@@ -171,6 +319,7 @@
   }
 
   kefine-clone-format-grid button,
+  kefine-clone-format-grid a,
   button[data-part='save-action'] {
     width: 100%;
     min-width: 0;
@@ -186,6 +335,11 @@
     overflow-wrap: anywhere;
     word-break: break-word;
     text-align: center;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
   }
 
   label[data-part='run-checkbox'] {
@@ -199,9 +353,26 @@
     background: color-mix(in oklab, var(--kef-primary, #b97a28) 14%, white);
   }
 
+  button[data-part='icon-copy'] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+    padding: 0;
+    border-radius: 0.75rem;
+    border: 1px solid color-mix(in oklab, var(--kef-border, #e0c999) 78%, transparent);
+    background: color-mix(in oklab, var(--kef-bg-card, #f7ecd4) 88%, white 12%);
+    color: inherit;
+  }
+
   :global(:root[data-kefine-theme='dark']) button[data-part='clone-trigger'],
   :global(:root[data-kefine-theme='dark']) kefine-clone-popover,
+  :global(:root[data-kefine-theme='dark']) kefine-clone-target,
   :global(:root[data-kefine-theme='dark']) kefine-clone-format-grid button,
+  :global(:root[data-kefine-theme='dark']) kefine-clone-format-grid a,
+  :global(:root[data-kefine-theme='dark']) button[data-part='icon-copy'],
   :global(:root[data-kefine-theme='dark']) button[data-part='save-action'] {
     color: #eadcc7;
     border-color: color-mix(in oklab, #d3a45c 36%, var(--kef-border, #6e5539));
@@ -212,9 +383,22 @@
     background: color-mix(in oklab, var(--kef-primary, #b97a28) 18%, var(--kef-bg-card, #22170f));
   }
 
+  :global(:root[data-kefine-theme='dark']) kefine-clone-badges span {
+    background: color-mix(in oklab, #f0d7b2 22%, #3a2818 78%);
+    color: #f3dfc4;
+  }
+
   @media (max-width: 380px) {
     kefine-clone-format-grid {
       grid-template-columns: 1fr;
+    }
+
+    kefine-clone-target {
+      grid-template-columns: 1fr;
+    }
+
+    kefine-clone-popover {
+      width: min(22rem, calc(100vw - 1rem));
     }
   }
 </style>

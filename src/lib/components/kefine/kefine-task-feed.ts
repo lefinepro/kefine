@@ -27,6 +27,7 @@ export type TaskThreadNode = {
 type ParsedTaskDocument = {
   body: string;
   systemComments: Record<string, OrderStepComment[]>;
+  systemInserts: Record<string, OrderNotebookBlock[]>;
 };
 
 function parseTaskDocumentContent(content: string | undefined): ParsedTaskDocument {
@@ -34,46 +35,68 @@ function parseTaskDocumentContent(content: string | undefined): ParsedTaskDocume
   if (!source) {
     return {
       body: '',
-      systemComments: {}
+      systemComments: {},
+      systemInserts: {}
     };
   }
 
   const systemComments: Record<string, OrderStepComment[]> = {};
+  const systemInserts: Record<string, OrderNotebookBlock[]> = {};
   const lines = source.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
   const bodyLines: string[] = [];
 
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index] ?? '';
     const commentStart = line.match(/^#\+begin_node_comment:\s+(.+)$/i);
-    if (!commentStart) {
+    const insertStart = line.match(/^#\+begin_node_insert:\s+(.+)$/i);
+    if (!commentStart && !insertStart) {
       bodyLines.push(line);
       continue;
     }
 
-    const nodeKey = commentStart[1]?.trim();
+    const nodeKey = (commentStart?.[1] || insertStart?.[1] || '').trim();
     const contentLines: string[] = [];
     index += 1;
 
-    while (index < lines.length && !/^#\+end_node_comment\b/i.test((lines[index] ?? '').trim())) {
+    while (
+      index < lines.length &&
+      !/^#\+end_node_comment\b/i.test((lines[index] ?? '').trim()) &&
+      !/^#\+end_node_insert\b/i.test((lines[index] ?? '').trim())
+    ) {
       contentLines.push(lines[index] ?? '');
       index += 1;
     }
 
     if (nodeKey) {
-      systemComments[nodeKey] = [
-        ...(systemComments[nodeKey] ?? []),
-        {
-          id: `${nodeKey}-${systemComments[nodeKey]?.length ?? 0}`,
-          content: contentLines.join('\n').trim()
+      if (commentStart) {
+        systemComments[nodeKey] = [
+          ...(systemComments[nodeKey] ?? []),
+          {
+            id: `${nodeKey}-${systemComments[nodeKey]?.length ?? 0}`,
+            content: contentLines.join('\n').trim()
+          }
+        ].filter((comment) => comment.content);
+      } else {
+        const insertContent = contentLines.join('\n').trim();
+        if (insertContent.length > 0) {
+          systemInserts[nodeKey] = [
+            ...(systemInserts[nodeKey] ?? []),
+            {
+              id: `${nodeKey}-insert-${systemInserts[nodeKey]?.length ?? 0}`,
+              type: 'markdown',
+              content: insertContent
+            }
+          ];
         }
-      ].filter((comment) => comment.content);
+      }
     }
   }
 
   const body = bodyLines.join('\n').trim();
   return {
     body,
-    systemComments
+    systemComments,
+    systemInserts
   };
 }
 
@@ -113,6 +136,26 @@ function replaceSystemComment(content: string | undefined, nodeKey: string, comm
   return blocks.filter(Boolean).join('\n\n').trim();
 }
 
+function appendSystemInsert(content: string | undefined, nodeKey: string, insertContent: string): string {
+  const parsed = parseTaskDocumentContent(content);
+  const blocks = [parsed.body].filter(Boolean);
+
+  for (const [key, comments] of Object.entries(parsed.systemComments)) {
+    for (const item of comments) {
+      blocks.push(`#+begin_node_comment: ${key}\n${item.content}\n#+end_node_comment`);
+    }
+  }
+
+  for (const [key, inserts] of Object.entries(parsed.systemInserts)) {
+    for (const item of inserts) {
+      blocks.push(`#+begin_node_insert: ${key}\n${item.content}\n#+end_node_insert`);
+    }
+  }
+
+  blocks.push(`#+begin_node_insert: ${nodeKey}\n${insertContent.trim()}\n#+end_node_insert`);
+  return blocks.filter(Boolean).join('\n\n').trim();
+}
+
 function executorState(executor: OrderExecutor): ProgressState {
   if (executor.status === 'completed') return 'completed';
   if (executor.status === 'running' || executor.status === 'review' || executor.status === 'accepted') return 'active';
@@ -146,6 +189,83 @@ function blockNode(
 
 function loadingNode(id: string, title: string, detail: string): TaskThreadNode {
   return { id, title, detail, state: 'active', mode: 'loading' };
+}
+
+function deriveSolverHandleFromUrl(value: string | undefined): string {
+  const raw = value?.trim();
+  if (!raw || !/^https?:\/\//i.test(raw)) {
+    return '';
+  }
+
+  try {
+    const url = new URL(raw);
+    const segments = url.pathname.split('/').filter(Boolean);
+    const handle = segments[segments.length - 1]?.trim();
+    if (!handle) {
+      return '';
+    }
+    return `@${handle}@${url.host}`;
+  } catch {
+    return '';
+  }
+}
+
+function isGenericSolverPlaceholder(value: string | undefined): boolean {
+  const raw = value?.trim();
+  if (!raw) {
+    return true;
+  }
+
+  const normalized = raw.toLowerCase();
+  if (['solver', 'default solver', 'saved', 'save'].includes(normalized)) {
+    return true;
+  }
+
+  if (!/^https?:\/\//i.test(raw)) {
+    return false;
+  }
+
+  try {
+    const url = new URL(raw);
+    const host = url.host.toLowerCase();
+    const segments = url.pathname.split('/').filter(Boolean);
+    if ((host === 'exchange.lefine.pro' || host === 'lefine.pro') && segments.length <= 1) {
+      return true;
+    }
+    return segments.length === 0;
+  } catch {
+    return false;
+  }
+}
+
+function resolveSolverLabel(order: OrderView): string {
+  const explicitHandle = order.solverHandle?.trim();
+  if (explicitHandle) {
+    return explicitHandle.startsWith('@') ? explicitHandle : `@${explicitHandle}`;
+  }
+
+  const explicitName = order.solverName?.trim();
+  if (explicitName) {
+    return explicitName;
+  }
+
+  const executorHandle = order.executors?.[0]?.handle?.trim();
+  if (executorHandle) {
+    return executorHandle.startsWith('@') ? executorHandle : `@${executorHandle}`;
+  }
+
+  const executorName = order.executors?.[0]?.name?.trim();
+  if (executorName) {
+    return executorName;
+  }
+
+  const derivedHandle = deriveSolverHandleFromUrl(order.solver);
+  if (derivedHandle) {
+    return derivedHandle;
+  }
+
+  const rawSolver = order.solver?.trim() || '';
+  return isGenericSolverPlaceholder(rawSolver) ? '' : rawSolver;
 }
 
 function resolveLatestActivityStage(order: OrderView): ExecutionStage | undefined {
@@ -269,6 +389,29 @@ function resolveSystemNodeComments(order: OrderView, nodeKey: string): OrderStep
   return comments?.length ? comments : undefined;
 }
 
+function resolveSystemNodeInserts(order: OrderView, nodeKey: string): TaskThreadNode[] | undefined {
+  const inserts = parseTaskDocumentContent(order.document?.content).systemInserts[nodeKey];
+  if (!inserts?.length) {
+    return undefined;
+  }
+
+  return inserts.map((block, index) =>
+    blockNode(
+      `${nodeKey}-insert-${index + 1}`,
+      `Update ${index + 1}`,
+      undefined,
+      'upcoming',
+      [block],
+      'pending',
+      {
+        commentable: true,
+        stepId: `${nodeKey}-insert-${index + 1}`,
+        comments: resolveSystemNodeComments(order, `${nodeKey}-insert-${index + 1}`)
+      }
+    )
+  );
+}
+
 function resolveRootTitle(order: OrderView): string {
   const title = order.title.trim();
   const summary = resolveTaskSummary(order);
@@ -308,7 +451,8 @@ function descriptionNode(order: OrderView): TaskThreadNode | null {
 
 function executionNodes(steps: OrderExecutionStep[] | undefined): TaskThreadNode[] {
   return (steps ?? []).map((step, index) =>
-    blockNode(
+    ({
+      ...blockNode(
       step.id,
       step.title,
       step.detail,
@@ -319,13 +463,16 @@ function executionNodes(steps: OrderExecutionStep[] | undefined): TaskThreadNode
         stepId: step.id,
         commentable: true
       }
-    )
+    ),
+      children: [] as TaskThreadNode[] | undefined
+    })
   );
 }
 
 function notebookNodes(steps: OrderNotebookStep[] | undefined): TaskThreadNode[] {
   return (steps ?? []).map((step, index) =>
-    blockNode(
+    ({
+      ...blockNode(
       step.id,
       step.title,
       step.detail,
@@ -337,7 +484,9 @@ function notebookNodes(steps: OrderNotebookStep[] | undefined): TaskThreadNode[]
         comments: step.comments,
         commentable: true
       }
-    )
+    ),
+      children: [] as TaskThreadNode[] | undefined
+    })
   );
 }
 
@@ -372,7 +521,7 @@ function solverNodes(order: OrderView): TaskThreadNode[] {
     ];
   }
 
-  const solverLabel = order.solverName || order.solver || order.executors?.[0]?.name || '';
+  const solverLabel = resolveSolverLabel(order);
   if (solverLabel) {
     return [
       compactNode(
@@ -400,7 +549,7 @@ export function buildTaskThreadNodes(order: OrderView | null): TaskThreadNode[] 
   const interim = resultNode(order.interimResult, `${order.id}-interim-result`, 'Interim result');
   const final = resultNode(order.result, `${order.id}-final-result`, 'Final result');
 
-  return [
+  const nodes = [
     exchangeSearchNode(order),
     ...solverNodes(order),
     ...(description ? [description] : []),
@@ -409,6 +558,11 @@ export function buildTaskThreadNodes(order: OrderView | null): TaskThreadNode[] 
     ...(interim ? [interim] : []),
     ...(final ? [final] : [])
   ];
+
+  return nodes.map((node) => ({
+    ...node,
+    children: [...(node.children ?? []), ...(resolveSystemNodeInserts(order, node.stepId || node.id) ?? [])]
+  }));
 }
 
 // Preserve the previous export name so Vite HMR can survive the refactor without a hard reload.
@@ -458,4 +612,12 @@ export function replaceTaskNodeComment(order: OrderView | null, nodeKey: string,
   }
 
   return replaceSystemComment(order.document?.content || order.description || '', nodeKey, content);
+}
+
+export function appendTaskNodeInsert(order: OrderView | null, nodeKey: string, content: string): string {
+  if (!order) {
+    return content.trim();
+  }
+
+  return appendSystemInsert(order.document?.content || order.description || '', nodeKey, content);
 }

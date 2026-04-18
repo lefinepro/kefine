@@ -323,6 +323,9 @@ export async function submitWorkspaceOrder(args: {
         ownerDisplayName: parsed.ownerDisplayName || args.owner?.ownerDisplayName,
         actorHandle: parsed.actorHandle,
         actorDid: parsed.actorDid,
+        vcsEnabled: parsed.vcsEnabled,
+        projectId: parsed.projectId,
+        repository: parsed.repository,
         status: parsed.status || 'queued',
         title: args.payload.title || args.localeText.defaults.taskTitle,
         description: args.payload.description || '',
@@ -392,6 +395,48 @@ export async function saveWorkspaceOrderDocument(args: {
       currency: args.localeText.defaults.defaultCurrency,
       createdAt: new Date().toISOString()
     }, args.localeText);
+  } catch {
+    return null;
+  }
+}
+
+export async function updateWorkspaceOrderSettings(args: {
+  orderId: string;
+  vcsEnabled?: boolean;
+  fetchFn: typeof fetch;
+  orderApiBaseUrl: string;
+  localeText: KefineLocaleText;
+}): Promise<OrderView | null> {
+  try {
+    const response = await args.fetchFn(
+      buildOrderProxyUrl(`/status/${encodeURIComponent(normalizeOrderStatusId(args.orderId))}/settings`, args.orderApiBaseUrl),
+      {
+        method: 'PATCH',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          ...(args.vcsEnabled !== undefined ? { vcsEnabled: args.vcsEnabled } : {})
+        })
+      }
+    );
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const payload: unknown = await response.json();
+    return extractStatusPayload(
+      payload,
+      {
+        title: '',
+        description: '',
+        currency: args.localeText.defaults.defaultCurrency,
+        createdAt: new Date().toISOString()
+      },
+      args.localeText
+    );
   } catch {
     return null;
   }
