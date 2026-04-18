@@ -675,7 +675,7 @@
         <kefine-rich-editor-strip>
           <button type="button" data-part="meta-action" aria-label="Add file" onclick={() => fileInput?.click()}>
             <Icon icon="mdi:paperclip" width="17" height="17" aria-hidden="true" />
-            <span>Add file</span>
+            <lefine-text>Add file</lefine-text>
           </button>
           {#if tagEditorOpen}
             <input
@@ -691,7 +691,7 @@
           {:else}
             <button type="button" data-part="meta-action" aria-label="Add tag" onclick={() => { tagEditorOpen = true; }}>
               <Icon icon="mdi:tag-plus-outline" width="17" height="17" aria-hidden="true" />
-              <span>Add tag</span>
+              <lefine-text>Add tag</lefine-text>
             </button>
           {/if}
           <input bind:this={fileInput} data-part="file-input" type="file" multiple onchange={handleFileChange} />
@@ -709,7 +709,7 @@
       {/if}
 
       {#if editorMode === 'visual' && !compact}
-        <div
+        <lefine-box
           bind:this={editorHost}
           data-part="editor-host"
           data-ready={editorReady}
@@ -718,7 +718,7 @@
           aria-multiline="true"
           data-placeholder={placeholder}
           onkeydown={handleEditorKeydown}
-        ></div>
+        ></lefine-box>
 
         {#if editor}
           <AutocompletePopover
@@ -739,7 +739,7 @@
                   <AutocompleteItem value={command.id}>
                     <kefine-slash-item>
                       <strong>{command.label}</strong>
-                      <span>{command.hint}</span>
+                      <lefine-text>{command.hint}</lefine-text>
                     </kefine-slash-item>
                   </AutocompleteItem>
                 {/each}
@@ -767,7 +767,7 @@
           <kefine-rich-editor-tag-strip>
             {#each tagDrafts as tag (`tag-${tag}`)}
               <button type="button" data-part="tag-pill" onclick={() => removeTag(tag)} aria-label={`Remove ${tag} tag`}>
-                <span>#{tag}</span>
+                <lefine-text>#{tag}</lefine-text>
                 <strong>×</strong>
               </button>
             {/each}
@@ -779,7 +779,7 @@
             {#each attachmentDrafts as file, index (`${file.name}-${index}`)}
               <button type="button" data-part="file-pill" onclick={() => removeAttachment(index)} aria-label={`Remove ${file.name}`}>
                 <Icon icon="mdi:file-outline" width="15" height="15" aria-hidden="true" />
-                <span>{file.name}</span>
+                <lefine-text>{file.name}</lefine-text>
                 <strong>{formatFileSize(file.size)}</strong>
               </button>
             {/each}
@@ -857,16 +857,16 @@
     font-size: 0.9rem;
   }
 
-  div[data-part='editor-host'] {
+  lefine-box[data-part='editor-host'] {
     min-height: 22rem;
     padding: 1rem 1.05rem;
   }
 
-  kefine-rich-editor[data-compact='true'] div[data-part='editor-host'] {
+  kefine-rich-editor[data-compact='true'] lefine-box[data-part='editor-host'] {
     min-height: 10rem;
   }
 
-  div[data-part='editor-host']:empty::before {
+  lefine-box[data-part='editor-host']:empty::before {
     content: attr(data-placeholder);
     color: color-mix(in oklab, var(--lefine-text-soft, #6d5a49) 70%, transparent);
   }
@@ -903,20 +903,20 @@
     font-size: 0.9rem;
   }
 
-  kefine-slash-item span,
+  kefine-slash-item lefine-text,
   kefine-slash-empty {
     color: var(--lefine-text-soft, #6d5a49);
     font-size: 0.8rem;
   }
 
-  :global(div[data-part='editor-host'] .ProseMirror) {
+  :global(lefine-box[data-part='editor-host'] .ProseMirror) {
     min-height: inherit;
     outline: none;
     color: var(--lefine-text, #2e2317);
     line-height: 1.6;
   }
 
-  :global(div[data-part='editor-host'] .ProseMirror p) {
+  :global(lefine-box[data-part='editor-host'] .ProseMirror p) {
     margin: 0 0 0.7rem;
   }
 
@@ -957,7 +957,7 @@
     justify-content: center;
   }
 
-  button[data-part='meta-action'] span {
+  button[data-part='meta-action'] lefine-text {
     font-size: 0.82rem;
   }
 

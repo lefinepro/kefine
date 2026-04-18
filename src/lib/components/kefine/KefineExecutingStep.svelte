@@ -399,7 +399,7 @@
         <h2 class="kefine-title-skeleton" aria-label="Loading task title"></h2>
       {:else}
         <h2>
-          <span data-part="task-icon">{taskMonogram}</span>
+          <lefine-text data-part="task-icon">{taskMonogram}</lefine-text>
           {currentOrder?.title}
         </h2>
       {/if}
@@ -415,7 +415,7 @@
         <lefine-box class="kefine-flow-badges">
           <lefine-text class="kefine-flow-badge kefine-flow-badge--timer">
             <Icon icon="mdi:alarm" width="16" height="16" aria-hidden="true" />
-            <span>{formattedRemaining}</span>
+            <lefine-text>{formattedRemaining}</lefine-text>
           </lefine-text>
         </lefine-box>
       </lefine-box>

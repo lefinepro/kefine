@@ -97,7 +97,7 @@
       <kefine-task-settings-section>
         <strong>Settings</strong>
         <label data-part="field">
-          <span>Slug</span>
+          <lefine-text>Slug</lefine-text>
           <input
             bind:value={slugDraft}
             type="text"
@@ -109,7 +109,7 @@
         </label>
         <label data-part="toggle">
           <input bind:checked={isPublicDraft} type="checkbox" />
-          <span>Make public</span>
+          <lefine-text>Make public</lefine-text>
         </label>
         <button type="button" data-part="apply" onclick={applySettings}>Save</button>
       </kefine-task-settings-section>
@@ -165,8 +165,8 @@
     gap: 0.35rem;
   }
 
-  label[data-part='field'] span,
-  label[data-part='toggle'] span {
+  label[data-part='field'] lefine-text,
+  label[data-part='toggle'] lefine-text {
     font-size: 0.92rem;
     font-weight: 600;
   }

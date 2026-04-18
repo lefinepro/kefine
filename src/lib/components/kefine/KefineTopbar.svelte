@@ -485,7 +485,7 @@
       >
         {#if isAuthLoading}
           <lef-auth-loading aria-hidden="true"></lef-auth-loading>
-          <span>{signInLabel}</span>
+          <lefine-text>{signInLabel}</lefine-text>
         {:else if isAuthenticated}
           <lefine-text data-part="auth-content">
             {#if authenticatedAvatarUrl}

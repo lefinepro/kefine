@@ -208,7 +208,7 @@
       <kefine-thread-line>
         <strong>{node.title}</strong>
         {#if node.meta}
-          <span>{node.meta}</span>
+          <lefine-text>{node.meta}</lefine-text>
         {/if}
       </kefine-thread-line>
       {#if node.detail}
@@ -267,7 +267,7 @@
                 onclick={() => openNodeCommentComposerWithAction(node, 'file')}
               >
                 <Icon icon="mdi:paperclip" width="16" height="16" aria-hidden="true" />
-                <span>Add file</span>
+                <lefine-text>Add file</lefine-text>
               </button>
               <button
                 type="button"
@@ -275,7 +275,7 @@
                 onclick={() => openNodeCommentComposerWithAction(node, 'tag')}
               >
                 <Icon icon="mdi:tag-plus-outline" width="16" height="16" aria-hidden="true" />
-                <span>Add tag</span>
+                <lefine-text>Add tag</lefine-text>
               </button>
             </kefine-thread-comment-plus-menu>
           {:else}
@@ -305,7 +305,7 @@
               />
               <kefine-thread-comment-actions>
                 {#if isCommentSubmitting(node)}
-                  <span>{labels.saving}</span>
+                  <lefine-text>{labels.saving}</lefine-text>
                 {/if}
                 <button
                   type="button"
@@ -326,7 +326,7 @@
 <kefine-thread-stage>
   <kefine-thread-head>
     <kefine-thread-title>
-      <span data-part="task-monogram" aria-hidden="true">{taskMonogram}</span>
+      <lefine-text data-part="task-monogram" aria-hidden="true">{taskMonogram}</lefine-text>
       <strong>{currentOrder?.title || labels.boardTitle}</strong>
     </kefine-thread-title>
     <kefine-thread-head-actions>
@@ -366,7 +366,7 @@
           <kefine-thread-line>
             <strong>{root.title}</strong>
             {#if root.meta}
-              <span>{root.meta}</span>
+              <lefine-text>{root.meta}</lefine-text>
             {/if}
           </kefine-thread-line>
           {#if root.detail}
@@ -573,7 +573,7 @@
     line-height: 1.25;
   }
 
-  kefine-thread-line span {
+  kefine-thread-line lefine-text {
     color: var(--lefine-text-soft, #6d5a49);
     font-size: 0.78rem;
     letter-spacing: 0.08em;
@@ -707,7 +707,7 @@
     gap: 0.8rem;
   }
 
-  kefine-thread-comment-actions span {
+  kefine-thread-comment-actions lefine-text {
     color: var(--lefine-text-soft, #6d5a49);
     font-size: 0.8rem;
     font-weight: 600;

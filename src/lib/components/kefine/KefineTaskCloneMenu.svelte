@@ -88,7 +88,7 @@
     disabled={!order}
   >
     <Icon icon="mdi:source-branch" width="16" height="16" aria-hidden="true" />
-    <span>Clone</span>
+    <lefine-text>Clone</lefine-text>
   </button>
 
   {#if menuOpen && order}
@@ -107,7 +107,7 @@
           <strong>Save to my tasks</strong>
           <label data-part="run-checkbox">
             <input bind:checked={runLocally} type="checkbox" />
-            <span>Run locally</span>
+            <lefine-text>Run locally</lefine-text>
           </label>
           <button type="button" data-part="save-action" onclick={handleSave}>
             {runLocally ? 'Save and run' : 'Save'}
