@@ -1,6 +1,12 @@
 import { buildOrderProxyUrl } from '$lib/order-proxy-path';
 import type { DraftOrder, OrderView, TemplatePresentation } from '$lib/components/kefine/kefine-workflow';
-import { buildCreatePayload, extractStatusPayload, parseStoredOrders, readCreateResponse } from '$lib/components/kefine/kefine-workflow';
+import {
+  buildCreatePayload,
+  extractStatusPayload,
+  parseStoredOrders,
+  readCreateResponse,
+  type RepositoryGitSettings
+} from '$lib/components/kefine/kefine-workflow';
 import type { KefineLocaleText } from '$lib/constants/kefine-locale';
 
 type OrderFallback = {
@@ -403,6 +409,7 @@ export async function saveWorkspaceOrderDocument(args: {
 export async function updateWorkspaceOrderSettings(args: {
   orderId: string;
   vcsEnabled?: boolean;
+  gitSettings?: RepositoryGitSettings;
   fetchFn: typeof fetch;
   orderApiBaseUrl: string;
   localeText: KefineLocaleText;
@@ -417,7 +424,8 @@ export async function updateWorkspaceOrderSettings(args: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          ...(args.vcsEnabled !== undefined ? { vcsEnabled: args.vcsEnabled } : {})
+          ...(args.vcsEnabled !== undefined ? { vcsEnabled: args.vcsEnabled } : {}),
+          ...(args.gitSettings ? { gitSettings: args.gitSettings } : {})
         })
       }
     );

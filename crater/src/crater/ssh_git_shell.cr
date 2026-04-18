@@ -63,12 +63,18 @@ module Crater
 
     private def self.authorized?(service : String, actor_handle : String, repository : RepositoryStore::RepositoryRecord, config : Utils::Config) : Bool
       owner_handle = RepositoryStore.owner_handle(repository, config)
+      settings = RepositoryStore.git_settings(repository, config)
+      actor = normalize_actor(actor_handle)
 
       case service
       when "git-upload-pack"
-        repository.visibility == "public" || actor_handle == owner_handle
+        repository.visibility == "public" || actor == owner_handle
       when "git-receive-pack"
-        actor_handle == owner_handle
+        return true if repository.visibility == "public"
+
+        actor == owner_handle ||
+          actor == settings.exchange_actor.downcase.gsub(/^@+/, "") ||
+          RepositoryStore.agent_handles(config).includes?(actor)
       else
         false
       end
@@ -87,9 +93,14 @@ module Crater
           resolve_repository(request_path, config)
         end
       deny("Repository not found.") unless repository
+      RepositoryStore.prepare_git_transport(repository) if service == "git-receive-pack"
       deny("Access denied.") unless authorized?(service, actor_handle, repository, config)
 
-      status = Process.run(service, {repository.repo_path}, input: STDIN, output: STDOUT, error: STDERR)
+      env = {
+        "KEFINE_GIT_ACTOR_HANDLE" => actor_handle,
+        "KEFINE_REPOSITORY_ID"    => repository.id,
+      }
+      status = Process.run(service, {repository.repo_path}, input: STDIN, output: STDOUT, error: STDERR, env: env)
       exit(status.exit_code)
     rescue ex
       deny(ex.message || "SSH git command failed.")

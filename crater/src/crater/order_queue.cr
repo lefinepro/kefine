@@ -304,16 +304,14 @@ module Crater
 
       normalized = value.strip
       return nil if normalized.empty?
+      return normalized if normalized.starts_with?("http://") || normalized.starts_with?("https://")
       return normalized if normalized.starts_with?("did:key:")
 
       "did:key:#{normalized}"
     end
 
     private def self.system_actor_did(config : Utils::Config) : String
-      public_key = Utils::ActorKeys.derive_public_key_string(config.resolved_actor_private_key_pem)
-      return "did:key:#{public_key}" unless public_key.empty?
-
-      normalize_did_key(config.actor_username) || "did:key:#{config.actor_username}"
+      config.actor_id
     end
 
     private def self.order_actor_did(order : OrderRecord, config : Utils::Config) : String

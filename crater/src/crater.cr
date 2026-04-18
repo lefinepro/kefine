@@ -22,6 +22,7 @@ require "./crater/repository_store"
 require "./crater/forgefed_store"
 require "./crater/ssh_key_store"
 require "./crater/ssh_git_shell"
+require "./crater/git_receive_hook"
 
 module Crater
   VERSION = "0.1.0"
@@ -89,6 +90,8 @@ when "authorized-keys"
   Crater::SshKeyStore.print_authorized_keys(STDOUT, config)
 when "ssh-shell"
   Crater::SshGitShell.run(config, ARGV[1..])
+when "git-receive-hook"
+  Crater::GitReceiveHook.run(config, ARGV[1..])
 else
   Crater.run
 end

@@ -1246,8 +1246,8 @@
     box-shadow:
       inset 0 1px 0 color-mix(in oklab, var(--afe-paper-highlight) 28%, transparent),
       inset 0 0 0 1px color-mix(in oklab, var(--afe-edge-warm) 14%, transparent),
-      inset 0 0 80px color-mix(in oklab, var(--afe-wash-a) 5%, transparent),
-      0 14px 30px color-mix(in oklab, var(--afe-shadow-deep) 9%, transparent);
+      inset 0 0 40px color-mix(in oklab, var(--afe-wash-a) 4%, transparent),
+      0 10px 20px color-mix(in oklab, var(--afe-shadow-deep) 6%, transparent);
     overflow: hidden;
   }
 
@@ -1280,8 +1280,8 @@
     inset: 0;
     border-radius: inherit;
     box-shadow:
-      inset 0 0 30px color-mix(in oklab, var(--afe-wash-b) 7%, transparent),
-      inset 0 0 80px color-mix(in oklab, var(--afe-speck) 4%, transparent);
+      inset 0 0 16px color-mix(in oklab, var(--afe-wash-b) 5%, transparent),
+      inset 0 0 36px color-mix(in oklab, var(--afe-speck) 3%, transparent);
     pointer-events: none;
   }
 
@@ -1537,7 +1537,9 @@
   lef-quote-box[data-selected='true'] {
     background: color-mix(in oklab, #dbe7c9 82%, #b8ce97 18%);
     border-color: color-mix(in oklab, #3b5b31 62%, transparent);
-    box-shadow: 0 0 0 2px color-mix(in oklab, #8fb07f 16%, transparent);
+    box-shadow:
+      inset 0 0 0 1px color-mix(in oklab, white 22%, transparent),
+      0 0 0 1px color-mix(in oklab, #8fb07f 10%, transparent);
   }
 
   lef-delivery-pack {
@@ -1793,8 +1795,8 @@
     box-shadow:
       inset 0 1px 0 color-mix(in oklab, var(--afe-paper-highlight) 10%, transparent),
       inset 0 0 0 1px color-mix(in oklab, var(--afe-edge-warm) 18%, transparent),
-      inset 0 0 80px color-mix(in oklab, var(--afe-speck) 11%, transparent),
-      0 14px 30px color-mix(in oklab, #000000 18%, transparent);
+      inset 0 0 42px color-mix(in oklab, var(--afe-speck) 8%, transparent),
+      0 10px 22px color-mix(in oklab, #000000 14%, transparent);
   }
 
   :global(:root[data-kefine-theme='dark']) lef-afe-flow::before {
@@ -1803,8 +1805,8 @@
 
   :global(:root[data-kefine-theme='dark']) lef-afe-flow::after {
     box-shadow:
-      inset 0 0 36px color-mix(in oklab, #3d2a19 16%, transparent),
-      inset 0 0 90px color-mix(in oklab, #24180f 12%, transparent);
+      inset 0 0 18px color-mix(in oklab, #3d2a19 12%, transparent),
+      inset 0 0 38px color-mix(in oklab, #24180f 9%, transparent);
   }
 
   :global(:root[data-kefine-theme='dark']) lef-afe-node-round,

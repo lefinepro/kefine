@@ -1,5 +1,6 @@
 require "db"
 require "file_utils"
+require "http/client"
 require "json"
 require "log"
 require "pg"
@@ -13,8 +14,38 @@ module Crater
   module RepositoryStore
     DEFAULT_BRANCH = "main"
     AD_HOC_ORDER_PREFIX = "__repo__:"
+    EXCHANGE_FEED_ACTOR = "feed@exchange.lefine.pro"
     ISSUE_ARTIFACT_EXTENSIONS = {".patch", ".diff", ".org"}
     ISSUE_ARTIFACT_MEDIA_TYPES = {"application/x-git-patch", "text/x-diff", "text/org", "application/org"}
+
+    struct GitAclRule
+      include JSON::Serializable
+
+      property id : String
+      @[JSON::Field(key: "branchPattern")]
+      property branch_pattern : String
+      @[JSON::Field(key: "allowedGroups")]
+      property allowed_groups : Array(String)
+
+      def initialize(@id : String, @branch_pattern : String, @allowed_groups : Array(String))
+      end
+    end
+
+    struct GitSettings
+      include JSON::Serializable
+
+      @[JSON::Field(key: "exchangeRunDefault")]
+      property exchange_run_default : Bool
+      @[JSON::Field(key: "exchangeActor")]
+      property exchange_actor : String
+      @[JSON::Field(key: "agentSourceUrl")]
+      property agent_source_url : String
+      @[JSON::Field(key: "aclRules")]
+      property acl_rules : Array(GitAclRule)
+
+      def initialize(@exchange_run_default : Bool, @exchange_actor : String, @agent_source_url : String, @acl_rules : Array(GitAclRule))
+      end
+    end
 
     class RepositoryRecord
       property id : String
@@ -92,6 +123,26 @@ module Crater
         db.exec "CREATE INDEX IF NOT EXISTS idx_repositories_order_id ON repositories(order_id)"
         db.exec "CREATE INDEX IF NOT EXISTS idx_repositories_slug ON repositories(slug)"
         db.exec "CREATE INDEX IF NOT EXISTS idx_repositories_project_id ON repositories(project_id)"
+
+        db.exec <<-SQL
+          CREATE TABLE IF NOT EXISTS repository_git_settings (
+            repository_id TEXT PRIMARY KEY,
+            settings_json TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+          )
+        SQL
+
+        db.exec <<-SQL
+          CREATE TABLE IF NOT EXISTS repository_exchange_tasks (
+            repository_id TEXT NOT NULL,
+            branch_name TEXT NOT NULL,
+            order_id TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            PRIMARY KEY (repository_id, branch_name)
+          )
+        SQL
 
         @@ready = true
       end
@@ -215,6 +266,72 @@ module Crater
       segments.join("/")
     end
 
+    private def self.exchange_actor_handle(config : Utils::Config) : String
+      exchange_host = URI.parse(config.exchange_url).host
+      return EXCHANGE_FEED_ACTOR unless exchange_host
+
+      "feed@#{exchange_host}"
+    rescue
+      EXCHANGE_FEED_ACTOR
+    end
+
+    private def self.agent_source_url(config : Utils::Config) : String
+      "#{config.exchange_url}/subscribers"
+    end
+
+    private def self.default_git_settings(config : Utils::Config) : GitSettings
+      GitSettings.new(
+        exchange_run_default: true,
+        exchange_actor: exchange_actor_handle(config),
+        agent_source_url: agent_source_url(config),
+        acl_rules: [
+          GitAclRule.new(id: "main-admin", branch_pattern: DEFAULT_BRANCH, allowed_groups: ["admin"]),
+          GitAclRule.new(id: "all-exchange", branch_pattern: "*", allowed_groups: ["exchange"])
+        ]
+      )
+    end
+
+    private def self.normalize_group(value : String) : String?
+      normalized = value.strip.downcase.gsub(/[^a-z0-9._-]+/, "-")
+      {"admin", "exchange", "agents", "authenticated"}.includes?(normalized) ? normalized : nil
+    end
+
+    private def self.normalize_branch_pattern(value : String?) : String
+      candidate = value.to_s.strip
+      candidate.empty? ? "*" : candidate
+    end
+
+    private def self.normalize_git_settings(value : GitSettings?, config : Utils::Config) : GitSettings
+      defaults = default_git_settings(config)
+      return defaults unless value
+
+      rules = value.acl_rules.compact_map do |rule|
+        branch_pattern = normalize_branch_pattern(rule.branch_pattern)
+        groups = rule.allowed_groups.compact_map { |group| normalize_group(group) }.uniq
+        next nil if groups.empty?
+        rule_id = presence(rule.id) || UUID.random.to_s
+
+        GitAclRule.new(
+          id: rule_id,
+          branch_pattern: branch_pattern,
+          allowed_groups: groups
+        )
+      end
+
+      rules = defaults.acl_rules if rules.empty?
+
+      GitSettings.new(
+        exchange_run_default: value.exchange_run_default,
+        exchange_actor: exchange_actor_handle(config),
+        agent_source_url: agent_source_url(config),
+        acl_rules: rules
+      )
+    end
+
+    private def self.settings_json_payload(settings : GitSettings) : JSON::Any
+      JSON.parse(settings.to_json)
+    end
+
     private def self.project_public_clone_url(record : RepositoryRecord, config : Utils::Config) : String?
       return nil unless record.visibility == "public"
 
@@ -260,11 +377,66 @@ module Crater
       raise "git #{args.join(' ')} failed: #{presence(error.to_s.strip) || presence(output.to_s.strip) || status.exit_code}"
     end
 
+    private def self.glob_match?(pattern : String, value : String) : Bool
+      regex = Regex.new("\\A" + Regex.escape(pattern).gsub("\\*", ".*") + "\\z")
+      !!regex.match(value)
+    end
+
+    private def self.receive_hook_script(stage : String, repository_id : String) : String
+      [
+        "#!/bin/sh",
+        %(exec /app/bin/crater git-receive-hook --stage #{stage} --repo-id #{repository_id})
+      ].join('\n') + '\n'
+    end
+
+    private def self.install_receive_hooks(record : RepositoryRecord) : Nil
+      hooks_path = File.join(record.repo_path, "hooks")
+      FileUtils.mkdir_p(hooks_path)
+
+      {"pre-receive", "post-receive"}.each do |stage|
+        hook_path = File.join(hooks_path, stage)
+        File.write(hook_path, receive_hook_script(stage, record.id))
+        File.chmod(hook_path, 0o755)
+      end
+    end
+
+    private def self.fetch_agent_handles(config : Utils::Config) : Array(String)
+      urls = [
+        agent_source_url(config),
+        "#{config.exchange_url}/followers",
+      ]
+
+      urls.each do |url|
+        begin
+          response = HTTP::Client.get(url, headers: HTTP::Headers{"Accept" => "application/json"}, tls: url.starts_with?("https://"))
+          next unless response.status_code == 200
+
+          items = JSON.parse(response.body).as_h?.try { |doc| doc["orderedItems"]? || doc["items"]? || doc["followers"]? } || next
+          values = items.as_a?.try do |array|
+            array.compact_map do |item|
+              if raw = item.as_s?
+                normalize_handle(raw.split('/').last? || raw.split('@').reject(&.empty?).last? || raw)
+              elsif object = item.as_h?
+                normalize_handle(object["preferredUsername"]?.try(&.as_s?) || object["handle"]?.try(&.as_s?) || object["id"]?.try(&.as_s?))
+              end
+            end
+          end || [] of String
+
+          normalized = values.reject(&.empty?).uniq
+          return normalized unless normalized.empty?
+        rescue
+        end
+      end
+
+      [] of String
+    end
+
     private def self.init_empty_bare_repository(record : RepositoryRecord) : Nil
       FileUtils.rm_rf(record.repo_path)
       FileUtils.mkdir_p(File.dirname(record.repo_path))
       run_git!(["init", "--bare", "--initial-branch=#{record.default_branch}", record.repo_path])
       run_git!(["--git-dir", record.repo_path, "update-server-info"])
+      install_receive_hooks(record)
     end
 
     private def self.meta_issue_readme_content : String
@@ -414,6 +586,7 @@ module Crater
       run_git!(["remote", "add", "origin", record.repo_path], chdir: worktree_path)
       run_git!(["push", "origin", record.default_branch], chdir: worktree_path)
       run_git!(["--git-dir", record.repo_path, "update-server-info"])
+      install_receive_hooks(record)
     ensure
       if path = worktree_path
         FileUtils.rm_rf(path) unless path.empty?
@@ -486,6 +659,82 @@ module Crater
       row ? hydrate_record(row) : nil
     end
 
+    def self.find_by_id(id : String, config : Utils::Config = Utils::Config.load) : RepositoryRecord?
+      setup(config)
+      row = database(config).query_one?(
+        "SELECT id, project_id, order_id, slug, name, visibility, default_branch, server_uuid, public_clone_url, ssh_clone_url, repo_path, created_at, updated_at FROM repositories WHERE id = $1",
+        id,
+        as: {String, String, String, String, String, String, String, String, String?, String?, String, String, String}
+      )
+      row ? hydrate_record(row) : nil
+    end
+
+    def self.git_settings(record : RepositoryRecord, config : Utils::Config = Utils::Config.load) : GitSettings
+      setup(config)
+      row = database(config).query_one?(
+        "SELECT settings_json FROM repository_git_settings WHERE repository_id = $1",
+        record.id,
+        as: String
+      )
+      return default_git_settings(config) unless row
+
+      normalize_git_settings(GitSettings.from_json(row), config)
+    rescue ex
+      default_git_settings(config)
+    end
+
+    def self.update_git_settings(record : RepositoryRecord, settings : GitSettings, config : Utils::Config = Utils::Config.load) : GitSettings
+      setup(config)
+      normalized = normalize_git_settings(settings, config)
+      now = current_time
+      database(config).exec(
+        <<-SQL,
+          INSERT INTO repository_git_settings (repository_id, settings_json, created_at, updated_at)
+          VALUES ($1, $2, $3, $4)
+          ON CONFLICT (repository_id) DO UPDATE SET
+            settings_json = EXCLUDED.settings_json,
+            updated_at = EXCLUDED.updated_at
+        SQL
+        record.id,
+        normalized.to_json,
+        now,
+        now
+      )
+      install_receive_hooks(record)
+      normalized
+    end
+
+    def self.allowed_push?(record : RepositoryRecord, branch_name : String, actor_handle : String, config : Utils::Config = Utils::Config.load) : Bool
+      return true if record.visibility == "public"
+
+      owner = owner_handle_for(record, config)
+      settings = git_settings(record, config)
+      actor = normalize_handle(actor_handle)
+      groups = ["authenticated"] of String
+      groups << "admin" if actor == owner
+      groups << "exchange" if actor == normalize_handle(settings.exchange_actor)
+      groups << "agents" if fetch_agent_handles(config).includes?(actor)
+
+      rule = settings.acl_rules.find { |candidate| glob_match?(candidate.branch_pattern, branch_name) }
+      return false unless rule
+
+      !(rule.allowed_groups & groups).empty?
+    end
+
+    def self.resolve_exchange_run(record : RepositoryRecord, push_option_override : Bool?, config : Utils::Config = Utils::Config.load) : Bool
+      return push_option_override unless push_option_override.nil?
+
+      git_settings(record, config).exchange_run_default
+    end
+
+    def self.agent_handles(config : Utils::Config = Utils::Config.load) : Array(String)
+      fetch_agent_handles(config)
+    end
+
+    def self.prepare_git_transport(record : RepositoryRecord) : Nil
+      install_receive_hooks(record)
+    end
+
     def self.find_by_owner_and_project_clone_name(owner_handle : String, clone_name : String, config : Utils::Config = Utils::Config.load) : RepositoryRecord?
       normalized_owner = normalize_handle(owner_handle)
       normalized_clone_name = clone_name.sub(/\.git\z/, "")
@@ -504,7 +753,10 @@ module Crater
       normalized_owner = normalize_handle(owner_handle)
       normalized_clone_name = normalize_clone_name(clone_name)
       existing = find_by_owner_and_project_clone_name(normalized_owner, normalized_clone_name, config)
-      return existing if existing
+      if existing
+        install_receive_hooks(existing)
+        return existing
+      end
 
       now = current_time
       tail = normalized_clone_name.split('/').last
@@ -553,6 +805,7 @@ module Crater
           existing.updated_at = current_time
           persist(existing, config)
         end
+        install_receive_hooks(existing)
         seed_repository(existing, order, config)
         return existing
       end
@@ -581,11 +834,88 @@ module Crater
       record
     end
 
+    def self.sync_exchange_issue_for_push(
+      record : RepositoryRecord,
+      branch_name : String,
+      actor_handle : String,
+      old_revision : String,
+      new_revision : String,
+      config : Utils::Config = Utils::Config.load
+    ) : String
+      setup(config)
+      now = current_time
+      owner_handle = owner_handle_for(record, config)
+      title = "#{record.name}: #{branch_name}"
+      body = [
+        "Repository push received.",
+        "",
+        "- Repository: @#{owner_handle}/#{record.project_id}.git",
+        "- Branch: #{branch_name}",
+        "- Actor: @#{normalize_handle(actor_handle)}",
+        "- From: #{old_revision}",
+        "- To: #{new_revision}",
+        "- Clone: #{project_ssh_clone_url(record, config)}"
+      ].join('\n')
+
+      existing_order_id = database(config).query_one?(
+        "SELECT order_id FROM repository_exchange_tasks WHERE repository_id = $1 AND branch_name = $2",
+        record.id,
+        branch_name,
+        as: String
+      )
+
+      if existing_order_id && OrderQueue.find_order(existing_order_id, config)
+        document = JSON.parse({"format" => "markdown", "content" => body}.to_json)
+        OrderQueue.update_document(existing_order_id, document, config)
+        database(config).exec(
+          "UPDATE repository_exchange_tasks SET updated_at = $3 WHERE repository_id = $1 AND branch_name = $2",
+          record.id,
+          branch_name,
+          now
+        )
+        return existing_order_id
+      end
+
+      payload = JSON.parse(
+        {
+          "title" => title,
+          "description" => body,
+          "labels" => ["git", "exchange-auto-run", "repo:#{record.slug}", "branch:#{branch_name}"],
+          "ownerUsername" => owner_handle,
+          "ownerDisplayName" => owner_handle,
+          "actorHandle" => normalize_handle(actor_handle),
+          "vcsEnabled" => false,
+          "document" => {
+            "format" => "markdown",
+            "content" => body
+          }
+        }.to_json
+      )
+
+      order = OrderQueue.submit_rest(payload, config)
+      database(config).exec(
+        <<-SQL,
+          INSERT INTO repository_exchange_tasks (repository_id, branch_name, order_id, created_at, updated_at)
+          VALUES ($1, $2, $3, $4, $5)
+          ON CONFLICT (repository_id, branch_name) DO UPDATE SET
+            order_id = EXCLUDED.order_id,
+            updated_at = EXCLUDED.updated_at
+        SQL
+        record.id,
+        branch_name,
+        order.id,
+        now,
+        now
+      )
+      order.id
+    end
+
     def self.to_json_payload(record : RepositoryRecord) : Hash(String, JSON::Any)
       config = Utils::Config.load
       owner_handle = owner_handle_for(record, config)
       project_public_url = project_public_clone_url(record, config)
       project_ssh_url = project_ssh_clone_url(record, config)
+      settings = git_settings(record, config)
       {
         "id" => JSON::Any.new(record.id),
         "projectId" => JSON::Any.new(record.project_id),
@@ -602,6 +932,7 @@ module Crater
         "projectPublicCloneUrl" => JSON::Any.new(project_public_url || ""),
         "projectSshCloneUrl" => JSON::Any.new(project_ssh_url),
         "projectArchiveUrl" => JSON::Any.new(project_archive_url(record, config)),
+        "gitSettings" => settings_json_payload(settings),
         "repositoryUrl" => JSON::Any.new("#{config.crater_url}/repositories/#{record.slug}"),
         "projectUrl" => JSON::Any.new("#{config.crater_url}/projects/#{record.project_id}"),
         "createdAt" => JSON::Any.new(record.created_at),
