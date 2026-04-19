@@ -34,7 +34,7 @@ services:
       - ./crater/shard.lock:/app/shard.lock:ro
       - ./kefine.config.json:/app/kefine.config.json:ro
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3001/health >/dev/null"]
+      test: ["CMD-SHELL", "bash -lc 'exec 3<>/dev/tcp/127.0.0.1/3001 && printf \"GET /health HTTP/1.1\\r\\nHost: 127.0.0.1\\r\\nConnection: close\\r\\n\\r\\n\" >&3 && grep -q \"200 OK\" <&3'"]
       interval: 5s
       timeout: 3s
       retries: 20

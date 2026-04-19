@@ -837,7 +837,7 @@
     anchor-name: --kefine-auth-anchor;
     width: auto;
     min-width: 0;
-    max-width: min(calc(16ch + 1.6rem), calc(100vw - 5rem));
+    max-width: min(calc(16ch + 2rem), calc(100vw - 2rem));
     min-height: 2.5rem;
     padding: 0.42rem 0.8rem;
     border: var(--kef-border-width-soft) solid color-mix(in oklab, var(--kef-border) 72%, transparent);
@@ -968,8 +968,8 @@
   }
 
   button[data-part='auth'][data-authenticated='true'] {
-    flex-basis: min(calc(16ch + 1.6rem), calc(100vw - 5rem));
-    width: min(calc(16ch + 1.6rem), calc(100vw - 5rem));
+    flex-basis: min(calc(16ch + 2rem), calc(100vw - 2rem));
+    width: min(calc(16ch + 2rem), calc(100vw - 2rem));
   }
 
   @keyframes kefine-auth-spin {
