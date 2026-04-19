@@ -225,6 +225,7 @@ module Crater
     end
 
     private def self.resolve_visibility(order : OrderQueue::OrderRecord) : String
+      return "public" if order.is_public_task
       return "public" if order.labels.any? { |label| normalized = label.strip.downcase; normalized == "public" || normalized == "repo-public" }
 
       "private"
@@ -800,8 +801,22 @@ module Crater
     def self.ensure_for_order(order : OrderQueue::OrderRecord, config : Utils::Config = Utils::Config.load) : RepositoryRecord
       existing = find_by_order(order.id, config)
       if existing
+        visibility = resolve_visibility(order)
+        changed = false
         if existing.project_id != order.id
           existing.project_id = order.id
+          changed = true
+        end
+        if existing.name != order.title
+          existing.name = order.title
+          changed = true
+        end
+        if existing.visibility != visibility
+          existing.visibility = visibility
+          existing.public_clone_url = public_clone_url(existing.slug, visibility, config)
+          changed = true
+        end
+        if changed
           existing.updated_at = current_time
           persist(existing, config)
         end

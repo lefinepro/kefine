@@ -157,6 +157,7 @@ module Crater
           ownerDisplayName: record.owner_display_name,
           actorHandle: record.actor_handle,
           actorDid: record.actor_did,
+          isPublicTask: record.is_public_task,
           vcsEnabled: vcs_enabled,
           document: document,
           activities: activities,
@@ -196,8 +197,9 @@ module Crater
         end
 
         vcs_enabled = payload.as_h?.try(&.["vcsEnabled"]?).try(&.as_bool?)
+        is_public_task = payload.as_h?.try(&.["isPublicTask"]?).try(&.as_bool?)
         git_settings_payload = payload.as_h?.try(&.["gitSettings"]?)
-        record = OrderQueue.update_settings(order_id, vcs_enabled, config)
+        record = OrderQueue.update_settings(order_id, vcs_enabled, is_public_task, config)
         if record.nil?
           env.response.status_code = 404
           return({error: "Order not found", orderId: order_id}.to_json)

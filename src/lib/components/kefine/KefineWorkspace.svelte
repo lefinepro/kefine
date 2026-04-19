@@ -2144,13 +2144,14 @@
       }
     }
 
-    if (patch.vcsEnabled === undefined && !patch.gitSettings) {
+    if (patch.vcsEnabled === undefined && patch.isPublicTask === undefined && !patch.gitSettings) {
       return;
     }
 
     const updated = await updateWorkspaceOrderSettings({
       orderId: currentOrder.id,
       vcsEnabled: patch.vcsEnabled,
+      isPublicTask: patch.isPublicTask,
       gitSettings: patch.gitSettings,
       fetchFn: fetch,
       orderApiBaseUrl: orderApiBaseUrl(),
