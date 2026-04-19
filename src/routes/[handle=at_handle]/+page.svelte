@@ -11,7 +11,7 @@
   import { authState, clearAuthState, hydrateAuthStateFromSession } from '$lib/auth/auth-store.svelte.js';
   import { clearPasskeySession, loadPasskeySession, passkeySessionStore } from '$lib/auth/passkey-session';
   import { parseStoredOrders, type OrderView, type TaskAccessMode } from '$lib/components/kefine/kefine-workflow';
-  import { buildActorOrderPath } from '$lib/components/kefine/kefine-workspace-helpers';
+  import { buildActorOrderPath, shortenAuthLabel } from '$lib/components/kefine/kefine-workspace-helpers';
   import { resolvePublicRuntimeConfig } from '$lib/config/public-config';
   import { kefineLocale, kefineLocaleText, setKefineLocale, type KefineLocale } from '$lib/constants/kefine-locale';
   import {
@@ -688,7 +688,7 @@
       themeDarkLabel={localeText.topbar.theme.dark}
       signInLabel={localeText.topbar.signIn}
       signedInLabel={localeText.topbar.signedIn}
-      authenticatedLabel={viewerProfile ? `@${viewerProfile.primaryHandle}` : null}
+      authenticatedLabel={viewerProfile ? shortenAuthLabel(`@${viewerProfile.primaryHandle}`) : null}
       authenticatedSecondaryLabel={null}
       authenticatedAvatarUrl={null}
       authMenuLabel={localeText.profile.title}

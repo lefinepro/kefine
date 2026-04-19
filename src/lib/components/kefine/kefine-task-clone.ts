@@ -22,24 +22,15 @@ export type TaskRepositoryArchiveTargets = {
 
 export function getTaskRepositoryArchiveTargets(order: OrderView): TaskRepositoryArchiveTargets | null {
   const repository = getTaskRepository(order);
-  const zipUrl = repository?.projectArchiveUrl?.trim() || null;
-  if (!zipUrl) {
+  const archiveUrl = repository?.projectArchiveUrl?.trim() || null;
+  if (!archiveUrl) {
     return null;
   }
 
-  if (zipUrl.endsWith('.zip')) {
-    const base = zipUrl.slice(0, -4);
-    return {
-      zip: zipUrl,
-      tarGz: `${base}.tar.gz`,
-      tarZst: `${base}.tar.zst`
-    };
-  }
-
   return {
-    zip: zipUrl,
-    tarGz: `${zipUrl}.tar.gz`,
-    tarZst: `${zipUrl}.tar.zst`
+    zip: replaceArchiveExtension(archiveUrl, 'zip'),
+    tarGz: replaceArchiveExtension(archiveUrl, 'tar.gz'),
+    tarZst: replaceArchiveExtension(archiveUrl, 'tar.zst')
   };
 }
 
@@ -60,6 +51,23 @@ type TaskClonePackage = {
 
 function normalizeLine(value: string | undefined): string {
   return value?.trim() || '-';
+}
+
+function replaceArchiveExtension(url: string, nextExtension: 'zip' | 'tar.gz' | 'tar.zst'): string {
+  const normalized = url.trim().toLowerCase();
+  if (normalized.endsWith('.tar.zst')) {
+    return `${url.trim().slice(0, -'.tar.zst'.length)}.${nextExtension}`;
+  }
+
+  if (normalized.endsWith('.tar.gz')) {
+    return `${url.trim().slice(0, -'.tar.gz'.length)}.${nextExtension}`;
+  }
+
+  if (normalized.endsWith('.zip')) {
+    return `${url.trim().slice(0, -'.zip'.length)}.${nextExtension}`;
+  }
+
+  return `${url.trim()}.${nextExtension}`;
 }
 
 function slugifyFilename(value: string): string {

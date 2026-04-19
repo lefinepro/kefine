@@ -9,6 +9,7 @@
   import { clearPasskeySession, loadPasskeySession, passkeySessionStore } from '$lib/auth/passkey-session';
   import { disconnectAppKit } from '$lib/auth/appkit';
   import KefineTopbar from '$lib/components/kefine/KefineTopbar.svelte';
+  import { shortenAuthLabel } from '$lib/components/kefine/kefine-workspace-helpers';
   import { resolvePublicRuntimeConfig, setBrowserPublicRuntimeConfig } from '$lib/config/public-config';
   import { kefineLocale, kefineLocaleText, setKefineLocale, type KefineLocale } from '$lib/constants/kefine-locale';
   import { buildLocaleHomePath, localizeAppPath, readLocaleFromPathname } from '$lib/routing/kefine-locale-routing';
@@ -20,8 +21,10 @@
     '/',
     '/task/[id]',
     '/order/[id]',
+    '/[actor=actor_handle]/order/[id]',
     '/[actor=actor_handle]/orders/[id]',
-    '/[handle=at_handle]'
+    '/[handle=at_handle]',
+    '/[handle=at_handle]/[shareId]'
   ]);
 
 	interface Props {
@@ -85,7 +88,7 @@
     }
   ]);
   const isAuthenticated = $derived(Boolean(passkeySession?.userId || authState.isConnected));
-  const authenticatedLabel = $derived(authState.displayName || authState.email || authState.address || null);
+  const authenticatedLabel = $derived(shortenAuthLabel(authState.displayName || authState.email || authState.address || null));
 
   let topbarExpanded = $state(false);
   let themeMode = $state<'light' | 'dark' | 'auto'>('auto');

@@ -63,6 +63,7 @@
     normalizeDraftOrder,
     resolveOrderIdCandidates,
     resolveOrderIdFromRouteValue,
+    shortenAuthLabel,
     resolveWalletNetworkLabel,
     readTaskRouteStateFromLocation
   } from '$lib/components/kefine/kefine-workspace-helpers';
@@ -356,22 +357,22 @@
   });
   const authenticatedLabel = $derived.by(() => {
     if (currentProfile?.primaryHandle) {
-      return `@${currentProfile.primaryHandle}`;
+      return shortenAuthLabel(`@${currentProfile.primaryHandle}`);
     }
 
     if (selectedAuthMethod === 'passkey' && normalizedPasskeyLabel) {
-      return normalizedPasskeyLabel;
+      return shortenAuthLabel(normalizedPasskeyLabel);
     }
 
     if (selectedAuthMethod === 'wallet' && normalizedWalletLabel) {
-      return normalizedWalletLabel;
+      return shortenAuthLabel(normalizedWalletLabel);
     }
 
     if (selectedAuthMethod === 'publickey' && normalizedPrivateKeyLabel) {
-      return normalizedPrivateKeyLabel;
+      return shortenAuthLabel(normalizedPrivateKeyLabel);
     }
 
-    return normalizedPrivateKeyLabel ?? normalizedPasskeyLabel ?? normalizedWalletLabel;
+    return shortenAuthLabel(normalizedPrivateKeyLabel ?? normalizedPasskeyLabel ?? normalizedWalletLabel);
   });
   const profileNeedsSetup = $derived(currentProfile?.metadata?.['profileSetupCompleted'] !== true);
   const ORDER_PAGE_SIZE = 12;
@@ -721,7 +722,7 @@
     void checkCraterHealth();
     hydrateAuthStateFromSession();
     loadPasskeySession();
-    loadCreatedOrders();
+    const loadedOrders = loadCreatedOrders();
     isSpecialRuntime = isSpecialRuntimeOrigin(window.location.origin);
     void ensureTemporaryOrderProfile({ createIfMissing: false });
 
@@ -755,7 +756,41 @@
     const routeOrderId = routeState?.orderId || getNormalizedInitialOrderId();
     if (routeOrderId) {
       isHydratingRoute = true;
-      void openOrderById(routeOrderId, routeState?.view ?? null);
+      const localRouteOrder = findLocalOrderByRouteValue(routeOrderId, loadedOrders);
+      if (localRouteOrder) {
+        showOrderFlow(localRouteOrder, routeState?.view ?? null);
+        void (async () => {
+          try {
+            if (localRouteOrder.status === 'completed') {
+              return;
+            }
+
+            const updated = await requestOrderFromStatus(localRouteOrder.id, {
+              title: localRouteOrder.title,
+              description: localRouteOrder.description,
+              currency: localRouteOrder.currency,
+              createdAt: localRouteOrder.createdAt
+            });
+
+            if (updated) {
+              const nextOrderWithActor = applyActorIdentityFallback(
+                {
+                  ...localRouteOrder,
+                  ...updated,
+                  id: localRouteOrder.id
+                },
+                localRouteOrder
+              );
+              currentOrder = nextOrderWithActor;
+              upsertOrder(nextOrderWithActor);
+            }
+          } finally {
+            isHydratingRoute = false;
+          }
+        })();
+      } else {
+        void openOrderById(routeOrderId, routeState?.view ?? null, loadedOrders);
+      }
     } else {
       restoreCloneDraftPrefill();
     }
@@ -1214,7 +1249,7 @@
     void goto(buildLocaleHomePath(locale));
   }
 
-  function loadCreatedOrders() {
+  function loadCreatedOrders(): OrderView[] {
     const loadedState = loadWorkspaceOrders({
       storage: localStorage,
       storageKey: ORDER_STORAGE_KEY,
@@ -1223,6 +1258,7 @@
     });
     createdOrders = loadedState.orders;
     visibleOrdersLimit = loadedState.visibleLimit;
+    return loadedState.orders;
   }
 
   function persistOrders() {
@@ -1299,13 +1335,30 @@
     step = 'executing';
   }
 
-  async function openOrderById(orderId: string, preferredView: 'result' | 'stages' | null = null) {
+  function findLocalOrderByRouteValue(orderId: string, knownOrders: OrderView[]): OrderView | null {
+    if (!orderId) {
+      return null;
+    }
+
+    const normalizedOrderId = orderId.trim();
+    const resolvedOrderId = resolveOrderIdFromRouteValue(normalizedOrderId, knownOrders);
+
+    return (
+      knownOrders.find(
+        (item) =>
+          item.id === resolvedOrderId ||
+          item.shareId?.trim() === normalizedOrderId ||
+          item.id.endsWith(`/${normalizedOrderId}`)
+      ) ?? null
+    );
+  }
+
+  async function openOrderById(orderId: string, preferredView: 'result' | 'stages' | null = null, knownOrders: OrderView[] = createdOrders) {
     if (!orderId) return;
-    const resolvedOrderId = resolveOrderIdFromRouteValue(orderId, createdOrders);
-    const candidateOrderIds = resolveOrderIdCandidates(orderId, createdOrders);
+    const candidateOrderIds = resolveOrderIdCandidates(orderId, knownOrders);
 
     try {
-      const local = createdOrders.find((item) => item.id === resolvedOrderId || item.id.endsWith(`/${orderId}`));
+      const local = findLocalOrderByRouteValue(orderId, knownOrders);
       if (local) {
         showOrderFlow(local, preferredView);
 
@@ -1319,11 +1372,11 @@
 
           if (updated) {
             const nextOrder = {
-              ...(currentOrder ?? local),
+              ...local,
               ...updated,
-              id: (currentOrder ?? local).id
+              id: local.id
             };
-            const nextOrderWithActor = applyActorIdentityFallback(nextOrder, currentOrder ?? local);
+            const nextOrderWithActor = applyActorIdentityFallback(nextOrder, local);
             currentOrder = nextOrderWithActor;
             upsertOrder(nextOrderWithActor);
           }
@@ -2056,7 +2109,7 @@
 
   function updateProfileTask(
     orderId: string,
-    patch: Partial<Pick<OrderView, 'shareId' | 'isPublicTask' | 'accessRules' | 'vcsEnabled' | 'repository' | 'projectId'>>
+    patch: Partial<Pick<OrderView, 'title' | 'description' | 'shareId' | 'isPublicTask' | 'accessRules' | 'vcsEnabled' | 'repository' | 'projectId'>>
   ) {
     createdOrders = createdOrders.map((order) => (order.id === orderId ? { ...order, ...patch } : order));
     if (currentOrder?.id === orderId) {
@@ -2066,13 +2119,30 @@
   }
 
   async function handleUpdateTaskSettings(
-    patch: Partial<Pick<OrderView, 'shareId' | 'isPublicTask' | 'vcsEnabled' | 'repository'>> & { gitSettings?: import('./kefine-workflow').RepositoryGitSettings }
+    patch: Partial<Pick<OrderView, 'title' | 'description' | 'taskIcon' | 'shareId' | 'isPublicTask' | 'vcsEnabled' | 'repository'>> & {
+      gitSettings?: import('./kefine-workflow').RepositoryGitSettings;
+    }
   ) {
     if (!currentOrder) {
       return;
     }
 
     updateProfileTask(currentOrder.id, patch);
+
+    if (browser && patch.shareId !== undefined) {
+      const nextShareId = patch.shareId?.trim() || currentOrder.id;
+      const actorHandle = currentOrder.actorHandle?.trim() || getRouteActorHandleFallback();
+
+      if (actorHandle && nextShareId) {
+        const nextUrl = new URL(window.location.href);
+        nextUrl.pathname = localizeAppPath(buildActorOrderPath(actorHandle, nextShareId), activeLocale);
+        nextUrl.search = '';
+
+        if (window.location.href !== nextUrl.toString()) {
+          replaceState(nextUrl, page.state);
+        }
+      }
+    }
 
     if (patch.vcsEnabled === undefined && !patch.gitSettings) {
       return;

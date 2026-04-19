@@ -5,14 +5,17 @@
   import KefineRichTaskEditorDialog from '$lib/components/kefine/KefineRichTaskEditorDialog.svelte';
   import {
     appendTaskNodeComment,
+    appendTaskNodeCommentWithMetadata,
     appendTaskNodeInsert,
     buildQueuedTaskRoot,
     buildTaskThreadNodes,
+    resolveTaskNodeComment,
     replaceTaskNodeComment,
     type TaskThreadNode
   } from '$lib/components/kefine/kefine-task-feed';
   import type { OrderView } from '$lib/components/kefine/kefine-workflow';
   import type { TaskCloneFormat } from '$lib/components/kefine/kefine-task-clone';
+  import type { EditorDraftState, EditorMentionCandidate } from '$lib/components/kefine/KefineRichTaskEditorDialog.svelte';
 
   let {
     currentOrder,
@@ -45,14 +48,18 @@
     onSaveDocument?: ((content: string) => Promise<void> | void) | null;
     onExportClone?: ((format: TaskCloneFormat) => void) | null;
     onSaveCloneLocally?: ((runLocally: boolean) => void) | null;
-    onUpdateTaskSettings?: ((patch: Partial<Pick<OrderView, 'shareId' | 'isPublicTask' | 'vcsEnabled' | 'repository'>> & { gitSettings?: import('./kefine-workflow').RepositoryGitSettings }) => void | Promise<void>) | null;
+    onUpdateTaskSettings?: ((patch: Partial<Pick<OrderView, 'title' | 'description' | 'taskIcon' | 'shareId' | 'isPublicTask' | 'vcsEnabled' | 'repository'>> & {
+      gitSettings?: import('./kefine-workflow').RepositoryGitSettings;
+    }) => void | Promise<void>) | null;
     onPauseSearch?: (() => void | Promise<void>) | null;
     onResumeSearch?: (() => void | Promise<void>) | null;
   } = $props();
 
   let commentDrafts = $state<Record<string, string>>({});
+  let commentMentionDrafts = $state<Record<string, EditorDraftState['mentions']>>({});
   let openCommentComposerId = $state<string | null>(null);
-  let commentMetaActionByNodeId = $state<Record<string, 'comment' | 'file' | 'tag' | 'vcs' | 'insert-menu' | 'insert' | 'branch'>>({});
+  let commentMetaActionByNodeId = $state<Record<string, 'comment' | 'file' | 'tag' | 'vcs' | 'insert' | 'branch'>>({});
+  let systemInstructionEnabledByNodeId = $state<Record<string, boolean>>({});
   let hoveredRailNodeId = $state<string | null>(null);
 
   const nextOrders = $derived.by(() =>
@@ -60,9 +67,50 @@
   );
   const currentThread = $derived(buildTaskThreadNodes(currentOrder));
   const taskMonogram = $derived.by(() => {
+    const icon = currentOrder?.taskIcon?.trim();
+    if (icon) {
+      return icon;
+    }
     const source = currentOrder?.title?.trim() || labels.boardTitle.trim();
     const match = source.match(/[A-Za-zА-Яа-яԱ-Ֆա-ֆ0-9]/u);
     return (match?.[0] ?? source.charAt(0) ?? 'T').toUpperCase();
+  });
+  const mentionCandidates = $derived.by<EditorMentionCandidate[]>(() => {
+    const nextCandidates: EditorMentionCandidate[] = [];
+    const exchangeHandle =
+      currentOrder?.repository?.gitSettings?.exchangeActor?.trim() ||
+      currentOrder?.actorHandle?.trim() ||
+      currentOrder?.ownerUsername?.trim() ||
+      '';
+
+    if (exchangeHandle) {
+      nextCandidates.push({
+        id: `actor:${exchangeHandle.replace(/^@+/, '')}`,
+        label: exchangeHandle.startsWith('@') ? exchangeHandle : `@${exchangeHandle}`,
+        value: '@workspace',
+        kind: 'actor',
+        targetKind: 'actor'
+      });
+    }
+
+    const solverLabel =
+      currentOrder?.solverHandle?.trim() ||
+      currentOrder?.executors?.[0]?.handle?.trim() ||
+      currentOrder?.solverName?.trim() ||
+      currentOrder?.executors?.[0]?.name?.trim() ||
+      '';
+
+    if (solverLabel) {
+      nextCandidates.push({
+        id: `solver:${solverLabel.replace(/^@+/, '')}`,
+        label: solverLabel.startsWith('@') ? solverLabel : solverLabel,
+        value: '@solver',
+        kind: 'solver',
+        targetKind: 'solver'
+      });
+    }
+
+    return nextCandidates;
   });
 
   function nodeTone(node: TaskThreadNode): string {
@@ -80,7 +128,7 @@
     };
   }
 
-  function openCommentComposerWithAction(nodeId: string, action: 'comment' | 'file' | 'tag' | 'vcs' | 'insert-menu' | 'insert' | 'branch'): void {
+  function openCommentComposerWithAction(nodeId: string, action: 'comment' | 'file' | 'tag' | 'vcs' | 'insert' | 'branch'): void {
     openCommentComposerId = nodeId;
     commentMetaActionByNodeId = {
       ...commentMetaActionByNodeId,
@@ -90,6 +138,23 @@
 
   function ensureEditableDraft(node: TaskThreadNode): void {
     if (commentDrafts[node.id] !== undefined) {
+      return;
+    }
+
+    const exchangeInstruction = currentOrder && isExchangeSearchNode(node) ? resolveTaskNodeComment(currentOrder, exchangeInstructionNodeKey(currentOrder)) : '';
+    if (exchangeInstruction) {
+      commentDrafts = {
+        ...commentDrafts,
+        [node.id]: exchangeInstruction
+      };
+      commentMentionDrafts = {
+        ...commentMentionDrafts,
+        [node.id]: []
+      };
+      systemInstructionEnabledByNodeId = {
+        ...systemInstructionEnabledByNodeId,
+        [node.id]: true
+      };
       return;
     }
 
@@ -112,17 +177,9 @@
     openCommentComposer(node.id);
   }
 
-  function openNodeCommentComposerWithAction(node: TaskThreadNode, action: 'comment' | 'file' | 'tag' | 'vcs' | 'insert-menu' | 'insert' | 'branch'): void {
+  function openNodeCommentComposerWithAction(node: TaskThreadNode, action: 'comment' | 'file' | 'tag' | 'vcs' | 'insert' | 'branch'): void {
     ensureEditableDraft(node);
     openCommentComposerWithAction(node.id, action);
-  }
-
-  async function enableVcsForCurrentOrder(): Promise<void> {
-    if (!currentOrder || !onUpdateTaskSettings || currentOrder.vcsEnabled === true || currentOrder.repository) {
-      return;
-    }
-
-    await onUpdateTaskSettings({ vcsEnabled: true });
   }
 
   function handleNodeActivate(node: TaskThreadNode, event: MouseEvent | KeyboardEvent): void {
@@ -180,12 +237,18 @@
         action === 'branch' ? `Branch: ${content}` : content
       );
       await onSaveDocument(nextContent);
+    } else if (action === 'comment' && currentOrder && isExchangeSearchNode(node) && systemInstructionEnabledByNodeId[node.id] === true && onSaveDocument) {
+      const nextContent = replaceTaskNodeComment(currentOrder, exchangeInstructionNodeKey(currentOrder), content);
+      await onSaveDocument(nextContent);
     } else if (isBackendStepNode(node) && onSubmitStepComment && node.stepId) {
       await onSubmitStepComment(node.stepId, content);
     } else if (onSaveDocument && currentOrder) {
+      const mentions = commentMentionDrafts[node.id]?.length ? commentMentionDrafts[node.id] : undefined;
       const nextContent = node.comments?.length
-        ? replaceTaskNodeComment(currentOrder, node.stepId || node.id, content)
-        : appendTaskNodeComment(currentOrder, node.stepId || node.id, content);
+        ? replaceTaskNodeComment(currentOrder, node.stepId || node.id, content, mentions)
+        : mentions?.length
+          ? appendTaskNodeCommentWithMetadata(currentOrder, node.stepId || node.id, { content, mentions })
+          : appendTaskNodeComment(currentOrder, node.stepId || node.id, content);
       await onSaveDocument(nextContent);
     } else {
       return;
@@ -194,6 +257,14 @@
     commentDrafts = {
       ...commentDrafts,
       [node.id]: ''
+    };
+    commentMentionDrafts = {
+      ...commentMentionDrafts,
+      [node.id]: []
+    };
+    systemInstructionEnabledByNodeId = {
+      ...systemInstructionEnabledByNodeId,
+      [node.id]: false
     };
     commentMetaActionByNodeId = {
       ...commentMetaActionByNodeId,
@@ -209,8 +280,27 @@
     };
   }
 
+  function updateCommentEditorState(nodeId: string, state: EditorDraftState): void {
+    updateCommentDraft(nodeId, state.value);
+    commentMentionDrafts = {
+      ...commentMentionDrafts,
+      [nodeId]: state.mentions
+    };
+  }
+
+  function toggleSystemInstruction(nodeId: string, enabled: boolean): void {
+    systemInstructionEnabledByNodeId = {
+      ...systemInstructionEnabledByNodeId,
+      [nodeId]: enabled
+    };
+  }
+
   function isExchangeSearchNode(node: TaskThreadNode): boolean {
     return Boolean(currentOrder && node.stepId === `${currentOrder.id}-exchange-search`);
+  }
+
+  function exchangeInstructionNodeKey(order: OrderView): string {
+    return `${order.id}-exchange-system-instruction`;
   }
 
   function canPauseSearch(node: TaskThreadNode): boolean {
@@ -271,20 +361,18 @@
     }
   }
 
-  function showNodeActions(node: TaskThreadNode, child: boolean): boolean {
-    return Boolean(node.commentable && !child);
+  function showNodeActions(node: TaskThreadNode): boolean {
+    return Boolean(node.commentable);
   }
 
-  function canCreateBranch(): boolean {
-    return Boolean(currentOrder?.repository || currentOrder?.vcsEnabled);
-  }
 </script>
 
-{#snippet threadNode(node: TaskThreadNode, index: number, child = false)}
+{#snippet threadNode(node: TaskThreadNode, index: number, child = false, queued = false)}
   <kefine-thread-node
     data-tone={nodeTone(node)}
     data-mode={node.mode}
     data-child={child ? 'true' : undefined}
+    data-queued={queued ? 'true' : undefined}
     data-commentable={node.commentable ? 'true' : undefined}
     data-comment-open={openCommentComposerId === node.id ? 'true' : undefined}
     style={`--node-delay:${index * 85}ms`}
@@ -300,7 +388,15 @@
         }
       }}
     >
-      <kefine-thread-dot data-hidden={showRailAction(node) ? 'true' : undefined}></kefine-thread-dot>
+      <kefine-thread-dot
+        data-action-visible={showRailAction(node) ? 'true' : undefined}
+        data-paused={child && node.state === 'upcoming' ? 'true' : undefined}
+      ></kefine-thread-dot>
+      {#if child && node.state === 'upcoming'}
+        <span data-part="rail-dot-static" aria-hidden="true">
+          <Icon icon="mdi:pause" width="14" height="14" aria-hidden="true" />
+        </span>
+      {/if}
       {#if showRailAction(node)}
         <button
           type="button"
@@ -322,6 +418,9 @@
       onkeydown={(event: KeyboardEvent) => handleNodeKeydown(node, event)}
     >
       <kefine-thread-line>
+        {#if node.branchLabel}
+          <kefine-thread-branch-badge>{node.branchLabel}</kefine-thread-branch-badge>
+        {/if}
         <kefine-thread-line-copy>
           <strong>{node.title}</strong>
           {#if node.meta}
@@ -366,15 +465,7 @@
         </kefine-thread-comments>
       {/if}
 
-      {#if node.children?.length}
-        <kefine-thread-branch>
-          {#each node.children as child, childIndex}
-            {@render threadNode(child, index + childIndex + 1, true)}
-          {/each}
-        </kefine-thread-branch>
-      {/if}
-
-      {#if showNodeActions(node, child)}
+      {#if showNodeActions(node)}
         <kefine-thread-comment-entry>
           <kefine-thread-comment-plus-menu>
             <button
@@ -388,71 +479,33 @@
             <button
               type="button"
               data-part="comment-trigger-action"
-              onclick={() => openNodeCommentComposerWithAction(node, 'file')}
+              data-kind="branch"
+              onclick={(event: MouseEvent) => {
+                event.stopPropagation();
+                openNodeCommentComposerWithAction(node, 'branch');
+              }}
             >
-              <Icon icon="mdi:paperclip" width="16" height="16" aria-hidden="true" />
-              <lefine-text>Add file</lefine-text>
+              <Icon icon="mdi:source-branch" width="16" height="16" aria-hidden="true" />
+              <lefine-text>Create branch</lefine-text>
             </button>
-            <button
-              type="button"
-              data-part="comment-trigger-action"
-              onclick={() => openNodeCommentComposerWithAction(node, 'tag')}
-            >
-              <Icon icon="mdi:tag-plus-outline" width="16" height="16" aria-hidden="true" />
-              <lefine-text>Add tag</lefine-text>
-            </button>
-            {#if currentOrder && !currentOrder.vcsEnabled && !currentOrder.repository && onUpdateTaskSettings}
-              <button
-                type="button"
-                data-part="comment-trigger-action"
-                onclick={() => void enableVcsForCurrentOrder()}
-              >
-                <Icon icon="mdi:source-repository" width="16" height="16" aria-hidden="true" />
-                <lefine-text>Create git repo</lefine-text>
-              </button>
-            {/if}
           </kefine-thread-comment-plus-menu>
 
-          {#if openCommentComposerId === node.id && commentMetaActionByNodeId[node.id] === 'insert-menu'}
+          {#if openCommentComposerId === node.id && commentMetaActionByNodeId[node.id] === 'branch'}
             <kefine-thread-side-popover>
-              <kefine-thread-side-insert data-part="insert-choice-popover">
-                <kefine-thread-insert-choice-grid>
-                  <button
-                    type="button"
-                    data-part="comment-trigger-action"
-                    onclick={() => openNodeCommentComposerWithAction(node, 'insert')}
-                  >
-                    <Icon icon="mdi:stairs" width="16" height="16" aria-hidden="true" />
-                    <lefine-text>Next step</lefine-text>
-                  </button>
-                  {#if canCreateBranch()}
-                    <button
-                      type="button"
-                      data-part="comment-trigger-action"
-                      onclick={() => openNodeCommentComposerWithAction(node, 'branch')}
-                    >
-                      <Icon icon="mdi:source-branch" width="16" height="16" aria-hidden="true" />
-                      <lefine-text>Create branch</lefine-text>
-                    </button>
-                  {/if}
-                </kefine-thread-insert-choice-grid>
-              </kefine-thread-side-insert>
-            </kefine-thread-side-popover>
-          {/if}
-
-          {#if openCommentComposerId === node.id && (commentMetaActionByNodeId[node.id] === 'insert' || commentMetaActionByNodeId[node.id] === 'branch')}
-            <kefine-thread-side-popover>
-              <kefine-thread-side-insert>
+              <kefine-thread-side-insert data-testid={`kefine-branch-editor-${node.id}`}>
                 <KefineRichTaskEditorDialog
                   open={true}
                   compact={true}
+                  singleLine={true}
                   enableMeta={false}
+                  mentionCandidates={mentionCandidates}
                   autoOpenTagEditor={false}
                   autoOpenFilePicker={false}
                   value={commentDrafts[node.id] ?? ''}
                   description={labels.richEditorDescription}
                   placeholder={commentMetaActionByNodeId[node.id] === 'branch' ? 'Branch name and parallel task' : labels.leaveComment}
                   onApply={(nextValue) => updateCommentDraft(node.id, nextValue)}
+                  onStateChange={(state) => updateCommentEditorState(node.id, state)}
                 />
                 <kefine-thread-comment-actions>
                   {#if isCommentSubmitting(node)}
@@ -470,22 +523,34 @@
             </kefine-thread-side-popover>
           {/if}
 
-          {#if openCommentComposerId === node.id && !['insert-menu', 'insert', 'branch'].includes(commentMetaActionByNodeId[node.id] ?? 'comment')}
+          {#if openCommentComposerId === node.id && !['insert', 'branch'].includes(commentMetaActionByNodeId[node.id] ?? 'comment')}
             <kefine-thread-comment-form>
               <KefineRichTaskEditorDialog
                 open={true}
                 compact={true}
                 enableMeta={false}
+                mentionCandidates={mentionCandidates}
                 autoOpenTagEditor={commentMetaActionByNodeId[node.id] === 'tag'}
                 autoOpenFilePicker={commentMetaActionByNodeId[node.id] === 'file'}
                 value={commentDrafts[node.id] ?? ''}
                 description={labels.richEditorDescription}
                 placeholder={labels.leaveComment}
                 onApply={(nextValue) => updateCommentDraft(node.id, nextValue)}
+                onStateChange={(state) => updateCommentEditorState(node.id, state)}
               />
               <kefine-thread-comment-actions>
                 {#if isCommentSubmitting(node)}
                   <lefine-text>{labels.saving}</lefine-text>
+                {/if}
+                {#if isExchangeSearchNode(node)}
+                  <label data-part="comment-system-toggle">
+                    <input
+                      type="checkbox"
+                      checked={systemInstructionEnabledByNodeId[node.id] === true}
+                      onchange={(event) => toggleSystemInstruction(node.id, (event.currentTarget as HTMLInputElement).checked)}
+                    />
+                    <lefine-text>System instruction</lefine-text>
+                  </label>
                 {/if}
                 <button
                   type="button"
@@ -499,17 +564,57 @@
           {/if}
         </kefine-thread-comment-entry>
 
-        <button
-          type="button"
-          data-part="next-step-trigger"
-          aria-label="Add step below"
-          title="Add step below"
-          onclick={() => openNodeCommentComposerWithAction(node, 'insert-menu')}
-        >
-          <Icon icon="mdi:plus" width="18" height="18" aria-hidden="true" />
-        </button>
+        <kefine-thread-next-step>
+          <button
+            type="button"
+            data-part="next-step-trigger"
+            aria-label="Add task below"
+            title="Add task below"
+            onclick={() => openNodeCommentComposerWithAction(node, 'insert')}
+          >
+            <Icon icon="mdi:plus" width="18" height="18" aria-hidden="true" />
+          </button>
+
+          {#if openCommentComposerId === node.id && commentMetaActionByNodeId[node.id] === 'insert'}
+            <kefine-thread-side-popover data-part="next-step-popover">
+              <kefine-thread-side-insert data-testid={`kefine-inline-next-step-editor-${node.id}`}>
+                <KefineRichTaskEditorDialog
+                  open={true}
+                  compact={true}
+                  singleLine={true}
+                  enableMeta={false}
+                  mentionCandidates={mentionCandidates}
+                  autoOpenTagEditor={false}
+                  autoOpenFilePicker={false}
+                  value={commentDrafts[node.id] ?? ''}
+                  description={labels.richEditorDescription}
+                  placeholder="Next task in this branch"
+                  onApply={(nextValue) => updateCommentDraft(node.id, nextValue)}
+                  onStateChange={(state) => updateCommentEditorState(node.id, state)}
+                />
+                <kefine-thread-comment-actions>
+                  <button
+                    type="button"
+                    disabled={isCommentSubmitting(node) || !(commentDrafts[node.id] ?? '').trim()}
+                    onclick={() => void submitComment(node)}
+                  >
+                    {labels.apply}
+                  </button>
+                </kefine-thread-comment-actions>
+              </kefine-thread-side-insert>
+            </kefine-thread-side-popover>
+          {/if}
+        </kefine-thread-next-step>
       {/if}
     </kefine-thread-copy>
+
+    {#if node.children?.length}
+      <kefine-thread-branch>
+        {#each node.children as child, childIndex}
+          {@render threadNode(child, index + childIndex + 1, true)}
+        {/each}
+      </kefine-thread-branch>
+    {/if}
   </kefine-thread-node>
 {/snippet}
 
@@ -523,9 +628,6 @@
       {#if commentSubmittingStepId}
         <kefine-thread-status>{labels.saving}</kefine-thread-status>
       {/if}
-      {#if currentOrder && canManageTask && onUpdateTaskSettings}
-        <KefineTaskSettingsMenu order={currentOrder} onApply={onUpdateTaskSettings} />
-      {/if}
       {#if currentOrder && onExportClone}
         <KefineTaskCloneMenu
           order={currentOrder}
@@ -533,6 +635,9 @@
           onExport={onExportClone}
           onSaveLocally={onSaveCloneLocally ?? undefined}
         />
+      {/if}
+      {#if currentOrder && onUpdateTaskSettings}
+        <KefineTaskSettingsMenu order={currentOrder} onApply={onUpdateTaskSettings} />
       {/if}
     </kefine-thread-head-actions>
   </kefine-thread-head>
@@ -543,35 +648,7 @@
     {/each}
 
     {#each nextOrders as root, rootIndex}
-      <kefine-thread-node
-        data-tone={nodeTone(root)}
-        data-mode="compact"
-        data-queued="true"
-        style={`--node-delay:${(currentThread.length + rootIndex) * 85}ms`}
-      >
-        <kefine-thread-rail aria-hidden="true">
-          <kefine-thread-dot></kefine-thread-dot>
-        </kefine-thread-rail>
-        <kefine-thread-copy>
-          <kefine-thread-line>
-            <strong>{root.title}</strong>
-            {#if root.meta}
-              <lefine-text>{root.meta}</lefine-text>
-            {/if}
-          </kefine-thread-line>
-          {#if root.detail}
-            <p>{root.detail}</p>
-          {/if}
-
-          {#if root.children?.length}
-            <kefine-thread-branch>
-              {#each root.children as child, childIndex}
-                {@render threadNode(child, currentThread.length + rootIndex + childIndex + 1, true)}
-              {/each}
-            </kefine-thread-branch>
-          {/if}
-        </kefine-thread-copy>
-      </kefine-thread-node>
+      {@render threadNode(root, currentThread.length + rootIndex, false, true)}
     {/each}
   </kefine-thread>
 </kefine-thread-stage>
@@ -595,6 +672,7 @@
     display: inline-flex;
     align-items: center;
     gap: 0.7rem;
+    flex-wrap: wrap;
     min-width: 0;
   }
 
@@ -602,6 +680,7 @@
     display: inline-flex;
     align-items: center;
     gap: 0.8rem;
+    flex-wrap: wrap;
   }
 
   kefine-thread-head strong {
@@ -646,10 +725,13 @@
   }
 
   kefine-thread-node {
+    --kef-thread-rail-width: 1.35rem;
+    --kef-thread-column-gap: 0.95rem;
     position: relative;
+    isolation: isolate;
     display: grid;
-    grid-template-columns: 1.35rem minmax(0, 1fr);
-    gap: 0.95rem;
+    grid-template-columns: var(--kef-thread-rail-width) minmax(0, 1fr);
+    gap: var(--kef-thread-column-gap);
     padding: 0 0 1.2rem;
     opacity: 0;
     transform: translateY(0.45rem);
@@ -659,6 +741,10 @@
 
   kefine-thread-node[data-child='true'] {
     padding-left: 0.35rem;
+  }
+
+  kefine-thread-node[data-comment-open='true'] {
+    z-index: 8;
   }
 
   kefine-thread-rail {
@@ -683,6 +769,9 @@
 
   kefine-thread-dot {
     position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     z-index: 1;
     width: 1rem;
     height: 1rem;
@@ -691,10 +780,6 @@
     background: radial-gradient(circle at 30% 30%, #f6e7bd, #d8b16f);
     box-shadow: 0 0 0 0.2rem color-mix(in oklab, var(--kef-bg, #f7ecd4) 92%, transparent);
     margin-top: 0.08rem;
-  }
-
-  kefine-thread-dot[data-hidden='true'] {
-    opacity: 0;
   }
 
   button[data-part='rail-dot-action'] {
@@ -731,6 +816,24 @@
     background: color-mix(in oklab, #fff7e5 82%, #d8b16f);
   }
 
+  kefine-thread-dot[data-paused='true']::after {
+    display: none;
+  }
+
+  [data-part='rail-dot-static'] {
+    position: absolute;
+    top: 0.08rem;
+    z-index: 3;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1rem;
+    min-width: 1rem;
+    min-height: 1rem;
+    color: color-mix(in oklab, #3e250d 94%, #c58b41);
+    pointer-events: none;
+  }
+
   kefine-thread-node[data-tone='completed'] kefine-thread-dot {
     border-color: color-mix(in oklab, #708f42 45%, #d8d8b4);
     background: radial-gradient(circle at 30% 30%, #edf2d8, #a9be74);
@@ -763,6 +866,11 @@
       transparent 210deg 360deg
     );
     animation: kefine-thread-dot-spin 1.1s linear infinite;
+  }
+
+  kefine-thread-node[data-tone='active'] kefine-thread-dot[data-action-visible='true']::after,
+  kefine-thread-node[data-tone='loading'] kefine-thread-dot[data-action-visible='true']::after {
+    display: none;
   }
 
   kefine-thread-copy {
@@ -802,6 +910,23 @@
     gap: 0.7rem;
   }
 
+  kefine-thread-branch-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    min-height: 1.4rem;
+    padding: 0.15rem 0.55rem;
+    border-radius: 999px;
+    border: 1px solid color-mix(in oklab, var(--kef-primary, #b97a28) 24%, transparent);
+    background: color-mix(in oklab, var(--kef-primary, #b97a28) 10%, white);
+    color: color-mix(in oklab, var(--kef-primary, #8d5e1f) 88%, #4f3d30);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
   kefine-thread-line-copy {
     display: flex;
     flex-wrap: wrap;
@@ -837,6 +962,11 @@
     gap: 0.7rem;
   }
 
+  kefine-thread-node > kefine-thread-branch {
+    grid-column: 1 / -1;
+    margin-top: 0.15rem;
+  }
+
   kefine-thread-block,
   kefine-thread-comment {
     display: grid;
@@ -868,12 +998,22 @@
 
   kefine-thread-comment-entry {
     position: relative;
+    z-index: 2;
     display: grid;
     gap: 0.6rem;
     margin-top: 0.1rem;
   }
 
+  kefine-thread-next-step {
+    position: relative;
+    display: inline-flex;
+    align-items: flex-start;
+    justify-self: start;
+  }
+
   button[data-part='next-step-trigger'] {
+    position: relative;
+    z-index: 2;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -930,50 +1070,63 @@
   }
 
   kefine-thread-comment-form {
+    position: relative;
+    z-index: 7;
     display: grid;
     gap: 0.6rem;
     padding: 0.75rem 0.85rem;
     border: 1px solid color-mix(in oklab, var(--kef-border, #e0c999) 78%, transparent);
     border-radius: 1rem;
-    background: color-mix(in oklab, var(--kef-bg-card, #f7ecd4) 94%, white 6%);
+    background: var(--kef-bg-card, #f7ecd4);
+    box-shadow: 0 1rem 2.4rem color-mix(in oklab, #000 14%, transparent);
   }
 
   kefine-thread-side-insert {
+    position: relative;
+    z-index: 7;
     display: grid;
     gap: 0.6rem;
     padding: 0.75rem 0.85rem;
     border: 1px solid color-mix(in oklab, var(--kef-border, #e0c999) 78%, transparent);
     border-radius: 1rem;
-    background: color-mix(in oklab, var(--kef-bg-card, #f7ecd4) 94%, white 6%);
+    background: var(--kef-bg-card, #f7ecd4);
+    box-shadow: 0 1rem 2.4rem color-mix(in oklab, #000 14%, transparent);
     width: min(22rem, calc(100vw - 3rem));
-  }
-
-  kefine-thread-side-insert[data-part='insert-choice-popover'] {
-    width: min(15rem, calc(100vw - 3rem));
-  }
-
-  kefine-thread-insert-choice-grid {
-    display: grid;
-    gap: 0.45rem;
-  }
-
-  kefine-thread-insert-choice-grid [data-part='comment-trigger-action'] {
-    justify-content: flex-start;
-    width: 100%;
   }
 
   kefine-thread-side-popover {
     position: absolute;
     top: calc(100% + 0.25rem);
     left: 0;
-    z-index: 6;
+    z-index: 9;
+  }
+
+  kefine-thread-side-popover[data-part='next-step-popover'] {
+    top: 0;
+    left: calc(100% + 0.6rem);
+    transform: none;
   }
 
   kefine-thread-comment-actions {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
+    flex-wrap: wrap;
     gap: 0.8rem;
+  }
+
+  kefine-thread-comment-actions [data-part='comment-system-toggle'] {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-right: auto;
+    color: var(--lefine-text-soft, #6d5a49);
+    font-size: 0.82rem;
+    font-weight: 600;
+  }
+
+  kefine-thread-comment-actions [data-part='comment-system-toggle'] input {
+    accent-color: var(--kef-primary, #b97a28);
   }
 
   kefine-thread-comment-actions lefine-text {
@@ -1020,6 +1173,17 @@
     color: #eadcc7;
   }
 
+  :global(:root[data-kefine-theme='dark']) kefine-thread-comment-form,
+  :global(:root[data-kefine-theme='dark']) kefine-thread-side-insert {
+    background: var(--kef-bg-card, #22170f);
+  }
+
+  :global(:root[data-kefine-theme='dark']) kefine-thread-branch-badge {
+    border-color: color-mix(in oklab, #d3a45c 34%, var(--kef-border, #6e5539));
+    background: color-mix(in oklab, #d3a45c 16%, #2a1b10);
+    color: #f4dfba;
+  }
+
   button[data-part='next-step-trigger'] :global(svg),
   kefine-thread-comment-entry [data-part='comment-trigger-action'] :global(svg) {
     display: block;
@@ -1031,6 +1195,10 @@
       position: static;
       margin-top: 0.35rem;
       margin-left: 0;
+    }
+
+    kefine-thread-side-popover[data-part='next-step-popover'] {
+      transform: none;
     }
   }
 

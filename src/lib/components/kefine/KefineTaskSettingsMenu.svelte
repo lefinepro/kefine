@@ -9,11 +9,15 @@
     onApply
   }: {
     order: OrderView | null;
-    onApply: (patch: Partial<Pick<OrderView, 'shareId' | 'isPublicTask' | 'vcsEnabled' | 'repository'>> & { gitSettings?: RepositoryGitSettings }) => void | Promise<void>;
+    onApply: (patch: Partial<Pick<OrderView, 'title' | 'description' | 'taskIcon' | 'shareId' | 'isPublicTask' | 'vcsEnabled' | 'repository'>> & {
+      gitSettings?: RepositoryGitSettings;
+    }) => void | Promise<void>;
   } = $props();
 
   let menuOpen = $state(false);
+  let aclDialogOpen = $state(false);
   let rootElement = $state<HTMLElement | null>(null);
+  let titleDraft = $state('');
   let slugDraft = $state('');
   let isPublicDraft = $state(false);
   let vcsEnabledDraft = $state(false);
@@ -48,6 +52,7 @@
   }
 
   function syncDrafts() {
+    titleDraft = order?.title?.trim() || '';
     slugDraft = order?.shareId?.trim() && order.shareId !== order.id ? order.shareId.trim() : '';
     isPublicDraft = order?.isPublicTask === true;
     vcsEnabledDraft = order?.vcsEnabled === true || Boolean(order?.repository);
@@ -61,6 +66,7 @@
   }
 
   function closeMenu() {
+    aclDialogOpen = false;
     menuOpen = false;
   }
 
@@ -74,6 +80,14 @@
     }
 
     menuOpen = !menuOpen;
+  }
+
+  function openAclDialog() {
+    aclDialogOpen = true;
+  }
+
+  function closeAclDialog() {
+    aclDialogOpen = false;
   }
 
   function addAclRule() {
@@ -108,6 +122,11 @@
     }
 
     const normalizedSlug = normalizeProfileResourceSlug(slugDraft);
+    const normalizedTitle = titleDraft.trim() || order.title;
+    const normalizedDescription =
+      order.description?.trim() && order.description.trim() === order.title.trim() && normalizedTitle !== order.title.trim()
+        ? ''
+        : undefined;
     const existingRepository = order.repository;
     const fallbackSettings = fallbackGitSettings(existingRepository, isPublicDraft);
     const gitSettings: RepositoryGitSettings = {
@@ -124,6 +143,8 @@
     };
 
     onApply({
+      title: normalizedTitle,
+      ...(normalizedDescription !== undefined ? { description: normalizedDescription } : {}),
       shareId: normalizedSlug || order.id,
       isPublicTask: isPublicDraft,
       vcsEnabled: vcsEnabledDraft,
@@ -138,6 +159,15 @@
         : {})
     });
     closeMenu();
+  }
+
+  function createGitRepo() {
+    if (!order) {
+      return;
+    }
+
+    vcsEnabledDraft = true;
+    applySettings();
   }
 
   $effect(() => {
@@ -182,83 +212,113 @@
   </button>
 
   {#if menuOpen && order}
-    <kefine-task-settings-popover role="dialog" aria-label="Task settings">
-      <kefine-task-settings-section>
-        <strong>Settings</strong>
-        <label data-part="field">
-          <lefine-text>Slug</lefine-text>
-          <input
-            bind:value={slugDraft}
-            type="text"
-            placeholder="task-name"
-            autocapitalize="off"
-            autocomplete="off"
-            spellcheck="false"
-          />
-        </label>
-        <label data-part="toggle">
-          <input bind:checked={isPublicDraft} type="checkbox" />
-          <lefine-text>Make public</lefine-text>
-        </label>
-        <label data-part="toggle">
-          <input bind:checked={vcsEnabledDraft} type="checkbox" />
-          <lefine-text>Enable VCS</lefine-text>
-        </label>
+    <kefine-task-settings-dialog role="presentation">
+      <kefine-task-settings-backdrop></kefine-task-settings-backdrop>
+      <kefine-task-settings-popover role="dialog" aria-modal="true" aria-label="Task settings">
+        <kefine-task-settings-section>
+          <kefine-task-settings-head>
+            <strong>Settings</strong>
+            <button type="button" data-part="icon-close" onclick={closeMenu} aria-label="Close settings">
+              <Icon icon="mdi:close" width="18" height="18" aria-hidden="true" />
+            </button>
+          </kefine-task-settings-head>
+          {#if !vcsEnabledDraft && !order.repository}
+            <button type="button" data-part="secondary" data-kind="create-repo" onclick={createGitRepo}>
+              <Icon icon="mdi:source-repository" width="16" height="16" aria-hidden="true" />
+              <lefine-text>Create git repo</lefine-text>
+            </button>
+          {/if}
+          <label data-part="field">
+            <lefine-text>Name</lefine-text>
+            <input bind:value={titleDraft} type="text" placeholder="Task name" />
+          </label>
+          <label data-part="field">
+            <lefine-text>Slug</lefine-text>
+            <input
+              bind:value={slugDraft}
+              type="text"
+              placeholder="task-name"
+              autocapitalize="off"
+              autocomplete="off"
+              spellcheck="false"
+            />
+          </label>
+          <label data-part="toggle">
+            <input bind:checked={isPublicDraft} type="checkbox" />
+            <lefine-text>Make public</lefine-text>
+          </label>
+          <label data-part="toggle">
+            <input bind:checked={vcsEnabledDraft} type="checkbox" />
+            <lefine-text>Enable VCS</lefine-text>
+          </label>
 
-        {#if vcsEnabledDraft}
-          <kefine-task-settings-git>
-            <strong>Git access</strong>
-            <label data-part="toggle">
-              <input bind:checked={exchangeRunDefaultDraft} type="checkbox" />
-              <lefine-text>Push runs exchange issue</lefine-text>
-            </label>
-            <p data-part="hint">
-              Exchange actor: @{order.repository?.gitSettings?.exchangeActor || 'feed@exchange.lefine.pro'}
-            </p>
-            <p data-part="hint">
-              Agents source: {order.repository?.gitSettings?.agentSourceUrl || 'https://exchange.lefine.pro/subscribers'}
-            </p>
-            <p data-part="hint">
-              Push override: <code>git push -o exchange-run=0</code> or <code>-o exchange-run=1</code>
-            </p>
+          {#if vcsEnabledDraft}
+            <kefine-task-settings-git>
+              <strong>Git access</strong>
+              <label data-part="toggle">
+                <input bind:checked={exchangeRunDefaultDraft} type="checkbox" />
+                <lefine-text>Push runs exchange issue</lefine-text>
+              </label>
 
-            <kefine-task-settings-acl>
-              {#each aclRulesDraft as rule}
-                <kefine-task-settings-acl-row>
-                  <label data-part="field">
-                    <lefine-text>Branch</lefine-text>
-                    <input
-                      value={rule.branchPattern}
-                      type="text"
-                      placeholder="main or feature/*"
-                      oninput={(event) => updateAclBranch(rule.id, (event.currentTarget as HTMLInputElement).value)}
-                    />
-                  </label>
+              <kefine-task-settings-summary>
+                <lefine-text>{aclRulesDraft.length} access rules configured</lefine-text>
+                <button type="button" data-part="secondary" onclick={openAclDialog}>Edit access rules</button>
+              </kefine-task-settings-summary>
+            </kefine-task-settings-git>
+          {/if}
 
-                  <kefine-task-settings-groups>
-                    {#each gitGroups as group}
-                      <label data-part="toggle" data-compact="true">
-                        <input
-                          checked={rule.allowedGroups.includes(group.id)}
-                          type="checkbox"
-                          onchange={(event) => toggleAclGroup(rule.id, group.id, (event.currentTarget as HTMLInputElement).checked)}
-                        />
-                        <lefine-text>{group.label}</lefine-text>
-                      </label>
-                    {/each}
-                  </kefine-task-settings-groups>
+          <button type="button" data-part="apply" onclick={applySettings}>Save</button>
+        </kefine-task-settings-section>
+      </kefine-task-settings-popover>
 
-                  <button type="button" data-part="secondary" onclick={() => removeAclRule(rule.id)}>Remove</button>
-                </kefine-task-settings-acl-row>
-              {/each}
-              <button type="button" data-part="secondary" onclick={addAclRule}>Add rule</button>
-            </kefine-task-settings-acl>
-          </kefine-task-settings-git>
-        {/if}
+      {#if aclDialogOpen}
+        <kefine-task-settings-dialog role="presentation" data-layer="nested">
+          <kefine-task-settings-backdrop></kefine-task-settings-backdrop>
+          <kefine-task-settings-popover role="dialog" aria-modal="true" aria-label="Git access rules">
+            <kefine-task-settings-section>
+              <kefine-task-settings-head>
+                <strong>Git access rules</strong>
+                <button type="button" data-part="icon-close" onclick={closeAclDialog} aria-label="Close access rules">
+                  <Icon icon="mdi:close" width="18" height="18" aria-hidden="true" />
+                </button>
+              </kefine-task-settings-head>
 
-        <button type="button" data-part="apply" onclick={applySettings}>Save</button>
-      </kefine-task-settings-section>
-    </kefine-task-settings-popover>
+              <kefine-task-settings-acl>
+                {#each aclRulesDraft as rule}
+                  <kefine-task-settings-acl-row>
+                    <label data-part="field">
+                      <lefine-text>Branch</lefine-text>
+                      <input
+                        value={rule.branchPattern}
+                        type="text"
+                        placeholder="main or feature/*"
+                        oninput={(event) => updateAclBranch(rule.id, (event.currentTarget as HTMLInputElement).value)}
+                      />
+                    </label>
+
+                    <kefine-task-settings-groups>
+                      {#each gitGroups as group}
+                        <label data-part="toggle" data-compact="true">
+                          <input
+                            checked={rule.allowedGroups.includes(group.id)}
+                            type="checkbox"
+                            onchange={(event) => toggleAclGroup(rule.id, group.id, (event.currentTarget as HTMLInputElement).checked)}
+                          />
+                          <lefine-text>{group.label}</lefine-text>
+                        </label>
+                      {/each}
+                    </kefine-task-settings-groups>
+
+                    <button type="button" data-part="secondary" onclick={() => removeAclRule(rule.id)}>Remove</button>
+                  </kefine-task-settings-acl-row>
+                {/each}
+                <button type="button" data-part="secondary" onclick={addAclRule}>Add rule</button>
+              </kefine-task-settings-acl>
+            </kefine-task-settings-section>
+          </kefine-task-settings-popover>
+        </kefine-task-settings-dialog>
+      {/if}
+    </kefine-task-settings-dialog>
   {/if}
 </kefine-task-settings>
 
@@ -281,13 +341,29 @@
     color: color-mix(in oklab, var(--lefine-text, #453323) 84%, transparent);
   }
 
-  kefine-task-settings-popover {
+  kefine-task-settings-dialog {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    display: grid;
+    place-items: center;
+    padding: 1rem;
+  }
+
+  kefine-task-settings-backdrop {
     position: absolute;
-    top: calc(100% + 0.55rem);
-    right: 0;
-    z-index: 15;
-    width: min(26rem, calc(100vw - 1rem));
-    max-width: calc(100vw - 1rem);
+    inset: 0;
+    background: color-mix(in oklab, #1a120d 46%, transparent);
+    backdrop-filter: blur(3px);
+  }
+
+  kefine-task-settings-popover {
+    position: relative;
+    z-index: 1;
+    width: min(32rem, calc(100vw - 2rem));
+    max-width: calc(100vw - 2rem);
+    max-height: min(44rem, calc(100vh - 2rem));
+    overflow: auto;
     padding: 0.95rem;
     border-radius: 1rem;
     border: 1px solid color-mix(in oklab, var(--kef-border, #e0c999) 82%, transparent);
@@ -300,6 +376,26 @@
   kefine-task-settings-git,
   kefine-task-settings-acl {
     display: grid;
+    gap: 0.75rem;
+  }
+
+  kefine-task-settings-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  kefine-task-settings-summary lefine-text {
+    color: color-mix(in oklab, var(--lefine-text, #453323) 72%, transparent);
+    font-size: 0.88rem;
+  }
+
+  kefine-task-settings-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     gap: 0.75rem;
   }
 
@@ -353,14 +449,9 @@
     gap: 0.4rem;
   }
 
-  p[data-part='hint'] {
-    margin: 0;
-    font-size: 0.82rem;
-    color: color-mix(in oklab, var(--lefine-text, #453323) 68%, transparent);
-  }
-
   button[data-part='apply'],
-  button[data-part='secondary'] {
+  button[data-part='secondary'],
+  button[data-part='icon-close'] {
     min-height: 2.4rem;
     padding: 0.55rem 0.8rem;
     border-radius: 0.75rem;
@@ -372,6 +463,15 @@
   }
 
   button[data-part='secondary'] {
+    background: color-mix(in oklab, var(--kef-bg-card, #f7ecd4) 90%, white 10%);
+  }
+
+  button[data-part='icon-close'] {
+    min-width: 2.4rem;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     background: color-mix(in oklab, var(--kef-bg-card, #f7ecd4) 90%, white 10%);
   }
 

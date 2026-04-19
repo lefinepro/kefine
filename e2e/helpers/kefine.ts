@@ -11,6 +11,7 @@ type MockOrder = {
   executionEstimate: string;
   estimatedCost: number;
   currency: string;
+  documentContent?: string;
 };
 
 function buildOrder(id: string, title: string, status = 'queued'): MockOrder {
@@ -36,6 +37,12 @@ function orderPayload(order: MockOrder) {
     estimatedCost: order.estimatedCost,
     currency: order.currency,
     paymentUrl: null,
+    document: order.documentContent
+      ? {
+          format: 'markdown',
+          content: order.documentContent
+        }
+      : undefined,
     createdAt: '2026-03-20T00:00:00.000Z',
     updatedAt: '2026-03-20T00:00:00.000Z'
   };
@@ -72,7 +79,12 @@ export async function mockOrderApi(page: Page) {
 
   async function handleOrderLookup(route: Route) {
     const url = new URL(route.request().url());
-    const orderId = decodeURIComponent(url.pathname.split('/').at(-1) ?? '');
+    const segments = url.pathname.split('/').filter(Boolean);
+    const orderId = decodeURIComponent(
+      segments.at(-1) === 'document' || segments.at(-1) === 'settings'
+        ? segments.at(-2) ?? ''
+        : segments.at(-1) ?? ''
+    );
     const order = orders.get(orderId);
 
     if (!order) {
@@ -82,6 +94,15 @@ export async function mockOrderApi(page: Page) {
         body: JSON.stringify({ error: 'Order not found', orderId })
       });
       return;
+    }
+
+    if (route.request().method() === 'PATCH' && url.pathname.endsWith('/document')) {
+      const payload = route.request().postDataJSON() as {
+        document?: {
+          content?: string;
+        };
+      };
+      order.documentContent = payload.document?.content ?? order.documentContent;
     }
 
     await route.fulfill({

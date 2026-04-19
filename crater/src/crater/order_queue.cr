@@ -351,6 +351,121 @@ module Crater
       build_default_document_json(title, content)
     end
 
+    private def self.document_content(order : OrderRecord) : String
+      raw = order.document_json
+      return "" unless raw
+
+      parsed = JSON.parse(raw).as_h?
+      to_string(parsed.try(&.["content"]?)).to_s
+    rescue
+      ""
+    end
+
+    private def self.extract_node_comment(content : String, node_key : String) : String?
+      return nil if content.empty? || node_key.empty?
+
+      lines = content.gsub("\r\n", "\n").gsub('\r', '\n').split('\n')
+      comments = [] of String
+      index = 0
+
+      while index < lines.size
+        line = lines[index]? || ""
+        match = line.match(/^#\+begin_node_comment:\s+(.+)$/i)
+        unless match
+          index += 1
+          next
+        end
+
+        current_key = match[1]?.to_s.strip
+        index += 1
+        buffer = [] of String
+
+        while index < lines.size && !(lines[index]? || "").strip.matches?(/^#\+end_node_comment\b/i)
+          buffer << (lines[index]? || "")
+          index += 1
+        end
+
+        if current_key == node_key
+          comment = buffer.join("\n").strip
+          comments << comment unless comment.empty?
+        end
+
+        index += 1
+      end
+
+      comments.last?
+    end
+
+    private def self.exchange_system_instruction(order : OrderRecord) : String?
+      extract_node_comment(document_content(order), "#{order.id}-exchange-system-instruction")
+    end
+
+    private def self.routed_comment_payloads(order : OrderRecord) : Array(JSON::Any)
+      content = document_content(order)
+      return [] of JSON::Any if content.empty?
+
+      lines = content.gsub("\r\n", "\n").gsub('\r', '\n').split('\n')
+      payloads = [] of JSON::Any
+      index = 0
+
+      while index < lines.size
+        line = lines[index]? || ""
+        match = line.match(/^#\+begin_node_comment:\s+(.+)$/i)
+        unless match
+          index += 1
+          next
+        end
+
+        node_key = match[1]?.to_s.strip
+        index += 1
+        buffer = [] of String
+
+        while index < lines.size && !(lines[index]? || "").strip.matches?(/^#\+end_node_comment\b/i)
+          buffer << (lines[index]? || "")
+          index += 1
+        end
+
+        raw_comment = buffer.join("\n").strip
+        begin
+          parsed = JSON.parse(raw_comment).as_h?
+          content_value = to_string(parsed.try(&.["content"]?))
+          mentions = parsed.try(&.["mentions"]?).try(&.as_a?)
+          if parsed && content_value && mentions
+            mention_payloads = mentions.compact_map do |mention|
+              object = mention.as_h?
+              value = to_string(object.try(&.["value"]?))
+              kind = to_string(object.try(&.["kind"]?))
+              target_kind = to_string(object.try(&.["targetKind"]?))
+              next nil unless value && kind
+
+              JSON.parse(
+                {
+                  "value" => value,
+                  "kind" => kind,
+                  "targetKind" => target_kind,
+                }.to_json
+              )
+            end
+
+            if mention_payloads.size > 0
+              payloads << JSON.parse(
+                {
+                  "nodeKey" => node_key,
+                  "content" => content_value,
+                  "mentions" => mention_payloads,
+                }.to_json
+              )
+            end
+          end
+        rescue
+        end
+
+        index += 1
+      end
+
+      payloads
+    end
+
     private def self.persist_order(record : OrderRecord, config : Utils::Config) : Nil
       setup(config)
       database(config).exec(
@@ -628,6 +743,8 @@ module Crater
       object_id = order_object_id(order, config)
       actor_did = order_actor_did(order, config)
       attachments = combined_attachments(order, status, config)
+      system_instruction = exchange_system_instruction(order)
+      routed_comments = routed_comment_payloads(order)
       ticket_payload = {
         "@context" => [ActivityPub::CONTEXT, ForgeFed::CONTEXT],
         "id" => "#{object_id}/ticket",
@@ -656,6 +773,8 @@ module Crater
         "document" => JSON.parse(order.document_json || build_default_document_json(order.title, order.description)),
         "attachment" => attachments
       }
+      ticket_payload["systemInstruction"] = JSON::Any.new(system_instruction) if system_instruction
+      ticket_payload["commentRoutes"] = JSON.parse(routed_comments.to_json) if routed_comments.size > 0
 
       object_payload = {
         "@context" => [
@@ -692,6 +811,8 @@ module Crater
         "document" => JSON.parse(order.document_json || build_default_document_json(order.title, order.description)),
         "attachment" => attachments
       }
+      object_payload["systemInstruction"] = JSON::Any.new(system_instruction) if system_instruction
+      object_payload["commentRoutes"] = JSON.parse(routed_comments.to_json) if routed_comments.size > 0
 
       JSON.parse(object_payload.to_json)
     end
@@ -1053,6 +1174,15 @@ module Crater
           record.id,
           config
         )
+
+        outbound_update = ActivityPub::Activity.from_json(activity_for(record, record.status, config).to_json)
+        spawn do
+          begin
+            post_to_exchange_inbox(outbound_update, config)
+          rescue ex
+            Log.error { "[order_queue:update_document] delivery failed id=#{record.id}: #{ex.message}" }
+          end
+        end
 
         record
       end

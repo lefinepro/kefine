@@ -125,8 +125,44 @@ describe('kefine task feed progression', () => {
     assert.ok(parsed);
 
     const nodes = buildTaskThreadNodes(parsed);
-    assert.equal(nodes[0]?.title, 'Exchange search');
+    assert.equal(nodes[0]?.title, 'Find solvers');
     assert.equal(nodes[0]?.state, 'completed');
     assert.equal(nodes[0]?.mode, 'compact');
+  });
+
+  test('system document comments preserve routed mention metadata', () => {
+    const order: OrderView = {
+      id: 'order-mentions',
+      solver: '',
+      status: 'running',
+      title: 'Route comments',
+      description: 'Track actor and solver recipients',
+      createdAt: '2026-04-16T10:00:00.000Z',
+      currency: 'USDC',
+      document: {
+        format: 'markdown',
+        content: [
+          'Track actor and solver recipients',
+          '',
+          '#+begin_node_comment: order-mentions-description',
+          JSON.stringify({
+            content: '@actor review this with @solver',
+            mentions: [
+              { id: 'actor:feed', value: '@actor', kind: 'actor', targetKind: 'actor' },
+              { id: 'solver:lumen', value: '@solver', kind: 'solver', targetKind: 'solver' }
+            ]
+          }),
+          '#+end_node_comment'
+        ].join('\n')
+      }
+    };
+
+    const nodes = buildTaskThreadNodes(order);
+    const descriptionNode = nodes.find((node) => node.stepId === 'order-mentions-description');
+
+    assert.ok(descriptionNode?.comments?.[0]);
+    assert.equal(descriptionNode.comments[0]?.mentions?.length, 2);
+    assert.equal(descriptionNode.comments[0]?.mentions?.[0]?.targetKind, 'actor');
+    assert.equal(descriptionNode.comments[0]?.mentions?.[1]?.targetKind, 'solver');
   });
 });
