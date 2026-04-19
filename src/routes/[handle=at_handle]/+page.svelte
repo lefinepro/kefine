@@ -9,6 +9,7 @@
   import { onMount } from 'svelte';
   import { disconnectAppKit } from '$lib/auth/appkit';
   import { authState, clearAuthState, hydrateAuthStateFromSession } from '$lib/auth/auth-store.svelte.js';
+  import { loadGeneratedPrivateKeyCookie } from '$lib/auth/publickey-cookie';
   import { clearPasskeySession, loadPasskeySession, passkeySessionStore } from '$lib/auth/passkey-session';
   import { parseStoredOrders, type OrderView, type TaskAccessMode } from '$lib/components/kefine/kefine-workflow';
   import { buildActorOrderPath, shortenAuthLabel } from '$lib/components/kefine/kefine-workspace-helpers';
@@ -54,6 +55,7 @@
   let referralPercent = $state(10);
   let socialLinks = $state<ProfileSocialLink[]>([]);
   let sshPublicKey = $state('');
+  let privateKey = $state('');
   let firstName = $state('');
   let surname = $state('');
   let leftNavExpanded = $state(false);
@@ -205,6 +207,10 @@
     surname = nameParts.surname;
   }
 
+  function syncPrivateKeyState() {
+    privateKey = browser ? loadGeneratedPrivateKeyCookie() ?? '' : '';
+  }
+
   function buildDefaultActorProfile(): Profile | null {
     const handle = runtimeConfig.defaultActor.handle?.trim();
     if (!handle || !isDefaultActorHandle(requestedHandle, handle)) {
@@ -268,6 +274,7 @@
     mediaQuery.addEventListener('change', handleThemePreferenceChange);
     hydrateAuthStateFromSession();
     loadPasskeySession();
+    syncPrivateKeyState();
 
     return () => {
       mediaQuery.removeEventListener('change', handleThemePreferenceChange);
@@ -288,6 +295,8 @@
     if (!browser) {
       return;
     }
+
+    syncPrivateKeyState();
 
     const currentPasskeySession = passkeySession;
     const userId = currentPasskeySession?.userId || authState.userId?.trim() || authState.email?.trim().toLowerCase() || authState.address?.trim();
@@ -397,6 +406,14 @@
         copyState = 'idle';
       }
     }, 1400);
+  }
+
+  async function copyPrivateKey() {
+    if (!privateKey.trim()) {
+      return;
+    }
+
+    await copyLink(privateKey, 'profile');
   }
 
   function resolveNextUsername(current: Profile): string {
@@ -914,6 +931,15 @@
                     <lefine-text>{localeText.profile.sshPublicKey}</lefine-text>
                     <textarea bind:value={sshPublicKey} rows="6" placeholder={localeText.profile.sshPublicKeyHint}></textarea>
                   </label>
+                  <label class="profile-field">
+                    <lefine-box class="profile-secret-field-head">
+                      <lefine-text>{localeText.profile.privateKey}</lefine-text>
+                      <button type="button" data-variant="ghost" onclick={copyPrivateKey} disabled={!privateKey.trim()}>
+                        {copyState === 'profile' ? localeText.profile.privateKeyCopied : localeText.profile.copyPrivateKey}
+                      </button>
+                    </lefine-box>
+                    <textarea value={privateKey} rows="8" readonly placeholder={localeText.profile.privateKeyHint}></textarea>
+                  </label>
                 </lefine-box>
               {/if}
 
@@ -1226,6 +1252,13 @@
   .profile-links-head {
     display: flex;
     align-items: center;
+    gap: 0.75rem;
+  }
+
+  .profile-secret-field-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     gap: 0.75rem;
   }
 
