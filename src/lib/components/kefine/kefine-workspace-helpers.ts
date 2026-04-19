@@ -26,7 +26,7 @@ export function normalizeActorHandle(value: string): string {
   return value.trim().replace(/^@+/, '');
 }
 
-export function shortenAuthLabel(value: string | null | undefined, maxLength = 18): string | null {
+export function shortenAuthLabel(value: string | null | undefined, maxLength = 16): string | null {
   const normalized = value?.trim();
   if (!normalized) {
     return null;
