@@ -148,17 +148,18 @@
             <kefine-clone-target>
               <kefine-clone-target-copy>
                 <strong>{repositoryCloneTarget.label}</strong>
-                <code>{repositoryCloneTarget.url}</code>
+                <code>{repositoryCloneTarget.command}</code>
+                <small>{repositoryCloneTarget.url}</small>
               </kefine-clone-target-copy>
               <button
                 type="button"
                 data-part="icon-copy"
-                onclick={() => copyText(repositoryCloneTarget.url)}
-                aria-label="Copy clone URL"
-                title="Copy clone URL"
+                onclick={() => copyText(repositoryCloneTarget.command)}
+                aria-label="Copy git clone command"
+                title="Copy git clone command"
               >
                 <Icon
-                  icon={copiedValue === repositoryCloneTarget.url ? 'mdi:check' : 'mdi:content-copy'}
+                  icon={copiedValue === repositoryCloneTarget.command ? 'mdi:check' : 'mdi:content-copy'}
                   width="16"
                   height="16"
                   aria-hidden="true"
@@ -272,6 +273,14 @@
     word-break: break-word;
     font-size: 0.8rem;
     line-height: 1.48;
+  }
+
+  kefine-clone-target-copy small {
+    color: color-mix(in oklab, var(--lefine-text, #453323) 68%, transparent);
+    font-size: 0.74rem;
+    line-height: 1.42;
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
 
   kefine-clone-format-grid {

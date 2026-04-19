@@ -12,6 +12,7 @@ export type TaskCloneFormat = 'txt' | 'md' | 'org';
 export type TaskRepositoryCloneTarget = {
   label: string;
   url: string;
+  command: string;
 };
 
 export type TaskRepositoryArchiveTargets = {
@@ -356,25 +357,39 @@ function ensureGitSuffix(url: string): string {
 
 export function getTaskRepositoryCloneTarget(order: OrderView): TaskRepositoryCloneTarget | null {
   const repository = getTaskRepository(order);
-  const canonicalName = getTaskRepositoryCanonicalName(order);
-  if (!repository || !canonicalName) {
+  if (!repository) {
     return null;
   }
 
-  const preferredHost =
-    currentSshOriginHost() ||
-    hostFromCloneUrl(repository.projectCloneUrl) ||
-    hostFromCloneUrl(repository.projectSshCloneUrl) ||
-    hostFromCloneUrl(repository.sshCloneUrl) ||
-    hostFromCloneUrl(repository.projectPublicCloneUrl) ||
-    hostFromCloneUrl(repository.publicCloneUrl);
-  const url = ensureGitSuffix(preferredHost ? `ssh://git@${preferredHost}/${canonicalName}` : '');
+  const preferredSshUrl =
+    repository.projectSshCloneUrl?.trim() ||
+    repository.sshCloneUrl?.trim() ||
+    '';
+  let url = ensureGitSuffix(preferredSshUrl);
+
+  if (!url) {
+    const canonicalName = getTaskRepositoryCanonicalName(order);
+    if (!canonicalName) {
+      return null;
+    }
+
+    const preferredHost =
+      currentSshOriginHost() ||
+      hostFromCloneUrl(repository.projectCloneUrl) ||
+      hostFromCloneUrl(repository.projectSshCloneUrl) ||
+      hostFromCloneUrl(repository.sshCloneUrl) ||
+      hostFromCloneUrl(repository.projectPublicCloneUrl) ||
+      hostFromCloneUrl(repository.publicCloneUrl);
+    url = ensureGitSuffix(preferredHost ? `ssh://git@${preferredHost}/${canonicalName}` : '');
+  }
+
   if (!url) {
     return null;
   }
 
   return {
     label: 'SSH clone',
-    url
+    url,
+    command: `git clone ${url}`
   };
 }
