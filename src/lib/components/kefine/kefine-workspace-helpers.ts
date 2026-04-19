@@ -26,6 +26,29 @@ export function normalizeActorHandle(value: string): string {
   return value.trim().replace(/^@+/, '');
 }
 
+export function shortenAuthLabel(value: string | null | undefined, maxLength = 18): string | null {
+  const normalized = value?.trim();
+  if (!normalized) {
+    return null;
+  }
+
+  if (normalized.length <= maxLength) {
+    return normalized;
+  }
+
+  const prefix = normalized.startsWith('@') ? '@' : '';
+  const body = prefix ? normalized.slice(1) : normalized;
+  const budget = Math.max(maxLength - prefix.length - 1, 8);
+  const headLength = Math.max(4, Math.ceil(budget * 0.6));
+  const tailLength = Math.max(3, budget - headLength);
+
+  if (body.length <= headLength + tailLength + 1) {
+    return normalized;
+  }
+
+  return `${prefix}${body.slice(0, headLength)}…${body.slice(-tailLength)}`;
+}
+
 export function buildActorOrderPath(actorHandle: string, orderId: string): string {
   const normalizedHandle = normalizeActorHandle(actorHandle);
   const normalizedOrderId = orderId.trim();
@@ -69,6 +92,11 @@ export function resolveOrderIdFromRouteValue(routeValue: string, knownOrders: Or
     return directMatch.id;
   }
 
+  const shareIdMatch = knownOrders.find((item) => item.shareId?.trim() === normalized);
+  if (shareIdMatch) {
+    return shareIdMatch.id;
+  }
+
   const suffixMatch = knownOrders.find((item) => item.id.endsWith(`/${normalized}`));
   if (suffixMatch) {
     return suffixMatch.id;
@@ -93,6 +121,11 @@ export function resolveOrderIdCandidates(routeValue: string, knownOrders: OrderV
   const suffixMatch = knownOrders.find((item) => item.id.endsWith(`/${normalized}`));
   if (suffixMatch && !candidates.includes(suffixMatch.id)) {
     candidates.unshift(suffixMatch.id);
+  }
+
+  const shareIdMatch = knownOrders.find((item) => item.shareId?.trim() === normalized);
+  if (shareIdMatch && !candidates.includes(shareIdMatch.id)) {
+    candidates.unshift(shareIdMatch.id);
   }
 
   if (!candidates.includes(normalized)) {
@@ -121,6 +154,7 @@ export function mergeOrdersById(
     {
       ...current,
       ...order,
+      ...(order.shareId?.trim() ? { shareId: order.shareId.trim() } : current.shareId ? { shareId: current.shareId } : {}),
       ...(order.taskIcon?.trim() ? { taskIcon: order.taskIcon.trim() } : current.taskIcon ? { taskIcon: current.taskIcon } : {}),
       id: current.id
     },

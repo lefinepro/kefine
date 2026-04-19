@@ -4,6 +4,8 @@
   import type { Editor } from 'prosekit/core';
   import { createEditor } from 'prosekit/core';
   import { defineBasicExtension } from 'prosekit/basic';
+  import { defineMention } from 'prosekit/extensions/mention';
+  import { union } from 'prosekit/core';
   import 'prosekit/basic/style.css';
   import 'prosekit/basic/typography.css';
   import {
@@ -25,15 +27,35 @@
     size?: number;
     type?: string;
   };
+  export type EditorMentionCandidate = {
+    id: string;
+    label: string;
+    value: string;
+    kind: 'actor' | 'solver';
+    targetKind?: 'actor' | 'solver';
+  };
+  export type EditorMentionDraft = {
+    id: string;
+    value: string;
+    kind: string;
+    targetKind?: 'actor' | 'solver';
+  };
+  export type EditorDraftState = {
+    value: string;
+    mentions: EditorMentionDraft[];
+  };
 
   let {
     open,
     value,
     description,
     onApply,
+    onStateChange,
     placeholder = '',
     compact = false,
+    singleLine = false,
     enableMeta = false,
+    mentionCandidates = [],
     autoOpenTagEditor = false,
     autoOpenFilePicker = false
   }: {
@@ -41,9 +63,12 @@
     value: string;
     description: string;
     onApply: (value: string) => void;
+    onStateChange?: (state: EditorDraftState) => void;
     placeholder?: string;
     compact?: boolean;
+    singleLine?: boolean;
     enableMeta?: boolean;
+    mentionCandidates?: EditorMentionCandidate[];
     autoOpenTagEditor?: boolean;
     autoOpenFilePicker?: boolean;
   } = $props();
@@ -63,11 +88,13 @@
   let fileInput: HTMLInputElement | null = $state(null);
   let tagDrafts = $state<string[]>([]);
   let attachmentDrafts = $state<AttachmentRef[]>([]);
+  let mentionDrafts = $state<EditorMentionDraft[]>([]);
   let hydratedValue = $state<string | null>(null);
   let autoOpenedTagEditor = $state(false);
   let autoOpenedFilePicker = $state(false);
 
   const slashRegex = /(?:^|\s)\/([^\s/]*)$/u;
+  const mentionRegex = /(?:^|\s)@([^\s@]*)$/u;
   const slashCommands: SlashCommand[] = [
     {
       id: 'paragraph',
@@ -137,9 +164,76 @@
       [command.label, command.hint, command.id].some((value) => value.toLowerCase().includes(query))
     );
   });
+  const filteredMentionCandidates = $derived.by(() => {
+    const query = sourceDraft.match(/(?:^|\s)@([^\s@]*)$/u)?.[1]?.trim().toLowerCase() ?? '';
+    if (!query) {
+      return mentionCandidates;
+    }
+
+    return mentionCandidates.filter((candidate) =>
+      [candidate.label, candidate.value, candidate.kind].some((value) => value.toLowerCase().includes(query))
+    );
+  });
 
   function normalizeTag(tag: string): string {
     return tag.trim().replace(/^#+/, '').toLowerCase();
+  }
+
+  function escapeRegex(value: string): string {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  function detectMentionDrafts(input: string): EditorMentionDraft[] {
+    const found: EditorMentionDraft[] = [];
+    for (const candidate of mentionCandidates) {
+      const regex = new RegExp(`(^|\\s)${escapeRegex(candidate.value)}(?=\\s|$)`, 'g');
+      if (regex.test(input)) {
+        found.push({
+          id: candidate.id,
+          value: candidate.value,
+          kind: candidate.kind,
+          targetKind: candidate.targetKind
+        });
+      }
+    }
+
+    return found;
+  }
+
+  function collectMentionDraftsFromDocJson(node: unknown): EditorMentionDraft[] {
+    if (!node || typeof node !== 'object') {
+      return [];
+    }
+
+    const current = node as {
+      type?: string;
+      attrs?: Record<string, unknown>;
+      content?: unknown[];
+    };
+    const next: EditorMentionDraft[] = [];
+
+    if (current.type === 'mention') {
+      const id = typeof current.attrs?.id === 'string' ? current.attrs.id : '';
+      const value = typeof current.attrs?.value === 'string' ? current.attrs.value : '';
+      const kind = typeof current.attrs?.kind === 'string' ? current.attrs.kind : '';
+      if (id && value && kind) {
+        const matchingCandidate = mentionCandidates.find((candidate) => candidate.id === id && candidate.value === value);
+        next.push({
+          id,
+          value,
+          kind,
+          targetKind:
+            matchingCandidate?.targetKind ||
+            (kind === 'actor' || kind === 'solver' ? kind : undefined)
+        });
+      }
+    }
+
+    for (const child of current.content ?? []) {
+      next.push(...collectMentionDraftsFromDocJson(child));
+    }
+
+    return next;
   }
 
   function formatFileSize(size?: number): string {
@@ -413,7 +507,7 @@
 
     try {
       const instance = createEditor({
-        extension: defineBasicExtension(),
+        extension: union(defineBasicExtension(), defineMention()),
         defaultContent: sourceToHtml(value)
       });
 
@@ -450,9 +544,15 @@
     };
   }
 
-  function publishDraft(nextSource: string): void {
-    sourceDraft = nextSource;
-    onApply(serializeMetaSections(nextSource, tagDrafts, attachmentDrafts));
+  function publishDraft(nextSource: string, nextMentions: EditorMentionDraft[] = detectMentionDrafts(nextSource)): void {
+    const normalizedSource = singleLine ? nextSource.replace(/\s*\n+\s*/g, ' ').trim() : nextSource;
+    mentionDrafts = nextMentions;
+    sourceDraft = normalizedSource;
+    onApply(serializeMetaSections(normalizedSource, tagDrafts, attachmentDrafts));
+    onStateChange?.({
+      value: serializeMetaSections(normalizedSource, tagDrafts, attachmentDrafts),
+      mentions: nextMentions
+    });
   }
 
   function syncVisualToSource(): void {
@@ -461,7 +561,7 @@
     }
 
     const nextSource = htmlToSource(editor.getDocHTML());
-    publishDraft(nextSource);
+    publishDraft(nextSource, collectMentionDraftsFromDocJson(editor.getDocJSON()));
   }
 
   function handleEditorKeydown(event: KeyboardEvent): void {
@@ -508,11 +608,32 @@
     syncVisualToSource();
   }
 
+  function applyMentionCandidate(candidateId: string): void {
+    if (!editor) {
+      return;
+    }
+
+    const candidate = mentionCandidates.find((item) => item.id === candidateId);
+    if (!candidate) {
+      return;
+    }
+
+    (editor.commands as any).insertMention({
+      id: candidate.id,
+      value: candidate.value,
+      kind: candidate.kind
+    });
+    (editor.commands as any).insertText({ text: ' ' });
+    editor.focus();
+    syncVisualToSource();
+  }
+
   function hydrateFromValue(nextValue: string): void {
     const parsed = parseMetaSections(nextValue);
     sourceDraft = parsed.body;
     tagDrafts = parsed.tags;
     attachmentDrafts = parsed.files;
+    mentionDrafts = detectMentionDrafts(parsed.body);
     hydratedValue = nextValue;
   }
 
@@ -578,7 +699,7 @@
     let cancelled = false;
 
     void ensureEditor().then((instance) => {
-      if (cancelled || !instance || !editorHost || editorMode !== 'visual' || compact) {
+      if (cancelled || !instance || !editorHost || editorMode !== 'visual') {
         return;
       }
 
@@ -617,12 +738,6 @@
   });
 
   $effect(() => {
-    if (compact && editorMode === 'visual') {
-      editorMode = 'source';
-    }
-  });
-
-  $effect(() => {
     if (!open || !enableMeta) {
       autoOpenedTagEditor = false;
       autoOpenedFilePicker = false;
@@ -656,7 +771,7 @@
 </script>
 
 {#if open}
-  <kefine-rich-editor data-compact={compact}>
+  <kefine-rich-editor data-compact={compact} data-single-line={singleLine}>
     <kefine-rich-editor-toolbar>
       {#if !compact}
         <kefine-rich-editor-modes>
@@ -708,7 +823,7 @@
         <kefine-rich-editor-state data-state="loading">Loading editor...</kefine-rich-editor-state>
       {/if}
 
-      {#if editorMode === 'visual' && !compact}
+      {#if editorMode === 'visual'}
         <lefine-box
           bind:this={editorHost}
           data-part="editor-host"
@@ -749,11 +864,36 @@
               </AutocompleteList>
             </kefine-slash-menu>
           </AutocompletePopover>
+
+          {#if mentionCandidates.length > 0}
+            <AutocompletePopover editor={editor} regex={mentionRegex}>
+              <kefine-slash-menu data-kind="mention">
+                <AutocompleteList
+                  editor={editor}
+                  on:valueChange={(event: CustomEvent<string>) => {
+                    applyMentionCandidate(event.detail);
+                  }}
+                >
+                  {#each filteredMentionCandidates as candidate}
+                    <AutocompleteItem value={candidate.id}>
+                      <kefine-slash-item>
+                        <strong>{candidate.value}</strong>
+                        <lefine-text>{candidate.label}</lefine-text>
+                      </kefine-slash-item>
+                    </AutocompleteItem>
+                  {/each}
+                  <AutocompleteEmpty>
+                    <kefine-slash-empty>No matching recipients</kefine-slash-empty>
+                  </AutocompleteEmpty>
+                </AutocompleteList>
+              </kefine-slash-menu>
+            </AutocompletePopover>
+          {/if}
         {/if}
       {:else}
         <textarea
           data-part="source"
-          rows={compact ? 6 : 16}
+          rows={singleLine ? 1 : compact ? 6 : 16}
           value={sourceDraft}
           placeholder={placeholder || 'Write with * headings, - lists, #+begin_quote, #+begin_src'}
           oninput={(event) => handleSourceInput((event.currentTarget as HTMLTextAreaElement).value)}
@@ -851,6 +991,23 @@
     min-height: 12rem;
   }
 
+  kefine-rich-editor[data-single-line='true'] kefine-rich-editor-surface {
+    min-height: 3.4rem;
+  }
+
+  kefine-rich-editor[data-compact='true'] textarea[data-part='source'] {
+    min-height: 12rem;
+  }
+
+  kefine-rich-editor[data-compact='true'] textarea[data-part='source'][rows='1'] {
+    min-height: 0;
+    height: 2.6rem;
+    resize: none;
+    white-space: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
   kefine-rich-editor-state {
     padding: 0.85rem 1rem 0;
     color: var(--lefine-text-soft, #6d5a49);
@@ -864,6 +1021,12 @@
 
   kefine-rich-editor[data-compact='true'] lefine-box[data-part='editor-host'] {
     min-height: 10rem;
+  }
+
+  kefine-rich-editor[data-single-line='true'] lefine-box[data-part='editor-host'] {
+    min-height: 2.8rem;
+    padding-top: 0.65rem;
+    padding-bottom: 0.65rem;
   }
 
   lefine-box[data-part='editor-host']:empty::before {
@@ -918,6 +1081,16 @@
 
   :global(lefine-box[data-part='editor-host'] .ProseMirror p) {
     margin: 0 0 0.7rem;
+  }
+
+  :global(lefine-box[data-part='editor-host'] .ProseMirror [data-mention='actor']) {
+    color: color-mix(in oklab, var(--kef-primary, #b97a28) 88%, #5a3b14);
+    font-weight: 600;
+  }
+
+  :global(lefine-box[data-part='editor-host'] .ProseMirror [data-mention='solver']) {
+    color: color-mix(in oklab, #2f7b95 82%, var(--lefine-text, #2e2317));
+    font-weight: 600;
   }
 
   kefine-rich-editor-meta {

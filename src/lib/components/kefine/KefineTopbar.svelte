@@ -484,6 +484,7 @@
     {#if showAuthButton}
       <button
         data-part="auth"
+        data-authenticated={isAuthenticated}
         type="button"
         data-scrolled={hasScrolled}
         data-variant={isAuthenticated ? 'ghost' : 'primary'}
@@ -496,13 +497,13 @@
         {#if isAuthLoading}
           <lef-auth-loading aria-hidden="true"></lef-auth-loading>
         {/if}
-        <lefine-text>
+        <span data-part="auth-label">
           {#if isAuthenticated}
             {authenticatedSecondaryLabel ?? authenticatedLabel ?? signedInLabel}
           {:else}
             {signInLabel}
           {/if}
-        </lefine-text>
+        </span>
       </button>
 
       <kefine-auth-popover
@@ -831,11 +832,12 @@
     z-index: 1;
     display: inline-flex;
     align-items: center;
+    flex: 0 1 auto;
     gap: 0.55rem;
     anchor-name: --kefine-auth-anchor;
     width: auto;
     min-width: 0;
-    max-width: min(18rem, calc(100vw - 5rem));
+    max-width: min(calc(16ch + 1.6rem), calc(100vw - 5rem));
     min-height: 2.5rem;
     padding: 0.42rem 0.8rem;
     border: var(--kef-border-width-soft) solid color-mix(in oklab, var(--kef-border) 72%, transparent);
@@ -950,18 +952,24 @@
     animation: kefine-auth-spin 0.78s linear infinite;
   }
 
-  button[data-part='auth'] > lefine-text {
+  button[data-part='auth'] > [data-part='auth-label'] {
     display: block;
+    flex: 1 1 auto;
     width: 100%;
     max-width: 100%;
     min-width: 0;
     overflow: hidden;
-    text-overflow: ellipsis;
+    text-overflow: clip;
     white-space: nowrap;
     font-size: 0.95rem;
     font-weight: 620;
     line-height: 1.15;
     text-align: left;
+  }
+
+  button[data-part='auth'][data-authenticated='true'] {
+    flex-basis: min(calc(16ch + 1.6rem), calc(100vw - 5rem));
+    width: min(calc(16ch + 1.6rem), calc(100vw - 5rem));
   }
 
   @keyframes kefine-auth-spin {
@@ -972,7 +980,7 @@
 
   @media (max-width: 760px) {
     button[data-part='auth'] {
-      max-width: min(14rem, calc(100vw - 4.25rem));
+      max-width: min(calc(12ch + 1.44rem), calc(100vw - 4.25rem));
       padding-inline: 0.72rem;
     }
 
@@ -1041,10 +1049,15 @@
     }
 
     button[data-part='auth'] {
-      max-width: min(14rem, calc(100vw - 4.25rem));
+      max-width: min(calc(12ch + 1.44rem), calc(100vw - 4.25rem));
       padding-inline: 0.72rem;
       white-space: nowrap;
       text-align: left;
+    }
+
+    button[data-part='auth'][data-authenticated='true'] {
+      flex-basis: min(calc(12ch + 1.44rem), calc(100vw - 4.25rem));
+      width: min(calc(12ch + 1.44rem), calc(100vw - 4.25rem));
     }
   }
 </style>

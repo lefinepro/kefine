@@ -94,7 +94,9 @@
     onSaveDocument?: ((content: string) => void | Promise<void>) | null;
     onExportClone?: ((format: TaskCloneFormat) => void) | null;
     onSaveCloneLocally?: ((runLocally: boolean) => void) | null;
-    onUpdateTaskSettings?: ((patch: Partial<Pick<OrderView, 'shareId' | 'isPublicTask' | 'vcsEnabled' | 'repository'>> & { gitSettings?: import('./kefine-workflow').RepositoryGitSettings }) => void | Promise<void>) | null;
+    onUpdateTaskSettings?: ((patch: Partial<Pick<OrderView, 'title' | 'description' | 'taskIcon' | 'shareId' | 'isPublicTask' | 'vcsEnabled' | 'repository'>> & {
+      gitSettings?: import('./kefine-workflow').RepositoryGitSettings;
+    }) => void | Promise<void>) | null;
     onPauseSearch?: (() => void | Promise<void>) | null;
     onResumeSearch?: (() => void | Promise<void>) | null;
     onWalletLogin: () => void;
@@ -253,6 +255,10 @@
     activeGenericStep ? activeGenericStep.title : execution.headline
   );
   const taskMonogram = $derived.by(() => {
+    const icon = currentOrder?.taskIcon?.trim();
+    if (icon) {
+      return icon;
+    }
     const source = currentOrder?.title?.trim() || '';
     const match = source.match(/[A-Za-zА-Яа-яԱ-Ֆա-ֆ0-9]/u);
     return (match?.[0] ?? source.charAt(0) ?? 'T').toUpperCase();
@@ -410,7 +416,7 @@
       <lefine-box class="kefine-flow-topline">
         <button type="button" class="kefine-flow-back" onclick={onCancel} aria-label={labels.cancel}>←</button>
         <lefine-box class="kefine-flow-topline-actions">
-          {#if currentOrder && canManageTask && onUpdateTaskSettings}
+          {#if currentOrder && onUpdateTaskSettings}
             <KefineTaskSettingsMenu order={currentOrder} onApply={onUpdateTaskSettings} />
           {/if}
           {#if currentOrder && onExportClone}
@@ -482,8 +488,8 @@
                           href={solverIdentity.profileUrl}
                           target="_blank"
                           rel="noreferrer"
-                          aria-label="Solver profile"
-                          title="Solver profile"
+                          aria-label="Solver workspace"
+                          title="Solver workspace"
                         >
                           <Icon icon="mdi:open-in-new" width="16" height="16" aria-hidden="true" />
                         </a>

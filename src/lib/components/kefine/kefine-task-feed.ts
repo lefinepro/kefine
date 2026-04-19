@@ -1,5 +1,6 @@
 import type {
   ExecutionStage,
+  OrderCommentMention,
   OrderExecutor,
   OrderExecutionStep,
   OrderNotebookBlock,
@@ -15,6 +16,7 @@ export type TaskThreadNode = {
   stepId?: string;
   title: string;
   detail?: string;
+  branchLabel?: string;
   state: ProgressState;
   mode: 'compact' | 'block' | 'loading';
   meta?: string;
@@ -29,6 +31,86 @@ type ParsedTaskDocument = {
   systemComments: Record<string, OrderStepComment[]>;
   systemInserts: Record<string, OrderNotebookBlock[]>;
 };
+
+export type TaskDocumentCommentPayload = {
+  content: string;
+  mentions?: OrderCommentMention[];
+};
+
+function parseStoredCommentPayload(raw: string): TaskDocumentCommentPayload {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return { content: '' };
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed) as {
+      content?: unknown;
+      mentions?: Array<{
+        id?: unknown;
+        value?: unknown;
+        kind?: unknown;
+        targetKind?: unknown;
+      }>;
+    };
+
+    if (typeof parsed?.content !== 'string') {
+      return { content: trimmed };
+    }
+
+    const mentions = Array.isArray(parsed.mentions)
+      ? parsed.mentions.reduce<OrderCommentMention[]>((acc, mention) => {
+          if (
+            typeof mention?.id !== 'string' ||
+            typeof mention?.value !== 'string' ||
+            typeof mention?.kind !== 'string'
+          ) {
+            return acc;
+          }
+
+          acc.push({
+            id: mention.id,
+            value: mention.value,
+            kind: mention.kind,
+            targetKind: mention.targetKind === 'actor' || mention.targetKind === 'solver' ? mention.targetKind : undefined
+          });
+          return acc;
+        }, [])
+      : undefined;
+
+    return {
+      content: parsed.content.trim(),
+      mentions: mentions?.length ? mentions : undefined
+    };
+  } catch {
+    return { content: trimmed };
+  }
+}
+
+function serializeStoredCommentPayload(payload: TaskDocumentCommentPayload): string {
+  const content = payload.content.trim();
+  if (!content) {
+    return '';
+  }
+
+  const mentions = payload.mentions?.filter(
+    (mention) => mention.id.trim() && mention.value.trim() && mention.kind.trim()
+  );
+
+  if (!mentions?.length) {
+    return content;
+  }
+
+  return JSON.stringify({
+    content,
+    mentions: mentions.map((mention) => ({
+      id: mention.id,
+      value: mention.value,
+      kind: mention.kind,
+      targetKind: mention.targetKind
+    }))
+  });
+}
 
 function parseTaskDocumentContent(content: string | undefined): ParsedTaskDocument {
   const source = content?.trim() || '';
@@ -69,11 +151,13 @@ function parseTaskDocumentContent(content: string | undefined): ParsedTaskDocume
 
     if (nodeKey) {
       if (commentStart) {
+        const commentPayload = parseStoredCommentPayload(contentLines.join('\n'));
         systemComments[nodeKey] = [
           ...(systemComments[nodeKey] ?? []),
           {
             id: `${nodeKey}-${systemComments[nodeKey]?.length ?? 0}`,
-            content: contentLines.join('\n').trim()
+            content: commentPayload.content,
+            mentions: commentPayload.mentions
           }
         ].filter((comment) => comment.content);
       } else {
@@ -100,22 +184,31 @@ function parseTaskDocumentContent(content: string | undefined): ParsedTaskDocume
   };
 }
 
-function appendSystemComment(content: string | undefined, nodeKey: string, comment: string): string {
+function appendSystemComment(content: string | undefined, nodeKey: string, comment: TaskDocumentCommentPayload): string {
   const parsed = parseTaskDocumentContent(content);
   const blocks = [parsed.body].filter(Boolean);
-  const existingComments = Object.entries(parsed.systemComments);
-
-  for (const [key, comments] of existingComments) {
+  for (const [key, comments] of Object.entries(parsed.systemComments)) {
     for (const item of comments) {
-      blocks.push(`#+begin_node_comment: ${key}\n${item.content}\n#+end_node_comment`);
+      blocks.push(
+        `#+begin_node_comment: ${key}\n${serializeStoredCommentPayload({ content: item.content, mentions: item.mentions })}\n#+end_node_comment`
+      );
     }
   }
 
-  blocks.push(`#+begin_node_comment: ${nodeKey}\n${comment.trim()}\n#+end_node_comment`);
+  for (const [key, inserts] of Object.entries(parsed.systemInserts)) {
+    for (const item of inserts) {
+      blocks.push(`#+begin_node_insert: ${key}\n${item.content}\n#+end_node_insert`);
+    }
+  }
+
+  const serializedComment = serializeStoredCommentPayload(comment);
+  if (serializedComment) {
+    blocks.push(`#+begin_node_comment: ${nodeKey}\n${serializedComment}\n#+end_node_comment`);
+  }
   return blocks.filter(Boolean).join('\n\n').trim();
 }
 
-function replaceSystemComment(content: string | undefined, nodeKey: string, comment: string): string {
+function replaceSystemComment(content: string | undefined, nodeKey: string, comment: TaskDocumentCommentPayload): string {
   const parsed = parseTaskDocumentContent(content);
   const blocks = [parsed.body].filter(Boolean);
 
@@ -125,12 +218,21 @@ function replaceSystemComment(content: string | undefined, nodeKey: string, comm
     }
 
     for (const item of comments) {
-      blocks.push(`#+begin_node_comment: ${key}\n${item.content}\n#+end_node_comment`);
+      blocks.push(
+        `#+begin_node_comment: ${key}\n${serializeStoredCommentPayload({ content: item.content, mentions: item.mentions })}\n#+end_node_comment`
+      );
     }
   }
 
-  if (comment.trim()) {
-    blocks.push(`#+begin_node_comment: ${nodeKey}\n${comment.trim()}\n#+end_node_comment`);
+  for (const [key, inserts] of Object.entries(parsed.systemInserts)) {
+    for (const item of inserts) {
+      blocks.push(`#+begin_node_insert: ${key}\n${item.content}\n#+end_node_insert`);
+    }
+  }
+
+  const serializedComment = serializeStoredCommentPayload(comment);
+  if (serializedComment) {
+    blocks.push(`#+begin_node_comment: ${nodeKey}\n${serializedComment}\n#+end_node_comment`);
   }
 
   return blocks.filter(Boolean).join('\n\n').trim();
@@ -142,7 +244,9 @@ function appendSystemInsert(content: string | undefined, nodeKey: string, insert
 
   for (const [key, comments] of Object.entries(parsed.systemComments)) {
     for (const item of comments) {
-      blocks.push(`#+begin_node_comment: ${key}\n${item.content}\n#+end_node_comment`);
+      blocks.push(
+        `#+begin_node_comment: ${key}\n${serializeStoredCommentPayload({ content: item.content, mentions: item.mentions })}\n#+end_node_comment`
+      );
     }
   }
 
@@ -182,7 +286,7 @@ function blockNode(
   state: ProgressState,
   blocks: OrderNotebookBlock[],
   meta?: string,
-  options?: Pick<TaskThreadNode, 'comments' | 'commentable' | 'stepId'>
+  options?: Pick<TaskThreadNode, 'comments' | 'commentable' | 'stepId' | 'branchLabel'>
 ): TaskThreadNode {
   return { id, title, detail, state, mode: 'block', blocks, meta, ...options };
 }
@@ -344,7 +448,7 @@ function exchangeSearchNode(order: OrderView): TaskThreadNode {
   if (stage === 'assigned' || stage === 'running' || stage === 'review' || stage === 'completed') {
     return compactNode(
       `${order.id}-exchange-search`,
-      'Exchange search',
+      'Find solvers',
       'A matching performer was found on the exchange.',
       'completed',
       undefined,
@@ -357,7 +461,7 @@ function exchangeSearchNode(order: OrderView): TaskThreadNode {
   if (stage === 'failed') {
     return compactNode(
       `${order.id}-exchange-search`,
-      'Exchange search',
+      'Find solvers',
       'The exchange route stopped before execution finished.',
       'active',
       undefined,
@@ -370,7 +474,7 @@ function exchangeSearchNode(order: OrderView): TaskThreadNode {
   return {
     id: `${order.id}-exchange-search`,
     stepId: `${order.id}-exchange-search`,
-    title: 'Exchange search',
+    title: 'Find solvers',
     detail: 'Publishing the task to exchange and waiting for a matching performer.',
     state: 'active',
     mode: 'loading',
@@ -389,35 +493,72 @@ function resolveSystemNodeComments(order: OrderView, nodeKey: string): OrderStep
   return comments?.length ? comments : undefined;
 }
 
-function resolveSystemNodeInserts(order: OrderView, nodeKey: string): TaskThreadNode[] | undefined {
+function resolveSystemNodeComment(order: OrderView, nodeKey: string): string {
+  const comments = parseTaskDocumentContent(order.document?.content).systemComments[nodeKey];
+  return comments?.[comments.length - 1]?.content?.trim() || '';
+}
+
+function deriveInsertTitle(content: string, fallback: string): string {
+  const lines = content
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  const firstLine = lines[0] ?? '';
+  if (!firstLine) {
+    return fallback;
+  }
+
+  const normalized = firstLine
+    .replace(/^branch:\s+/i, '')
+    .replace(/^\*+\s+/, '')
+    .replace(/^[-+]\s+/, '')
+    .replace(/^\d+\.\s+/, '')
+    .trim();
+
+  return normalized || fallback;
+}
+
+function resolveSystemNodeInserts(order: OrderView, nodeKey: string, inheritedBranchLabel?: string): TaskThreadNode[] | undefined {
   const inserts = parseTaskDocumentContent(order.document?.content).systemInserts[nodeKey];
   if (!inserts?.length) {
     return undefined;
   }
 
+  let branchCounter = 0;
+  let taskCounter = 0;
+
   return inserts.map((block, index) => {
     const normalizedContent = block.content.trim();
     const isBranchInsert = /^branch:\s+/i.test(normalizedContent);
-    const stepId = `${nodeKey}-insert-${index + 1}`;
+    if (isBranchInsert) {
+      branchCounter += 1;
+    } else {
+      taskCounter += 1;
+    }
 
-    return blockNode(
+    const branchLabel = isBranchInsert ? `Branch ${branchCounter}` : inheritedBranchLabel;
+    const body = isBranchInsert ? normalizedContent.replace(/^branch:\s+/i, '').trim() : normalizedContent;
+    const stepId = `${nodeKey}-insert-${index + 1}`;
+    const title = deriveInsertTitle(body, isBranchInsert ? `Branch task ${branchCounter}` : `Task ${taskCounter}`);
+    const detail = body && body !== title ? body : undefined;
+    const node = compactNode(
       stepId,
-      isBranchInsert ? `Branch ${index + 1}` : `Update ${index + 1}`,
-      undefined,
+      title,
+      detail,
       'upcoming',
-      [
-        {
-          ...block,
-          content: isBranchInsert ? normalizedContent.replace(/^branch:\s+/i, '').trim() : block.content
-        }
-      ],
-      isBranchInsert ? 'branch' : 'pending',
-      {
-        commentable: true,
-        stepId,
-        comments: resolveSystemNodeComments(order, stepId)
-      }
+      undefined,
+      stepId,
+      true,
+      resolveSystemNodeComments(order, stepId)
     );
+
+    const children = resolveSystemNodeInserts(order, stepId, branchLabel);
+    return {
+      ...node,
+      branchLabel,
+      children
+    };
   });
 }
 
@@ -570,7 +711,7 @@ export function buildTaskThreadNodes(order: OrderView | null): TaskThreadNode[] 
 
   return nodes.map((node) => ({
     ...node,
-    children: [...(node.children ?? []), ...(resolveSystemNodeInserts(order, node.stepId || node.id) ?? [])]
+    children: [...(node.children ?? []), ...(resolveSystemNodeInserts(order, node.stepId || node.id, node.branchLabel) ?? [])]
   }));
 }
 
@@ -612,15 +753,35 @@ export function appendTaskNodeComment(order: OrderView | null, nodeKey: string, 
     return content.trim();
   }
 
-  return appendSystemComment(order.document?.content || order.description || '', nodeKey, content);
+  return appendSystemComment(order.document?.content || order.description || '', nodeKey, { content });
 }
 
-export function replaceTaskNodeComment(order: OrderView | null, nodeKey: string, content: string): string {
+export function replaceTaskNodeComment(order: OrderView | null, nodeKey: string, content: string, mentions?: OrderCommentMention[]): string {
   if (!order) {
     return content.trim();
   }
 
-  return replaceSystemComment(order.document?.content || order.description || '', nodeKey, content);
+  return replaceSystemComment(order.document?.content || order.description || '', nodeKey, { content, mentions });
+}
+
+export function appendTaskNodeCommentWithMetadata(
+  order: OrderView | null,
+  nodeKey: string,
+  payload: TaskDocumentCommentPayload
+): string {
+  if (!order) {
+    return payload.content.trim();
+  }
+
+  return appendSystemComment(order.document?.content || order.description || '', nodeKey, payload);
+}
+
+export function resolveTaskNodeComment(order: OrderView | null, nodeKey: string): string {
+  if (!order) {
+    return '';
+  }
+
+  return resolveSystemNodeComment(order, nodeKey);
 }
 
 export function appendTaskNodeInsert(order: OrderView | null, nodeKey: string, content: string): string {

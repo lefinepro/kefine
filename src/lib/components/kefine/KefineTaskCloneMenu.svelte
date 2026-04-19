@@ -127,9 +127,16 @@
     onclick={toggleMenu}
     aria-haspopup="menu"
     aria-expanded={menuOpen}
+    aria-label="Clone task"
+    title="Clone task"
     disabled={!order}
   >
-    <Icon icon="mdi:source-branch" width="16" height="16" aria-hidden="true" />
+    <Icon
+      icon={menuOpen ? 'mdi:chevron-up' : 'mdi:chevron-down'}
+      width="16"
+      height="16"
+      aria-hidden="true"
+    />
     <lefine-text>Clone</lefine-text>
   </button>
 
@@ -137,20 +144,6 @@
     <kefine-clone-popover role="menu" aria-label="Clone task">
       {#if repository}
         <kefine-clone-section>
-          <kefine-clone-heading>
-            <strong>Git repo</strong>
-            <kefine-clone-badges>
-              <span>{repository.visibility}</span>
-              {#if repository.defaultBranch}
-                <span>{repository.defaultBranch}</span>
-              {/if}
-            </kefine-clone-badges>
-          </kefine-clone-heading>
-
-          {#if repository.name}
-            <p data-part="clone-muted">{repository.name}</p>
-          {/if}
-
           {#if repositoryCloneTarget}
             <kefine-clone-target>
               <kefine-clone-target-copy>
@@ -254,39 +247,8 @@
     gap: 0.7rem;
   }
 
-  kefine-clone-heading {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.7rem;
-  }
-
   kefine-clone-section strong {
     font-size: 0.9rem;
-  }
-
-  kefine-clone-badges {
-    display: inline-flex;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-    gap: 0.35rem;
-  }
-
-  kefine-clone-badges span {
-    padding: 0.24rem 0.48rem;
-    border-radius: 999px;
-    background: color-mix(in oklab, var(--kef-primary, #b97a28) 20%, white 80%);
-    color: #7f5531;
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.01em;
-    text-transform: uppercase;
-  }
-
-  p[data-part='clone-muted'] {
-    margin: -0.15rem 0 0;
-    font-size: 0.85rem;
-    color: color-mix(in oklab, var(--lefine-text, #453323) 74%, transparent);
   }
 
   kefine-clone-target {
@@ -381,11 +343,6 @@
 
   :global(:root[data-kefine-theme='dark']) button[data-part='save-action'] {
     background: color-mix(in oklab, var(--kef-primary, #b97a28) 18%, var(--kef-bg-card, #22170f));
-  }
-
-  :global(:root[data-kefine-theme='dark']) kefine-clone-badges span {
-    background: color-mix(in oklab, #f0d7b2 22%, #3a2818 78%);
-    color: #f3dfc4;
   }
 
   @media (max-width: 380px) {

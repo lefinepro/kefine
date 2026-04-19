@@ -275,9 +275,19 @@ export type OrderNotebookBlock = {
   href?: string;
 };
 
+export type OrderCommentRecipient = 'actor' | 'solver';
+
+export type OrderCommentMention = {
+  id: string;
+  value: string;
+  kind: string;
+  targetKind?: OrderCommentRecipient;
+};
+
 export type OrderStepComment = {
   id: string;
   content: string;
+  mentions?: OrderCommentMention[];
   authorName?: string;
   authorHandle?: string;
   createdAt?: string;

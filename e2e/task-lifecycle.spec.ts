@@ -32,7 +32,7 @@ test.describe('Task Lifecycle', () => {
 
     await createTask(page, 'Optimize database queries');
 
-    await expect(page).toHaveURL(/#\/orders\/order-1$/);
+    await expect(page).toHaveURL(/\/order-1$/);
     await expect(page.getByRole('heading', { name: 'Optimize database queries' })).toBeVisible();
     await expect(page.getByTestId('kefine-subtask-list')).toBeVisible();
     await expect(page.getByTestId('kefine-price-metric')).toBeVisible();
@@ -77,7 +77,7 @@ test.describe('Task Lifecycle', () => {
     expect(storedAfter).toContain('order-1');
 
     await realRow.getByTestId('kefine-open-order-order-1').click();
-    await expect(page).toHaveURL(/#\/orders\/order-1$/);
+    await expect(page).toHaveURL(/\/order-1$/);
   });
 
   test('reloading a persisted order route keeps the executing flow mounted', async ({ page }) => {
@@ -86,12 +86,35 @@ test.describe('Task Lifecycle', () => {
     await gotoAndWaitForReady(page);
 
     await createTask(page, 'Persisted route order');
-    await expect(page).toHaveURL(/#\/orders\/order-1$/);
+    await expect(page).toHaveURL(/\/order-1$/);
 
     await page.reload();
 
-    await expect(page).toHaveURL(/#\/orders\/order-1$/);
+    await expect(page).toHaveURL(/\/order-1$/);
     await expect(page.getByRole('heading', { name: 'Persisted route order' })).toBeVisible();
+    await expect(page.getByTestId('kefine-wallet-tile')).toBeVisible();
+  });
+
+  test('custom slug survives reload and keeps executing flow mounted', async ({ page }) => {
+    await mockOrderApi(page);
+    await gotoAndWaitForReady(page);
+
+    await createTask(page, 'Custom slug order');
+    await expect(page).toHaveURL(/\/order-1$/);
+
+    await page.getByTitle('Task settings').click();
+    const settingsDialog = page.getByRole('dialog', { name: 'Task settings' });
+    await settingsDialog.getByRole('textbox', { name: 'Slug' }).fill('custom-slug-order');
+    await settingsDialog.getByRole('button', { name: 'Save' }).click();
+
+    await expect
+      .poll(() => page.evaluate(() => window.localStorage.getItem('kefine-created-orders-v1') ?? ''))
+      .toContain('custom-slug-order');
+    await expect(page).toHaveURL(/\/custom-slug-order$/);
+    await page.reload();
+
+    await expect(page).toHaveURL(/\/custom-slug-order$/);
+    await expect(page.getByRole('heading', { name: 'Custom slug order' })).toBeVisible();
     await expect(page.getByTestId('kefine-wallet-tile')).toBeVisible();
   });
 
@@ -101,9 +124,54 @@ test.describe('Task Lifecycle', () => {
 
     await createTask(page, 'Build a landing page');
 
-    await expect(page).toHaveURL(/#\/orders\/order-1$/);
+    await expect(page).toHaveURL(/\/order-1$/);
     await expect(page.getByTestId('kefine-solver-fallback')).toBeVisible();
     await expect(page.getByTestId('kefine-promo-toggle')).toHaveCount(0);
     await expect(page.getByTestId('kefine-promo-input')).toHaveCount(0);
+  });
+
+  test('next step from plus opens full editor and saves detailed step', async ({ page }) => {
+    await mockOrderApi(page);
+    await gotoAndWaitForReady(page);
+
+    await createTask(page, 'Build a landing page');
+    await expect(page).toHaveURL(/\/order-1$/);
+
+    await page.locator('[data-part="next-step-trigger"]').first().click({ force: true });
+
+    const editor = page.getByTestId(/kefine-inline-next-step-editor-/).first();
+    await expect(editor).toBeVisible();
+    await editor.locator('textarea[data-part="source"]').fill('QA handoff');
+    await editor.getByRole('button', { name: 'Apply' }).click();
+
+    await expect(page.locator('kefine-thread-line strong').filter({ hasText: 'QA handoff' })).toBeVisible();
+  });
+
+  test('plus near a node starts a new branch and survives reload', async ({ page }) => {
+    await mockOrderApi(page);
+    await gotoAndWaitForReady(page);
+
+    await createTask(page, 'Launch docs portal');
+    await expect(page).toHaveURL(/\/order-1$/);
+
+    await page.locator('[data-part="comment-trigger-action"][data-kind="branch"]').first().evaluate((element) => {
+      (element as HTMLButtonElement).click();
+    });
+
+    const branchEditor = page.getByTestId(/kefine-branch-editor-/).first();
+    const branchTextarea = branchEditor.locator('textarea[data-part="source"]');
+    await expect(branchEditor).toBeVisible();
+    await expect(branchTextarea).toBeVisible();
+    await branchTextarea.fill('API migration');
+    await branchEditor.getByRole('button', { name: 'Apply' }).click();
+
+    await expect(page.getByText('Branch 1')).toBeVisible();
+    await expect(page.locator('kefine-thread-line strong').filter({ hasText: 'API migration' })).toBeVisible();
+
+    await page.reload();
+
+    await expect(page).toHaveURL(/\/order-1$/);
+    await expect(page.getByText('Branch 1')).toBeVisible();
+    await expect(page.locator('kefine-thread-line strong').filter({ hasText: 'API migration' })).toBeVisible();
   });
 });
