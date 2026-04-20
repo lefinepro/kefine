@@ -14,6 +14,13 @@ module Crater
           handle_inbox(env, config)
         end
 
+        # Some federated peers derive per-actor inboxes from `/actor/:username`
+        # by rewriting them to `/inbox/:username`. Accept that alias so remote
+        # delivery still works even when they ignore the actor document inbox URL.
+        post "/inbox/:username" do |env|
+          handle_inbox(env, config)
+        end
+
         post "/actor/:username/inbox" do |env|
           handle_inbox(env, config)
         end
