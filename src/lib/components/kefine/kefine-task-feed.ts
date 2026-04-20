@@ -444,6 +444,21 @@ export function resolveOrderStage(order: OrderView): ExecutionStage {
 function exchangeSearchNode(order: OrderView): TaskThreadNode {
   const stage = resolveOrderStage(order);
   const comments = resolveSystemNodeComments(order, `${order.id}-exchange-search`);
+  const finalResultBlocks = order.result?.blocks;
+
+  if (finalResultBlocks?.length) {
+    return {
+      id: `${order.id}-exchange-search`,
+      stepId: `${order.id}-exchange-search`,
+      title: 'Solution',
+      detail: order.result?.summary || order.result?.title || 'The solution has been received.',
+      state: 'completed',
+      mode: 'block',
+      blocks: finalResultBlocks,
+      commentable: true,
+      comments
+    };
+  }
 
   if (stage === 'assigned' || stage === 'running' || stage === 'review' || stage === 'completed') {
     return compactNode(
@@ -698,15 +713,17 @@ export function buildTaskThreadNodes(order: OrderView | null): TaskThreadNode[] 
   const description = descriptionNode(order);
   const interim = resultNode(order.interimResult, `${order.id}-interim-result`, 'Interim result');
   const final = resultNode(order.result, `${order.id}-final-result`, 'Final result');
+  const exchangeNode = exchangeSearchNode(order);
+  const exchangeShowsFinalResult = exchangeNode.mode === 'block' && exchangeNode.title === 'Solution';
 
   const nodes = [
-    exchangeSearchNode(order),
+    exchangeNode,
     ...solverNodes(order),
     ...(description ? [description] : []),
     ...executionNodes(order.executionSteps),
     ...notebookNodes(order.notebook?.steps),
     ...(interim ? [interim] : []),
-    ...(final ? [final] : [])
+    ...(final && !exchangeShowsFinalResult ? [final] : [])
   ];
 
   return nodes.map((node) => ({
