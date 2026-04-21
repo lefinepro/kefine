@@ -235,6 +235,49 @@ module Crater
       normalize_handle(order.owner_username || order.actor_handle || config.actor_username)
     end
 
+    private def self.owner_handle_from_actor_uri(value : String?) : String?
+      actor_uri = presence(value)
+      return nil unless actor_uri
+
+      match = actor_uri.match(/\/actor\/([^\/?#]+)\z/)
+      handle = match.try(&.[1]?)
+      presence(handle).try { |candidate| normalize_handle(candidate) }
+    end
+
+    private def self.owner_handle_from_activity(activity : JSON::Any) : String?
+      queue = [activity]
+
+      until queue.empty?
+        current = queue.shift
+        current_hash = current.as_h?
+        next unless current_hash
+
+        handle = presence(current_hash["ownerUsername"]?.try(&.as_s?)) || presence(current_hash["actorHandle"]?.try(&.as_s?))
+        return normalize_handle(handle) if handle
+
+        actor_handle =
+          owner_handle_from_actor_uri(current_hash["actor"]?.try(&.as_s?)) ||
+          owner_handle_from_actor_uri(current_hash["attributedTo"]?.try(&.as_s?))
+        return actor_handle if actor_handle
+
+        %w[object offeredItem ticket target].each do |key|
+          nested = current_hash[key]?
+          queue << nested if nested
+        end
+      end
+
+      nil
+    end
+
+    private def self.owner_handle_from_activities(order_id : String, config : Utils::Config) : String?
+      OrderQueue.activities_for_order(order_id, config, 5).each do |activity|
+        handle = owner_handle_from_activity(activity)
+        return handle if handle
+      end
+
+      nil
+    end
+
     private def self.owner_handle_for(record : RepositoryRecord, config : Utils::Config) : String
       order = OrderQueue.find_order(record.order_id, config)
       unless order
@@ -244,7 +287,10 @@ module Crater
         return normalize_handle(config.actor_username)
       end
 
-      owner_handle_for_order(order, config)
+      order_handle = presence(order.owner_username) || presence(order.actor_handle)
+      return normalize_handle(order_handle) if order_handle
+
+      owner_handle_from_activities(record.order_id, config) || normalize_handle(config.actor_username)
     end
 
     private def self.ad_hoc_order_id(owner_handle : String, clone_name : String) : String
@@ -336,7 +382,7 @@ module Crater
     private def self.project_public_clone_url(record : RepositoryRecord, config : Utils::Config) : String?
       return nil unless record.visibility == "public"
 
-      "#{config.crater_url}/git/@#{owner_handle_for(record, config)}/#{record.project_id}.git"
+      "#{config.crater_url}/@#{owner_handle_for(record, config)}/#{record.project_id}.git"
     end
 
     private def self.project_ssh_clone_url(record : RepositoryRecord, config : Utils::Config) : String
@@ -344,7 +390,7 @@ module Crater
     end
 
     private def self.project_archive_url(record : RepositoryRecord, config : Utils::Config) : String
-      "#{config.crater_url}/git/@#{owner_handle_for(record, config)}/#{record.project_id}.zip"
+      "#{config.crater_url}/@#{owner_handle_for(record, config)}/#{record.project_id}.zip"
     end
 
     private def self.hydrate_record(row : {String, String, String, String, String, String, String, String, String?, String?, String, String, String}) : RepositoryRecord
