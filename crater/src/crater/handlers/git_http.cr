@@ -35,18 +35,6 @@ module Crater
           )
         end
 
-        get "/@:owner/:slug.zip" do |env|
-          serve_archive(env, resolve_repo_path_for_owner(env.params.url["owner"], env.params.url["slug"], config), env.params.url["slug"], "zip")
-        end
-
-        get "/@:owner/:slug.tar.gz" do |env|
-          serve_archive(env, resolve_repo_path_for_owner(env.params.url["owner"], env.params.url["slug"], config), env.params.url["slug"], "tar.gz")
-        end
-
-        get "/@:owner/:slug.tar.zst" do |env|
-          serve_archive(env, resolve_repo_path_for_owner(env.params.url["owner"], env.params.url["slug"], config), env.params.url["slug"], "tar.zst")
-        end
-
         get "/:owner/:slug/HEAD" do |env|
           serve_text(env, resolve_public_repo_path_for_owner(env.params.url["owner"], env.params.url["slug"], config), "HEAD")
         end
@@ -75,16 +63,8 @@ module Crater
           )
         end
 
-        get "/:owner/:slug.zip" do |env|
-          serve_archive(env, resolve_repo_path_for_owner(env.params.url["owner"], env.params.url["slug"], config), env.params.url["slug"], "zip")
-        end
-
-        get "/:owner/:slug.tar.gz" do |env|
-          serve_archive(env, resolve_repo_path_for_owner(env.params.url["owner"], env.params.url["slug"], config), env.params.url["slug"], "tar.gz")
-        end
-
-        get "/:owner/:slug.tar.zst" do |env|
-          serve_archive(env, resolve_repo_path_for_owner(env.params.url["owner"], env.params.url["slug"], config), env.params.url["slug"], "tar.zst")
+        get "/:owner/:archive_name" do |env|
+          serve_owner_archive(env, env.params.url["owner"], env.params.url["archive_name"], config)
         end
 
         get "/git/:owner/:slug/HEAD" do |env|
@@ -115,16 +95,8 @@ module Crater
           )
         end
 
-        get "/git/:owner/:slug.zip" do |env|
-          serve_archive(env, resolve_repo_path_for_owner(env.params.url["owner"], env.params.url["slug"], config), env.params.url["slug"], "zip")
-        end
-
-        get "/git/:owner/:slug.tar.gz" do |env|
-          serve_archive(env, resolve_repo_path_for_owner(env.params.url["owner"], env.params.url["slug"], config), env.params.url["slug"], "tar.gz")
-        end
-
-        get "/git/:owner/:slug.tar.zst" do |env|
-          serve_archive(env, resolve_repo_path_for_owner(env.params.url["owner"], env.params.url["slug"], config), env.params.url["slug"], "tar.zst")
+        get "/git/:owner/:archive_name" do |env|
+          serve_owner_archive(env, env.params.url["owner"], env.params.url["archive_name"], config)
         end
 
         get "/git/:slug/HEAD" do |env|
@@ -155,17 +127,44 @@ module Crater
           )
         end
 
-        get "/git/:slug.zip" do |env|
-          serve_archive(env, resolve_repo_path(env.params.url["slug"], config), env.params.url["slug"], "zip")
+        get "/git/:archive_name" do |env|
+          serve_slug_archive(env, env.params.url["archive_name"], config)
+        end
+      end
+
+      private def self.parse_archive_name(raw_name : String) : {String, String}?
+        case
+        when raw_name.ends_with?(".tar.gz")
+          {raw_name[0, raw_name.bytesize - ".tar.gz".bytesize], "tar.gz"}
+        when raw_name.ends_with?(".tar.zst")
+          {raw_name[0, raw_name.bytesize - ".tar.zst".bytesize], "tar.zst"}
+        when raw_name.ends_with?(".zip")
+          {raw_name[0, raw_name.bytesize - ".zip".bytesize], "zip"}
+        else
+          nil
+        end
+      end
+
+      private def self.serve_owner_archive(env, raw_owner : String, raw_name : String, config : Utils::Config) : String
+        parsed = parse_archive_name(raw_name)
+        unless parsed
+          env.response.status_code = 404
+          return "Not found"
         end
 
-        get "/git/:slug.tar.gz" do |env|
-          serve_archive(env, resolve_repo_path(env.params.url["slug"], config), env.params.url["slug"], "tar.gz")
+        slug, format = parsed
+        serve_archive(env, resolve_repo_path_for_owner(raw_owner, slug, config), slug, format)
+      end
+
+      private def self.serve_slug_archive(env, raw_name : String, config : Utils::Config) : String
+        parsed = parse_archive_name(raw_name)
+        unless parsed
+          env.response.status_code = 404
+          return "Not found"
         end
 
-        get "/git/:slug.tar.zst" do |env|
-          serve_archive(env, resolve_repo_path(env.params.url["slug"], config), env.params.url["slug"], "tar.zst")
-        end
+        slug, format = parsed
+        serve_archive(env, resolve_repo_path(slug, config), slug, format)
       end
 
       private def self.normalize_slug(raw_slug : String) : String
