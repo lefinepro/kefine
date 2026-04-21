@@ -246,6 +246,7 @@ module Crater
 
     private def self.owner_handle_from_activity(activity : JSON::Any) : String?
       queue = [activity]
+      actor_handle_fallback : String? = nil
 
       until queue.empty?
         current = queue.shift
@@ -255,10 +256,8 @@ module Crater
         handle = presence(current_hash["ownerUsername"]?.try(&.as_s?)) || presence(current_hash["actorHandle"]?.try(&.as_s?))
         return normalize_handle(handle) if handle
 
-        actor_handle =
-          owner_handle_from_actor_uri(current_hash["actor"]?.try(&.as_s?)) ||
-          owner_handle_from_actor_uri(current_hash["attributedTo"]?.try(&.as_s?))
-        return actor_handle if actor_handle
+        actor_handle_fallback ||= owner_handle_from_actor_uri(current_hash["actor"]?.try(&.as_s?))
+        actor_handle_fallback ||= owner_handle_from_actor_uri(current_hash["attributedTo"]?.try(&.as_s?))
 
         %w[object offeredItem ticket target].each do |key|
           nested = current_hash[key]?
@@ -266,7 +265,7 @@ module Crater
         end
       end
 
-      nil
+      actor_handle_fallback
     end
 
     private def self.owner_handle_from_activities(order_id : String, config : Utils::Config) : String?
