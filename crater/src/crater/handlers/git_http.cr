@@ -7,6 +7,46 @@ module Crater
   module Handlers
     module GitHttp
       def self.register(config : Utils::Config)
+        get "/:owner/:slug/HEAD" do |env|
+          serve_text(env, resolve_public_repo_path_for_owner(env.params.url["owner"], env.params.url["slug"], config), "HEAD")
+        end
+
+        get "/:owner/:slug/info/refs" do |env|
+          serve_text(env, resolve_public_repo_path_for_owner(env.params.url["owner"], env.params.url["slug"], config), File.join("info", "refs"))
+        end
+
+        get "/:owner/:slug/packed-refs" do |env|
+          serve_text(env, resolve_public_repo_path_for_owner(env.params.url["owner"], env.params.url["slug"], config), "packed-refs")
+        end
+
+        get "/:owner/:slug/objects/info/packs" do |env|
+          serve_text(env, resolve_public_repo_path_for_owner(env.params.url["owner"], env.params.url["slug"], config), File.join("objects", "info", "packs"))
+        end
+
+        get "/:owner/:slug/objects/pack/:name" do |env|
+          serve_binary(env, resolve_public_repo_path_for_owner(env.params.url["owner"], env.params.url["slug"], config), File.join("objects", "pack", env.params.url["name"]))
+        end
+
+        get "/:owner/:slug/objects/:prefix/:name" do |env|
+          serve_binary(
+            env,
+            resolve_public_repo_path_for_owner(env.params.url["owner"], env.params.url["slug"], config),
+            File.join("objects", env.params.url["prefix"], env.params.url["name"])
+          )
+        end
+
+        get "/:owner/:slug.zip" do |env|
+          serve_archive(env, resolve_repo_path_for_owner(env.params.url["owner"], env.params.url["slug"], config), env.params.url["slug"], "zip")
+        end
+
+        get "/:owner/:slug.tar.gz" do |env|
+          serve_archive(env, resolve_repo_path_for_owner(env.params.url["owner"], env.params.url["slug"], config), env.params.url["slug"], "tar.gz")
+        end
+
+        get "/:owner/:slug.tar.zst" do |env|
+          serve_archive(env, resolve_repo_path_for_owner(env.params.url["owner"], env.params.url["slug"], config), env.params.url["slug"], "tar.zst")
+        end
+
         get "/git/:owner/:slug/HEAD" do |env|
           serve_text(env, resolve_public_repo_path_for_owner(env.params.url["owner"], env.params.url["slug"], config), "HEAD")
         end
