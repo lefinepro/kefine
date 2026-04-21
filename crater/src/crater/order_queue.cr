@@ -550,6 +550,40 @@ module Crater
       )
     end
 
+    private def self.merge_existing_order_state(record : OrderRecord, config : Utils::Config) : OrderRecord
+      existing = find_order(record.id, config)
+      return record unless existing
+
+      record.owner_profile_id ||= existing.owner_profile_id
+      record.owner_username ||= existing.owner_username
+      record.owner_display_name ||= existing.owner_display_name
+      record.actor_handle ||= existing.actor_handle
+      record.actor_did ||= existing.actor_did
+      record.template_id ||= existing.template_id
+      record.template_slug ||= existing.template_slug
+      record.template_author_profile_id ||= existing.template_author_profile_id
+      record.template_author_username ||= existing.template_author_username
+      record.template_author_display_name ||= existing.template_author_display_name
+      record.template_pricing_mode ||= existing.template_pricing_mode
+      record.template_pricing_value ||= existing.template_pricing_value
+      record.document_json ||= existing.document_json
+      record.attachment_json ||= existing.attachment_json
+      record.payment_url ||= existing.payment_url
+      record.ui_scenario ||= existing.ui_scenario
+
+      if !record.is_public_task && existing.is_public_task
+        record.is_public_task = true
+      end
+      if !record.vcs_enabled && existing.vcs_enabled
+        record.vcs_enabled = true
+      end
+      if record.labels.empty? && !existing.labels.empty?
+        record.labels = existing.labels
+      end
+
+      record
+    end
+
     private def self.persist_activity(activity : JSON::Any, order_id : String, config : Utils::Config) : Nil
       setup(config)
       activity_hash = activity.as_h?
@@ -779,6 +813,8 @@ module Crater
         "ownerDisplayName" => order.owner_display_name,
         "actorHandle" => order.actor_handle,
         "actorDid" => actor_did,
+        "isPublicTask" => order.is_public_task,
+        "vcsEnabled" => order.vcs_enabled,
         "document" => JSON.parse(order.document_json || build_default_document_json(order.title, order.description)),
         "attachment" => attachments
       }
@@ -817,6 +853,8 @@ module Crater
         "ownerDisplayName" => order.owner_display_name,
         "actorHandle" => order.actor_handle,
         "actorDid" => actor_did,
+        "isPublicTask" => order.is_public_task,
+        "vcsEnabled" => order.vcs_enabled,
         "document" => JSON.parse(order.document_json || build_default_document_json(order.title, order.description)),
         "attachment" => attachments
       }
@@ -956,6 +994,7 @@ module Crater
       raise Error::InvalidActivity.new("Activity type must be Create") unless activity.type == "Create"
 
       record = parse_order_payload(activity, config)
+      record = merge_existing_order_state(record, config)
 
       @@lock.synchronize do
         persist_order(record, config)
@@ -969,6 +1008,7 @@ module Crater
       raise Error::InvalidActivity.new("Activity type must be Create") unless activity.type == "Create"
 
       record = parse_order_payload(activity, config)
+      record = merge_existing_order_state(record, config)
       Log.info { "[order_queue:submit_create] parsed id=#{record.id} status=#{record.status} title=#{record.title.inspect}" }
 
       @@lock.synchronize do
@@ -995,6 +1035,7 @@ module Crater
       raise Error::InvalidActivity.new("Activity type must be Update") unless activity.type == "Update"
 
       record = parse_order_payload(activity, config)
+      record = merge_existing_order_state(record, config)
 
       @@lock.synchronize do
         persist_order(record, config)
