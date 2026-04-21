@@ -63,10 +63,6 @@ module Crater
           )
         end
 
-        get "/:owner/:archive_name" do |env|
-          serve_owner_archive(env, env.params.url["owner"], env.params.url["archive_name"], config)
-        end
-
         get "/git/:owner/:slug/HEAD" do |env|
           serve_text(env, resolve_public_repo_path_for_owner(env.params.url["owner"], env.params.url["slug"], config), "HEAD")
         end
@@ -93,10 +89,6 @@ module Crater
             resolve_public_repo_path_for_owner(env.params.url["owner"], env.params.url["slug"], config),
             File.join("objects", env.params.url["prefix"], env.params.url["name"])
           )
-        end
-
-        get "/git/:owner/:archive_name" do |env|
-          serve_owner_archive(env, env.params.url["owner"], env.params.url["archive_name"], config)
         end
 
         get "/git/:slug/HEAD" do |env|
@@ -127,8 +119,12 @@ module Crater
           )
         end
 
-        get "/git/:archive_name" do |env|
-          serve_slug_archive(env, env.params.url["archive_name"], config)
+        get "/git/*archive_path" do |env|
+          serve_git_archive_path(env, env.params.url["archive_path"], config)
+        end
+
+        get "/*archive_path" do |env|
+          serve_public_archive_path(env, env.params.url["archive_path"], config)
         end
       end
 
@@ -165,6 +161,28 @@ module Crater
 
         slug, format = parsed
         serve_archive(env, resolve_repo_path(slug, config), slug, format)
+      end
+
+      private def self.serve_git_archive_path(env, raw_path : String, config : Utils::Config) : String
+        normalized_path = raw_path.sub(/\A\/+/, "")
+        segments = normalized_path.split('/', 2)
+
+        if segments.size >= 2
+          serve_owner_archive(env, segments[0], segments[1], config)
+        else
+          serve_slug_archive(env, normalized_path, config)
+        end
+      end
+
+      private def self.serve_public_archive_path(env, raw_path : String, config : Utils::Config) : String
+        normalized_path = raw_path.sub(/\A\/+/, "")
+        segments = normalized_path.split('/', 2)
+        unless segments.size >= 2
+          env.response.status_code = 404
+          return "Not found"
+        end
+
+        serve_owner_archive(env, segments[0].sub(/\A@+/, ""), segments[1], config)
       end
 
       private def self.normalize_slug(raw_slug : String) : String
