@@ -12,6 +12,21 @@ type MockOrder = {
   estimatedCost: number;
   currency: string;
   documentContent?: string;
+  ownerUsername?: string;
+  ownerDisplayName?: string;
+  actorHandle?: string;
+  repository?: {
+    id: string;
+    projectId?: string;
+    ownerHandle?: string;
+    slug: string;
+    visibility: 'public' | 'private';
+    defaultBranch?: string;
+    projectCloneUrl?: string;
+    projectArchiveUrl?: string;
+    publicCloneUrl?: string;
+    sshCloneUrl?: string;
+  };
 };
 
 function buildOrder(id: string, title: string, status = 'queued'): MockOrder {
@@ -37,6 +52,7 @@ function orderPayload(order: MockOrder) {
     estimatedCost: order.estimatedCost,
     currency: order.currency,
     paymentUrl: null,
+    repository: order.repository,
     document: order.documentContent
       ? {
           format: 'markdown',
@@ -44,7 +60,10 @@ function orderPayload(order: MockOrder) {
         }
       : undefined,
     createdAt: '2026-03-20T00:00:00.000Z',
-    updatedAt: '2026-03-20T00:00:00.000Z'
+    updatedAt: '2026-03-20T00:00:00.000Z',
+    ownerUsername: order.ownerUsername,
+    ownerDisplayName: order.ownerDisplayName,
+    actorHandle: order.actorHandle
   };
 }
 
@@ -118,6 +137,23 @@ export async function mockOrderApi(page: Page) {
   return {
     setCreateDelay(delayMs: number) {
       createDelayMs = delayMs;
+    },
+    setOrderRepository(orderId: string, repository: NonNullable<MockOrder['repository']>) {
+      const order = orders.get(orderId);
+      if (order) {
+        order.repository = repository;
+      }
+    },
+    setOrderOwner(
+      orderId: string,
+      owner: { ownerUsername?: string; ownerDisplayName?: string; actorHandle?: string }
+    ) {
+      const order = orders.get(orderId);
+      if (order) {
+        order.ownerUsername = owner.ownerUsername;
+        order.ownerDisplayName = owner.ownerDisplayName;
+        order.actorHandle = owner.actorHandle;
+      }
     },
     setOrderStatus(orderId: string, status: string) {
       const order = orders.get(orderId);
