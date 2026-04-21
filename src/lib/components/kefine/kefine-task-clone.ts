@@ -343,7 +343,7 @@ function preferredProjectPathId(order: OrderView, repository: OrderRepository | 
 }
 
 function preferredActorHandle(order: OrderView, repository: OrderRepository | null): string | null {
-  const handle = order.actorHandle?.trim() || order.ownerUsername?.trim() || repository?.ownerHandle?.trim();
+  const handle = order.ownerUsername?.trim() || repository?.ownerHandle?.trim() || order.actorHandle?.trim();
   return handle ? handle.replace(/^@+/, '') : null;
 }
 
@@ -397,6 +397,15 @@ export function getTaskRepositoryCloneTarget(order: OrderView): TaskRepositoryCl
     return null;
   }
 
+  const canonicalName = getTaskRepositoryCanonicalName(order);
+  const preferredHost =
+    currentSshOriginHost() ||
+    hostFromCloneUrl(repository.projectCloneUrl) ||
+    hostFromCloneUrl(repository.projectSshCloneUrl) ||
+    hostFromCloneUrl(repository.sshCloneUrl) ||
+    hostFromCloneUrl(repository.projectPublicCloneUrl) ||
+    hostFromCloneUrl(repository.publicCloneUrl);
+  const canonicalUrl = ensureGitSuffix(canonicalName && preferredHost ? `ssh://git@${preferredHost}/${canonicalName}` : '');
   const preferredCloneUrl =
     repository.projectSshCloneUrl?.trim() ||
     repository.projectCloneUrl?.trim() ||
@@ -406,20 +415,16 @@ export function getTaskRepositoryCloneTarget(order: OrderView): TaskRepositoryCl
     '';
   let url = ensureGitSuffix(preferredCloneUrl);
 
+  if (canonicalUrl && /\/@staff\//i.test(url) && !/\/@staff\//i.test(canonicalUrl)) {
+    url = canonicalUrl;
+  }
+
   if (!url) {
-    const canonicalName = getTaskRepositoryCanonicalName(order);
-    if (!canonicalName) {
+    if (!canonicalUrl) {
       return null;
     }
 
-    const preferredHost =
-      currentSshOriginHost() ||
-      hostFromCloneUrl(repository.projectCloneUrl) ||
-      hostFromCloneUrl(repository.projectSshCloneUrl) ||
-      hostFromCloneUrl(repository.sshCloneUrl) ||
-      hostFromCloneUrl(repository.projectPublicCloneUrl) ||
-      hostFromCloneUrl(repository.publicCloneUrl);
-    url = ensureGitSuffix(preferredHost ? `ssh://git@${preferredHost}/${canonicalName}` : '');
+    url = canonicalUrl;
   }
 
   if (!url) {
