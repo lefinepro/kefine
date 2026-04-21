@@ -15,6 +15,11 @@ export type TaskRepositoryCloneTarget = {
   command: string;
 };
 
+export type TaskRepositoryLinkTarget = {
+  label: string;
+  url: string;
+};
+
 export type TaskRepositoryArchiveTargets = {
   zip: string;
   tarGz: string;
@@ -296,6 +301,37 @@ export function getTaskRepository(order: OrderView): OrderRepository | null {
   return order.repository ?? null;
 }
 
+export function getTaskRepositoryLinkTarget(order: OrderView): TaskRepositoryLinkTarget | null {
+  const repository = getTaskRepository(order);
+  if (!repository) {
+    return null;
+  }
+
+  const url =
+    repository.projectUrl?.trim() ||
+    repository.repositoryUrl?.trim() ||
+    repository.projectArchiveUrl?.trim() ||
+    repository.projectPublicCloneUrl?.trim() ||
+    repository.publicCloneUrl?.trim() ||
+    null;
+
+  if (!url) {
+    return null;
+  }
+
+  if (repository.projectArchiveUrl?.trim() && url === repository.projectArchiveUrl.trim()) {
+    return {
+      label: 'Download archive',
+      url
+    };
+  }
+
+  return {
+    label: 'Repository URL',
+    url
+  };
+}
+
 function preferredProjectPathId(order: OrderView, repository: OrderRepository | null): string | null {
   const routeScopedId = order.shareId?.trim() || order.id?.trim();
   if (routeScopedId) {
@@ -361,11 +397,14 @@ export function getTaskRepositoryCloneTarget(order: OrderView): TaskRepositoryCl
     return null;
   }
 
-  const preferredSshUrl =
+  const preferredCloneUrl =
     repository.projectSshCloneUrl?.trim() ||
+    repository.projectCloneUrl?.trim() ||
     repository.sshCloneUrl?.trim() ||
+    repository.projectPublicCloneUrl?.trim() ||
+    repository.publicCloneUrl?.trim() ||
     '';
-  let url = ensureGitSuffix(preferredSshUrl);
+  let url = ensureGitSuffix(preferredCloneUrl);
 
   if (!url) {
     const canonicalName = getTaskRepositoryCanonicalName(order);
@@ -387,8 +426,10 @@ export function getTaskRepositoryCloneTarget(order: OrderView): TaskRepositoryCl
     return null;
   }
 
+  const label = url.startsWith('http://') || url.startsWith('https://') ? 'HTTPS clone' : 'SSH clone';
+
   return {
-    label: 'SSH clone',
+    label,
     url,
     command: `git clone ${url}`
   };

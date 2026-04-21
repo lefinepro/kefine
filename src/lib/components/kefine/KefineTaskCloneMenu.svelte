@@ -2,7 +2,13 @@
   import { browser } from '$app/environment';
   import Icon from '@iconify/svelte';
   import type { OrderView } from './kefine-workflow';
-  import { getTaskRepository, getTaskRepositoryArchiveTargets, getTaskRepositoryCloneTarget, type TaskCloneFormat } from './kefine-task-clone';
+  import {
+    getTaskRepository,
+    getTaskRepositoryArchiveTargets,
+    getTaskRepositoryCloneTarget,
+    getTaskRepositoryLinkTarget,
+    type TaskCloneFormat
+  } from './kefine-task-clone';
 
   let {
     order,
@@ -24,6 +30,7 @@
 
   const repository = $derived(order ? getTaskRepository(order) : null);
   const repositoryCloneTarget = $derived(order ? getTaskRepositoryCloneTarget(order) : null);
+  const repositoryLinkTarget = $derived(order ? getTaskRepositoryLinkTarget(order) : null);
   const repositoryArchiveTargets = $derived(order ? getTaskRepositoryArchiveTargets(order) : null);
   const repositoryArchiveActions = $derived.by(() =>
     repositoryArchiveTargets
@@ -160,6 +167,27 @@
               >
                 <Icon
                   icon={copiedValue === repositoryCloneTarget.command ? 'mdi:check' : 'mdi:content-copy'}
+                  width="16"
+                  height="16"
+                  aria-hidden="true"
+                />
+              </button>
+            </kefine-clone-target>
+          {:else if repositoryLinkTarget}
+            <kefine-clone-target>
+              <kefine-clone-target-copy>
+                <strong>{repositoryLinkTarget.label}</strong>
+                <code>{repositoryLinkTarget.url}</code>
+              </kefine-clone-target-copy>
+              <button
+                type="button"
+                data-part="icon-copy"
+                onclick={() => copyText(repositoryLinkTarget.url)}
+                aria-label="Copy repository link"
+                title="Copy repository link"
+              >
+                <Icon
+                  icon={copiedValue === repositoryLinkTarget.url ? 'mdi:check' : 'mdi:content-copy'}
                   width="16"
                   height="16"
                   aria-hidden="true"
