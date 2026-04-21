@@ -169,6 +169,7 @@ module Crater
 
     private def self.normalize_handle(value : String?) : String
       normalized = value.to_s.strip.downcase.gsub(/^@+/, "").gsub(/[^a-z0-9._-]+/, "-").gsub(/^[._-]+|[._-]+$/, "")
+      normalized = normalized[0, 32] if normalized.size > 32
       normalized.empty? ? "staff" : normalized
     end
 

@@ -1254,6 +1254,7 @@ module Crater
       return nil unless value
 
       normalized = value.strip.gsub(/^@+/, "").downcase.gsub(/[^a-z0-9._-]+/, "-").gsub(/^[._-]+|[._-]+$/, "")
+      normalized = normalized[0, 32] if normalized.size > 32
       normalized.empty? ? nil : normalized
     end
   end
