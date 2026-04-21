@@ -51,3 +51,14 @@ export async function proxyOrderDocumentUpdate(
     context: { orderId }
   });
 }
+
+export async function proxyOrderSettingsUpdate(
+  request: Request,
+  orderId: string,
+  fetchFn: typeof fetch
+): Promise<Response> {
+  return proxyCraterRequest(request, fetchFn, `/status/${encodeURIComponent(orderId)}/settings`, {
+    errorMessage: 'Failed to update task settings.',
+    context: { orderId }
+  });
+}
