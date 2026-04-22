@@ -21,6 +21,11 @@ module Crater
       getter actor_handle : String
       getter actor_display_name : String
       getter actor_private_key : String
+      getter frontend_url : String?
+      getter google_oauth_client_id : String?
+      getter google_oauth_client_secret : String?
+      getter github_oauth_client_id : String?
+      getter github_oauth_client_secret : String?
 
       def initialize(
         @port : Int32,
@@ -39,7 +44,12 @@ module Crater
         @git_ssh_shell_command : String?,
         @actor_handle : String,
         @actor_display_name : String,
-        @actor_private_key : String
+        @actor_private_key : String,
+        @frontend_url : String?,
+        @google_oauth_client_id : String?,
+        @google_oauth_client_secret : String?,
+        @github_oauth_client_id : String?,
+        @github_oauth_client_secret : String?
       )
       end
 
@@ -49,6 +59,7 @@ module Crater
         origins = raw["origins"]?.try(&.as_h) || Hash(String, JSON::Any).new
         payment = raw["payment"]?.try(&.as_h) || Hash(String, JSON::Any).new
         default_actor = raw["defaultActor"]?.try(&.as_h) || Hash(String, JSON::Any).new
+        oauth = raw["oauth"]?.try(&.as_h) || Hash(String, JSON::Any).new
 
         crater_url = normalize_url(
           read_env_or_string(
@@ -77,7 +88,12 @@ module Crater
           git_ssh_shell_command: read_env_or_optional_string("KEFINE_GIT_SSH_SHELL_COMMAND", backend, "gitSshShellCommand"),
           actor_handle: read_string(default_actor, "handle", "staff"),
           actor_display_name: read_string(default_actor, "displayName", "Staff"),
-          actor_private_key: read_env_or_string("KEFINE_PRIVATEKEY_DEFAULT", default_actor, "privateKey", read_string(default_actor, "privateKeyPem", ""))
+          actor_private_key: read_env_or_string("KEFINE_PRIVATEKEY_DEFAULT", default_actor, "privateKey", read_string(default_actor, "privateKeyPem", "")),
+          frontend_url: read_env_or_optional_string("KEFINE_FRONTEND_URL", origins, "frontend"),
+          google_oauth_client_id: read_env_or_optional_string("GOOGLE_CLIENT_ID", oauth, "googleClientId"),
+          google_oauth_client_secret: read_env_or_optional_string("GOOGLE_CLIENT_SECRET", oauth, "googleClientSecret"),
+          github_oauth_client_id: read_env_or_optional_string("GITHUB_CLIENT_ID", oauth, "githubClientId"),
+          github_oauth_client_secret: read_env_or_optional_string("GITHUB_CLIENT_SECRET", oauth, "githubClientSecret")
         )
       end
 

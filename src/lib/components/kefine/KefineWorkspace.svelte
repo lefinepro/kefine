@@ -508,6 +508,18 @@
         )
       : []
   );
+  const recentProfileOrders = $derived(
+    currentProfile
+      ? [...createdOrders]
+          .filter((order) => order.ownerProfileId === currentProfile?.id)
+          .sort(
+            (left, right) =>
+              new Date(right.createdAt).getTime() -
+              new Date(left.createdAt).getTime()
+          )
+          .slice(0, 5)
+      : []
+  );
 
   const TITLE_FONT_MAX = 2.0;
   const TITLE_FONT_MIN = 1.0;
@@ -1065,8 +1077,8 @@
     suppressPostAuthProfileRedirect = false;
   }
 
-  async function openSocialAuth() {
-        if (!browser) {
+  async function openWalletConnectAuth() {
+    if (!browser) {
       authDialogOpen = true;
       return;
     }
@@ -1075,6 +1087,72 @@
       const { openAppKit } = await import('$lib/auth/appkit.js');
       await openAppKit();
     } catch {
+      authDialogOpen = true;
+    }
+  }
+
+  function beginOAuthLogin(provider: 'google' | 'github') {
+    if (!browser) {
+      authDialogOpen = true;
+      return;
+    }
+
+    closeAuthDialog();
+    stagePreviewOpen = false;
+    selectedAuthMethod = 'wallet';
+    paymentMethod = 'wallet';
+
+    void loadAuthRoutes().then(({ buildOAuthLoginPath }) => {
+      window.location.assign(buildOAuthLoginPath(provider, window.location.href));
+    });
+  }
+
+  async function chooseTonConnectMethod() {
+    closeAuthDialog();
+    stagePreviewOpen = false;
+    selectedAuthMethod = 'wallet';
+    paymentMethod = 'wallet';
+
+    if (!browser) {
+      authDialogOpen = true;
+      return;
+    }
+
+    try {
+      const [{ connectTonWallet }, { loginWithTonWallet }] = await Promise.all([
+        import('$lib/auth/tonconnect.js'),
+        loadAuthRoutes()
+      ]);
+      const tonSession = await connectTonWallet();
+      const walletSession = await loginWithTonWallet(tonSession.address, tonSession.chain);
+
+      updateAuthState({
+        isConnected: true,
+        address: walletSession.address,
+        chainId: null,
+        email: walletSession.email,
+        userId: walletSession.userId,
+        handle: normalizeActorHandle(walletSession.handle),
+        displayName: walletSession.displayName,
+        authType: 'wallet',
+        status: 'connected'
+      });
+
+      if (draftQueued || pendingCloneAction) {
+        void continueAfterAuth();
+        return;
+      }
+
+      void maybeOpenProfileAfterAuth({
+        userId: walletSession.userId,
+        email: walletSession.email,
+        displayName: walletSession.displayName,
+        authType: 'wallet',
+        walletAddress: walletSession.address,
+        walletAlias: 'TON'
+      });
+    } catch (error) {
+      console.error('[tonconnect] chooseTonConnectMethod', error);
       authDialogOpen = true;
     }
   }
@@ -1122,10 +1200,6 @@
   }
 
   async function selectTopbarAuth() {
-    if (isAuthenticated) {
-      return;
-    }
-
     authButtonLoading = true;
     await ensureDialogComponentsLoaded();
     authDialogOpen = true;
@@ -1231,6 +1305,13 @@
       await disconnectAppKit();
     } catch {
       // AppKit might not be initialized for passkey-only sessions.
+    }
+
+    try {
+      const { disconnectTonWallet } = await import('$lib/auth/tonconnect.js');
+      await disconnectTonWallet();
+    } catch {
+      // TON Connect might not be initialized for non-TON sessions.
     }
 
     clearAuthState();
@@ -2212,12 +2293,81 @@
     passkeyDialogOpen = true;
   }
 
-  function chooseWalletMethod() {
+  async function chooseBrowserWalletMethod() {
     closeAuthDialog();
     stagePreviewOpen = false;
     selectedAuthMethod = 'wallet';
     paymentMethod = 'wallet';
-    void openSocialAuth();
+
+    if (!browser) {
+      authDialogOpen = true;
+      return;
+    }
+
+    const provider = (window as Window & {
+      ethereum?: {
+        request: (args: { method: string; params?: unknown[] | Record<string, unknown> }) => Promise<unknown>;
+      };
+    }).ethereum;
+
+    if (!provider) {
+      console.error('[wallet] browser wallet provider not found');
+      authDialogOpen = true;
+      return;
+    }
+
+    try {
+      const accounts = await provider.request({ method: 'eth_requestAccounts' });
+      const address = Array.isArray(accounts) ? String(accounts[0] ?? '').trim() : '';
+      if (!address) {
+        throw new Error('Browser wallet address is unavailable.');
+      }
+
+      const chainIdHex = await provider.request({ method: 'eth_chainId' });
+      const chainId =
+        typeof chainIdHex === 'string' && chainIdHex.trim()
+          ? Number.parseInt(chainIdHex, 16)
+          : null;
+      const { loginWithBrowserWallet } = await loadAuthRoutes();
+      const walletSession = await loginWithBrowserWallet(address, Number.isFinite(chainId) ? chainId : null);
+
+      updateAuthState({
+        isConnected: true,
+        address: walletSession.address,
+        chainId: walletSession.chainId,
+        email: walletSession.email,
+        userId: walletSession.userId,
+        handle: normalizeActorHandle(walletSession.handle),
+        displayName: walletSession.displayName,
+        authType: 'wallet',
+        status: 'connected'
+      });
+
+      if (draftQueued || pendingCloneAction) {
+        void continueAfterAuth();
+        return;
+      }
+
+      void maybeOpenProfileAfterAuth({
+        userId: walletSession.userId,
+        email: walletSession.email,
+        displayName: walletSession.displayName,
+        authType: 'wallet',
+        walletAddress: walletSession.address,
+        walletAlias: null
+      });
+    } catch (error) {
+      console.error('[wallet] chooseBrowserWalletMethod', error);
+      authDialogOpen = true;
+    }
+  }
+
+  function chooseWalletConnectMethod() {
+    closeAuthDialog();
+    stagePreviewOpen = false;
+    selectedAuthMethod = 'wallet';
+    paymentMethod = 'wallet';
+    void openWalletConnectAuth();
   }
 
   function openPrivateKeyDialog() {
@@ -2396,9 +2546,7 @@
     authenticatedLabel={authenticatedLabel}
     authenticatedSecondaryLabel={null}
     authenticatedAvatarUrl={authState.isConnected ? walletAvatarUrl : null}
-    authMenuLabel={localeText.profile.title}
     openProfileLabel={profileNeedsSetup ? localeText.profile.onboardingTitle : localeText.profile.title}
-    signOutLabel={localeText.profile.signOut}
     isAuthenticated={isAuthenticated}
     isAuthLoading={authButtonLoading}
     isDarkTheme={isDarkTheme}
@@ -2565,7 +2713,7 @@
               resumeOrder(currentOrder);
             }
           }}
-          onWalletLogin={chooseWalletMethod}
+          onWalletLogin={selectTopbarAuth}
           onPasskeyLogin={choosePasskeyMethod}
           onAnonymous={chooseAnonymousMethod}
           onCancel={() => {
@@ -2649,7 +2797,7 @@
             onConfirmPayment={confirmPayment}
             onRevealResult={revealResult}
             onSaveAnonymousResult={saveAnonymousResult}
-            onWalletLogin={chooseWalletMethod}
+            onWalletLogin={selectTopbarAuth}
             onPasskeyLogin={choosePasskeyMethod}
             onAnonymousLogin={chooseAnonymousMethod}
             labels={{
@@ -2716,15 +2864,40 @@
       open={authDialogOpen}
       title={localeText.executionFlow['awaiting-auth'].title}
       description={localeText.executionFlow['awaiting-auth'].detail}
-      walletTitle={localeText.auth.walletTitle}
+      browserWalletTitle={localeText.auth.browserWalletTitle}
+      walletConnectTitle={localeText.auth.walletConnectTitle}
+      tonConnectTitle={localeText.auth.tonConnectTitle}
+      googleTitle={localeText.auth.googleTitle}
+      githubTitle={localeText.auth.githubTitle}
       passkeyTitle={localeText.auth.passkeyTitle}
       privateKeyTitle={localeText.auth.privateKeyTitle}
+      connectedTitle={localeText.profile.title}
+      connectedDescription={localeText.profile.authDrawerSubtitle}
+      latestTasksTitle={localeText.profile.latestTasks}
+      latestTasksEmptyLabel={localeText.profile.noRecentTasks}
+      openWorkspaceLabel={localeText.profile.openPublicProfile}
+      shareProfileLabel={localeText.profile.shareProfile}
+      profileCopiedLabel={localeText.profile.profileCopied}
+      signOutLabel={localeText.profile.signOut}
+      openTaskLabel={localeText.profile.openTask}
+      bonusBalanceLabel={localeText.profile.bonusBalance}
       showPrivateKey={showPrivateKeyAuth}
+      isAuthenticated={isAuthenticated}
+      profile={currentProfile}
+      recentTasks={recentProfileOrders}
+      profileUrl={profileUrl}
       closeLabel={localeText.buttons.closeDialog}
       onClose={() => { authDialogOpen = false; }}
-      onWallet={chooseWalletMethod}
+      onBrowserWallet={chooseBrowserWalletMethod}
+      onWalletConnect={chooseWalletConnectMethod}
+      onTonConnect={chooseTonConnectMethod}
+      onGoogle={() => { beginOAuthLogin('google'); }}
+      onGithub={() => { beginOAuthLogin('github'); }}
       onPasskey={choosePasskeyMethod}
       onPrivateKey={openPrivateKeyDialog}
+      onOpenProfile={() => { void openTopbarProfile(); }}
+      onOpenTask={(orderId: string) => { void openOrderById(orderId); }}
+      onSignOut={() => { void signOutProfileSession(); }}
     />
   {/if}
 

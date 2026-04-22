@@ -708,9 +708,7 @@
       authenticatedLabel={viewerProfile ? shortenAuthLabel(`@${viewerProfile.primaryHandle}`) : null}
       authenticatedSecondaryLabel={null}
       authenticatedAvatarUrl={null}
-      authMenuLabel={localeText.profile.title}
       openProfileLabel={localeText.profile.title}
-      signOutLabel={localeText.profile.signOut}
       isAuthenticated={Boolean(viewerProfile)}
       isDarkTheme={isDarkTheme}
       isExpanded={leftNavExpanded}

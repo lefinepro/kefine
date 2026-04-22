@@ -42,6 +42,36 @@ export interface PublicKeyAuthSuccess {
   expiresAt: string;
 }
 
+export interface BrowserWalletAuthSuccess {
+  verified: true;
+  token: string;
+  userId: string;
+  username: string;
+  displayName: string;
+  handle: string;
+  email: string;
+  authType: 'wallet';
+  address: string;
+  chainId: number | null;
+  expiresAt: string;
+}
+
+export type OAuthProvider = 'google' | 'github';
+
+export interface TonWalletAuthSuccess {
+  verified: true;
+  token: string;
+  userId: string;
+  username: string;
+  displayName: string;
+  handle: string;
+  email: string;
+  authType: 'wallet';
+  address: string;
+  chainId: null;
+  expiresAt: string;
+}
+
 interface PasskeyStartResponse<T> {
 	options: T;
 	transactionId: string;
@@ -387,4 +417,35 @@ export async function restoreGeneratedPortableActor(): Promise<PublicKeyAuthSucc
 	}
 
 	return loginWithPortablePublicKey(publicKey);
+}
+
+export async function loginWithBrowserWallet(
+  address: string,
+  chainId: number | null
+): Promise<BrowserWalletAuthSuccess> {
+  return postJson<BrowserWalletAuthSuccess>(buildCraterClientUrl('/auth/wallet/browser'), {
+    wallet: {
+      address,
+      chainId
+    }
+  });
+}
+
+export async function loginWithTonWallet(address: string, chain?: string | null): Promise<TonWalletAuthSuccess> {
+  return postJson<TonWalletAuthSuccess>(buildCraterClientUrl('/auth/wallet/ton'), {
+    wallet: {
+      address,
+      chain: chain ?? null
+    }
+  });
+}
+
+export function buildOAuthLoginPath(provider: OAuthProvider, returnTo?: string): string {
+  const params = new URLSearchParams();
+  if (returnTo?.trim()) {
+    params.set('return_to', returnTo.trim());
+  }
+
+  const query = params.toString();
+  return query ? `/auth/oauth/${provider}?${query}` : `/auth/oauth/${provider}`;
 }
