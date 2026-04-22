@@ -26,6 +26,12 @@ module Crater
       getter google_oauth_client_secret : String?
       getter github_oauth_client_id : String?
       getter github_oauth_client_secret : String?
+      getter maddy_smtp_host : String?
+      getter maddy_smtp_port : Int32
+      getter maddy_smtp_username : String?
+      getter maddy_smtp_password : String?
+      getter maddy_from_email : String?
+      getter maddy_from_name : String?
 
       def initialize(
         @port : Int32,
@@ -49,7 +55,13 @@ module Crater
         @google_oauth_client_id : String?,
         @google_oauth_client_secret : String?,
         @github_oauth_client_id : String?,
-        @github_oauth_client_secret : String?
+        @github_oauth_client_secret : String?,
+        @maddy_smtp_host : String?,
+        @maddy_smtp_port : Int32,
+        @maddy_smtp_username : String?,
+        @maddy_smtp_password : String?,
+        @maddy_from_email : String?,
+        @maddy_from_name : String?
       )
       end
 
@@ -60,6 +72,7 @@ module Crater
         payment = raw["payment"]?.try(&.as_h) || Hash(String, JSON::Any).new
         default_actor = raw["defaultActor"]?.try(&.as_h) || Hash(String, JSON::Any).new
         oauth = raw["oauth"]?.try(&.as_h) || Hash(String, JSON::Any).new
+        email_auth = raw["emailAuth"]?.try(&.as_h) || Hash(String, JSON::Any).new
 
         crater_url = normalize_url(
           read_env_or_string(
@@ -93,7 +106,13 @@ module Crater
           google_oauth_client_id: read_env_or_optional_string("GOOGLE_CLIENT_ID", oauth, "googleClientId"),
           google_oauth_client_secret: read_env_or_optional_string("GOOGLE_CLIENT_SECRET", oauth, "googleClientSecret"),
           github_oauth_client_id: read_env_or_optional_string("GITHUB_CLIENT_ID", oauth, "githubClientId"),
-          github_oauth_client_secret: read_env_or_optional_string("GITHUB_CLIENT_SECRET", oauth, "githubClientSecret")
+          github_oauth_client_secret: read_env_or_optional_string("GITHUB_CLIENT_SECRET", oauth, "githubClientSecret"),
+          maddy_smtp_host: read_env_or_optional_string("MADDY_SMTP_HOST", email_auth, "smtpHost"),
+          maddy_smtp_port: read_env_or_int("MADDY_SMTP_PORT", email_auth, "smtpPort", 25),
+          maddy_smtp_username: read_env_or_optional_string("MADDY_SMTP_USERNAME", email_auth, "smtpUsername"),
+          maddy_smtp_password: read_env_or_optional_string("MADDY_SMTP_PASSWORD", email_auth, "smtpPassword"),
+          maddy_from_email: read_env_or_optional_string("MADDY_FROM_EMAIL", email_auth, "fromEmail"),
+          maddy_from_name: read_env_or_optional_string("MADDY_FROM_NAME", email_auth, "fromName")
         )
       end
 
@@ -129,6 +148,16 @@ module Crater
         return value.not_nil! unless value.nil? || value.empty?
 
         read_optional_string(source, key)
+      end
+
+      private def self.read_env_or_int(env_key : String, source : Hash(String, JSON::Any), key : String, fallback : Int32) : Int32
+        value = ENV[env_key]?.try(&.strip)
+        if value && !value.empty?
+          parsed = value.to_i?
+          return parsed if parsed
+        end
+
+        read_int(source, key, fallback)
       end
 
       private def self.read_int(source : Hash(String, JSON::Any), key : String, fallback : Int32) : Int32

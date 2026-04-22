@@ -43,7 +43,7 @@ const KEFINE_THEME_DARK = {
 type KefineTheme = 'light' | 'dark';
 
 type AppKitLike = {
-	open: () => void;
+	open: (options?: { view?: string }) => void;
 	disconnect: () => Promise<void> | void;
 	setThemeMode: (theme: KefineTheme) => void;
 	setThemeVariables: (vars: Record<string, string | number>) => void;
@@ -103,14 +103,16 @@ export async function ensureAppKit(): Promise<AppKitLike | undefined> {
 			defaultNetwork,
 			projectId,
 			metadata,
+			basic: true,
+			manualWCControl: true,
 			features: {
 				analytics: true,
-				email: true,
-				socials: ['google', 'github']
+				email: false,
+				socials: []
 			},
 			themeMode: initialTheme,
 			themeVariables: getThemeVariables(initialTheme)
-		}) as AppKitLike;
+		} as any) as AppKitLike;
 
 		return appkit;
 	})();
@@ -120,7 +122,7 @@ export async function ensureAppKit(): Promise<AppKitLike | undefined> {
 
 export async function openAppKit(): Promise<void> {
 	const instance = await ensureAppKit();
-	instance?.open();
+	instance?.open({ view: 'ConnectingWalletConnectBasic' });
 }
 
 export async function disconnectAppKit(): Promise<void> {

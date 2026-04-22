@@ -86,6 +86,12 @@
     background: color-mix(in oklab, var(--kef-bg-card, #fff) 96%, white);
     color: inherit;
     box-shadow: 0 1.25rem 3rem color-mix(in oklab, var(--lefine-text, #2e2317) 12%, transparent);
+    opacity: 0;
+    transform: translateY(0.9rem) scale(0.985);
+  }
+
+  dialog[open] {
+    animation: kefine-modal-enter 220ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
   }
 
   dialog[data-tone='dark'] {
@@ -111,16 +117,18 @@
   }
 
   dialog[data-placement='right'] {
-    width: min(28rem, 100vw);
+    width: min(24.5rem, 100vw);
     min-height: 100vh;
     max-height: 100vh;
     margin: 0 0 0 auto;
     border-radius: 1.5rem 0 0 1.5rem;
+    transform: translateX(1.5rem) scale(0.995);
   }
 
   dialog::backdrop {
     background: rgba(15, 23, 42, 0.32);
     backdrop-filter: blur(4px);
+    animation: kefine-backdrop-enter 200ms ease-out forwards;
   }
 
   dialog > button[data-variant='close'] {
@@ -141,5 +149,26 @@
     min-height: 100vh;
     padding: 1.2rem;
     overflow: auto;
+  }
+
+  @keyframes kefine-modal-enter {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+      transform: translate(0, 0) scale(1);
+    }
+  }
+
+  @keyframes kefine-backdrop-enter {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
   }
 </style>
