@@ -18,7 +18,7 @@ module Crater
             next({error: "Missing order id"}.to_json)
           end
 
-          next render_status(env, order_id)
+          next render_status(env, order_id, config)
         end
 
         get "/api/status/:id" do |env|
@@ -30,7 +30,7 @@ module Crater
             next({error: "Missing order id"}.to_json)
           end
 
-          next render_status(env, order_id)
+          next render_status(env, order_id, config)
         end
 
         get "/status" do |env|
@@ -42,7 +42,7 @@ module Crater
             next({error: "Missing order id"}.to_json)
           end
 
-          next render_status(env, order_id)
+          next render_status(env, order_id, config)
         end
 
         get "/api/status" do |env|
@@ -54,7 +54,7 @@ module Crater
             next({error: "Missing order id"}.to_json)
           end
 
-          next render_status(env, order_id)
+          next render_status(env, order_id, config)
         end
 
         patch "/status/:id/document" do |env|
@@ -65,7 +65,7 @@ module Crater
             next({error: "Missing order id"}.to_json)
           end
 
-          next update_document(env, order_id)
+          next update_document(env, order_id, config)
         end
 
         patch "/api/status/:id/document" do |env|
@@ -76,7 +76,7 @@ module Crater
             next({error: "Missing order id"}.to_json)
           end
 
-          next update_document(env, order_id)
+          next update_document(env, order_id, config)
         end
 
         patch "/status/:id/settings" do |env|
@@ -102,8 +102,8 @@ module Crater
         end
       end
 
-      private def self.render_status(env, order_id : String) : String
-        record = OrderQueue.find_order(order_id)
+      private def self.render_status(env, order_id : String, config : Utils::Config) : String
+        record = OrderQueue.find_order(order_id, config)
         if record.nil?
           Log.warn { "[status] order not found id=#{order_id}" }
           env.response.status_code = 404
@@ -115,12 +115,12 @@ module Crater
         rescue
           JSON.parse(%({"format":"markdown","content":""}))
         end
-        activities = OrderQueue.activities_for_order(record.id)
-        existing_repository = RepositoryStore.find_by_order(record.id)
+        activities = OrderQueue.activities_for_order(record.id, config)
+        existing_repository = RepositoryStore.find_by_order(record.id, config)
         vcs_enabled = record.vcs_enabled || !existing_repository.nil?
         repository = if vcs_enabled
                        begin
-                         existing_repository || RepositoryStore.ensure_for_order(record)
+                         existing_repository || RepositoryStore.ensure_for_order(record, config)
                        rescue ex
                          Log.error(exception: ex) { "[status] failed to load repository for orderId=#{record.id}" }
                          nil
@@ -168,7 +168,7 @@ module Crater
         }.to_json
       end
 
-      private def self.update_document(env, order_id : String) : String
+      private def self.update_document(env, order_id : String, config : Utils::Config) : String
         payload = begin
           body = env.request.body.try(&.gets_to_end) || ""
           JSON.parse(body)
@@ -178,13 +178,13 @@ module Crater
         end
 
         document = payload.as_h?.try(&.["document"]?) || payload
-        record = OrderQueue.update_document(order_id, document)
+        record = OrderQueue.update_document(order_id, document, config)
         if record.nil?
           env.response.status_code = 404
           return({error: "Order not found", orderId: order_id}.to_json)
         end
 
-        render_status(env, record.id)
+        render_status(env, record.id, config)
       end
 
       private def self.update_settings(env, order_id : String, config : Utils::Config) : String
@@ -226,7 +226,7 @@ module Crater
           end
         end
 
-        render_status(env, record.id)
+        render_status(env, record.id, config)
       end
     end
   end

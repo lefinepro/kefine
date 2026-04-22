@@ -15,6 +15,10 @@ type MockOrder = {
   ownerUsername?: string;
   ownerDisplayName?: string;
   actorHandle?: string;
+  vcsEnabled?: boolean;
+  shareId?: string;
+  isPublicTask?: boolean;
+  projectId?: string;
   repository?: {
     id: string;
     projectId?: string;
@@ -26,6 +30,16 @@ type MockOrder = {
     projectArchiveUrl?: string;
     publicCloneUrl?: string;
     sshCloneUrl?: string;
+    gitSettings?: {
+      exchangeRunDefault?: boolean;
+      exchangeActor?: string;
+      agentSourceUrl?: string;
+      aclRules?: Array<{
+        id: string;
+        branchPattern: string;
+        allowedGroups: string[];
+      }>;
+    };
   };
 };
 
@@ -37,7 +51,13 @@ function buildOrder(id: string, title: string, status = 'queued'): MockOrder {
     solver: 'Test Solver',
     executionEstimate: 'about 2 hours',
     estimatedCost: 42,
-    currency: 'USDC'
+    currency: 'USDC',
+    ownerUsername: 'api',
+    ownerDisplayName: 'API',
+    actorHandle: 'api',
+    shareId: id,
+    isPublicTask: false,
+    vcsEnabled: false
   };
 }
 
@@ -63,7 +83,31 @@ function orderPayload(order: MockOrder) {
     updatedAt: '2026-03-20T00:00:00.000Z',
     ownerUsername: order.ownerUsername,
     ownerDisplayName: order.ownerDisplayName,
-    actorHandle: order.actorHandle
+    actorHandle: order.actorHandle,
+    vcsEnabled: order.vcsEnabled,
+    shareId: order.shareId,
+    isPublicTask: order.isPublicTask,
+    projectId: order.projectId
+  };
+}
+
+function buildRepository(order: MockOrder) {
+  const ownerHandle = order.ownerUsername || order.actorHandle || 'api';
+  const routeScopedId = order.shareId || order.id;
+  const projectId = order.projectId || `${order.id}-project`;
+  const visibility = order.isPublicTask ? 'public' : 'private';
+
+  return {
+    id: `repo-${order.id}`,
+    projectId,
+    ownerHandle,
+    slug: routeScopedId,
+    visibility,
+    defaultBranch: 'main' as const,
+    projectCloneUrl: `ssh://git@lefine.pro/@${ownerHandle}/${routeScopedId}.git`,
+    projectArchiveUrl: `https://lefine.pro/@${ownerHandle}/${projectId}.zip`,
+    publicCloneUrl: `https://lefine.pro/@${ownerHandle}/${routeScopedId}.git`,
+    sshCloneUrl: `ssh://git@lefine.pro/@${ownerHandle}/${routeScopedId}.git`
   };
 }
 
@@ -124,6 +168,31 @@ export async function mockOrderApi(page: Page) {
       order.documentContent = payload.document?.content ?? order.documentContent;
     }
 
+    if (route.request().method() === 'PATCH' && url.pathname.endsWith('/settings')) {
+      const payload = route.request().postDataJSON() as {
+        vcsEnabled?: boolean;
+        isPublicTask?: boolean;
+        gitSettings?: NonNullable<NonNullable<MockOrder['repository']>['gitSettings']>;
+      };
+
+      if (payload.vcsEnabled !== undefined) {
+        order.vcsEnabled = payload.vcsEnabled;
+      }
+
+      if (payload.isPublicTask !== undefined) {
+        order.isPublicTask = payload.isPublicTask;
+      }
+
+      if (order.vcsEnabled) {
+        order.projectId ||= `${order.id}-project`;
+        order.repository = {
+          ...(order.repository || buildRepository(order)),
+          visibility: order.isPublicTask ? 'public' : 'private',
+          gitSettings: payload.gitSettings || order.repository?.gitSettings
+        };
+      }
+    }
+
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -153,6 +222,18 @@ export async function mockOrderApi(page: Page) {
         order.ownerUsername = owner.ownerUsername;
         order.ownerDisplayName = owner.ownerDisplayName;
         order.actorHandle = owner.actorHandle;
+      }
+    },
+    setOrderShareId(orderId: string, shareId: string) {
+      const order = orders.get(orderId);
+      if (order) {
+        order.shareId = shareId;
+      }
+    },
+    setOrderProjectId(orderId: string, projectId: string) {
+      const order = orders.get(orderId);
+      if (order) {
+        order.projectId = projectId;
       }
     },
     setOrderStatus(orderId: string, status: string) {
