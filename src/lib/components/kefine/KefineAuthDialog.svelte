@@ -296,7 +296,7 @@
 <style>
   kefine-account-drawer {
     display: grid;
-    gap: 1rem;
+    gap: 0.85rem;
     min-height: calc(100vh - 2.4rem);
     color: var(--kef-color-text, #2e2317);
   }
@@ -348,23 +348,51 @@
 
   kefine-account-auth-grid {
     display: grid;
-    gap: 0.6rem;
+    gap: 0.55rem;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .kefine-account-auth-card {
     display: grid;
-    gap: 0.4rem;
-    min-height: 7.5rem;
-    padding: 0.8rem 0.85rem;
-    border-radius: 1rem;
+    grid-template-rows: auto auto 1fr;
+    gap: 0.34rem;
+    min-height: 6.7rem;
+    padding: 0.72rem 0.78rem;
+    border-radius: 0.95rem;
     color: inherit;
     text-align: left;
+    opacity: 0;
+    transform: translateY(0.5rem);
+    animation: kefine-auth-card-enter 260ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
     transition:
       transform 160ms ease,
       border-color 160ms ease,
       background-color 160ms ease,
       box-shadow 160ms ease;
+  }
+
+  .kefine-account-auth-card:nth-child(2) {
+    animation-delay: 35ms;
+  }
+
+  .kefine-account-auth-card:nth-child(3) {
+    animation-delay: 70ms;
+  }
+
+  .kefine-account-auth-card:nth-child(4) {
+    animation-delay: 105ms;
+  }
+
+  .kefine-account-auth-card:nth-child(5) {
+    animation-delay: 140ms;
+  }
+
+  .kefine-account-auth-card:nth-child(6) {
+    animation-delay: 175ms;
+  }
+
+  .kefine-account-auth-card:nth-child(7) {
+    animation-delay: 210ms;
   }
 
   .kefine-account-auth-card[data-kind='browser-wallet'] {
@@ -390,8 +418,8 @@
   kefine-account-avatar {
     display: inline-grid;
     place-items: center;
-    width: 2.15rem;
-    height: 2.15rem;
+    width: 2rem;
+    height: 2rem;
     border-radius: 999px;
     border: 1px solid color-mix(in oklab, var(--kef-color-primary, #7a4b2a) 18%, transparent);
     background: color-mix(in oklab, var(--kef-color-primary, #7a4b2a) 12%, var(--kef-color-bg-card, #f7ecd6));
@@ -423,13 +451,14 @@
   }
 
   .kefine-account-auth-card strong {
-    font-size: 0.95rem;
-    line-height: 1.15;
+    font-size: 0.9rem;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
   }
 
   .kefine-account-auth-card small {
-    font-size: 0.8rem;
-    line-height: 1.3;
+    font-size: 0.76rem;
+    line-height: 1.24;
     color: color-mix(in oklab, var(--kef-color-text, #2e2317) 62%, transparent);
   }
 
@@ -523,6 +552,18 @@
         color-mix(in oklab, var(--kef-color-primary, #c89a5a) 10%, var(--kef-color-bg-card, #1d1510)),
         color-mix(in oklab, var(--kef-color-bg-soft, #221912) 78%, var(--kef-color-bg-card, #1d1510) 22%)
       );
+  }
+
+  @keyframes kefine-auth-card-enter {
+    from {
+      opacity: 0;
+      transform: translateY(0.5rem);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   @media (max-width: 640px) {
