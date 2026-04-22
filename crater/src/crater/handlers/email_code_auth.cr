@@ -152,17 +152,17 @@ module Crater
       end
 
       private def self.build_email_body(email : String, code : String) : String
-        <<-BODY
-Hello,
-
-Use this one-time code to sign in to Kefine:
-
-#{code}
-
-This code was requested for #{email} and expires in 10 minutes.
-
-If you did not request it, you can ignore this email.
-        BODY
+        [
+          "Hello,",
+          "",
+          "Use this one-time code to sign in to Kefine:",
+          "",
+          code,
+          "",
+          "This code was requested for #{email} and expires in 10 minutes.",
+          "",
+          "If you did not request it, you can ignore this email."
+        ].join('\n')
       end
     end
   end
