@@ -127,18 +127,11 @@
   open={open}
   onClose={onClose}
   closeLabel={closeLabel}
-  tone="dark"
   width="wide"
   placement="right"
 >
   <kefine-account-drawer data-authenticated={isAuthenticated}>
     {#if !isAuthenticated}
-      <kefine-account-hero>
-        <small>Access</small>
-        <h2>{title}</h2>
-        <p>{description}</p>
-      </kefine-account-hero>
-
       <kefine-account-auth-grid>
         <button
           type="button"
@@ -305,21 +298,25 @@
     display: grid;
     gap: 1rem;
     min-height: calc(100vh - 2.4rem);
-    color: color-mix(in oklab, #e9f0f5 92%, white 8%);
+    color: var(--kef-color-text, #2e2317);
   }
 
-  kefine-account-hero,
   .kefine-account-surface,
   .kefine-account-auth-card,
   .kefine-account-task,
   kefine-account-stat {
-    border: 1px solid color-mix(in oklab, #8aa0b6 18%, transparent);
+    border: 1px solid color-mix(in oklab, var(--kef-color-text, #2e2317) 12%, transparent);
     background:
-      linear-gradient(180deg, color-mix(in oklab, #15202b 94%, #10161c 6%), color-mix(in oklab, #111a22 96%, black 4%));
-    box-shadow: 0 20px 40px color-mix(in oklab, black 28%, transparent);
+      linear-gradient(
+        180deg,
+        color-mix(in oklab, var(--kef-color-bg-card, #f7ecd6) 96%, white 4%),
+        color-mix(in oklab, var(--kef-color-bg-soft, #eadcbc) 88%, var(--kef-color-bg-card, #f7ecd6) 12%)
+      );
+    box-shadow:
+      inset 0 1px 0 color-mix(in oklab, white 28%, transparent),
+      0 16px 32px color-mix(in oklab, var(--kef-color-text, #2e2317) 12%, transparent);
   }
 
-  kefine-account-hero,
   .kefine-account-surface {
     display: grid;
     gap: 0.7rem;
@@ -327,27 +324,10 @@
     border-radius: 1.25rem;
   }
 
-  kefine-account-hero {
-    background:
-      radial-gradient(circle at top left, color-mix(in oklab, var(--kef-primary, #98c95c) 30%, transparent) 0, transparent 38%),
-      linear-gradient(180deg, color-mix(in oklab, #0f1720 96%, black 4%), color-mix(in oklab, #101822 98%, black 2%));
-  }
-
-  kefine-account-hero small,
   .kefine-account-profile-copy small,
   .kefine-account-task__copy small,
   .kefine-account-empty {
-    color: color-mix(in oklab, #cfdae4 56%, transparent);
-  }
-
-  kefine-account-hero h2,
-  kefine-account-hero p {
-    margin: 0;
-  }
-
-  kefine-account-hero h2 {
-    font-size: clamp(1.65rem, 3vw, 2.2rem);
-    line-height: 1.05;
+    color: color-mix(in oklab, var(--kef-color-text, #2e2317) 58%, transparent);
   }
 
   kefine-account-section-head,
@@ -379,11 +359,30 @@
     border-radius: 1.1rem;
     color: inherit;
     text-align: left;
+    transition:
+      transform 160ms ease,
+      border-color 160ms ease,
+      background-color 160ms ease,
+      box-shadow 160ms ease;
   }
 
   .kefine-account-auth-card[data-kind='browser-wallet'] {
     background:
-      linear-gradient(180deg, color-mix(in oklab, #182431 82%, var(--kef-primary, #98c95c) 18%), color-mix(in oklab, #101820 94%, black 6%));
+      radial-gradient(circle at top left, color-mix(in oklab, var(--kef-color-primary, #7a4b2a) 16%, transparent) 0, transparent 44%),
+      linear-gradient(
+        180deg,
+        color-mix(in oklab, var(--kef-color-primary, #7a4b2a) 10%, var(--kef-color-bg-card, #f7ecd6)),
+        color-mix(in oklab, var(--kef-color-bg-soft, #eadcbc) 72%, var(--kef-color-bg-card, #f7ecd6) 28%)
+      );
+  }
+
+  .kefine-account-auth-card:hover,
+  .kefine-account-task:hover {
+    transform: translateY(-1px);
+    border-color: color-mix(in oklab, var(--kef-color-primary, #7a4b2a) 30%, transparent);
+    box-shadow:
+      inset 0 1px 0 color-mix(in oklab, white 34%, transparent),
+      0 18px 36px color-mix(in oklab, var(--kef-color-text, #2e2317) 16%, transparent);
   }
 
   .kefine-account-auth-card__icon,
@@ -393,8 +392,9 @@
     width: 2.5rem;
     height: 2.5rem;
     border-radius: 999px;
-    background: color-mix(in oklab, var(--kef-primary, #98c95c) 24%, #19222d);
-    color: color-mix(in oklab, #f5ffd8 84%, white 16%);
+    border: 1px solid color-mix(in oklab, var(--kef-color-primary, #7a4b2a) 18%, transparent);
+    background: color-mix(in oklab, var(--kef-color-primary, #7a4b2a) 12%, var(--kef-color-bg-card, #f7ecd6));
+    color: color-mix(in oklab, var(--kef-color-primary, #7a4b2a) 84%, var(--kef-color-text, #2e2317));
   }
 
   kefine-account-avatar {
@@ -422,7 +422,7 @@
   }
 
   .kefine-account-profile-copy span {
-    color: color-mix(in oklab, var(--kef-primary, #98c95c) 68%, white 32%);
+    color: color-mix(in oklab, var(--kef-color-primary, #7a4b2a) 76%, var(--kef-color-text, #2e2317));
     font-size: 0.92rem;
   }
 
@@ -449,6 +449,10 @@
     border-radius: 1rem;
     color: inherit;
     text-align: left;
+    transition:
+      transform 160ms ease,
+      border-color 160ms ease,
+      box-shadow 160ms ease;
   }
 
   .kefine-account-task__copy {
@@ -465,6 +469,7 @@
 
   button[data-variant='primary'],
   button[data-variant='ghost'] {
+    cursor: pointer;
     border-radius: 999px;
     padding: 0.7rem 0.95rem;
     font: inherit;
@@ -472,15 +477,40 @@
 
   button[data-variant='primary'] {
     border: 0;
-    background: var(--kef-primary, #98c95c);
-    color: #112010;
+    background: var(--kef-color-primary, #7a4b2a);
+    color: var(--kef-color-on-primary, #f7edd8);
     font-weight: 700;
   }
 
   button[data-variant='ghost'] {
-    border: 1px solid color-mix(in oklab, #8aa0b6 18%, transparent);
-    background: color-mix(in oklab, #17212d 96%, black 4%);
+    border: 1px solid color-mix(in oklab, var(--kef-color-text, #2e2317) 14%, transparent);
+    background: color-mix(in oklab, var(--kef-color-bg-card, #f7ecd6) 86%, transparent);
     color: inherit;
+  }
+
+  :global(:root[data-kefine-theme='dark']) .kefine-account-surface,
+  :global(:root[data-kefine-theme='dark']) .kefine-account-auth-card,
+  :global(:root[data-kefine-theme='dark']) .kefine-account-task,
+  :global(:root[data-kefine-theme='dark']) kefine-account-stat {
+    background:
+      linear-gradient(
+        180deg,
+        color-mix(in oklab, var(--kef-color-bg-card, #1d1510) 90%, #2b1f16 10%),
+        color-mix(in oklab, var(--kef-color-bg-soft, #221912) 82%, var(--kef-color-bg-card, #1d1510) 18%)
+      );
+    box-shadow:
+      inset 0 1px 0 color-mix(in oklab, white 8%, transparent),
+      0 18px 36px color-mix(in oklab, black 26%, transparent);
+  }
+
+  :global(:root[data-kefine-theme='dark']) .kefine-account-auth-card[data-kind='browser-wallet'] {
+    background:
+      radial-gradient(circle at top left, color-mix(in oklab, var(--kef-color-primary, #c89a5a) 18%, transparent) 0, transparent 42%),
+      linear-gradient(
+        180deg,
+        color-mix(in oklab, var(--kef-color-primary, #c89a5a) 10%, var(--kef-color-bg-card, #1d1510)),
+        color-mix(in oklab, var(--kef-color-bg-soft, #221912) 78%, var(--kef-color-bg-card, #1d1510) 22%)
+      );
   }
 
   @media (max-width: 640px) {
