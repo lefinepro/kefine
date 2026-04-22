@@ -5,7 +5,7 @@
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
 	import type { Snippet } from 'svelte';
-  import { authState, clearAuthState, hydrateAuthStateFromSession } from '$lib/auth/auth-store.svelte.js';
+  import { authState, clearAuthState, hydrateAuthStateFromSession, updateAuthState } from '$lib/auth/auth-store.svelte.js';
   import { clearPasskeySession, loadPasskeySession, passkeySessionStore } from '$lib/auth/passkey-session';
   import { disconnectAppKit } from '$lib/auth/appkit';
   import KefineTopbar from '$lib/components/kefine/KefineTopbar.svelte';
@@ -125,6 +125,7 @@
     };
     mediaQuery.addEventListener('change', handleThemePreferenceChange);
     hydrateAuthStateFromSession();
+    consumeExternalAuthCallback();
     loadPasskeySession();
 
     return () => {
@@ -144,6 +145,58 @@
 
   function handleSharedBrandClick() {
     void goto(buildLocaleHomePath(activeLocale));
+  }
+
+  function consumeExternalAuthCallback() {
+    if (!browser) {
+      return;
+    }
+
+    const url = new URL(window.location.href);
+    if (url.searchParams.get('auth_callback') !== '1') {
+      return;
+    }
+
+    const authError = url.searchParams.get('auth_error')?.trim();
+    if (!authError) {
+      const authType = url.searchParams.get('auth_type');
+      const allowedAuthType = authType === 'wallet' || authType === 'email' || authType === 'publickey' ? authType : null;
+      const chainIdRaw = url.searchParams.get('auth_chain_id');
+      const parsedChainId = chainIdRaw ? Number.parseInt(chainIdRaw, 10) : Number.NaN;
+      const chainId = Number.isFinite(parsedChainId) ? parsedChainId : null;
+      const address = url.searchParams.get('auth_address')?.trim() || null;
+      const email = url.searchParams.get('auth_email')?.trim() || null;
+      const userId = url.searchParams.get('auth_user_id')?.trim() || email || address;
+      const handle = url.searchParams.get('auth_handle')?.trim() || email?.split('@')[0] || address;
+      const displayName =
+        url.searchParams.get('auth_display_name')?.trim() ||
+        handle ||
+        email?.split('@')[0] ||
+        address;
+
+      if (allowedAuthType && userId) {
+        updateAuthState({
+          isConnected: true,
+          address,
+          chainId,
+          email,
+          userId,
+          handle: handle ?? null,
+          displayName: displayName ?? null,
+          authType: allowedAuthType,
+          status: 'connected'
+        });
+      }
+    } else {
+      console.error('[auth] external callback failed', authError);
+    }
+
+    const authKeys = [...url.searchParams.keys()].filter((key) => key.startsWith('auth_'));
+    for (const key of authKeys) {
+      url.searchParams.delete(key);
+    }
+
+    window.history.replaceState(window.history.state, '', url.toString());
   }
 
   async function handleSharedSignOut() {
@@ -203,9 +256,7 @@
     authenticatedLabel={authenticatedLabel}
     authenticatedSecondaryLabel={null}
     authenticatedAvatarUrl={null}
-    authMenuLabel={localeText.profile.title}
     openProfileLabel={localeText.profile.title}
-    signOutLabel={localeText.profile.signOut}
     isAuthenticated={isAuthenticated}
     isDarkTheme={isDarkTheme}
     isExpanded={topbarExpanded}

@@ -9,6 +9,7 @@
     closeLabel = 'Close',
     showClose = true,
     width = 'default',
+    placement = 'center',
     tone = 'default',
     children
   }: {
@@ -17,6 +18,7 @@
     closeLabel?: string;
     showClose?: boolean;
     width?: 'narrow' | 'default' | 'medium' | 'wide' | 'xwide';
+    placement?: 'center' | 'right';
     tone?: 'default' | 'dark';
     children?: Snippet;
   } = $props();
@@ -53,6 +55,7 @@
 <dialog
   data-tone={tone}
   data-width={width}
+  data-placement={placement}
   bind:this={dialogEl}
   onclose={onClose}
   onclick={handleBackdropClick}
@@ -107,6 +110,14 @@
     width: min(58rem, calc(100vw - 2rem));
   }
 
+  dialog[data-placement='right'] {
+    width: min(28rem, 100vw);
+    min-height: 100vh;
+    max-height: 100vh;
+    margin: 0 0 0 auto;
+    border-radius: 1.5rem 0 0 1.5rem;
+  }
+
   dialog::backdrop {
     background: rgba(15, 23, 42, 0.32);
     backdrop-filter: blur(4px);
@@ -124,5 +135,11 @@
     display: block;
     position: relative;
     padding: 1.1rem 1.2rem 1.2rem;
+  }
+
+  dialog[data-placement='right'] > lef-modal-body {
+    min-height: 100vh;
+    padding: 1.2rem;
+    overflow: auto;
   }
 </style>

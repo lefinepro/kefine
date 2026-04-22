@@ -37,9 +37,7 @@
     authenticatedLabel,
     authenticatedSecondaryLabel,
     authenticatedAvatarUrl,
-    authMenuLabel,
     openProfileLabel,
-    signOutLabel,
     isAuthenticated,
     isAuthLoading = false,
     isDarkTheme,
@@ -81,9 +79,7 @@
     authenticatedLabel: string | null;
     authenticatedSecondaryLabel: string | null;
     authenticatedAvatarUrl: string | null;
-    authMenuLabel: string;
     openProfileLabel: string;
-    signOutLabel: string;
     isAuthenticated: boolean;
     isAuthLoading?: boolean;
     isDarkTheme: boolean;
@@ -130,8 +126,6 @@
   let cancelLocaleClick: (() => void) | null = null;
   let themePickerOpen = $state(false);
   let localePickerOpen = $state(false);
-  let authMenuPopover: HTMLElement | null = $state(null);
-  let authMenuOpen = $state(false);
   let cancelAuthClick: (() => void) | null = null;
 
   function updateScrollState() {
@@ -168,13 +162,7 @@
   function handleAuthClick() {
     cancelAuthClick?.();
     cancelAuthClick = scheduleAfter(220, () => {
-      if (!isAuthenticated) {
-        onAuth();
-        cancelAuthClick = null;
-        return;
-      }
-
-      authMenuOpen = !authMenuOpen;
+      onAuth();
       cancelAuthClick = null;
     });
   }
@@ -188,7 +176,6 @@
       return;
     }
 
-    authMenuOpen = false;
     onAuthDoubleClick();
   }
 
@@ -254,20 +241,6 @@
     localePickerOpen = localePopover?.matches(':popover-open') ?? false;
   }
 
-  function handleAuthPopoverToggle() {
-    authMenuOpen = authMenuPopover?.matches(':popover-open') ?? false;
-  }
-
-  function handleOpenProfileClick() {
-    authMenuOpen = false;
-    onOpenProfile();
-  }
-
-  function handleSignOutClick() {
-    authMenuOpen = false;
-    onSignOut();
-  }
-
   $effect(() => {
     if (!menuPopover) {
       return;
@@ -320,35 +293,12 @@
   });
 
   $effect(() => {
-    if (!authMenuPopover) {
-      return;
-    }
-
-    if (authMenuOpen && isAuthenticated && !isAuthLoading) {
-      if (!authMenuPopover.matches(':popover-open')) {
-        authMenuPopover.showPopover();
-      }
-      return;
-    }
-
-    if (authMenuPopover.matches(':popover-open')) {
-      authMenuPopover.hidePopover();
-    }
-  });
-
-  $effect(() => {
     if (isExpanded) {
       return;
     }
 
     themePickerOpen = false;
     localePickerOpen = false;
-  });
-
-  $effect(() => {
-    if (isAuthLoading || !isAuthenticated) {
-      authMenuOpen = false;
-    }
   });
 </script>
 
@@ -505,24 +455,6 @@
           {/if}
         </span>
       </button>
-
-      <kefine-auth-popover
-        bind:this={authMenuPopover}
-        popover="manual"
-        aria-label={authMenuLabel}
-        ontoggle={handleAuthPopoverToggle}
-      >
-        <kefine-auth-menu>
-          <button type="button" data-part="auth-menu-option" onclick={handleOpenProfileClick}>
-            <KefineTopbarIcon name="profile" size={18} />
-            <lefine-text>{openProfileLabel}</lefine-text>
-          </button>
-          <button type="button" data-part="auth-menu-option" onclick={handleSignOutClick}>
-            <KefineTopbarIcon name="sign-out" size={18} />
-            <lefine-text>{signOutLabel}</lefine-text>
-          </button>
-        </kefine-auth-menu>
-      </kefine-auth-popover>
     {/if}
   </kefine-topbar-row>
 </kefine-topbar>
@@ -889,58 +821,6 @@
     color: color-mix(in oklab, var(--kef-primary) 92%, #4f3d30);
     border-color: color-mix(in oklab, var(--kef-primary) 38%, var(--kef-border));
     background: color-mix(in oklab, var(--kef-primary) 10%, transparent);
-  }
-
-  kefine-auth-popover {
-    position: fixed;
-    position-anchor: --kefine-auth-anchor;
-    top: anchor(bottom);
-    right: anchor(right);
-    left: auto;
-    margin: 0;
-    margin-top: 0.45rem;
-    padding: 0.28rem;
-    min-width: 12rem;
-    border: var(--kef-border-width-soft) solid color-mix(in oklab, var(--kef-border) 72%, transparent);
-    border-radius: var(--kef-radius-ui);
-    background: color-mix(in oklab, var(--kef-bg-card) 98%, var(--kef-bg));
-    box-shadow: 0 10px 24px color-mix(in oklab, #544536 8%, transparent);
-    color: inherit;
-    pointer-events: auto;
-  }
-
-  kefine-auth-popover::backdrop {
-    background: transparent;
-  }
-
-  kefine-auth-menu {
-    display: grid;
-    gap: 0.2rem;
-  }
-
-  kefine-auth-menu [data-part='auth-menu-option'] {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    align-items: center;
-    gap: 0.55rem;
-    min-height: 2.45rem;
-    padding: 0.55rem 0.7rem;
-    border: var(--kef-border-width-soft) solid transparent;
-    border-radius: calc(var(--kef-radius-ui) - 0.08rem);
-    background: transparent;
-    color: color-mix(in oklab, var(--lefine-text) 96%, transparent);
-    text-align: left;
-    font: inherit;
-    transition:
-      border-color var(--kef-motion-fast) var(--kef-ease-soft),
-      background-color var(--kef-motion-fast) var(--kef-ease-soft),
-      color var(--kef-motion-fast) var(--kef-ease-soft);
-  }
-
-  kefine-auth-menu [data-part='auth-menu-option']:hover {
-    border-color: color-mix(in oklab, var(--kef-primary) 22%, var(--kef-line));
-    background: color-mix(in oklab, var(--kef-primary) 6%, white);
-    color: color-mix(in oklab, var(--kef-primary) 92%, #4f3d30);
   }
 
   lef-auth-loading {
