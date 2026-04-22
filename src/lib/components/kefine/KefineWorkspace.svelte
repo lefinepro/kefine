@@ -218,19 +218,21 @@
   }
 
   async function ensureDialogComponentsLoaded() {
-    if (AuthDialogComponent && PasskeyDialogComponent && PrivateKeyDialogComponent) {
+    if (AuthDialogComponent && PasskeyDialogComponent && PrivateKeyDialogComponent && EmailCodeDialogComponent) {
       return;
     }
 
-    const [authModule, passkeyModule, privateKeyModule] = await Promise.all([
+    const [authModule, passkeyModule, privateKeyModule, emailCodeModule] = await Promise.all([
       import('$lib/components/kefine/KefineAuthDialog.svelte'),
       import('$lib/components/kefine/KefinePasskeyDialog.svelte'),
-      import('$lib/components/kefine/KefinePrivateKeyDialog.svelte')
+      import('$lib/components/kefine/KefinePrivateKeyDialog.svelte'),
+      import('$lib/components/kefine/KefineEmailCodeDialog.svelte')
     ]);
 
     AuthDialogComponent ??= authModule.default;
     PasskeyDialogComponent ??= passkeyModule.default;
     PrivateKeyDialogComponent ??= privateKeyModule.default;
+    EmailCodeDialogComponent ??= emailCodeModule.default;
   }
 
   let step = $state<FlowStep>(getNormalizedInitialOrderId() ? 'executing' : 'create');
@@ -268,6 +270,12 @@
   let stepCommentLoadingId = $state<string | null>(null);
   let passkeyDialogOpen = $state(false);
   let privateKeyDialogOpen = $state(false);
+  let emailCodeDialogOpen = $state(false);
+  let emailCodePending = $state(false);
+  let emailCodeRequested = $state(false);
+  let emailCodeEmail = $state('');
+  let emailCodeValue = $state('');
+  let emailCodeStatus = $state('');
   let stagePreviewOpen = $state(false);
   let privateKeyInput = $state('');
   let isHydratingRoute = $state(Boolean(getNormalizedInitialOrderId()));
@@ -285,6 +293,7 @@
   let AuthDialogComponent = $state<LazyComponent | null>(null);
   let PasskeyDialogComponent = $state<LazyComponent | null>(null);
   let PrivateKeyDialogComponent = $state<LazyComponent | null>(null);
+  let EmailCodeDialogComponent = $state<LazyComponent | null>(null);
 
   const passkeySession = $derived($passkeySessionStore);
   const isPasskeyActive = $derived(passkeySession ? passkeySession.expiresAt.getTime() > Date.now() : false);
@@ -885,7 +894,7 @@
   });
 
   $effect(() => {
-    if (authDialogOpen || passkeyDialogOpen || privateKeyDialogOpen) {
+    if (authDialogOpen || passkeyDialogOpen || privateKeyDialogOpen || emailCodeDialogOpen) {
       void ensureDialogComponentsLoaded();
     }
   });
@@ -1091,6 +1100,95 @@
     }
   }
 
+  function openEmailCodeDialog() {
+    closeAuthDialog();
+    stagePreviewOpen = false;
+    selectedAuthMethod = 'wallet';
+    paymentMethod = 'wallet';
+    emailCodeRequested = false;
+    emailCodeValue = '';
+    emailCodeStatus = '';
+    emailCodeDialogOpen = true;
+  }
+
+  async function requestEmailCodeAuth() {
+    const email = emailCodeEmail.trim().toLowerCase();
+    if (!email) {
+      emailCodeStatus = 'Email is required.';
+      return;
+    }
+
+    emailCodePending = true;
+    try {
+      const { requestEmailCode } = await loadAuthRoutes();
+      const result = await requestEmailCode(email);
+      emailCodeEmail = result.email;
+      emailCodeRequested = true;
+      emailCodeValue = '';
+      emailCodeStatus = result.devCode ? `Code sent. Dev code: ${result.devCode}` : 'Code sent. Check your email.';
+    } catch (error) {
+      emailCodeStatus = error instanceof Error ? error.message : localeText.errors.fallback;
+    } finally {
+      emailCodePending = false;
+    }
+  }
+
+  async function verifyEmailCodeAuth() {
+    const email = emailCodeEmail.trim().toLowerCase();
+    const code = emailCodeValue.trim();
+    if (!email || !code) {
+      emailCodeStatus = 'Enter both email and one-time code.';
+      return;
+    }
+
+    emailCodePending = true;
+    try {
+      const { verifyEmailCode } = await loadAuthRoutes();
+      const emailSession = await verifyEmailCode(email, code);
+
+      updateAuthState({
+        isConnected: true,
+        address: null,
+        chainId: null,
+        email: emailSession.email,
+        userId: emailSession.userId,
+        handle: normalizeActorHandle(emailSession.handle),
+        displayName: emailSession.displayName,
+        authType: 'email',
+        status: 'connected'
+      });
+
+      emailCodeDialogOpen = false;
+      emailCodeRequested = false;
+      emailCodeStatus = '';
+      emailCodeValue = '';
+
+      if (draftQueued || pendingCloneAction) {
+        void continueAfterAuth();
+        return;
+      }
+
+      void maybeOpenProfileAfterAuth({
+        userId: emailSession.userId,
+        email: emailSession.email,
+        displayName: emailSession.displayName,
+        authType: 'email',
+        walletAddress: null,
+        walletAlias: null
+      });
+    } catch (error) {
+      emailCodeStatus = error instanceof Error ? error.message : localeText.errors.fallback;
+    } finally {
+      emailCodePending = false;
+    }
+  }
+
+  function resetEmailCodeStep() {
+    emailCodeRequested = false;
+    emailCodeValue = '';
+    emailCodeStatus = '';
+  }
+
   function beginOAuthLogin(provider: 'google' | 'github') {
     if (!browser) {
       authDialogOpen = true;
@@ -1182,6 +1280,7 @@
   function closeAuthDialog() {
     authDialogOpen = false;
     passkeyDialogOpen = false;
+    emailCodeDialogOpen = false;
     authButtonLoading = false;
   }
 
@@ -2925,6 +3024,34 @@
       onInput={(value: string) => { privateKeyInput = value; }}
       onSubmit={choosePrivateKeyMethod}
       onGenerate={chooseGeneratedPrivateKeyMethod}
+    />
+  {/if}
+
+  {#if EmailCodeDialogComponent}
+    <EmailCodeDialogComponent
+      open={emailCodeDialogOpen}
+      title={localeText.auth.emailCodeTitle}
+      description={localeText.auth.emailCodeDescription}
+      emailValue={emailCodeEmail}
+      codeValue={emailCodeValue}
+      statusMessage={emailCodeStatus}
+      emailLabel={localeText.auth.emailCodeEmailLabel}
+      codeLabel={localeText.auth.emailCodeLabel}
+      emailPlaceholder={localeText.auth.emailCodeEmailPlaceholder}
+      codePlaceholder={localeText.auth.emailCodePlaceholder}
+      sendCodeLabel={localeText.auth.emailCodeSendLabel}
+      resendCodeLabel={localeText.auth.emailCodeResendLabel}
+      verifyCodeLabel={localeText.auth.emailCodeVerifyLabel}
+      backLabel={localeText.buttons.backToMethods}
+      closeLabel={localeText.buttons.closeDialog}
+      codeRequested={emailCodeRequested}
+      isSubmitting={emailCodePending}
+      onClose={() => { emailCodeDialogOpen = false; }}
+      onEmailInput={(value: string) => { emailCodeEmail = value; }}
+      onCodeInput={(value: string) => { emailCodeValue = value.replace(/[^0-9]/g, '').slice(0, 6); }}
+      onRequestCode={requestEmailCodeAuth}
+      onVerifyCode={verifyEmailCodeAuth}
+      onBack={resetEmailCodeStep}
     />
   {/if}
 

@@ -158,7 +158,7 @@
             <Icon icon="simple-icons:walletconnect" width="20" height="20" aria-hidden="true" />
           </span>
           <strong>{walletConnectTitle}</strong>
-          <small>Open Reown only for WalletConnect.</small>
+          <small>Scan a WalletConnect QR code with your wallet app.</small>
         </button>
 
         <button
@@ -348,15 +348,16 @@
 
   kefine-account-auth-grid {
     display: grid;
-    gap: 0.75rem;
+    gap: 0.6rem;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .kefine-account-auth-card {
     display: grid;
-    gap: 0.55rem;
-    padding: 1rem;
-    border-radius: 1.1rem;
+    gap: 0.4rem;
+    min-height: 7.5rem;
+    padding: 0.8rem 0.85rem;
+    border-radius: 1rem;
     color: inherit;
     text-align: left;
     transition:
@@ -389,8 +390,8 @@
   kefine-account-avatar {
     display: inline-grid;
     place-items: center;
-    width: 2.5rem;
-    height: 2.5rem;
+    width: 2.15rem;
+    height: 2.15rem;
     border-radius: 999px;
     border: 1px solid color-mix(in oklab, var(--kef-color-primary, #7a4b2a) 18%, transparent);
     background: color-mix(in oklab, var(--kef-color-primary, #7a4b2a) 12%, var(--kef-color-bg-card, #f7ecd6));
@@ -419,6 +420,17 @@
   .kefine-account-task__copy strong {
     font-size: 1rem;
     line-height: 1.2;
+  }
+
+  .kefine-account-auth-card strong {
+    font-size: 0.95rem;
+    line-height: 1.15;
+  }
+
+  .kefine-account-auth-card small {
+    font-size: 0.8rem;
+    line-height: 1.3;
+    color: color-mix(in oklab, var(--kef-color-text, #2e2317) 62%, transparent);
   }
 
   .kefine-account-profile-copy span {

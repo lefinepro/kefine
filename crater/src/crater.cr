@@ -12,6 +12,7 @@ require "./crater/handlers/passkeys"
 require "./crater/handlers/privatekey_auth"
 require "./crater/handlers/browser_wallet_auth"
 require "./crater/handlers/oauth_auth"
+require "./crater/handlers/email_code_auth"
 require "./crater/handlers/projects"
 require "./crater/handlers/git_http"
 require "./crater/handlers/forgefed_resources"
@@ -68,6 +69,7 @@ module Crater
     Handlers::PrivatekeyAuth.register(config)
     Handlers::BrowserWalletAuth.register(config)
     Handlers::OauthAuth.register(config)
+    Handlers::EmailCodeAuth.register(config)
 
     # ForgeFed project endpoints
     Handlers::Projects.register(config)

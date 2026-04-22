@@ -72,6 +72,25 @@ export interface TonWalletAuthSuccess {
   expiresAt: string;
 }
 
+export interface EmailCodeStartSuccess {
+  sent: true;
+  email: string;
+  expiresInSeconds: number;
+  devCode?: string;
+}
+
+export interface EmailCodeAuthSuccess {
+  verified: true;
+  token: string;
+  userId: string;
+  username: string;
+  displayName: string;
+  handle: string;
+  email: string;
+  authType: 'email';
+  expiresAt: string;
+}
+
 interface PasskeyStartResponse<T> {
 	options: T;
 	transactionId: string;
@@ -437,6 +456,19 @@ export async function loginWithTonWallet(address: string, chain?: string | null)
       address,
       chain: chain ?? null
     }
+  });
+}
+
+export async function requestEmailCode(email: string): Promise<EmailCodeStartSuccess> {
+  return postJson<EmailCodeStartSuccess>(buildCraterClientUrl('/auth/email-code/start'), {
+    email
+  });
+}
+
+export async function verifyEmailCode(email: string, code: string): Promise<EmailCodeAuthSuccess> {
+  return postJson<EmailCodeAuthSuccess>(buildCraterClientUrl('/auth/email-code/verify'), {
+    email,
+    code
   });
 }
 
