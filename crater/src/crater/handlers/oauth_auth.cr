@@ -248,9 +248,7 @@ module Crater
       end
 
       private def self.sanitize_return_to(value : String?, config : Utils::Config) : String
-        fallback = config.frontend_url || config.exchange_url
-        fallback = config.crater_url if fallback.nil?
-        fallback = fallback.not_nil!
+        fallback = (config.frontend_url || config.exchange_url || config.crater_url).as(String)
         return fallback if value.nil?
 
         raw = value.not_nil!.strip
