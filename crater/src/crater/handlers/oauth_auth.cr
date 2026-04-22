@@ -247,15 +247,18 @@ module Crater
         "#{config.crater_url}/auth/oauth/#{provider}/callback"
       end
 
+      private def self.oauth_fallback_url(config : Utils::Config) : String
+        if frontend_url = config.frontend_url
+          frontend_url
+        elsif exchange_url = config.exchange_url
+          exchange_url
+        else
+          config.crater_url
+        end
+      end
+
       private def self.sanitize_return_to(value : String?, config : Utils::Config) : String
-        fallback =
-          if frontend_url = config.frontend_url
-            frontend_url
-          elsif exchange_url = config.exchange_url
-            exchange_url
-          else
-            config.crater_url
-          end
+        fallback = oauth_fallback_url(config)
         return fallback if value.nil?
 
         raw = value.not_nil!.strip
@@ -266,7 +269,7 @@ module Crater
 
         raw
       rescue
-        fallback
+        oauth_fallback_url(config)
       end
 
       private def self.encode_state(return_to : String) : String
