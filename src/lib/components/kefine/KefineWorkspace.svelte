@@ -2848,7 +2848,8 @@
             feedTitle: localeText.labels.taskFeed,
             saving: localeText.status.savingDocument,
             apply: localeText.buttons.apply,
-            richEditorDescription: localeText.create.richEditorDescription
+            richEditorDescription: localeText.create.richEditorDescription,
+            resultTitle: localeText.labels.resultTitle
           }}
           authLabels={{
             walletTitle: localeText.auth.walletTitle,

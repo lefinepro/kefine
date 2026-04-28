@@ -66,6 +66,7 @@
       saving: string;
       apply: string;
       richEditorDescription: string;
+      resultTitle: string;
     };
     authLabels: {
       walletTitle: string;
@@ -645,7 +646,10 @@
           saving: labels.saving,
           leaveComment: labels.leaveComment,
           apply: labels.apply,
-          richEditorDescription: labels.richEditorDescription
+          richEditorDescription: labels.richEditorDescription,
+          interimResult: labels.interimResult,
+          finalResult: labels.finalResult,
+          resultTitle: labels.resultTitle
         }}
       />
   </kefine-task-stage>
