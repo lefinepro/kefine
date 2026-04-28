@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 
 import { KEFINE_TEXT_EN } from '$lib/constants/kefine-locale-en';
-import { buildTaskThreadNodes, resolveOrderStage } from '$lib/components/kefine/kefine-task-feed';
+import { appendTaskNodeInsert, buildTaskThreadNodes, resolveOrderStage } from '$lib/components/kefine/kefine-task-feed';
 import { extractStatusPayload } from '$lib/components/kefine/kefine-workflow-parsers';
 import type { OrderView } from '$lib/components/kefine/kefine-workflow';
 
@@ -128,6 +128,63 @@ describe('kefine task feed progression', () => {
     assert.equal(nodes[0]?.title, 'Find solvers');
     assert.equal(nodes[0]?.state, 'completed');
     assert.equal(nodes[0]?.mode, 'compact');
+  });
+
+  test('final result renders as a separate timeline block instead of exchange description', () => {
+    const order: OrderView = {
+      id: 'order-result',
+      solver: '',
+      status: 'completed',
+      title: 'Ship result view',
+      description: 'Show a result block',
+      createdAt: '2026-04-16T10:00:00.000Z',
+      currency: 'USDC',
+      result: {
+        title: 'Final result',
+        summary: 'Result description',
+        blocks: [{ id: 'result-1', type: 'markdown', content: 'Done.' }]
+      }
+    };
+
+    const nodes = buildTaskThreadNodes(order, { resultTitle: 'Result' });
+    const exchangeNode = nodes.find((node) => node.stepId === 'order-result-exchange-search');
+    const resultNode = nodes.find((node) => node.id === 'order-result-final-result');
+
+    assert.equal(exchangeNode?.title, 'Find solvers');
+    assert.equal(exchangeNode?.mode, 'compact');
+    assert.equal(resultNode?.title, 'Result');
+    assert.equal(resultNode?.mode, 'block');
+    assert.equal(resultNode?.detail, undefined);
+    assert.equal(resultNode?.blocks?.[0]?.content, 'Done.');
+  });
+
+  test('node inserts from inline editor become regular and branch children', () => {
+    const order: OrderView = {
+      id: 'order-inline',
+      solver: '',
+      status: 'running',
+      title: 'Inline nodes',
+      description: 'Build an outliner flow',
+      createdAt: '2026-04-16T10:00:00.000Z',
+      currency: 'USDC'
+    };
+
+    const withNextTask = appendTaskNodeInsert(order, 'order-inline-description', 'Draft the next step');
+    const withBranchTask = appendTaskNodeInsert(
+      { ...order, document: { format: 'markdown', content: withNextTask } },
+      'order-inline-description',
+      'Branch: Explore a parallel route'
+    );
+    const nodes = buildTaskThreadNodes({
+      ...order,
+      document: { format: 'markdown', content: withBranchTask }
+    });
+    const descriptionNode = nodes.find((node) => node.stepId === 'order-inline-description');
+
+    assert.equal(descriptionNode?.children?.[0]?.title, 'Draft the next step');
+    assert.equal(descriptionNode?.children?.[0]?.branchLabel, undefined);
+    assert.equal(descriptionNode?.children?.[1]?.title, 'Explore a parallel route');
+    assert.equal(descriptionNode?.children?.[1]?.branchLabel, 'Branch 1');
   });
 
   test('system document comments preserve routed mention metadata', () => {

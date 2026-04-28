@@ -444,21 +444,6 @@ export function resolveOrderStage(order: OrderView): ExecutionStage {
 function exchangeSearchNode(order: OrderView): TaskThreadNode {
   const stage = resolveOrderStage(order);
   const comments = resolveSystemNodeComments(order, `${order.id}-exchange-search`);
-  const finalResultBlocks = order.result?.blocks;
-
-  if (finalResultBlocks?.length) {
-    return {
-      id: `${order.id}-exchange-search`,
-      stepId: `${order.id}-exchange-search`,
-      title: 'Solution',
-      detail: order.result?.summary || order.result?.title || 'The solution has been received.',
-      state: 'completed',
-      mode: 'block',
-      blocks: finalResultBlocks,
-      commentable: true,
-      comments
-    };
-  }
 
   if (stage === 'assigned' || stage === 'running' || stage === 'review' || stage === 'completed') {
     return compactNode(
@@ -660,7 +645,7 @@ function resultNode(section: OrderResultSection | undefined, id: string, title: 
     return null;
   }
 
-  return blockNode(id, title, section.summary || section.title, 'completed', section.blocks);
+  return blockNode(id, title, undefined, 'completed', section.blocks);
 }
 
 function solverNodes(order: OrderView): TaskThreadNode[] {
@@ -705,16 +690,18 @@ function solverNodes(order: OrderView): TaskThreadNode[] {
   return [];
 }
 
-export function buildTaskThreadNodes(order: OrderView | null): TaskThreadNode[] {
+export function buildTaskThreadNodes(
+  order: OrderView | null,
+  labels: { interimResult?: string; resultTitle?: string; finalResult?: string } = {}
+): TaskThreadNode[] {
   if (!order) {
     return [];
   }
 
   const description = descriptionNode(order);
-  const interim = resultNode(order.interimResult, `${order.id}-interim-result`, 'Interim result');
-  const final = resultNode(order.result, `${order.id}-final-result`, 'Final result');
+  const interim = resultNode(order.interimResult, `${order.id}-interim-result`, labels.interimResult || 'Interim result');
+  const final = resultNode(order.result, `${order.id}-final-result`, labels.resultTitle || labels.finalResult || 'Result');
   const exchangeNode = exchangeSearchNode(order);
-  const exchangeShowsFinalResult = exchangeNode.mode === 'block' && exchangeNode.title === 'Solution';
 
   const nodes = [
     exchangeNode,
@@ -723,7 +710,7 @@ export function buildTaskThreadNodes(order: OrderView | null): TaskThreadNode[] 
     ...executionNodes(order.executionSteps),
     ...notebookNodes(order.notebook?.steps),
     ...(interim ? [interim] : []),
-    ...(final && !exchangeShowsFinalResult ? [final] : [])
+    ...(final ? [final] : [])
   ];
 
   return nodes.map((node) => ({
@@ -735,8 +722,11 @@ export function buildTaskThreadNodes(order: OrderView | null): TaskThreadNode[] 
 // Preserve the previous export name so Vite HMR can survive the refactor without a hard reload.
 export const buildTaskFeedInserts = buildTaskThreadNodes;
 
-export function buildQueuedTaskRoot(order: OrderView): TaskThreadNode {
-  const children = buildTaskThreadNodes(order);
+export function buildQueuedTaskRoot(
+  order: OrderView,
+  labels: { interimResult?: string; resultTitle?: string; finalResult?: string } = {}
+): TaskThreadNode {
+  const children = buildTaskThreadNodes(order, labels);
   const title = resolveRootTitle(order);
   const summary = resolveTaskSummary(order);
   const status = (order.status === 'completed' || order.status === 'done') ? 'completed' : order.status === 'queued' ? 'active' : 'upcoming';

@@ -51,9 +51,12 @@
     description,
     onApply,
     onStateChange,
+    onSubmit,
+    onCancel,
     placeholder = '',
     compact = false,
     singleLine = false,
+    submitOnEnter = false,
     enableMeta = false,
     mentionCandidates = [],
     autoOpenTagEditor = false,
@@ -64,9 +67,12 @@
     description: string;
     onApply: (value: string) => void;
     onStateChange?: (state: EditorDraftState) => void;
+    onSubmit?: () => void;
+    onCancel?: () => void;
     placeholder?: string;
     compact?: boolean;
     singleLine?: boolean;
+    submitOnEnter?: boolean;
     enableMeta?: boolean;
     mentionCandidates?: EditorMentionCandidate[];
     autoOpenTagEditor?: boolean;
@@ -535,11 +541,13 @@
     for (const eventName of events) {
       instance.view.dom.addEventListener(eventName, sync);
     }
+    instance.view.dom.addEventListener('keydown', handleEditorKeydown, { capture: true });
 
     detachEditorListeners = () => {
       for (const eventName of events) {
         instance.view.dom?.removeEventListener(eventName, sync);
       }
+      instance.view.dom?.removeEventListener('keydown', handleEditorKeydown, { capture: true });
       detachEditorListeners = null;
     };
   }
@@ -565,6 +573,19 @@
   }
 
   function handleEditorKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape' && onCancel) {
+      event.preventDefault();
+      onCancel();
+      return;
+    }
+
+    if (submitOnEnter && singleLine && event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
+      event.preventDefault();
+      syncVisualToSource();
+      queueMicrotask(() => onSubmit?.());
+      return;
+    }
+
     if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
       event.preventDefault();
       syncVisualToSource();
@@ -573,6 +594,19 @@
 
   function handleSourceInput(nextValue: string): void {
     publishDraft(nextValue);
+  }
+
+  function handleSourceKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape' && onCancel) {
+      event.preventDefault();
+      onCancel();
+      return;
+    }
+
+    if (submitOnEnter && singleLine && event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
+      event.preventDefault();
+      onSubmit?.();
+    }
   }
 
   function setEditorMode(nextMode: EditorMode): void {
@@ -832,7 +866,6 @@
           tabindex="0"
           aria-multiline="true"
           data-placeholder={placeholder}
-          onkeydown={handleEditorKeydown}
         ></lefine-box>
 
         {#if editor}
@@ -897,6 +930,7 @@
           value={sourceDraft}
           placeholder={placeholder || 'Write with * headings, - lists, #+begin_quote, #+begin_src'}
           oninput={(event) => handleSourceInput((event.currentTarget as HTMLTextAreaElement).value)}
+          onkeydown={handleSourceKeydown}
         ></textarea>
       {/if}
     </kefine-rich-editor-surface>
