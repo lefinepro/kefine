@@ -60,6 +60,16 @@
       interimResult: string;
       finalResult: string;
       leaveComment: string;
+      commentAction?: string;
+      createBranch?: string;
+      createBranchLeft?: string;
+      createBranchHidden?: string;
+      editCode?: string;
+      expandBranch?: string;
+      collapseBranch?: string;
+      showHiddenBranches?: string;
+      hideBranches?: string;
+      inlineCodeEditHint?: string;
       noNotebookYet: string;
       treeTitle: string;
       feedTitle: string;

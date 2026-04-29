@@ -97,6 +97,7 @@ module Crater
       actor = actor_handle
       updates = read_updates
       exchange_run = RepositoryStore.resolve_exchange_run(repository, push_option_override, config)
+      lepos_settings = RepositoryStore.lepos_config(repository)
       exit(0) unless exchange_run
 
       updates.each do |update|
@@ -104,7 +105,15 @@ module Crater
         next unless branch
         next if update.deleted?
 
-        RepositoryStore.sync_exchange_issue_for_push(repository, branch, actor, update.old_revision, update.new_revision, config)
+        RepositoryStore.sync_exchange_issue_for_push(
+          repository,
+          branch,
+          actor,
+          update.old_revision,
+          update.new_revision,
+          config,
+          lepos_settings
+        )
       end
 
       exit(0)

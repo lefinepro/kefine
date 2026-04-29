@@ -391,6 +391,7 @@
               type="button"
               data-part="icon"
               data-role="theme"
+              data-testid="kefine-topbar-theme-toggle"
               aria-label={themeLabel}
               title={themeLabel}
               onclick={handleThemeButtonClick}
@@ -402,6 +403,7 @@
               type="button"
               data-part="icon"
               data-role="locale"
+              data-testid="kefine-topbar-locale-toggle"
               aria-label={localeLabel}
               title={localeLabel}
               onclick={handleLocaleButtonClick}
@@ -430,15 +432,33 @@
         ontoggle={handleThemePopoverToggle}
       >
         <kefine-picker-list>
-          <button type="button" data-part="picker-option" data-active={themeMode === 'auto'} onclick={() => selectTheme('auto')}>
+          <button
+            type="button"
+            data-part="picker-option"
+            data-testid="kefine-topbar-theme-option-auto"
+            data-active={themeMode === 'auto'}
+            onclick={() => selectTheme('auto')}
+          >
             <KefineTopbarIcon name="theme-auto" size={18} />
             <lefine-text>{themeAutoLabel}</lefine-text>
           </button>
-          <button type="button" data-part="picker-option" data-active={themeMode === 'light'} onclick={() => selectTheme('light')}>
+          <button
+            type="button"
+            data-part="picker-option"
+            data-testid="kefine-topbar-theme-option-light"
+            data-active={themeMode === 'light'}
+            onclick={() => selectTheme('light')}
+          >
             <KefineTopbarIcon name="theme-light" size={18} />
             <lefine-text>{themeLightLabel}</lefine-text>
           </button>
-          <button type="button" data-part="picker-option" data-active={themeMode === 'dark'} onclick={() => selectTheme('dark')}>
+          <button
+            type="button"
+            data-part="picker-option"
+            data-testid="kefine-topbar-theme-option-dark"
+            data-active={themeMode === 'dark'}
+            onclick={() => selectTheme('dark')}
+          >
             <KefineTopbarIcon name="theme-dark" size={18} />
             <lefine-text>{themeDarkLabel}</lefine-text>
           </button>
@@ -451,15 +471,33 @@
         ontoggle={handleLocalePopoverToggle}
       >
         <kefine-picker-list>
-          <button type="button" data-part="picker-option" data-active={locale === 'en'} onclick={() => selectLocale('en')}>
+          <button
+            type="button"
+            data-part="picker-option"
+            data-testid="kefine-topbar-locale-option-en"
+            data-active={locale === 'en'}
+            onclick={() => selectLocale('en')}
+          >
             <KefineTopbarIcon name={localeFlagIcons.en} size={18} />
             <lefine-text>{languageEnglishLabel}</lefine-text>
           </button>
-          <button type="button" data-part="picker-option" data-active={locale === 'ru'} onclick={() => selectLocale('ru')}>
+          <button
+            type="button"
+            data-part="picker-option"
+            data-testid="kefine-topbar-locale-option-ru"
+            data-active={locale === 'ru'}
+            onclick={() => selectLocale('ru')}
+          >
             <KefineTopbarIcon name={localeFlagIcons.ru} size={18} />
             <lefine-text>{languageRussianLabel}</lefine-text>
           </button>
-          <button type="button" data-part="picker-option" data-active={locale === 'hy'} onclick={() => selectLocale('hy')}>
+          <button
+            type="button"
+            data-part="picker-option"
+            data-testid="kefine-topbar-locale-option-hy"
+            data-active={locale === 'hy'}
+            onclick={() => selectLocale('hy')}
+          >
             <KefineTopbarIcon name={localeFlagIcons.hy} size={18} />
             <lefine-text>{languageArmenianLabel}</lefine-text>
           </button>

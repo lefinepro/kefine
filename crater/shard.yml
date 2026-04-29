@@ -20,6 +20,8 @@ dependencies:
   pg:
     github: will/crystal-pg
     version: "~> 0.29.0"
+  rcl:
+    path: ./lib/rcl
 
 crystal: ">= 1.10.0"
 

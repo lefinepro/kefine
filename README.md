@@ -106,6 +106,72 @@ Notes:
 - `backend.databaseUrl` is the Postgres connection string crater uses for orders, payment redemptions, passkey users, challenges, sessions, and outbox activity persistence.
 - `company.*` controls the new `/legal-information` company page. Empty optional fields are hidden automatically.
 
+### 2a. Repository defaults: `.lepos.rcl`
+
+When a task repository is created, crater now seeds it with `.lepos.rcl` in the repository root.
+You can use this config to control repository storage behavior:
+
+```rcl
+[repository]
+icon = "🧩"
+issue_storage = "filesystem"   # or "database"
+default_branch = "main"
+accept_pull_issues = true
+accept_pull_patches = true
+issue_root = ".meta/issues"
+issue_readme_name = "README.org"
+issue_file_name = "issue.org"
+issue_attachments_dir = "attachments"
+main_readme_path = ".meta/lefine.pro.org"
+repository_readme = "Lefine repository metadata and task context"
+reps_config_paths = "reps.rcl,reps.toml"
+agent_system_prompt_path = ""
+```
+
+- `issue_storage = "filesystem"` writes per-order notes and attachments to `issue_root`.
+- `issue_storage = "database"` stores issue metadata/attachments in Postgres (`repository_issue_artifacts`) instead of repository files.
+- `icon` stores repository icon metadata.
+- `default_branch` controls branch name exposed to clients as `repository.defaultBranch` when repository metadata is fetched.
+- `accept_pull_issues` and `accept_pull_patches` control which push branches create auto-run exchange issues.
+- `main_readme_path` configures the repository-level readme path.
+- `issue_root`, `issue_file_name`, `issue_readme_name`, and `issue_attachments_dir` control issue artifact layout.
+- `reps_config_paths` lists repo-level config files to read (`reps.rcl`/`reps.toml` by default).
+- `agent_system_prompt_path` sets a repository-level path for system prompt configuration.
+
+Example `reps.rcl` file:
+
+```rcl
+[reps]
+repositories = ["repo-a", "repo-b"]
+repository_config_path = "reps"
+agent_system_prompt_path = "agents/system_prompt.md"
+```
+
+If `reps.rcl` is missing, `reps.toml` is checked next.
+
+If `.lepos.rcl` is absent, crater uses default values and writes a new default `.lepos.rcl` on first seed.
+Both `/status/:id` and `/projects/:id/repository` now expose repository `.lepos.rcl` settings under `repository.leposConfig`, so clients can inspect `issueStorage` and path settings for repositories they receive.
+
+### Git hooks and CI
+
+Project CI now runs through `githooks` scripts and all checks are executed in containers.
+
+- `/.githooks/ci` contains the current CI entrypoint
+- `/.githooks/pre-commit` runs lint only
+- `/.githooks/pre-push` runs the full CI pipeline
+
+Run full checks locally with:
+
+```bash
+./.githooks/ci
+```
+
+To make Git trigger hooks automatically:
+
+```bash
+git config core.hooksPath .githooks
+```
+
 ### Remote exchange mode
 
 To test against the hosted Lefine exchange instead of the local `crater`, use:
