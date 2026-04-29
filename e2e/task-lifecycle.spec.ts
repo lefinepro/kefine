@@ -6,7 +6,11 @@ function normalizeFontFamily(value: string) {
   return value.replaceAll('"', '').replaceAll("'", '').replaceAll(/\s*,\s*/g, ', ').trim();
 }
 
+const ORDER_ID = 'order-1';
+
 test.describe('Task Lifecycle', () => {
+  const exchangeNodeId = `${ORDER_ID}-exchange-search`;
+
   test('brand mark uses the shared magical lefine font token', async ({ page }) => {
     await mockOrderApi(page);
     await gotoAndWaitForReady(page);
@@ -173,5 +177,195 @@ test.describe('Task Lifecycle', () => {
     await expect(page).toHaveURL(/\/order-1$/);
     await expect(page.getByText('Branch 1')).toBeVisible();
     await expect(page.locator('kefine-thread-line strong').filter({ hasText: 'API migration' })).toBeVisible();
+  });
+
+  test('expand and collapse branch children in ProseKit tree', async ({ page }) => {
+    await mockOrderApi(page);
+    await gotoAndWaitForReady(page);
+
+    await createTask(page, 'ProseKit branch toggle');
+    await expect(page).toHaveURL(/\/order-1$/);
+
+    const branchButton = page.getByTestId(`kefine-thread-action-branch-${exchangeNodeId}`);
+    await branchButton.click();
+
+    const branchEditor = page.getByTestId(`kefine-branch-editor-${exchangeNodeId}`);
+    await branchEditor.locator('textarea[data-part="source"]').fill('Expand/collapse path');
+    await branchEditor.getByTestId(`kefine-thread-action-apply-${exchangeNodeId}`).click();
+
+    const branchNode = page.getByTestId(`kefine-task-node-${exchangeNodeId}-insert-1`);
+    const toggle = page.getByTestId(`kefine-thread-branch-toggle-${exchangeNodeId}`);
+
+    await expect(branchNode).toBeVisible();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+
+    await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await expect(branchNode).toHaveCount(0);
+
+    await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    await expect(branchNode).toBeVisible();
+  });
+
+  test('create inline comment from ProseKit node context', async ({ page }) => {
+    await mockOrderApi(page);
+    await gotoAndWaitForReady(page);
+
+    await createTask(page, 'Task with inline comment');
+    await expect(page).toHaveURL(/\/order-1$/);
+
+    await page.getByTestId(`kefine-thread-action-comment-${exchangeNodeId}`).click();
+    const commentForm = page.getByTestId(`kefine-thread-comment-form-${exchangeNodeId}`);
+    await commentForm.locator('textarea[data-part="source"]').fill('Inline comment in ProseKit node');
+    await commentForm.getByTestId(`kefine-thread-action-apply-${exchangeNodeId}`).click();
+
+    await expect(page.getByTestId(`kefine-task-node-${exchangeNodeId}`)).toContainText(
+      'Inline comment in ProseKit node'
+    );
+  });
+
+  test('edit branch source through ProseKit inline editor', async ({ page }) => {
+    await mockOrderApi(page);
+    await gotoAndWaitForReady(page);
+
+    await createTask(page, 'Task with editable branch');
+    await expect(page).toHaveURL(/\/order-1$/);
+
+    const branchButton = page.getByTestId(`kefine-thread-action-branch-${exchangeNodeId}`);
+    await branchButton.click();
+    const branchEditor = page.getByTestId(`kefine-branch-editor-${exchangeNodeId}`);
+    await branchEditor.locator('textarea[data-part="source"]').fill('Original branch source');
+    await branchEditor.getByTestId(`kefine-thread-action-apply-${exchangeNodeId}`).click();
+
+    const branchNodeId = `${exchangeNodeId}-insert-1`;
+    const editButton = page.getByTestId(`kefine-thread-action-edit-${branchNodeId}`);
+    await expect(editButton).toBeVisible();
+
+    await editButton.click();
+    const editEditor = page.getByTestId(`kefine-branch-editor-${branchNodeId}`);
+    await editEditor.locator('textarea[data-part="source"]').fill('Updated branch source');
+    await editEditor.getByTestId(`kefine-thread-action-apply-${branchNodeId}`).click();
+
+    await expect(page.getByTestId(`kefine-task-node-${branchNodeId}`)).toContainText('Updated branch source');
+  });
+
+  test('create left and hidden parallel branches and toggle hidden visibility', async ({ page }) => {
+    await mockOrderApi(page);
+    await gotoAndWaitForReady(page);
+
+    await createTask(page, 'Parallel branch placement');
+    await expect(page).toHaveURL(/\/order-1$/);
+
+    await page.getByTestId(`kefine-thread-action-branch-left-${exchangeNodeId}`).click();
+    const leftBranchEditor = page.getByTestId(`kefine-branch-editor-${exchangeNodeId}`);
+    await leftBranchEditor.locator('textarea[data-part="source"]').fill('Left branch path');
+    await leftBranchEditor.getByTestId(`kefine-thread-action-apply-${exchangeNodeId}`).click();
+
+    await page.getByTestId(`kefine-thread-action-branch-hidden-${exchangeNodeId}`).click();
+    const hiddenBranchEditor = page.getByTestId(`kefine-branch-editor-${exchangeNodeId}`);
+    await hiddenBranchEditor.locator('textarea[data-part="source"]').fill('Hidden branch path');
+    await hiddenBranchEditor.getByTestId(`kefine-thread-action-apply-${exchangeNodeId}`).click();
+
+    const leftBranchNode = page.getByTestId(`kefine-task-node-${exchangeNodeId}-insert-1`);
+    const hiddenBranchNode = page.getByTestId(`kefine-task-node-${exchangeNodeId}-insert-2`);
+
+    await expect(leftBranchNode).toBeVisible();
+    await expect(page.getByTestId(`kefine-thread-branch-left-${exchangeNodeId}`)).toBeVisible();
+    await expect(page.getByTestId(`kefine-thread-branch-${exchangeNodeId}`)).toBeVisible();
+    await expect(hiddenBranchNode).toHaveCount(0);
+
+    await page.getByTestId(`kefine-thread-hidden-toggle-${exchangeNodeId}`).click();
+    await expect(hiddenBranchNode).toBeVisible();
+  });
+
+  test('branch tree state is persisted across reloads', async ({ page }) => {
+    await mockOrderApi(page);
+    await gotoAndWaitForReady(page);
+
+    await createTask(page, 'Persistent branch layout');
+    await expect(page).toHaveURL(/\/order-1$/);
+
+    await page.getByTestId(`kefine-thread-action-branch-${exchangeNodeId}`).click();
+    const branchEditor = page.getByTestId(`kefine-branch-editor-${exchangeNodeId}`);
+    await branchEditor.locator('textarea[data-part="source"]').fill('Persisted branch');
+    await branchEditor.getByTestId(`kefine-thread-action-apply-${exchangeNodeId}`).click();
+
+    await page.getByTestId(`kefine-thread-action-branch-hidden-${exchangeNodeId}`).click();
+    const hiddenBranchEditor = page.getByTestId(`kefine-branch-editor-${exchangeNodeId}`);
+    await hiddenBranchEditor.locator('textarea[data-part="source"]').fill('Persisted hidden branch');
+    await hiddenBranchEditor.getByTestId(`kefine-thread-action-apply-${exchangeNodeId}`).click();
+
+    await page.getByTestId(`kefine-thread-hidden-toggle-${exchangeNodeId}`).click();
+    await page.getByTestId(`kefine-thread-branch-toggle-${exchangeNodeId}`).click();
+
+    await page.reload();
+
+    await expect(page).toHaveURL(/\/order-1$/);
+    await expect(page.getByTestId(`kefine-thread-branch-toggle-${exchangeNodeId}`)).toHaveAttribute(
+      'aria-expanded',
+      'false'
+    );
+    await expect(page.getByTestId(`kefine-task-node-${exchangeNodeId}-insert-1`)).toHaveCount(0);
+    await page.getByTestId(`kefine-thread-branch-toggle-${exchangeNodeId}`).click();
+    await expect(page.getByTestId(`kefine-thread-action-branch-${exchangeNodeId}`)).toBeVisible();
+    await expect(page.getByTestId(`kefine-task-node-${exchangeNodeId}-insert-1`)).toBeVisible();
+    await expect(page.getByTestId(`kefine-task-node-${exchangeNodeId}-insert-2`)).toBeVisible();
+
+    const persisted = await page.evaluate(() => {
+      const raw = localStorage.getItem('kefine-task-thread-ui-v1:order-1');
+      return raw ? JSON.parse(raw) : null;
+    });
+    expect(persisted).toBeTruthy();
+    expect(persisted?.collapsed?.[exchangeNodeId]).toBe(true);
+    expect(persisted?.hiddenVisible?.[exchangeNodeId]).toBe(true);
+  });
+
+  test('theme and locale switches do not close ProseKit inline editor', async ({ page }) => {
+    await mockOrderApi(page);
+    await gotoAndWaitForReady(page);
+
+    await createTask(page, 'Editor survives theme locale switches');
+    await expect(page).toHaveURL(/\/order-1$/);
+
+    await page.getByTestId(`kefine-thread-action-comment-${exchangeNodeId}`).click();
+    const commentForm = page.getByTestId(`kefine-thread-comment-form-${exchangeNodeId}`);
+    const commentInput = commentForm.locator('textarea[data-part="source"]');
+    const commentText = 'Theme/locale keep this draft';
+    await commentInput.fill(commentText);
+
+    await page.locator('[data-part="brand"]').click();
+    await page.getByTestId('kefine-topbar-theme-toggle').click();
+    await page.getByTestId('kefine-topbar-theme-option-dark').click();
+
+    await expect(commentForm).toBeVisible();
+    await expect(commentInput).toHaveValue(commentText);
+
+    await page.locator('[data-part="brand"]').click();
+    await page.getByTestId('kefine-topbar-locale-toggle').click();
+    await page.getByTestId('kefine-topbar-locale-option-ru').click();
+
+    await expect(commentForm).toBeVisible();
+    await expect(commentInput).toHaveValue(commentText);
+    await expect(page.getByTestId(`kefine-thread-action-apply-${exchangeNodeId}`)).toBeVisible();
+  });
+
+  test('accessibility smoke: keyboard activation and ARIA labels', async ({ page }) => {
+    await mockOrderApi(page);
+    await gotoAndWaitForReady(page);
+
+    await createTask(page, 'Keyboard accessible task tree');
+    await expect(page).toHaveURL(/\/order-1$/);
+
+    const nodeCopy = page.getByTestId(`kefine-task-node-copy-${exchangeNodeId}`);
+    await nodeCopy.focus();
+    await expect(nodeCopy).toBeFocused();
+    await page.keyboard.press('Enter');
+
+    await expect(page.getByTestId(`kefine-thread-comment-form-${exchangeNodeId}`)).toBeVisible();
+    await expect(page.getByTestId(`kefine-thread-action-branch-${exchangeNodeId}`)).toHaveAttribute(
+      'aria-label',
+      /Create branch/
+    );
   });
 });

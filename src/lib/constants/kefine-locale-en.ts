@@ -183,7 +183,17 @@ export const KEFINE_TEXT_EN = {
     loadingTask: 'Loading lepo...',
     elapsed: 'Elapsed',
     selectedSolver: 'Solver',
-    blurredWidget: 'Widget preview'
+    blurredWidget: 'Widget preview',
+    commentAction: 'Comment',
+    createBranch: 'Create branch',
+    createBranchLeft: 'Create left branch',
+    createBranchHidden: 'Create hidden branch',
+    editCode: 'Edit code',
+    expandBranch: 'Expand branch',
+    collapseBranch: 'Collapse branch',
+    showHiddenBranches: 'Show hidden branches',
+    hideBranches: 'Hide hidden branches',
+    inlineCodeEditHint: 'Edit code block'
   },
   placeholders: {
     promoCode: 'WELCOME10',

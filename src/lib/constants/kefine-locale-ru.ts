@@ -184,7 +184,17 @@ export const KEFINE_TEXT_RU = {
     loadingTask: 'Загрузка lepo...',
     elapsed: 'Прошло',
     selectedSolver: 'Решатель',
-    blurredWidget: 'Превью виджета'
+    blurredWidget: 'Превью виджета',
+    commentAction: 'Комментировать',
+    createBranch: 'Создать ветку',
+    createBranchLeft: 'Создать левую ветку',
+    createBranchHidden: 'Создать скрытую ветку',
+    editCode: 'Редактировать код',
+    expandBranch: 'Раскрыть ветку',
+    collapseBranch: 'Свернуть ветку',
+    showHiddenBranches: 'Показать скрытые ветки',
+    hideBranches: 'Скрыть ветки',
+    inlineCodeEditHint: 'Измените кодовый блок'
   },
   placeholders: {
     promoCode: 'WELCOME10',

@@ -154,7 +154,17 @@ export const KEFINE_TEXT_HY = {
     loadingTask: 'Lepo-ն բեռնվում է...',
     elapsed: 'Անցել է',
     selectedSolver: 'Solver',
-    blurredWidget: 'Widget նախադիտում'
+    blurredWidget: 'Widget նախադիտում',
+    commentAction: 'Լուսաբանել',
+    createBranch: 'Ստեղծել ճյուղ',
+    createBranchLeft: 'Ստեղծել ձախ ճյուղ',
+    createBranchHidden: 'Ստեղծել թաքնված ճյուղ',
+    editCode: 'Խմբագրել կոդը',
+    expandBranch: 'Ընդարձակել ճյուղը',
+    collapseBranch: 'Փակել ճյուղը',
+    showHiddenBranches: 'Ցույց տալ թաքնված ճյուղերը',
+    hideBranches: 'Թաքննել ճյուղերը',
+    inlineCodeEditHint: 'Խմբագրել կոդային բլոկը'
   },
   buttons: {
     ...KEFINE_TEXT_EN.buttons,

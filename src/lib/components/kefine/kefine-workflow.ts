@@ -49,6 +49,28 @@ export type RepositoryGitSettings = {
   aclRules: RepositoryGitAclRule[];
 };
 
+export type RepositoryRepsConfig = {
+  repositories: string[];
+  repositoryConfigPath: string;
+  agentSystemPromptPath?: string;
+};
+
+export type RepositoryLeposConfig = {
+  issueStorage: 'filesystem' | 'database';
+  issueRoot: string;
+  issueReadmeName: string;
+  issueFileName: string;
+  issueAttachmentsDir: string;
+  mainReadmePath: string;
+  repositoryReadme: string;
+  repositoryIcon: string;
+  defaultBranch: string;
+  acceptPullIssues: boolean;
+  acceptPullPatches: boolean;
+  repsConfigPaths: string[];
+  agentSystemPromptPath?: string;
+};
+
 export type VpnResultLink = {
   type: string;
   name: string;
@@ -111,10 +133,12 @@ export type OrderRepository = {
   projectArchiveUrl?: string;
   publicCloneUrl?: string;
   sshCloneUrl?: string;
+  repsConfig?: RepositoryRepsConfig;
   repositoryUrl?: string;
   projectUrl?: string;
   patchTrackerUrl?: string;
   gitSettings?: RepositoryGitSettings;
+  leposConfig?: RepositoryLeposConfig;
   createdAt?: string;
   updatedAt?: string;
 };
