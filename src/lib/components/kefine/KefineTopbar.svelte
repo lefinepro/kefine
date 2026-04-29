@@ -18,6 +18,13 @@
     href: string;
   };
 
+  type ProjectLink = {
+    id: string;
+    title: string;
+    subtitle?: string;
+    orderId: string;
+  };
+
   let {
     brandLabel,
     navigationLabel,
@@ -51,6 +58,8 @@
     showEmailButton = true,
     showAuthButton = true,
     legalLinks,
+    projects = [],
+    projectsLabel = '',
     onExpandedChange,
     onBrandClick,
     onOpenEmailDialog,
@@ -59,7 +68,8 @@
     onOpenProfile,
     onSignOut,
     onAuthDoubleClick,
-    onLocale
+    onLocale,
+    onOpenProject = () => {}
   }: {
     brandLabel: string;
     navigationLabel: string;
@@ -93,6 +103,8 @@
     showEmailButton?: boolean;
     showAuthButton?: boolean;
     legalLinks: LegalLink[];
+    projects?: ProjectLink[];
+    projectsLabel?: string;
     onExpandedChange: (expanded: boolean) => void;
     onBrandClick: () => void;
     onOpenEmailDialog: () => void;
@@ -102,6 +114,7 @@
     onSignOut: () => void;
     onAuthDoubleClick: () => void;
     onLocale: (locale: KefineLocale) => void;
+    onOpenProject?: (orderId: string) => void;
   } = $props();
 
   const localeCycle: KefineLocale[] = ['en', 'ru', 'hy'];
@@ -153,6 +166,11 @@
     cancelBrandClick?.();
     cancelBrandClick = null;
     onBrandClick();
+  }
+
+  function openProject(orderId: string) {
+    onExpandedChange(false);
+    onOpenProject(orderId);
   }
 
   function handleEmailClick() {
@@ -315,7 +333,9 @@
         onclick={handleBrandClick}
         ondblclick={handleBrandDoubleClick}
       >
-        <kefine-sidebar-brand-mark data-part="brand-mark" data-testid="kefine-brand-mark">{brandLabel}</kefine-sidebar-brand-mark>
+        <kefine-sidebar-brand-mark data-part="brand-mark" data-testid="kefine-brand-mark">
+          <KefineTopbarIcon name="menu" size={22} />
+        </kefine-sidebar-brand-mark>
       </button>
       <kefine-sidebar-popover
         bind:this={menuPopover}
@@ -339,6 +359,23 @@
                 </a>
               {/each}
             </kefine-sidebar-toolbar>
+          {/if}
+
+          {#if projects.length > 0}
+            <kefine-sidebar-projects aria-label={projectsLabel}>
+              <small>{projectsLabel}</small>
+              {#each projects as project (project.id)}
+                <button type="button" data-part="project" onclick={() => openProject(project.orderId)}>
+                  <KefineTopbarIcon name="project" size={18} />
+                  <lefine-box>
+                    <strong>{project.title}</strong>
+                    {#if project.subtitle}
+                      <span>{project.subtitle}</span>
+                    {/if}
+                  </lefine-box>
+                </button>
+              {/each}
+            </kefine-sidebar-projects>
           {/if}
 
           <kefine-sidebar-nav aria-label={legalLabel}>
@@ -553,17 +590,17 @@
   }
 
   kefine-sidebar-brand-mark[data-part='brand-mark'] {
-    width: auto;
-    min-height: 0;
+    width: 2.2rem;
+    min-height: 2.2rem;
     flex: 0 0 auto;
-    border-radius: 0;
+    border-radius: calc(var(--kef-radius-ui) - 0.12rem);
     display: inline-flex;
     align-items: center;
-    justify-content: flex-start;
-    background: transparent;
+    justify-content: center;
+    background: color-mix(in oklab, var(--kef-bg-card) 82%, transparent);
     color: color-mix(in oklab, var(--lefine-text) 96%, transparent);
     font-family: var(--kef-font-family-brand);
-    font-size: 1.72rem;
+    font-size: 1rem;
     font-weight: 700;
     letter-spacing: 0.01em;
     padding: 0;
@@ -691,6 +728,58 @@
     gap: 0.42rem;
   }
 
+  kefine-sidebar-projects {
+    display: grid;
+    gap: 0.32rem;
+    padding: 0.16rem 0 0.24rem;
+  }
+
+  kefine-sidebar-projects > small {
+    padding: 0 0.22rem;
+    color: color-mix(in oklab, var(--lefine-text) 58%, transparent);
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  kefine-sidebar-projects button[data-part='project'] {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 0.55rem;
+    min-height: 2.85rem;
+    padding: 0.55rem 0.66rem;
+    border: var(--kef-border-width-soft) solid color-mix(in oklab, var(--kef-border) 58%, transparent);
+    border-radius: calc(var(--kef-radius-ui) - 0.06rem);
+    background: transparent;
+    color: color-mix(in oklab, var(--lefine-text) 96%, transparent);
+    text-align: left;
+    font: inherit;
+  }
+
+  kefine-sidebar-projects lefine-box {
+    min-width: 0;
+  }
+
+  kefine-sidebar-projects strong,
+  kefine-sidebar-projects span {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  kefine-sidebar-projects strong {
+    font-size: 0.88rem;
+    line-height: 1.1;
+  }
+
+  kefine-sidebar-projects span {
+    margin-top: 0.12rem;
+    color: color-mix(in oklab, var(--lefine-text) 58%, transparent);
+    font-size: 0.74rem;
+  }
+
   kefine-sidebar-nav a[data-part='link'] {
     min-height: 2.85rem;
     border-radius: calc(var(--kef-radius-ui) - 0.06rem);
@@ -709,6 +798,7 @@
   }
 
   kefine-sidebar-nav a[data-part='link']:hover,
+  kefine-sidebar-projects button[data-part='project']:hover,
   kefine-sidebar-toolbar [data-part='icon']:hover {
     background: color-mix(in oklab, var(--kef-primary) 6%, white);
     border-color: var(--kef-line-primary);
