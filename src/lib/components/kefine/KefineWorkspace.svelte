@@ -529,6 +529,27 @@
           .slice(0, 5)
       : []
   );
+  const topbarProjects = $derived.by(() => {
+    const seen = new Set<string>();
+    return createdOrders
+      .map((order) => {
+        const repository = order.repository;
+        const id = repository?.projectId?.trim() || order.projectId?.trim() || order.id;
+        if (seen.has(id)) {
+          return null;
+        }
+
+        seen.add(id);
+        return {
+          id,
+          title: repository?.name?.trim() || order.title.trim() || id,
+          subtitle: repository?.projectId?.trim() || order.status,
+          orderId: order.id
+        };
+      })
+      .filter((project): project is { id: string; title: string; subtitle: string; orderId: string } => Boolean(project))
+      .slice(0, 6);
+  });
 
   const TITLE_FONT_MAX = 2.0;
   const TITLE_FONT_MIN = 1.0;
@@ -2657,6 +2678,8 @@
     socialLinks={sidebarSocialLinks}
     showSocialLinks={false}
     legalLinks={sidebarLegalLinks}
+    projects={topbarProjects}
+    projectsLabel={localeText.profile.projects}
     onExpandedChange={(expanded) => { leftNavExpanded = expanded; }}
     onBrandClick={handleTopbarBrandClick}
     onOpenEmailDialog={() => {
@@ -2670,10 +2693,12 @@
     onSignOut={() => { void signOutProfileSession(); }}
     onAuthDoubleClick={() => { void openTopbarProfileSetup(); }}
     onLocale={selectTopbarLocale}
+    onOpenProject={(orderId) => { void openOrderById(orderId); }}
   />
 
   <main>
   <kefine-layout data-mode={layoutMode} data-step={step}>
+    <section class="kefine-window-grid">
     {#if craterHealthState === 'failed'}
       <kefine-screen in:softScreenTransition out:softScreenTransition>
         <article class="kefine-card kefine-card--wide kefine-template-unavailable">
@@ -2956,6 +2981,7 @@
       </kefine-screen>
     {/if}
 
+    </section>
   </kefine-layout>
   </main>
 
@@ -2976,16 +3002,12 @@
       latestTasksTitle={localeText.profile.latestTasks}
       latestTasksEmptyLabel={localeText.profile.noRecentTasks}
       openWorkspaceLabel={localeText.profile.openPublicProfile}
-      shareProfileLabel={localeText.profile.shareProfile}
-      profileCopiedLabel={localeText.profile.profileCopied}
       signOutLabel={localeText.profile.signOut}
       openTaskLabel={localeText.profile.openTask}
-      bonusBalanceLabel={localeText.profile.bonusBalance}
       showPrivateKey={showPrivateKeyAuth}
       isAuthenticated={isAuthenticated}
       profile={currentProfile}
       recentTasks={recentProfileOrders}
-      profileUrl={profileUrl}
       closeLabel={localeText.buttons.closeDialog}
       onClose={() => { authDialogOpen = false; }}
       onBrowserWallet={chooseBrowserWalletMethod}
@@ -3076,10 +3098,10 @@
     height: auto;
     display: grid;
     gap: 1rem;
-    align-items: center;
-    align-content: center;
-    justify-items: center;
-    justify-self: center;
+    align-items: start;
+    align-content: start;
+    justify-items: stretch;
+    justify-self: stretch;
     width: min(980px, 100%);
     margin-inline: auto;
   }
@@ -3095,10 +3117,25 @@
   }
 
   kefine-layout[data-mode='flow'] {
-    align-items: start;
-    align-content: start;
     width: min(1100px, 100%);
     padding-top: clamp(3.5rem, 8vh, 5.5rem);
+  }
+
+  .kefine-window-grid {
+    width: 100%;
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: 1fr;
+    align-items: start;
+    justify-content: stretch;
+  }
+
+  .kefine-window-grid:empty {
+    display: none;
+  }
+
+  kefine-layout[data-mode='flow'] .kefine-window-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 38rem), 1fr));
   }
 
   kefine-layout[data-step='submitting'] {
@@ -3117,6 +3154,7 @@
   kefine-screen {
     display: grid;
     width: 100%;
+    min-width: 0;
   }
 
   kefine-screen.kefine-screen--centered {
