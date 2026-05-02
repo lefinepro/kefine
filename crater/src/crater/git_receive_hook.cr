@@ -1,4 +1,6 @@
+require "json"
 require "./repository_store"
+require "./order_queue"
 require "./utils/config"
 
 module Crater
@@ -98,6 +100,17 @@ module Crater
       updates = read_updates
       exchange_run = RepositoryStore.resolve_exchange_run(repository, push_option_override, config)
       lepos_settings = RepositoryStore.lepos_config(repository)
+
+      if plan = RepositoryStore.read_plan_document(repository, config)
+        unless repository.order_id.starts_with?(RepositoryStore::AD_HOC_ORDER_PREFIX)
+          OrderQueue.update_document(
+            repository.order_id,
+            JSON.parse({"format" => "markdown", "content" => plan}.to_json),
+            config
+          )
+        end
+      end
+
       exit(0) unless exchange_run
 
       updates.each do |update|

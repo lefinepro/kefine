@@ -12,6 +12,7 @@
     buildQueuedTaskRoot,
     buildTaskThreadNodes,
     replaceTaskNodeInsert,
+    resolveTaskDocumentContent,
     resolveTaskNodeComment,
     replaceTaskNodeComment,
     type TaskBranchPlacement,
@@ -88,6 +89,8 @@
   let hiddenBranchVisibleByNodeId = $state<Record<string, boolean>>({});
   let branchPlacementDraftByNodeId = $state<Record<string, TaskBranchPlacement>>({});
   let branchVisibilityDraftByNodeId = $state<Record<string, TaskBranchVisibility>>({});
+  let planEditorOpen = $state(false);
+  let planDraft = $state('');
   type ThreadUiStorageState = { collapsed: Record<string, boolean>; hiddenVisible: Record<string, boolean> };
 
   const THREAD_UI_STORAGE_KEY = 'kefine-task-thread-ui-v1';
@@ -189,6 +192,25 @@
       return labels.inlineCodeEditHint ?? 'Edit code block';
     }
     return labels.leaveComment ?? 'Comment';
+  }
+
+  function openPlanEditor(): void {
+    planDraft = currentOrder?.document?.content || resolveTaskDocumentContent(currentOrder);
+    planEditorOpen = true;
+  }
+
+  function closePlanEditor(): void {
+    planEditorOpen = false;
+    planDraft = '';
+  }
+
+  async function savePlanEditor(): Promise<void> {
+    if (!onSaveDocument || !currentOrder || !planDraft.trim()) {
+      return;
+    }
+
+    await onSaveDocument(planDraft);
+    closePlanEditor();
   }
 
   $effect(() => {
@@ -951,6 +973,12 @@
       {#if commentSubmittingStepId}
         <kefine-thread-status>{labels.saving}</kefine-thread-status>
       {/if}
+      {#if currentOrder && onSaveDocument}
+        <button type="button" data-part="plan-edit-trigger" aria-label="Edit PLAN.org" title="Edit PLAN.org" onclick={openPlanEditor}>
+          <Icon icon="mdi:file-tree-outline" width="18" height="18" aria-hidden="true" />
+          <lefine-text>PLAN.org</lefine-text>
+        </button>
+      {/if}
       {#if currentOrder && onExportClone}
         <KefineTaskCloneMenu
           order={currentOrder}
@@ -977,6 +1005,37 @@
       {@render threadNode(root, currentThread.length + rootIndex, false, true)}
     {/each}
   </kefine-thread>
+
+  {#if planEditorOpen && currentOrder}
+    <kefine-plan-editor role="dialog" aria-modal="true" aria-label="Edit PLAN.org">
+      <kefine-plan-editor-panel>
+        <kefine-plan-editor-head>
+          <strong>PLAN.org</strong>
+          <button type="button" data-part="icon-close" aria-label="Close PLAN.org editor" onclick={closePlanEditor}>
+            <Icon icon="mdi:close" width="18" height="18" aria-hidden="true" />
+          </button>
+        </kefine-plan-editor-head>
+        <KefineRichTaskEditorDialog
+          open={true}
+          compact={false}
+          enableMeta={false}
+          mentionCandidates={mentionCandidates}
+          value={planDraft}
+          description={labels.richEditorDescription}
+          placeholder="* Plan"
+          onApply={(nextValue) => {
+            planDraft = nextValue;
+          }}
+        />
+        <kefine-plan-editor-actions>
+          <button type="button" data-kind="secondary" onclick={closePlanEditor}>Cancel</button>
+          <button type="button" data-kind="primary" disabled={!planDraft.trim()} onclick={() => void savePlanEditor()}>
+            {labels.apply}
+          </button>
+        </kefine-plan-editor-actions>
+      </kefine-plan-editor-panel>
+    </kefine-plan-editor>
+  {/if}
 </kefine-thread-stage>
 
 <style>
@@ -1007,6 +1066,71 @@
     align-items: center;
     gap: 0.8rem;
     flex-wrap: wrap;
+  }
+
+  button[data-part='plan-edit-trigger'] {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-height: 2.2rem;
+    padding: 0 0.7rem;
+    border-radius: 0.55rem;
+    border: 1px solid color-mix(in oklab, var(--kef-line-strong, #b69a77) 36%, transparent);
+    background: color-mix(in oklab, var(--kef-bg-card, #fff8ef) 92%, white 8%);
+    color: var(--lefine-text, #2e2317);
+    font: inherit;
+    font-weight: 700;
+  }
+
+  kefine-plan-editor {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    display: grid;
+    place-items: center;
+    padding: 1rem;
+    background: color-mix(in oklab, #20150e 48%, transparent);
+  }
+
+  kefine-plan-editor-panel {
+    display: grid;
+    gap: 1rem;
+    width: min(100%, 58rem);
+    max-height: min(92vh, 60rem);
+    overflow: auto;
+    padding: 1rem;
+    border-radius: 0.8rem;
+    border: 1px solid color-mix(in oklab, var(--kef-line-strong, #b69a77) 42%, transparent);
+    background: var(--kef-bg-card, #fff8ef);
+    box-shadow: 0 1rem 3rem color-mix(in oklab, #000 24%, transparent);
+  }
+
+  kefine-plan-editor-head,
+  kefine-plan-editor-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.8rem;
+  }
+
+  kefine-plan-editor-actions {
+    justify-content: flex-end;
+  }
+
+  kefine-plan-editor button {
+    min-height: 2.2rem;
+    border-radius: 0.55rem;
+    border: 1px solid color-mix(in oklab, var(--kef-line-strong, #b69a77) 36%, transparent);
+    background: color-mix(in oklab, var(--kef-bg-card, #fff8ef) 92%, white 8%);
+    color: var(--lefine-text, #2e2317);
+    font: inherit;
+    font-weight: 700;
+  }
+
+  kefine-plan-editor button[data-kind='primary'] {
+    padding: 0 0.9rem;
+    background: #2f5d50;
+    color: #fffaf0;
   }
 
   kefine-thread-head strong {

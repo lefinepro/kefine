@@ -62,6 +62,7 @@ export type RepositoryLeposConfig = {
   issueFileName: string;
   issueAttachmentsDir: string;
   mainReadmePath: string;
+  planDocumentPath: string;
   repositoryReadme: string;
   repositoryIcon: string;
   defaultBranch: string;

@@ -86,7 +86,7 @@ export const KEFINE_TEXT_EN = {
   },
   create: {
     title: 'Describe a technical lepo',
-    subtitle: 'Set the execution time. Lefine finds a solver, confirms the route and ETA, and delivers the result.',
+    subtitle: '',
     placeholder: 'Describe any technical lepo...',
     placeholderVariants: [
       'Fix a broken CI/CD rollback flow',
@@ -102,8 +102,8 @@ export const KEFINE_TEXT_EN = {
     ],
     executeAria: 'Execute lepo',
     backgroundExecuteAria: 'Send lepo in background',
+    solverSearchLabel: 'Finding Solver',
     addFile: '+ file',
-    addDescription: '+ description',
     addExecutionEstimate: '+ ETA',
     fileCount: (count: number) => `${count} file${count === 1 ? '' : 's'}`,
     composerHints: 'Enter to send, Alt+Enter to queue, Shift+Enter for a new line',
@@ -116,7 +116,6 @@ export const KEFINE_TEXT_EN = {
     pathCreateLabel: 'Create lepo:',
     pathStatusLabel: 'Lepo:',
     pathPaymentLabel: 'Payment:',
-    recentTasks: 'Recent lepos',
     noRecentTasks: 'No saved lepos yet',
     matchedTasks: 'Resolved lepos',
     noMatchedTasks: 'No resolved lepos match this query yet'
@@ -395,7 +394,7 @@ export const KEFINE_TEXT_EN = {
     cards: {
       afe: {
         title: 'What is Lefine?',
-        detail: 'Lefine is an Automated Freelance Marketplace (AFM) where you describe the work you need and Lefine finds the right path to deliver the result.'
+        detail: 'Lefine is an Automated Freelance Marketplace (AFM). You describe the work you need. Lefine finds the solvers and returns the result.'
       },
       task: {
         title: 'Brief',
@@ -403,11 +402,11 @@ export const KEFINE_TEXT_EN = {
       },
       quote: {
         title: 'Quote',
-        detail: 'A solver confirms the route and ETA.'
+        detail: 'Lefine finds available solvers and shows the offer before work starts.'
       },
       delivery: {
         title: 'Delivery',
-        detail: 'Lefine delivers the final access or result.'
+        detail: 'Lefine returns the final access or result.'
       }
     }
   },
