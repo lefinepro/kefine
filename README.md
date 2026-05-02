@@ -123,6 +123,7 @@ issue_readme_name = "README.org"
 issue_file_name = "issue.org"
 issue_attachments_dir = "attachments"
 main_readme_path = ".meta/lefine.pro.org"
+plan_document_path = "PLAN.org"
 repository_readme = "Lefine repository metadata and task context"
 reps_config_paths = "reps.rcl,reps.toml"
 agent_system_prompt_path = ""
@@ -133,7 +134,8 @@ agent_system_prompt_path = ""
 - `icon` stores repository icon metadata.
 - `default_branch` controls branch name exposed to clients as `repository.defaultBranch` when repository metadata is fetched.
 - `accept_pull_issues` and `accept_pull_patches` control which push branches create auto-run exchange issues.
-- `main_readme_path` configures the repository-level readme path.
+- `main_readme_path` configures the repository-level readme/metadata path.
+- `plan_document_path` configures the canonical execute plan file, `PLAN.org` by default.
 - `issue_root`, `issue_file_name`, `issue_readme_name`, and `issue_attachments_dir` control issue artifact layout.
 - `reps_config_paths` lists repo-level config files to read (`reps.rcl`/`reps.toml` by default).
 - `agent_system_prompt_path` sets a repository-level path for system prompt configuration.

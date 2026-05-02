@@ -57,7 +57,6 @@
   import {
     buildActorOrderPath,
     createGeneratedWalletAvatar,
-    getVisibleOrdersLimit,
     mergeOrdersById,
     normalizeActorHandle,
     normalizeDraftOrder,
@@ -237,6 +236,8 @@
 
   let step = $state<FlowStep>(getNormalizedInitialOrderId() ? 'executing' : 'create');
   let draft = $state<DraftOrder>(createEmptyDraft());
+  let solverSearchActive = $state(false);
+  let solverSearchText = $state('');
   let draftQueued = $state<DraftOrder | null>(null);
   let pendingCloneAction = $state<PendingCloneAction | null>(null);
   let currentOrder = $state<OrderView | null>(
@@ -385,9 +386,6 @@
   });
   const profileNeedsSetup = $derived(currentProfile?.metadata?.['profileSetupCompleted'] !== true);
   const ORDER_PAGE_SIZE = 12;
-  let visibleOrdersLimit = $state(ORDER_PAGE_SIZE);
-  const visibleOrders = $derived(createdOrders.slice(0, visibleOrdersLimit));
-  const hasMoreOrders = $derived(visibleOrdersLimit < createdOrders.length);
   const resolvedTheme = $derived(themeMode === 'auto' ? (systemPrefersDark ? 'dark' : 'light') : themeMode);
   const isDarkTheme = $derived(resolvedTheme === 'dark');
   const topbarThemeActionLabel = $derived(themeMode === 'auto' ? localeText.topbar.theme.auto : isDarkTheme ? localeText.topbar.theme.dark : localeText.topbar.theme.light);
@@ -529,28 +527,6 @@
           .slice(0, 5)
       : []
   );
-  const topbarProjects = $derived.by(() => {
-    const seen = new Set<string>();
-    return createdOrders
-      .map((order) => {
-        const repository = order.repository;
-        const id = repository?.projectId?.trim() || order.projectId?.trim() || order.id;
-        if (seen.has(id)) {
-          return null;
-        }
-
-        seen.add(id);
-        return {
-          id,
-          title: repository?.name?.trim() || order.title.trim() || id,
-          subtitle: repository?.projectId?.trim() || order.status,
-          orderId: order.id
-        };
-      })
-      .filter((project): project is { id: string; title: string; subtitle: string; orderId: string } => Boolean(project))
-      .slice(0, 6);
-  });
-
   const TITLE_FONT_MAX = 2.0;
   const TITLE_FONT_MIN = 1.0;
   const TITLE_FONT_SHRINK_AT = 24;
@@ -1458,7 +1434,6 @@
       pageSize: ORDER_PAGE_SIZE
     });
     createdOrders = loadedState.orders;
-    visibleOrdersLimit = loadedState.visibleLimit;
     return loadedState.orders;
   }
 
@@ -1474,7 +1449,6 @@
         order.isClosedCompleted === true || order.status === 'completed' || order.status === 'done'
     };
     createdOrders = mergeOrdersById(createdOrders, normalizedOrder);
-    visibleOrdersLimit = getVisibleOrdersLimit(createdOrders.length, visibleOrdersLimit, ORDER_PAGE_SIZE);
 
     persistOrders();
   }
@@ -1715,14 +1689,6 @@
     }
 
     await saveForeignTaskLocally(currentOrder, runLocally);
-  }
-
-  function loadMoreOrders() {
-    if (!hasMoreOrders) {
-      return;
-    }
-
-    visibleOrdersLimit = Math.min(visibleOrdersLimit + ORDER_PAGE_SIZE, createdOrders.length);
   }
 
   function orderApiBaseUrl(): string {
@@ -2097,6 +2063,8 @@
     if (created && options?.background) {
       draft = createEmptyDraft();
     }
+
+    return created;
   }
 
   async function continueAfterAuth() {
@@ -2117,7 +2085,29 @@
   }
 
   function handleSubmit() {
-    void submitDraft(draft, { background: true, focusInQueue: true });
+    const normalized = normalizeDraftOrder(draft, localeText);
+
+    if (!normalized.description.trim() && !normalized.title.trim()) {
+      return;
+    }
+
+    const submittedSearchText = normalized.description.trim() || normalized.title.trim() || localeText.defaults.taskTitle;
+    solverSearchText = submittedSearchText;
+    solverSearchActive = true;
+    draft = createEmptyDraft();
+
+    void submitDraft(normalized, { background: true }).then((created) => {
+      if (!created) {
+        if (!draft.description.trim()) {
+          draft = normalized;
+        }
+
+        if (solverSearchText === submittedSearchText) {
+          solverSearchActive = false;
+          solverSearchText = '';
+        }
+      }
+    });
   }
 
   async function queueTaskBelow() {
@@ -2134,6 +2124,11 @@
   }
 
   function updateDescription(value: string) {
+    if (value.trim()) {
+      solverSearchActive = false;
+      solverSearchText = '';
+    }
+
     draft.description = value;
   }
 
@@ -2164,7 +2159,6 @@
 
     activePollTokens.delete(order.id);
     createdOrders = createdOrders.filter((item) => item.id !== order.id);
-    visibleOrdersLimit = getVisibleOrdersLimit(createdOrders.length, visibleOrdersLimit, ORDER_PAGE_SIZE);
     persistOrders();
 
     if (currentOrder?.id === order.id) {
@@ -2646,57 +2640,53 @@
   <title>{browserTitle}</title>
 </svelte:head>
 
-<kefine-shell data-sidebar-expanded={leftNavExpanded}>
-  <KefineTopbar
-    brandLabel={localeText.brand.name}
-    navigationLabel={localeText.topbar.quickActions}
-    openSidebarLabel={localeText.topbar.openActionsMenu}
-    collapseSidebarLabel={localeText.topbar.closeActionsMenu}
-    dockLabel={localeText.topbar.dockLabel}
-    socialLabel={localeText.topbar.socialLabel}
-    legalLabel={localeText.topbar.legalLabel}
-    mailLabel={localeText.topbar.mailLabel}
-    themeLabel={topbarThemeActionLabel}
-    themeMode={themeMode}
-    themeAutoLabel={localeText.topbar.theme.auto}
-    themeLightLabel={localeText.topbar.theme.light}
-    themeDarkLabel={localeText.topbar.theme.dark}
-    signInLabel={localeText.topbar.signIn}
-    signedInLabel={localeText.topbar.signedIn}
-    authenticatedLabel={authenticatedLabel}
-    authenticatedSecondaryLabel={null}
-    authenticatedAvatarUrl={authState.isConnected ? walletAvatarUrl : null}
-    openProfileLabel={profileNeedsSetup ? localeText.profile.onboardingTitle : localeText.profile.title}
-    isAuthenticated={isAuthenticated}
-    isAuthLoading={authButtonLoading}
-    isDarkTheme={isDarkTheme}
-    isExpanded={leftNavExpanded}
-    locale={$kefineLocale}
-    languageEnglishLabel={localeText.topbar.languageEnglish}
-    languageRussianLabel={localeText.topbar.languageRussian}
-    languageArmenianLabel={localeText.topbar.languageArmenian}
-    socialLinks={sidebarSocialLinks}
-    showSocialLinks={false}
-    legalLinks={sidebarLegalLinks}
-    projects={topbarProjects}
-    projectsLabel={localeText.profile.projects}
-    onExpandedChange={(expanded) => { leftNavExpanded = expanded; }}
-    onBrandClick={handleTopbarBrandClick}
-    onOpenEmailDialog={() => {
-      if (browser) {
-        window.location.assign(localizeAppPath(`/@${runtimeConfig.defaultActor.handle}`, activeLocale));
-      }
-    }}
-    onThemeChange={(theme) => { themeMode = theme; }}
-    onAuth={selectTopbarAuth}
-    onOpenProfile={openTopbarProfile}
-    onSignOut={() => { void signOutProfileSession(); }}
-    onAuthDoubleClick={() => { void openTopbarProfileSetup(); }}
-    onLocale={selectTopbarLocale}
-    onOpenProject={(orderId) => { void openOrderById(orderId); }}
-  />
+<KefineTopbar
+  brandLabel={localeText.brand.name}
+  navigationLabel={localeText.topbar.quickActions}
+  openSidebarLabel={localeText.topbar.openActionsMenu}
+  collapseSidebarLabel={localeText.topbar.closeActionsMenu}
+  dockLabel={localeText.topbar.dockLabel}
+  socialLabel={localeText.topbar.socialLabel}
+  legalLabel={localeText.topbar.legalLabel}
+  mailLabel={localeText.topbar.mailLabel}
+  themeLabel={topbarThemeActionLabel}
+  themeMode={themeMode}
+  themeAutoLabel={localeText.topbar.theme.auto}
+  themeLightLabel={localeText.topbar.theme.light}
+  themeDarkLabel={localeText.topbar.theme.dark}
+  signInLabel={localeText.topbar.signIn}
+  signedInLabel={localeText.topbar.signedIn}
+  authenticatedLabel={authenticatedLabel}
+  authenticatedSecondaryLabel={null}
+  authenticatedAvatarUrl={authState.isConnected ? walletAvatarUrl : null}
+  openProfileLabel={profileNeedsSetup ? localeText.profile.onboardingTitle : localeText.profile.title}
+  isAuthenticated={isAuthenticated}
+  isAuthLoading={authButtonLoading}
+  isDarkTheme={isDarkTheme}
+  isExpanded={leftNavExpanded}
+  locale={$kefineLocale}
+  languageEnglishLabel={localeText.topbar.languageEnglish}
+  languageRussianLabel={localeText.topbar.languageRussian}
+  languageArmenianLabel={localeText.topbar.languageArmenian}
+  socialLinks={sidebarSocialLinks}
+  showSocialLinks={false}
+  legalLinks={sidebarLegalLinks}
+  onExpandedChange={(expanded) => { leftNavExpanded = expanded; }}
+  onBrandClick={handleTopbarBrandClick}
+  onOpenEmailDialog={() => {
+    if (browser) {
+      window.location.assign(localizeAppPath(`/@${runtimeConfig.defaultActor.handle}`, activeLocale));
+    }
+  }}
+  onThemeChange={(theme) => { themeMode = theme; }}
+  onAuth={selectTopbarAuth}
+  onOpenProfile={openTopbarProfile}
+  onSignOut={() => { void signOutProfileSession(); }}
+  onAuthDoubleClick={() => { void openTopbarProfileSetup(); }}
+  onLocale={selectTopbarLocale}
+/>
 
-  <main>
+<main data-sidebar-expanded={leftNavExpanded}>
   <kefine-layout data-mode={layoutMode} data-step={step}>
     <section class="kefine-window-grid">
     {#if craterHealthState === 'failed'}
@@ -2713,7 +2703,6 @@
           template={null}
           serviceSetup={null}
           title={localeText.create.title}
-          subtitle={localeText.create.subtitle}
           pinnedServices={pinnedCreateServices}
           pinnedServicesTitle={localeText.profile.templates}
           pinnedServicesSubtitle={localeText.create.pinnedServicesSubtitle}
@@ -2732,35 +2721,25 @@
           placeholderVariants={localeText.create.placeholderVariants}
           executeAria={localeText.create.executeAria}
           backgroundExecuteAria={localeText.create.backgroundExecuteAria}
+          solverSearchActive={solverSearchActive}
+          solverSearchText={solverSearchText}
+          solverSearchLabel={localeText.create.solverSearchLabel}
           solverLabel={localeText.labels.solver}
-          recentOrders={visibleOrders}
           matchedOrders={matchedOrders}
           isSearching={draft.description.trim().length > 0}
-          totalOrders={createdOrders.length}
-          hasMoreOrders={hasMoreOrders}
-          onLoadMoreOrders={loadMoreOrders}
           matchedTasksLabel={localeText.create.matchedTasks}
           addFileLabel={localeText.create.addFile}
-          addDescriptionLabel={localeText.create.addDescription}
           addExecutionEstimateLabel={localeText.create.addExecutionEstimate}
           fileCountLabel={localeText.create.fileCount}
           composerHints={localeText.create.composerHints}
-          richEditorDescription={localeText.create.richEditorDescription}
-          timeLeftLabel={localeText.labels.timeLeft}
           openTaskLabel={localeText.labels.openOrderLink}
-          summaryLabel={localeText.labels.summary}
-          executionLabel={localeText.labels.execution}
           relatedItemsLabel={localeText.labels.relatedItems}
-          windowLabel={localeText.labels.window}
           executionEstimateLabel={localeText.labels.executionEstimate}
-          statusLabel={localeText.labels.taskStatus}
-          stopTaskLabel={localeText.buttons.stopTask}
           deleteTaskLabel={localeText.buttons.delete}
           onSubmit={handleSubmit}
           onQueueTask={queueTaskBelow}
           onAttachFiles={attachFiles}
           onRemoveFile={removeAttachedFile}
-          onStopOrder={handleStopOrder}
           onDeleteOrder={handleDeleteOrder}
           onOpenOrder={openOrder}
           onCreateServiceFromOrder={() => {}}
@@ -2993,114 +2972,108 @@
 
     </section>
   </kefine-layout>
-  </main>
+</main>
 
-  {#if AuthDialogComponent}
-    <AuthDialogComponent
-      open={authDialogOpen}
-      title={localeText.executionFlow['awaiting-auth'].title}
-      description={localeText.executionFlow['awaiting-auth'].detail}
-      browserWalletTitle={localeText.auth.browserWalletTitle}
-      walletConnectTitle={localeText.auth.walletConnectTitle}
-      tonConnectTitle={localeText.auth.tonConnectTitle}
-      googleTitle={localeText.auth.googleTitle}
-      githubTitle={localeText.auth.githubTitle}
-      passkeyTitle={localeText.auth.passkeyTitle}
-      privateKeyTitle={localeText.auth.privateKeyTitle}
-      connectedTitle={localeText.profile.title}
-      connectedDescription={localeText.profile.authDrawerSubtitle}
-      latestTasksTitle={localeText.profile.latestTasks}
-      latestTasksEmptyLabel={localeText.profile.noRecentTasks}
-      openWorkspaceLabel={localeText.profile.openPublicProfile}
-      signOutLabel={localeText.profile.signOut}
-      openTaskLabel={localeText.profile.openTask}
-      showPrivateKey={showPrivateKeyAuth}
-      isAuthenticated={isAuthenticated}
-      profile={currentProfile}
-      recentTasks={recentProfileOrders}
-      closeLabel={localeText.buttons.closeDialog}
-      onClose={() => { authDialogOpen = false; }}
-      onBrowserWallet={chooseBrowserWalletMethod}
-      onWalletConnect={chooseWalletConnectMethod}
-      onTonConnect={chooseTonConnectMethod}
-      onGoogle={() => { beginOAuthLogin('google'); }}
-      onGithub={() => { beginOAuthLogin('github'); }}
-      onPasskey={choosePasskeyMethod}
-      onPrivateKey={openPrivateKeyDialog}
-      onOpenProfile={() => { void openTopbarProfile(); }}
-      onOpenTask={(orderId: string) => { void openOrderById(orderId); }}
-      onSignOut={() => { void signOutProfileSession(); }}
-    />
-  {/if}
+{#if AuthDialogComponent}
+  <AuthDialogComponent
+    open={authDialogOpen}
+    title={localeText.executionFlow['awaiting-auth'].title}
+    description={localeText.executionFlow['awaiting-auth'].detail}
+    browserWalletTitle={localeText.auth.browserWalletTitle}
+    walletConnectTitle={localeText.auth.walletConnectTitle}
+    tonConnectTitle={localeText.auth.tonConnectTitle}
+    googleTitle={localeText.auth.googleTitle}
+    githubTitle={localeText.auth.githubTitle}
+    passkeyTitle={localeText.auth.passkeyTitle}
+    privateKeyTitle={localeText.auth.privateKeyTitle}
+    connectedTitle={localeText.profile.title}
+    connectedDescription={localeText.profile.authDrawerSubtitle}
+    latestTasksTitle={localeText.profile.latestTasks}
+    latestTasksEmptyLabel={localeText.profile.noRecentTasks}
+    openWorkspaceLabel={localeText.profile.openPublicProfile}
+    signOutLabel={localeText.profile.signOut}
+    openTaskLabel={localeText.profile.openTask}
+    showPrivateKey={showPrivateKeyAuth}
+    isAuthenticated={isAuthenticated}
+    profile={currentProfile}
+    recentTasks={recentProfileOrders}
+    closeLabel={localeText.buttons.closeDialog}
+    onClose={() => { authDialogOpen = false; }}
+    onBrowserWallet={chooseBrowserWalletMethod}
+    onWalletConnect={chooseWalletConnectMethod}
+    onTonConnect={chooseTonConnectMethod}
+    onGoogle={() => { beginOAuthLogin('google'); }}
+    onGithub={() => { beginOAuthLogin('github'); }}
+    onPasskey={choosePasskeyMethod}
+    onPrivateKey={openPrivateKeyDialog}
+    onOpenProfile={() => { void openTopbarProfile(); }}
+    onOpenTask={(orderId: string) => { void openOrderById(orderId); }}
+    onSignOut={() => { void signOutProfileSession(); }}
+  />
+{/if}
 
-  {#if PasskeyDialogComponent}
-    <PasskeyDialogComponent
-      open={passkeyDialogOpen}
-      title={localeText.auth.passkeyTitle}
-      onClose={() => { passkeyDialogOpen = false; }}
-      onSuccess={loginWithPasskey}
-      onError={handlePasskeyError}
-    />
-  {/if}
+{#if PasskeyDialogComponent}
+  <PasskeyDialogComponent
+    open={passkeyDialogOpen}
+    title={localeText.auth.passkeyTitle}
+    onClose={() => { passkeyDialogOpen = false; }}
+    onSuccess={loginWithPasskey}
+    onError={handlePasskeyError}
+  />
+{/if}
 
-  {#if PrivateKeyDialogComponent}
-    <PrivateKeyDialogComponent
-      open={privateKeyDialogOpen}
-      title={localeText.auth.privateKeyTitle}
-      description={localeText.auth.privateKeyDescription}
-      value={privateKeyInput}
-      placeholder="pqsk_... or -----BEGIN PRIVATE KEY-----"
-      submitLabel="Sign"
-      closeLabel={localeText.buttons.closeDialog}
-      generateLabel={localeText.auth.privateKeyGenerateLabel}
-      onClose={() => { privateKeyDialogOpen = false; }}
-      onInput={(value: string) => { privateKeyInput = value; }}
-      onSubmit={choosePrivateKeyMethod}
-      onGenerate={chooseGeneratedPrivateKeyMethod}
-    />
-  {/if}
+{#if PrivateKeyDialogComponent}
+  <PrivateKeyDialogComponent
+    open={privateKeyDialogOpen}
+    title={localeText.auth.privateKeyTitle}
+    description={localeText.auth.privateKeyDescription}
+    value={privateKeyInput}
+    placeholder="pqsk_... or -----BEGIN PRIVATE KEY-----"
+    submitLabel="Sign"
+    closeLabel={localeText.buttons.closeDialog}
+    generateLabel={localeText.auth.privateKeyGenerateLabel}
+    onClose={() => { privateKeyDialogOpen = false; }}
+    onInput={(value: string) => { privateKeyInput = value; }}
+    onSubmit={choosePrivateKeyMethod}
+    onGenerate={chooseGeneratedPrivateKeyMethod}
+  />
+{/if}
 
-  {#if EmailCodeDialogComponent}
-    <EmailCodeDialogComponent
-      open={emailCodeDialogOpen}
-      title={localeText.auth.emailCodeTitle}
-      description={localeText.auth.emailCodeDescription}
-      emailValue={emailCodeEmail}
-      codeValue={emailCodeValue}
-      statusMessage={emailCodeStatus}
-      emailLabel={localeText.auth.emailCodeEmailLabel}
-      codeLabel={localeText.auth.emailCodeLabel}
-      emailPlaceholder={localeText.auth.emailCodeEmailPlaceholder}
-      codePlaceholder={localeText.auth.emailCodePlaceholder}
-      sendCodeLabel={localeText.auth.emailCodeSendLabel}
-      resendCodeLabel={localeText.auth.emailCodeResendLabel}
-      verifyCodeLabel={localeText.auth.emailCodeVerifyLabel}
-      backLabel={localeText.buttons.backToMethods}
-      closeLabel={localeText.buttons.closeDialog}
-      codeRequested={emailCodeRequested}
-      isSubmitting={emailCodePending}
-      onClose={() => { emailCodeDialogOpen = false; }}
-      onEmailInput={(value: string) => { emailCodeEmail = value; }}
-      onCodeInput={(value: string) => { emailCodeValue = value.replace(/[^0-9]/g, '').slice(0, 6); }}
-      onRequestCode={requestEmailCodeAuth}
-      onVerifyCode={verifyEmailCodeAuth}
-      onBack={resetEmailCodeStep}
-    />
-  {/if}
-
-</kefine-shell>
+{#if EmailCodeDialogComponent}
+  <EmailCodeDialogComponent
+    open={emailCodeDialogOpen}
+    title={localeText.auth.emailCodeTitle}
+    description={localeText.auth.emailCodeDescription}
+    emailValue={emailCodeEmail}
+    codeValue={emailCodeValue}
+    statusMessage={emailCodeStatus}
+    emailLabel={localeText.auth.emailCodeEmailLabel}
+    codeLabel={localeText.auth.emailCodeLabel}
+    emailPlaceholder={localeText.auth.emailCodeEmailPlaceholder}
+    codePlaceholder={localeText.auth.emailCodePlaceholder}
+    sendCodeLabel={localeText.auth.emailCodeSendLabel}
+    resendCodeLabel={localeText.auth.emailCodeResendLabel}
+    verifyCodeLabel={localeText.auth.emailCodeVerifyLabel}
+    backLabel={localeText.buttons.backToMethods}
+    closeLabel={localeText.buttons.closeDialog}
+    codeRequested={emailCodeRequested}
+    isSubmitting={emailCodePending}
+    onClose={() => { emailCodeDialogOpen = false; }}
+    onEmailInput={(value: string) => { emailCodeEmail = value; }}
+    onCodeInput={(value: string) => { emailCodeValue = value.replace(/[^0-9]/g, '').slice(0, 6); }}
+    onRequestCode={requestEmailCodeAuth}
+    onVerifyCode={verifyEmailCodeAuth}
+    onBack={resetEmailCodeStep}
+  />
+{/if}
 
 <style>
-  kefine-shell {
+  main {
     min-height: 100vh;
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     align-items: stretch;
     padding: clamp(0.75rem, 2vw, 1.4rem);
-  }
-
-  main {
-    display: contents;
   }
 
   kefine-layout {
@@ -3122,7 +3095,7 @@
     max-width: none;
     align-items: start;
     align-content: start;
-    padding-top: clamp(4rem, 8vh, 5.75rem);
+    padding-top: clamp(6.25rem, 14vh, 9.5rem);
     padding-bottom: clamp(2rem, 6vh, 4rem);
   }
 
@@ -3192,7 +3165,7 @@
   }
 
   @media (max-width: 760px) {
-    kefine-shell {
+    main {
       grid-template-columns: 1fr;
       padding: 0.75rem;
     }
@@ -3200,14 +3173,14 @@
     kefine-layout {
       min-height: auto;
       width: min(980px, 100%);
-      padding-top: 4.75rem;
+      padding-top: 6rem;
     }
 
-    kefine-shell[data-sidebar-expanded='true'] kefine-layout[data-mode='create'] {
+    main[data-sidebar-expanded='true'] kefine-layout[data-mode='create'] {
       padding-top: 21rem;
     }
 
-    kefine-shell[data-sidebar-expanded='true'] kefine-layout[data-mode='flow'] {
+    main[data-sidebar-expanded='true'] kefine-layout[data-mode='flow'] {
       padding-top: 20rem;
     }
   }

@@ -42,6 +42,7 @@ module Crater
       property issue_file_name : String
       property issue_attachments_dir : String
       property main_readme_path : String
+      property plan_document_path : String
       property repository_readme : String
       property repository_icon : String
       property default_branch : String
@@ -57,6 +58,7 @@ module Crater
         @issue_file_name : String,
         @issue_attachments_dir : String,
         @main_readme_path : String,
+        @plan_document_path : String,
         @repository_readme : String,
         @repository_icon : String,
         @default_branch : String,
@@ -75,6 +77,7 @@ module Crater
           issue_file_name: "issue.org",
           issue_attachments_dir: "attachments",
           main_readme_path: ".meta/lefine.pro.org",
+          plan_document_path: "PLAN.org",
           repository_readme: "Lefine repository metadata and task context",
           repository_icon: "",
           default_branch: DEFAULT_BRANCH,
@@ -98,23 +101,27 @@ module Crater
       end
 
       def issue_directory(order_id : String) : String
-        safe_path_join(issue_root_path, order_id)
+        RepositorySettings.safe_path_join(issue_root_path, order_id)
       end
 
       def issue_file_path(order_id : String) : String
-        safe_path_join(issue_directory(order_id), issue_file_name)
+        RepositorySettings.safe_path_join(issue_directory(order_id), issue_file_name)
       end
 
       def issue_readme_path(order_id : String) : String
-        safe_path_join(issue_directory(order_id), issue_readme_name)
+        RepositorySettings.safe_path_join(issue_directory(order_id), issue_readme_name)
       end
 
       def issue_attachment_path(order_id : String, attachment_name : String) : String
-        safe_path_join(issue_directory(order_id), issue_attachments_dir, attachment_name)
+        RepositorySettings.safe_path_join(issue_directory(order_id), issue_attachments_dir, attachment_name)
       end
 
       def repository_readme_path : String
         main_readme_path
+      end
+
+      def plan_path : String
+        plan_document_path
       end
 
       def pull_issues_allowed? : Bool
@@ -126,7 +133,7 @@ module Crater
       end
 
       def reps_sources : Array(String)
-        reps_config_paths.any? ? reps_config_paths : default.reps_config_paths
+        reps_config_paths.any? ? reps_config_paths : RepositorySettings.default.reps_config_paths
       end
 
       def payload : JSON::Any
@@ -138,6 +145,7 @@ module Crater
             "issueFileName" => issue_file_name,
             "issueAttachmentsDir" => issue_attachments_dir,
             "mainReadmePath" => main_readme_path,
+            "planDocumentPath" => plan_document_path,
             "repositoryReadme" => repository_readme,
             "repositoryIcon" => repository_icon,
             "defaultBranch" => default_branch,
@@ -153,9 +161,9 @@ module Crater
         [
           "repository do",
           "  # Repository icon",
-          "  icon = \"#{escape_rcl_value(repository_icon)}\"",
+          "  icon = \"#{LeposConfig.escape_rcl_value(repository_icon)}\"",
           "  # Default branch for this repository",
-          "  default_branch = \"#{escape_rcl_value(default_branch)}\"",
+          "  default_branch = \"#{LeposConfig.escape_rcl_value(default_branch)}\"",
           "",
           "  # Pull policies",
           "  # true/false or yes/no/on/off",
@@ -165,32 +173,35 @@ module Crater
           "  # How task issues are stored for this repository:",
           "  # filesystem (default) = create local issue metadata in issue_root",
           "  # database  = keep issue metadata in DB table (no issue files are written)",
-          "  issue_storage = \"#{escape_rcl_value(issue_storage)}\"",
-          "  issue_root = \"#{escape_rcl_value(issue_root)}\"",
-          "  issue_file_name = \"#{escape_rcl_value(issue_file_name)}\"",
-          "  issue_readme_name = \"#{escape_rcl_value(issue_readme_name)}\"",
-          "  issue_attachments_dir = \"#{escape_rcl_value(issue_attachments_dir)}\"",
+          "  issue_storage = \"#{LeposConfig.escape_rcl_value(issue_storage)}\"",
+          "  issue_root = \"#{LeposConfig.escape_rcl_value(issue_root)}\"",
+          "  issue_file_name = \"#{LeposConfig.escape_rcl_value(issue_file_name)}\"",
+          "  issue_readme_name = \"#{LeposConfig.escape_rcl_value(issue_readme_name)}\"",
+          "  issue_attachments_dir = \"#{LeposConfig.escape_rcl_value(issue_attachments_dir)}\"",
           "",
           "  # Path for repository-level metadata/readme document",
-          "  main_readme_path = \"#{escape_rcl_value(main_readme_path)}\"",
-          "  repository_readme = \"#{escape_rcl_value(repository_readme)}\"",
+          "  main_readme_path = \"#{LeposConfig.escape_rcl_value(main_readme_path)}\"",
+          "  repository_readme = \"#{LeposConfig.escape_rcl_value(repository_readme)}\"",
+          "",
+          "  # Canonical execute plan document",
+          "  plan_document_path = \"#{LeposConfig.escape_rcl_value(plan_document_path)}\"",
           "",
           "  # Repository set controls",
           "  reps_config_paths = [\"#{reps_config_paths.join("\", \"")}\"]",
-          "  agent_system_prompt_path = \"#{escape_rcl_value(agent_system_prompt_path || "")}\"",
+          "  agent_system_prompt_path = \"#{LeposConfig.escape_rcl_value(agent_system_prompt_path || "")}\"",
           "",
           "  # Optional per-repository sets are read from reps.rcl/reps.toml in repo root",
           "end"
         ].join('\n')
       end
 
-      private def self.safe_path_join(*parts : String) : String
+      def self.safe_path_join(*parts : String) : String
         normalized_parts = parts.flat_map { |part| sanitize_path(part).split('/') }.reject(&.empty?)
         return "." if normalized_parts.empty?
-        File.join(*normalized_parts)
+        File.join(normalized_parts)
       end
 
-      private def self.sanitize_path(value : String) : String
+      def self.sanitize_path(value : String) : String
         normalized = value.gsub('\\', '/').strip
 
         return "" if normalized.empty?
@@ -269,10 +280,10 @@ module Crater
     end
 
     private def self.sanitized_path(raw : String) : String
-      RepositorySettings.send(:sanitize_path, raw)
+      RepositorySettings.sanitize_path(raw)
     end
 
-    private def self.escape_rcl_value(value : String) : String
+    def self.escape_rcl_value(value : String) : String
       value.gsub("\\", "\\\\").gsub("\"", "\\\"")
     end
 
@@ -318,8 +329,8 @@ module Crater
       normalize : String -> String = ->(value : String) { value }
     ) : String
       value_lookup(data, keys).try do |candidate|
-        return normalize(candidate.as?(String).to_s) if candidate.is_a?(String)
-        return normalize(parse_list(candidate.to_s).join(", "))
+        return normalize.call(candidate.as?(String).to_s) if candidate.is_a?(String)
+        return normalize.call(parse_list(candidate.to_s).join(", "))
       end
       fallback
     end
@@ -396,7 +407,7 @@ module Crater
     def self.parse_reps(raw : String) : RepsSettings
       if section = extract_rcl_section(raw, ["reps", "repositories", "agents", "agent"])
         repositories = extract_string_array(section, ["repositories", "repository_list", "reps"], RepsSettings.default.repositories)
-        repository_config_path = extract_string(section, ["repository_config_path", "config_path", "path"], "", &->(value : String) { normalize_path(value, "") })
+        repository_config_path = extract_string(section, ["repository_config_path", "config_path", "path"], "", normalize: ->(value : String) { normalize_path(value, "") })
         agent_system_prompt_path = extract_optional_string(section, ["agent_system_prompt_path", "system_prompt_path", "system_prompt"])
 
         return RepsSettings.new(
@@ -413,22 +424,23 @@ module Crater
       raw = File.read(path)
       parse(raw)
     rescue
-      default
+      RepositorySettings.default
     end
 
     def self.parse(raw : String) : RepositorySettings
       if section = extract_rcl_section(raw, ["repository", "repo"])
-        defaults = default
-        issue_storage = extract_string(section, ["issue_storage"], defaults.issue_storage, &->(value : String) { normalize_storage(value) })
-        issue_root = extract_string(section, ["issue_root", "issues_root", "issues_dir"], defaults.issue_root, &->(value : String) { normalize_path(value, defaults.issue_root) })
-        issue_readme_name = extract_string(section, ["issue_readme_name"], defaults.issue_readme_name, &->(value : String) { normalize_name(value, defaults.issue_readme_name) })
-        issue_file_name = extract_string(section, ["issue_file_name"], defaults.issue_file_name, &->(value : String) { normalize_name(value, defaults.issue_file_name) })
-        issue_attachments_dir = extract_string(section, ["issue_attachments_dir"], defaults.issue_attachments_dir, &->(value : String) { normalize_name(value, defaults.issue_attachments_dir) })
+        defaults = RepositorySettings.default
+        issue_storage = extract_string(section, ["issue_storage"], defaults.issue_storage, normalize: ->(value : String) { normalize_storage(value) })
+        issue_root = extract_string(section, ["issue_root", "issues_root", "issues_dir"], defaults.issue_root, normalize: ->(value : String) { normalize_path(value, defaults.issue_root) })
+        issue_readme_name = extract_string(section, ["issue_readme_name"], defaults.issue_readme_name, normalize: ->(value : String) { normalize_name(value, defaults.issue_readme_name) })
+        issue_file_name = extract_string(section, ["issue_file_name"], defaults.issue_file_name, normalize: ->(value : String) { normalize_name(value, defaults.issue_file_name) })
+        issue_attachments_dir = extract_string(section, ["issue_attachments_dir"], defaults.issue_attachments_dir, normalize: ->(value : String) { normalize_name(value, defaults.issue_attachments_dir) })
         reps_config_paths = extract_string_array(section, ["reps_config_paths", "reps_config_path"], defaults.reps_config_paths)
-        repository_icon = extract_string(section, ["repository_icon", "icon"], defaults.repository_icon, &->(value : String) { normalize_name(value, defaults.repository_icon) })
-        main_readme_path = extract_string(section, ["main_readme_path", "main_readme", "repository_readme_path", "readme_path"], defaults.main_readme_path, &->(value : String) { normalize_path(value, defaults.main_readme_path) })
-        repository_readme = extract_string(section, ["repository_readme"], defaults.repository_readme, &->(value : String) { normalize_name(value, defaults.repository_readme) })
-        default_branch = extract_string(section, ["default_branch", "default_branch_name"], defaults.default_branch, &->(value : String) { normalize_name(value, defaults.default_branch) })
+        repository_icon = extract_string(section, ["repository_icon", "icon"], defaults.repository_icon, normalize: ->(value : String) { normalize_name(value, defaults.repository_icon) })
+        main_readme_path = extract_string(section, ["main_readme_path", "main_readme", "repository_readme_path", "readme_path"], defaults.main_readme_path, normalize: ->(value : String) { normalize_path(value, defaults.main_readme_path) })
+        plan_document_path = extract_string(section, ["plan_document_path", "plan_path", "plan_file"], defaults.plan_document_path, normalize: ->(value : String) { normalize_path(value, defaults.plan_document_path) })
+        repository_readme = extract_string(section, ["repository_readme"], defaults.repository_readme, normalize: ->(value : String) { normalize_name(value, defaults.repository_readme) })
+        default_branch = extract_string(section, ["default_branch", "default_branch_name"], defaults.default_branch, normalize: ->(value : String) { normalize_name(value, defaults.default_branch) })
         accept_pull_issues = extract_bool(section, ["accept_pull_issues", "allow_pull_issues", "accept_pull_issue"], defaults.accept_pull_issues)
         accept_pull_patches = extract_bool(section, ["accept_pull_patches", "allow_pull_patches", "accept_pull_patch"], defaults.accept_pull_patches)
         agent_system_prompt_path = extract_optional_string(section, ["agent_system_prompt_path", "system_prompt_path", "system_prompt"])
@@ -440,6 +452,7 @@ module Crater
           issue_file_name: issue_file_name,
           issue_attachments_dir: issue_attachments_dir,
           main_readme_path: main_readme_path,
+          plan_document_path: plan_document_path,
           repository_readme: repository_readme,
           repository_icon: repository_icon,
           default_branch: default_branch,
@@ -454,16 +467,16 @@ module Crater
     end
 
     def self.load(path : String) : RepositorySettings
-      return default unless File.exists?(path)
+      return RepositorySettings.default unless File.exists?(path)
       load_from_file(path)
     end
 
     def self.default_payload : JSON::Any
-      default.payload
+      RepositorySettings.default.payload
     end
 
     private def self.parse_legacy(raw : String) : RepositorySettings
-      settings = default
+      settings = RepositorySettings.default
       section = ""
       issue_storage = settings.issue_storage
       issue_root = settings.issue_root
@@ -471,6 +484,7 @@ module Crater
       issue_file_name = settings.issue_file_name
       issue_attachments_dir = settings.issue_attachments_dir
       main_readme_path = settings.main_readme_path
+      plan_document_path = settings.plan_document_path
       repository_readme = settings.repository_readme
       repository_icon = settings.repository_icon
       default_branch = settings.default_branch
@@ -513,6 +527,8 @@ module Crater
           repository_icon = normalize_name(value, settings.repository_icon)
         when "main_readme_path", "main_readme", "repository_readme_path", "readme_path"
           main_readme_path = normalize_path(value, settings.main_readme_path)
+        when "plan_document_path", "plan_path", "plan_file"
+          plan_document_path = normalize_path(value, settings.plan_document_path)
         when "repository_readme"
           repository_readme = normalize_name(value, settings.repository_readme)
         when "default_branch", "default_branch_name"
@@ -534,6 +550,7 @@ module Crater
         issue_file_name: issue_file_name,
         issue_attachments_dir: issue_attachments_dir,
         main_readme_path: main_readme_path,
+        plan_document_path: plan_document_path,
         repository_readme: repository_readme,
         repository_icon: repository_icon,
         default_branch: normalize_name(default_branch, settings.default_branch),

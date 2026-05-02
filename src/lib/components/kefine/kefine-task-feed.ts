@@ -10,6 +10,7 @@ import type {
   OrderView,
   ProgressState
 } from '$lib/components/kefine/kefine-workflow';
+import { parseOrgPlanThreadNodes } from '$lib/components/kefine/kefine-org-plan';
 
 export type TaskThreadNode = {
   id: string;
@@ -830,7 +831,7 @@ function isGenericSolverPlaceholder(value: string | undefined): boolean {
     const url = new URL(raw);
     const host = url.host.toLowerCase();
     const segments = url.pathname.split('/').filter(Boolean);
-    if ((host === 'exchange.lefine.pro' || host === 'lefine.pro') && segments.length <= 1) {
+    if (host === 'lefine.pro' && segments.length <= 1) {
       return true;
     }
     return segments.length === 0;
@@ -1201,6 +1202,29 @@ function solverNodes(order: OrderView): TaskThreadNode[] {
   return [];
 }
 
+function attachDocumentInserts(order: OrderView, node: TaskThreadNode): TaskThreadNode {
+  const inheritedStyle = {
+    visibility: node.branchVisibility ?? 'visible',
+    placement: node.branchPlacement ?? 'normal',
+    tags: node.branchTags ?? []
+  };
+  const insertedChildren = resolveSystemNodeInserts(
+    order,
+    node.stepId || node.id,
+    node.branchLabel,
+    inheritedStyle
+  ) ?? [];
+
+  return {
+    ...node,
+    comments: node.comments ?? resolveSystemNodeComments(order, node.stepId || node.id),
+    children: [
+      ...(node.children ?? []).map((child) => attachDocumentInserts(order, child)),
+      ...insertedChildren.map((child) => attachDocumentInserts(order, child))
+    ]
+  };
+}
+
 export function buildTaskThreadNodes(
   order: OrderView | null,
   labels: { interimResult?: string; resultTitle?: string; finalResult?: string } = {}
@@ -1213,6 +1237,11 @@ export function buildTaskThreadNodes(
   const interim = resultNode(order.interimResult, `${order.id}-interim-result`, labels.interimResult || 'Interim result');
   const final = resultNode(order.result, `${order.id}-final-result`, labels.resultTitle || labels.finalResult || 'Result');
   const exchangeNode = exchangeSearchNode(order);
+  const planNodes = parseOrgPlanThreadNodes(order.document?.content);
+
+  if (planNodes.length > 0) {
+    return planNodes.map((node) => attachDocumentInserts(order, node));
+  }
 
   const nodes = [
     exchangeNode,
@@ -1224,22 +1253,7 @@ export function buildTaskThreadNodes(
     ...(final ? [final] : [])
   ];
 
-  return nodes.map((node) => ({
-    ...node,
-    children: [
-      ...(node.children ?? []),
-      ...(resolveSystemNodeInserts(
-        order,
-        node.stepId || node.id,
-        node.branchLabel,
-        {
-          visibility: node.branchVisibility ?? 'visible',
-          placement: node.branchPlacement ?? 'normal',
-          tags: node.branchTags ?? []
-        }
-      ) ?? [])
-    ]
-  }));
+  return nodes.map((node) => attachDocumentInserts(order, node));
 }
 
 // Preserve the previous export name so Vite HMR can survive the refactor without a hard reload.

@@ -62,7 +62,7 @@ export const KEFINE_TEXT_HY = {
   create: {
     ...KEFINE_TEXT_EN.create,
     title: 'Նկարագրեք տեխնիկական lepo',
-    subtitle: 'Նշեք կատարման ժամկետը։ Lefine-ը գտնում է solver, հաստատում ուղին ու ETA-ն, հետո հանձնում արդյունքը։',
+    subtitle: '',
     placeholder: 'Նկարագրեք ցանկացած տեխնիկական lepo...',
     placeholderVariants: [
       'Ուղղել կոտրված rollback-ը CI/CD-ում',
@@ -78,8 +78,8 @@ export const KEFINE_TEXT_HY = {
     ],
     executeAria: 'Ուղարկել lepo-ն',
     backgroundExecuteAria: 'Ուղարկել lepo-ն ֆոնային ռեժիմով',
+    solverSearchLabel: 'Solver-ի որոնում',
     addFile: '+ ֆայլ',
-    addDescription: '+ նկարագրություն',
     addExecutionEstimate: '+ ժամկետ',
     fileCount: (count: number) => `${count} ֆայլ`,
     composerHints: 'Enter-ը ուղարկում է, Alt+Enter-ը ուղարկում է ֆոնում, Shift+Enter-ը նոր տող է ավելացնում',
@@ -88,7 +88,6 @@ export const KEFINE_TEXT_HY = {
     serviceSetupSubtitle: 'Ստուգեք template-ի փոփոխականները, փոխեք արժեքները, եթե պետք է, և հետո միայն գործարկեք ծառայությունը։',
     pinnedServicesTitle: 'Ամրացված ծառայություններ',
     pinnedServicesSubtitle: 'Սկսեք կարգավորված service entry point-երից, ապա միայն գրեք ազատ ձևի lepo։',
-    recentTasks: 'Վերջին lepos',
     noRecentTasks: 'Պահված lepos դեռ չկան',
     matchedTasks: 'Գտնված ավարտված lepos',
     noMatchedTasks: 'Այս հարցմանը համապատասխան ավարտված lepos դեռ չկան'
@@ -256,7 +255,7 @@ export const KEFINE_TEXT_HY = {
       afe: {
         title: 'Ի՞նչ է Lefine-ը',
         detail:
-          'Lefine-ը Automated Freelance Marketplace (AFM) է, որտեղ դուք նկարագրում եք անհրաժեշտ աշխատանքը, իսկ Lefine-ը գտնում է ճիշտ ուղին արդյունքը հասցնելու համար։'
+          'Lefine-ը Automated Freelance Marketplace (AFM) է։ Դուք նկարագրում եք անհրաժեշտ աշխատանքը։ Lefine-ը գտնում է solver-ներին և վերադարձնում արդյունքը։'
       },
       task: {
         title: 'Բրիֆ',
@@ -264,11 +263,11 @@ export const KEFINE_TEXT_HY = {
       },
       quote: {
         title: 'Գնառաջարկ',
-        detail: 'Solver-ը հաստատում է ուղին և ETA-ն։'
+        detail: 'Lefine-ը գտնում է հասանելի solver-ներին և ցույց է տալիս առաջարկը մինչև աշխատանքի սկիզբը։'
       },
       delivery: {
         title: 'Առաքում',
-        detail: 'Lefine-ը հասցնում է վերջնական հասանելիությունը կամ արդյունքը։'
+        detail: 'Lefine-ը վերադարձնում է վերջնական հասանելիությունը կամ արդյունքը։'
       }
     }
   },

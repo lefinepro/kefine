@@ -86,7 +86,7 @@ export const KEFINE_TEXT_RU = {
   },
   create: {
     title: 'Опишите технический lepo',
-    subtitle: 'Укажите срок выполнения. Lefine найдёт исполнителя, подтвердит маршрут и ETA, а затем доставит результат.',
+    subtitle: '',
     placeholder: 'Опишите любой технический lepo...',
     placeholderVariants: [
       'Исправить сломанный rollback в CI/CD',
@@ -102,8 +102,8 @@ export const KEFINE_TEXT_RU = {
     ],
     executeAria: 'Выполнить lepo',
     backgroundExecuteAria: 'Отправить lepo в фоне',
+    solverSearchLabel: 'Поиск Solver',
     addFile: '+ файл',
-    addDescription: '+ описание',
     addExecutionEstimate: '+ срок',
     fileCount: (count: number) => `${count} файл${count === 1 ? '' : count < 5 ? 'а' : 'ов'}`,
     composerHints: 'Enter отправляет, Alt+Enter ставит в фон, Shift+Enter делает новую строку',
@@ -116,7 +116,6 @@ export const KEFINE_TEXT_RU = {
     pathCreateLabel: 'Создание lepo:',
     pathStatusLabel: 'Lepo:',
     pathPaymentLabel: 'Оплата:',
-    recentTasks: 'Последние lepos',
     noRecentTasks: 'Сохранённых lepos пока нет',
     matchedTasks: 'Найденные завершённые lepos',
     noMatchedTasks: 'По этому запросу завершённые lepos не найдены'
@@ -397,7 +396,7 @@ export const KEFINE_TEXT_RU = {
       afe: {
         title: 'Что такое Lefine?',
         detail:
-          'Lefine — это автоматизированный маркетплейс фриланса (AFM), где вы описываете нужную работу, а Lefine находит лучший путь, чтобы доставить результат.'
+          'Lefine — это автоматизированный маркетплейс фриланса (AFM). Вы описываете нужную работу. Lefine находит solver-ов и возвращает результат.'
       },
       task: {
         title: 'Бриф',
@@ -405,11 +404,11 @@ export const KEFINE_TEXT_RU = {
       },
       quote: {
         title: 'Котировка',
-        detail: 'Исполнитель подтверждает маршрут и ETA.'
+        detail: 'Lefine находит доступных solver-ов и показывает предложение до начала работы.'
       },
       delivery: {
         title: 'Доставка',
-        detail: 'Lefine доставляет финальный доступ или результат.'
+        detail: 'Lefine возвращает финальный доступ или результат.'
       }
     }
   },

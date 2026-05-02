@@ -168,7 +168,6 @@
       'default solver',
       'saved',
       'save',
-      'https://exchange.lefine.pro',
       'https://lefine.pro'
     ]);
 
@@ -177,7 +176,7 @@
       try {
         const url = new URL(profileUrl);
         const segments = url.pathname.split('/').filter(Boolean);
-        return (url.host === 'exchange.lefine.pro' || url.host === 'lefine.pro') && segments.length <= 1;
+        return (url.host === 'lefine.pro') && segments.length <= 1;
       } catch {
         return false;
       }
