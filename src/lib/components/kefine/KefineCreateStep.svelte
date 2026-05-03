@@ -9,7 +9,7 @@
   import { onMount } from 'svelte';
   import hljs from 'highlight.js/lib/core';
   import rust from 'highlight.js/lib/languages/rust';
-  import 'highlight.js/styles/github.css';
+  import 'highlight.js/styles/xcode.css';
   // TODO: Add BlockHandle and DropIndicator if available
 
   hljs.registerLanguage('rust', rust);
@@ -2188,12 +2188,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
   }
 
   .code-block {
-    background: #f8f9fa;
     padding: 1rem;
     border-radius: 0.5rem;
     overflow-x: auto;
     font-family: monospace;
     border: 1px solid #e9ecef;
+  }
+
+  .code-block pre {
+    margin: 0;
   }
 
   .code-block code {
