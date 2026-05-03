@@ -900,26 +900,26 @@
        {/if}
 
        {#if taskCompleted}
-         <div class="solutions-list">
+         <section class="solutions-list">
            {#each mockSolutions as solution (solution.id)}
-             <div class="solution-card">
-               <div class="solution-header">
+             <article class="solution-card">
+               <header class="solution-header">
                  <img src={solution.avatar} alt={solution.solver} class="solver-avatar" />
                  <div class="solution-meta">
                    <strong>{solution.solver}</strong>
                    <span>{solution.title}</span>
                  </div>
-               </div>
+               </header>
                <p class="solution-description">{solution.description}</p>
                <div class="diff-summary">
                  {#each solution.diffs as diff}
                    <span class="diff-file">{diff.file}: +{diff.added} -{diff.removed}</span>
                  {/each}
                </div>
-               <pre class="code-diff"><code>{solution.codeDiff}</code></pre>
-             </div>
+               <pre class="code-diff"><code>{@html solution.codeDiff.replace(/^\+(.+)$/gm, '<span class="added">+$1</span>').replace(/^-(.+)$/gm, '<span class="removed">-$1</span>').replace(/^@@(.+)$/gm, '<span class="diff-header">@@$1</span>')}</code></pre>
+             </article>
            {/each}
-         </div>
+         </section>
        {/if}
    </section>
  {/if}
@@ -2049,11 +2049,14 @@
 
   .solutions-list {
     margin-top: 1rem;
-    display: grid;
+    display: flex;
     gap: 1rem;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
   }
 
   .solution-card {
+    flex: 0 0 400px;
     border: 1px solid var(--kef-line);
     border-radius: var(--kef-radius-ui);
     padding: 1rem;
@@ -2120,6 +2123,21 @@
 
   .code-diff code {
     font-family: monospace;
+  }
+
+  .code-diff .added {
+    color: #22c55e;
+    background: rgba(34, 197, 94, 0.1);
+  }
+
+  .code-diff .removed {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+  }
+
+  .code-diff .diff-header {
+    color: #6366f1;
+    font-weight: bold;
   }
 
   button[data-part='composer-chip'][data-part-tag='true'] {
