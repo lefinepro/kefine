@@ -744,7 +744,8 @@
 </article>
 
 {#if taskEditorOpen}
-  <KefineModal title={taskCompleted ? "Task Results" : "Edit Task"} onClose={() => { taskEditorOpen = false; }}>
+  <KefineModal open={taskEditorOpen} onClose={() => { taskEditorOpen = false; }}>
+    <h2>{taskCompleted ? "Task Results" : "Edit Task"}</h2>
     <div style="height: 400px;">
       <ProseKit {editor}>
         <div bind:this={editor.mount} class="p-4">
