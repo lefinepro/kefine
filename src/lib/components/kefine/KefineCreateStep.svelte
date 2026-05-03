@@ -3,6 +3,9 @@
   import type { DraftOrder, OrderView, TemplatePresentation } from './kefine-workflow';
   import { scheduleAfter } from '$lib/utils/helpers';
   import KefineOrderListItem from '$lib/components/kefine/KefineOrderListItem.svelte';
+  import { createEditor } from 'prosekit/core';
+  import { ProseKit } from 'prosekit/svelte';
+  import { defineBasicExtension } from 'prosekit/extensions/basic';
 
   const PLACEHOLDER_TYPE_DELAY_MS = 58;
   const PLACEHOLDER_DELETE_DELAY_MS = 34;
@@ -134,6 +137,8 @@
   let placeholderVariantIndex = $state(0);
   let placeholderCharIndex = $state(0);
   let placeholderDeleting = $state(false);
+  let taskEditorOpen = $state(false);
+  let editor = $state(createEditor({ extension: defineBasicExtension() }));
   const isMultilineDraft = $derived(draft.description.includes('\n'));
   const afeIntroCard = $derived(afe.cards[0] ?? null);
   const afeStepCards = $derived(afe.cards.slice(1));
@@ -262,6 +267,17 @@
       cancelPlaceholderTick?.();
       cancelPlaceholderTick = null;
     };
+  });
+
+  $effect(() => {
+    if (solverSearchActive && solverSearchText.trim()) {
+      const timer = setTimeout(() => {
+        // Simulate task completion
+        taskEditorOpen = false;
+        // Perhaps call onSubmit or notify completion
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
   });
 
   $effect(() => {
@@ -539,14 +555,7 @@
     </section>
   {/if}
 
-  {#if solverSearchActive && solverSearchText.trim()}
-    <kefine-solver-search-row aria-live="polite">
-      <lefine-text>{solverSearchText}</lefine-text>
-      <kefine-solver-search-indicator aria-label={solverSearchLabel} title={solverSearchLabel}>
-        <kefine-solver-search-dot aria-hidden="true"></kefine-solver-search-dot>
-      </kefine-solver-search-indicator>
-    </kefine-solver-search-row>
-  {/if}
+
 
   <fieldset data-part="exec-row" data-testid="kefine-create-form">
     <kefine-task-shell>
@@ -732,6 +741,14 @@
   {/if}
 </article>
 
+{#if taskEditorOpen}
+  <KefineModal title="Edit Task" onClose={() => { taskEditorOpen = false; }}>
+    <div style="height: 400px;">
+      <ProseKit {editor} />
+    </div>
+  </KefineModal>
+{/if}
+
 {#if pinnedServices.length > 0}
   <lef-services-showcase>
     <lef-services-head>
@@ -761,9 +778,22 @@
   </lef-services-showcase>
 {/if}
 
-{#if afeIntroCard}
-  <lef-afe-showcase-heading>{afeIntroCard.title}</lef-afe-showcase-heading>
-{/if}
+ {#if afeIntroCard}
+   <lef-afe-showcase-heading>{afeIntroCard.title}</lef-afe-showcase-heading>
+ {/if}
+
+ {#if solverSearchActive && solverSearchText.trim()}
+   <section data-part="tasks-list">
+     <button type="button" data-part="task-item" onclick={() => { taskEditorOpen = true; }}>
+       <kefine-solver-search-row aria-live="polite">
+         <lefine-text>{solverSearchText}</lefine-text>
+         <kefine-solver-search-indicator aria-label={solverSearchLabel} title={solverSearchLabel}>
+           <kefine-solver-search-dot aria-hidden="true"></kefine-solver-search-dot>
+         </kefine-solver-search-indicator>
+       </kefine-solver-search-row>
+     </button>
+   </section>
+ {/if}
 
 <lef-afe-showcase>
   <lef-afe-layout>
@@ -1845,6 +1875,15 @@
     background: color-mix(in oklab, var(--kef-bg-card) 92%, white 8%);
     color: var(--lefine-text);
     flex: 0 0 auto;
+  }
+
+  button[data-part='task-item'] {
+    border: 0;
+    background: none;
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    cursor: pointer;
   }
 
   button[data-part='composer-chip'][data-part-tag='true'] {
