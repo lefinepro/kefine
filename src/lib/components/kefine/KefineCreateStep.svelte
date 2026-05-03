@@ -6,8 +6,13 @@
   import { createEditor, type NodeJSON } from 'prosekit/core';
   import { ProseKit } from 'prosekit/svelte';
   import { defineBasicExtension } from 'prosekit/basic';
-
+  import { onMount } from 'svelte';
+  import hljs from 'highlight.js/lib/core';
+  import rust from 'highlight.js/lib/languages/rust';
+  import 'highlight.js/styles/github.css';
   // TODO: Add BlockHandle and DropIndicator if available
+
+  hljs.registerLanguage('rust', rust);
 
   const PLACEHOLDER_TYPE_DELAY_MS = 58;
   const PLACEHOLDER_DELETE_DELAY_MS = 34;
@@ -386,6 +391,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
       cancelQueuePress?.();
       cancelQueuePress = null;
     };
+  });
+
+  onMount(() => {
+    hljs.highlightAll();
   });
 
 
@@ -904,7 +913,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                            <span class="diff-file">{diff.file}: <span class="added">+{diff.added}</span> <span class="removed">-{diff.removed}</span></span>
                          {/each}
                        </div>
-                       <pre class="code-block"><code>{solution.finalCode}</code></pre>
+                       <pre class="code-block"><code class="language-rust">{solution.finalCode}</code></pre>
                     </article>
                   {/each}
                 </section>
@@ -2179,12 +2188,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
   }
 
   .code-block {
-    background: #2d3748;
-    color: #e2e8f0;
+    background: #f8f9fa;
     padding: 1rem;
     border-radius: 0.5rem;
     overflow-x: auto;
     font-family: monospace;
+    border: 1px solid #e9ecef;
   }
 
   .code-block code {
