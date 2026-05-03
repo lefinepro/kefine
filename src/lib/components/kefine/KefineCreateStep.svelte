@@ -790,16 +790,15 @@
 
  {#if solverSearchActive && solverSearchText.trim()}
    <section data-part="tasks-list">
-     <button type="button" data-part="task-item" onclick={() => { taskEditorOpen = !taskEditorOpen; }}>
+     <div data-part="task-item" onclick={() => { taskEditorOpen = !taskEditorOpen; }}>
        {#if taskEditorOpen}
-         <div class="task-editor-expanded">
+         <div class="task-editor-expanded" onclick={() => { taskEditorOpen = false; }}>
            <div class="task-editor-header">
              <h2>{taskCompleted ? "Task Results" : "Edit Task"}</h2>
-             <button type="button" onclick={() => { taskEditorOpen = false; }} class="close-button">×</button>
            </div>
-           <div style="height: 400px;">
+           <div style="height: 400px;" onclick={(e) => e.stopPropagation()}>
              <ProseKit {editor}>
-               <div {@attach editor.mount} class="ProseMirror box-border min-h-full px-4 py-8 outline-hidden outline-0 text-left" onclick={(e) => e.stopPropagation()}>
+               <div {@attach editor.mount} class="ProseMirror box-border min-h-full px-4 py-8 outline-hidden outline-0 text-left">
                  {#if taskCompleted}
                    <p>Task completed successfully!</p>
                  {/if}
@@ -1905,12 +1904,7 @@
     flex: 0 0 auto;
   }
 
-  button[data-part='task-item'] {
-    border: 0;
-    background: none;
-    padding: 0;
-    margin: 0;
-    width: 100%;
+  [data-part='task-item'] {
     cursor: pointer;
   }
 
