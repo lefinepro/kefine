@@ -6,8 +6,7 @@
   import { createEditor, type NodeJSON } from 'prosekit/core';
   import { ProseKit } from 'prosekit/svelte';
   import { defineBasicExtension } from 'prosekit/basic';
-  import Highlight from 'svelte-highlight';
-  import 'prismjs/components/prism-rust';
+
   // TODO: Add BlockHandle and DropIndicator if available
 
   const PLACEHOLDER_TYPE_DELAY_MS = 58;
@@ -905,7 +904,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                            <span class="diff-file">{diff.file}: <span class="added">+{diff.added}</span> <span class="removed">-{diff.removed}</span></span>
                          {/each}
                        </div>
-                       <Highlight language="rust" code={solution.finalCode} />
+                       <pre class="code-block"><code>{solution.finalCode}</code></pre>
                     </article>
                   {/each}
                 </section>
@@ -2177,6 +2176,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
   .code-diff .diff-header {
     color: #6366f1;
     font-weight: bold;
+  }
+
+  .code-block {
+    background: #f5f5f5;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    overflow-x: auto;
+    font-family: monospace;
+  }
+
+  .code-block code {
+    background: none;
+    padding: 0;
   }
 
   button[data-part='composer-chip'][data-part-tag='true'] {
