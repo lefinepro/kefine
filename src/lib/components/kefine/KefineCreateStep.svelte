@@ -161,50 +161,84 @@
   const mockSolutions = $state([
     {
       id: '1',
-      solver: 'Rust Expert',
-      avatar: 'https://via.placeholder.com/40',
-      title: 'Complete Rust Hello World Implementation',
-      description: 'Added proper error handling and optimized performance',
+      solver: 'Basic Rust Dev',
+      avatar: 'https://via.placeholder.com/40/4CAF50/FFFFFF?text=BR',
+      title: 'Simple Hello World without comments',
+      description: 'Minimal implementation with just the basics',
       diffs: [
-        { file: 'src/main.rs', added: 15, removed: 0 },
-        { file: 'Cargo.toml', added: 5, removed: 2 }
+        { file: 'src/main.rs', added: 3, removed: 0 }
       ],
-      codeDiff: `@@ -1,3 +1,18 @@
-+use std::io;
-+
- fn main() {
--    println!("Hello, world!");
-+    println!("Hello, Rust!");
-+
-+    // Read user input
-+    let mut input = String::new();
-+    io::stdin().read_line(&mut input).expect("Failed to read line");
-+    println!("You entered: {}", input.trim());
- }`
+      codeDiff: `@@ -0,0 +1,3 @@
++fn main() {
++    println!("Hello, world!");
++}`
     },
     {
       id: '2',
-      solver: 'Code Optimizer',
-      avatar: 'https://via.placeholder.com/40',
-      title: 'Memory Optimization and Best Practices',
-      description: 'Improved memory usage and added Rust best practices',
+      solver: 'Commented Rust Expert',
+      avatar: 'https://via.placeholder.com/40/2196F3/FFFFFF?text=CE',
+      title: 'Hello World with detailed comments',
+      description: 'Educational version with explanations for each line',
       diffs: [
-        { file: 'src/main.rs', added: 8, removed: 3 },
-        { file: 'src/lib.rs', added: 12, removed: 0 }
+        { file: 'src/main.rs', added: 10, removed: 0 }
       ],
-      codeDiff: `@@ -5,7 +5,12 @@
-     // Read user input
-     let mut input = String::new();
-     io::stdin().read_line(&mut input).expect("Failed to read line");
--    println!("You entered: {}", input.trim());
-+    let trimmed = input.trim();
-+    println!("You entered: {}", trimmed);
+      codeDiff: `@@ -0,0 +1,10 @@
++// This is the main function - entry point of every Rust program
++fn main() {
++    // Print a greeting message to the console
++    // println! is a macro that prints to stdout with a newline
++    println!("Hello, world!");
 +
-+    // Validate input
-+    if trimmed.is_empty() {
-+        println!("Input was empty!");
-+    }
- }`
++    // The program will exit here
++    // Rust automatically returns () (unit type) from functions
++}`
+    },
+    {
+      id: '3',
+      solver: 'Interactive Rust',
+      avatar: 'https://via.placeholder.com/40/FF9800/FFFFFF?text=IR',
+      title: 'Interactive Hello World with user input',
+      description: 'Reads user input and responds accordingly',
+      diffs: [
+        { file: 'src/main.rs', added: 12, removed: 0 }
+      ],
+      codeDiff: `@@ -0,0 +1,12 @@
++use std::io;
++
++fn main() {
++    println!("Hello, world!");
++
++    println!("What's your name?");
++    let mut name = String::new();
++    io::stdin().read_line(&mut name).expect("Failed to read line");
++
++    println!("Hello, {}!", name.trim());
++}`
+    },
+    {
+      id: '4',
+      solver: 'Modern Rust Patterns',
+      avatar: 'https://via.placeholder.com/40/9C27B0/FFFFFF?text=MP',
+      title: 'Hello World using modern Rust patterns',
+      description: 'Uses Result handling and modern syntax',
+      diffs: [
+        { file: 'src/main.rs', added: 15, removed: 0 }
+      ],
+      codeDiff: `@@ -0,0 +1,15 @@
++use std::io::{self, Write};
++
++fn main() -> Result<(), Box<dyn std::error::Error>> {
++    println!("Hello, world!");
++
++    print!("Enter your name: ");
++    io::stdout().flush()?;
++
++    let mut name = String::new();
++    io::stdin().read_line(&mut name)?;
++
++    println!("Hello, {}!", name.trim());
++    Ok(())
++}`
     }
   ]);
   const isMultilineDraft = $derived(draft.description.includes('\n'));
