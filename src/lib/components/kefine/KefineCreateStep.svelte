@@ -3,9 +3,10 @@
   import type { DraftOrder, OrderView, TemplatePresentation } from './kefine-workflow';
   import { scheduleAfter } from '$lib/utils/helpers';
   import KefineOrderListItem from '$lib/components/kefine/KefineOrderListItem.svelte';
-  import { createEditor } from 'prosekit/core';
+  import { createEditor, type NodeJSON } from 'prosekit/core';
   import { ProseKit } from 'prosekit/svelte';
   import { defineBasicExtension } from 'prosekit/basic';
+  // TODO: Add BlockHandle and DropIndicator if available
 
   const PLACEHOLDER_TYPE_DELAY_MS = 58;
   const PLACEHOLDER_DELETE_DELAY_MS = 34;
@@ -139,7 +140,23 @@
   let placeholderDeleting = $state(false);
   let taskEditorOpen = $state(false);
   let taskCompleted = $state(false);
-  let editor = $state(createEditor({ extension: defineBasicExtension() }));
+
+  const sampleContent: NodeJSON = {
+    type: 'doc',
+    content: [
+      {
+        type: 'heading',
+        attrs: { level: 1 },
+        content: [{ type: 'text', text: 'Task Editor' }]
+      },
+      {
+        type: 'paragraph',
+        content: [{ type: 'text', text: 'Edit your task here...' }]
+      }
+    ]
+  };
+
+  let editor = $state(createEditor({ extension: defineBasicExtension(), defaultContent: sampleContent }));
   const isMultilineDraft = $derived(draft.description.includes('\n'));
   const afeIntroCard = $derived(afe.cards[0] ?? null);
   const afeStepCards = $derived(afe.cards.slice(1));
