@@ -157,6 +157,56 @@
   };
 
   let editor = $state(createEditor({ extension: defineBasicExtension(), defaultContent: sampleContent }));
+
+  const mockSolutions = $state([
+    {
+      id: '1',
+      solver: 'Rust Expert',
+      avatar: 'https://via.placeholder.com/40',
+      title: 'Complete Rust Hello World Implementation',
+      description: 'Added proper error handling and optimized performance',
+      diffs: [
+        { file: 'src/main.rs', added: 15, removed: 0 },
+        { file: 'Cargo.toml', added: 5, removed: 2 }
+      ],
+      codeDiff: `@@ -1,3 +1,18 @@
++use std::io;
++
+ fn main() {
+-    println!("Hello, world!");
++    println!("Hello, Rust!");
++
++    // Read user input
++    let mut input = String::new();
++    io::stdin().read_line(&mut input).expect("Failed to read line");
++    println!("You entered: {}", input.trim());
+ }`
+    },
+    {
+      id: '2',
+      solver: 'Code Optimizer',
+      avatar: 'https://via.placeholder.com/40',
+      title: 'Memory Optimization and Best Practices',
+      description: 'Improved memory usage and added Rust best practices',
+      diffs: [
+        { file: 'src/main.rs', added: 8, removed: 3 },
+        { file: 'src/lib.rs', added: 12, removed: 0 }
+      ],
+      codeDiff: `@@ -5,7 +5,12 @@
+     // Read user input
+     let mut input = String::new();
+     io::stdin().read_line(&mut input).expect("Failed to read line");
+-    println!("You entered: {}", input.trim());
++    let trimmed = input.trim();
++    println!("You entered: {}", trimmed);
++
++    // Validate input
++    if trimmed.is_empty() {
++        println!("Input was empty!");
++    }
+ }`
+    }
+  ]);
   const isMultilineDraft = $derived(draft.description.includes('\n'));
   const afeIntroCard = $derived(afe.cards[0] ?? null);
   const afeStepCards = $derived(afe.cards.slice(1));
@@ -814,7 +864,29 @@
            </kefine-solver-search-indicator>
          </kefine-solver-search-row>
        {/if}
-     </div>
+
+       {#if taskCompleted}
+         <div class="solutions-list">
+           {#each mockSolutions as solution (solution.id)}
+             <div class="solution-card">
+               <div class="solution-header">
+                 <img src={solution.avatar} alt={solution.solver} class="solver-avatar" />
+                 <div class="solution-meta">
+                   <strong>{solution.solver}</strong>
+                   <span>{solution.title}</span>
+                 </div>
+               </div>
+               <p class="solution-description">{solution.description}</p>
+               <div class="diff-summary">
+                 {#each solution.diffs as diff}
+                   <span class="diff-file">{diff.file}: +{diff.added} -{diff.removed}</span>
+                 {/each}
+               </div>
+               <pre class="code-diff"><code>{solution.codeDiff}</code></pre>
+             </div>
+           {/each}
+         </div>
+       {/if}
    </section>
  {/if}
 
@@ -1939,6 +2011,81 @@
     cursor: pointer;
     padding: 0.5rem;
     color: var(--lefine-text);
+  }
+
+  .solutions-list {
+    margin-top: 1rem;
+    display: grid;
+    gap: 1rem;
+  }
+
+  .solution-card {
+    border: 1px solid var(--kef-line);
+    border-radius: var(--kef-radius-ui);
+    padding: 1rem;
+    background: var(--kef-bg-card);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .solution-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .solver-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+  }
+
+  .solution-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .solution-meta strong {
+    font-size: 1rem;
+    color: var(--lefine-text);
+  }
+
+  .solution-meta span {
+    font-size: 0.9rem;
+    color: var(--lefine-text-soft);
+  }
+
+  .solution-description {
+    margin: 0.5rem 0;
+    color: var(--lefine-text);
+  }
+
+  .diff-summary {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .diff-file {
+    font-size: 0.8rem;
+    background: var(--kef-bg);
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    color: var(--lefine-text-soft);
+  }
+
+  .code-diff {
+    background: var(--kef-bg);
+    padding: 1rem;
+    border-radius: 0.5rem;
+    overflow-x: auto;
+    font-size: 0.85rem;
+    color: var(--lefine-text);
+  }
+
+  .code-diff code {
+    font-family: monospace;
   }
 
   button[data-part='composer-chip'][data-part-tag='true'] {
