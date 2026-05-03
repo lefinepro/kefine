@@ -747,7 +747,7 @@
   <KefineModal title={taskCompleted ? "Task Results" : "Edit Task"} onClose={() => { taskEditorOpen = false; }}>
     <div style="height: 400px;">
       <ProseKit {editor}>
-        <div use:editor.mount class="p-4">
+        <div bind:this={editor.mount} class="p-4">
           {#if taskCompleted}
             <p>Task completed successfully!</p>
           {/if}
