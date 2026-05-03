@@ -3,9 +3,11 @@
   import type { DraftOrder, OrderView, TemplatePresentation } from './kefine-workflow';
   import { scheduleAfter } from '$lib/utils/helpers';
   import KefineOrderListItem from '$lib/components/kefine/KefineOrderListItem.svelte';
+  import 'prosekit/basic/style.css';
+  import 'prosekit/basic/typography.css';
   import { createEditor } from 'prosekit/core';
   import { ProseKit } from 'prosekit/svelte';
-  import { defineBasicExtension } from 'prosekit/extensions/basic';
+  import { defineBasicExtension } from 'prosekit/basic';
 
   const PLACEHOLDER_TYPE_DELAY_MS = 58;
   const PLACEHOLDER_DELETE_DELAY_MS = 34;
@@ -744,7 +746,9 @@
 {#if taskEditorOpen}
   <KefineModal title="Edit Task" onClose={() => { taskEditorOpen = false; }}>
     <div style="height: 400px;">
-      <ProseKit {editor} />
+      <ProseKit {editor}>
+        <div use:editor.mount class="p-4"></div>
+      </ProseKit>
     </div>
   </KefineModal>
 {/if}
