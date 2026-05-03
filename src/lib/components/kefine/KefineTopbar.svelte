@@ -721,7 +721,8 @@
   }
 
   kefine-sidebar-stack {
-    display: grid;
+    display: flex;
+    flex-direction: row;
     gap: 0.45rem;
     width: 100%;
     border-radius: calc(var(--kef-radius-ui) - 0.06rem);
@@ -933,13 +934,15 @@
     }
 
     kefine-sidebar-root:not([data-expanded='true']) kefine-sidebar-toolbar {
-      display: grid;
-      justify-items: center;
-      overflow: visible;
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
     }
 
     kefine-sidebar-root:not([data-expanded='true']) kefine-sidebar-stack {
-      justify-items: center;
+      justify-content: center;
     }
 
     kefine-sidebar-popover {
@@ -957,18 +960,25 @@
 
     kefine-sidebar-stack {
       width: 100%;
-      max-height: calc(100dvh - 5.25rem);
-      overflow-y: auto;
+      overflow-x: auto;
+      overflow-y: hidden;
       background: transparent;
+      flex-wrap: nowrap;
     }
 
     kefine-sidebar-nav,
     kefine-sidebar-toolbar {
       width: 100%;
+      flex-shrink: 0;
     }
 
     kefine-sidebar-toolbar {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: nowrap;
       gap: 0.35rem;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
     }
 
     button[data-part='auth'] {

@@ -65,7 +65,6 @@ services:
       - "5173:5173"
     networks:
       - kefine
-      - source-forgejo
 
 volumes:
   postgres-data:
@@ -73,6 +72,3 @@ volumes:
 networks:
   kefine:
     name: kefine
-  source-forgejo:
-    name: source-forgejo_default
-    external: true
