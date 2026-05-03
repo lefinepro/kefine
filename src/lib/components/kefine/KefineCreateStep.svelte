@@ -6,6 +6,8 @@
   import { createEditor, type NodeJSON } from 'prosekit/core';
   import { ProseKit } from 'prosekit/svelte';
   import { defineBasicExtension } from 'prosekit/basic';
+  import Highlight from 'svelte-highlight';
+  import 'prismjs/components/prism-rust';
   // TODO: Add BlockHandle and DropIndicator if available
 
   const PLACEHOLDER_TYPE_DELAY_MS = 58;
@@ -168,10 +170,9 @@
       diffs: [
         { file: 'src/main.rs', added: 3, removed: 0 }
       ],
-      codeDiff: `@@ -0,0 +1,3 @@
-+fn main() {
-+    println!("Hello, world!");
-+}`
+      finalCode: `fn main() {
+    println!("Hello, world!");
+}`
     },
     {
       id: '2',
@@ -182,16 +183,15 @@
       diffs: [
         { file: 'src/main.rs', added: 10, removed: 0 }
       ],
-      codeDiff: `@@ -0,0 +1,10 @@
-+// This is the main function - entry point of every Rust program
-+fn main() {
-+    // Print a greeting message to the console
-+    // println! is a macro that prints to stdout with a newline
-+    println!("Hello, world!");
-+
-+    // The program will exit here
-+    // Rust automatically returns () (unit type) from functions
-+}`
+      finalCode: `// This is the main function - entry point of every Rust program
+fn main() {
+    // Print a greeting message to the console
+    // println! is a macro that prints to stdout with a newline
+    println!("Hello, world!");
+
+    // The program will exit here
+    // Rust automatically returns () (unit type) from functions
+}`
     },
     {
       id: '3',
@@ -202,18 +202,17 @@
       diffs: [
         { file: 'src/main.rs', added: 12, removed: 0 }
       ],
-      codeDiff: `@@ -0,0 +1,12 @@
-+use std::io;
-+
-+fn main() {
-+    println!("Hello, world!");
-+
-+    println!("What's your name?");
-+    let mut name = String::new();
-+    io::stdin().read_line(&mut name).expect("Failed to read line");
-+
-+    println!("Hello, {}!", name.trim());
-+}`
+      finalCode: `use std::io;
+
+fn main() {
+    println!("Hello, world!");
+
+    println!("What's your name?");
+    let mut name = String::new();
+    io::stdin().read_line(&mut name).expect("Failed to read line");
+
+    println!("Hello, {}!", name.trim());
+}`
     },
     {
       id: '4',
@@ -224,21 +223,20 @@
       diffs: [
         { file: 'src/main.rs', added: 15, removed: 0 }
       ],
-      codeDiff: `@@ -0,0 +1,15 @@
-+use std::io::{self, Write};
-+
-+fn main() -> Result<(), Box<dyn std::error::Error>> {
-+    println!("Hello, world!");
-+
-+    print!("Enter your name: ");
-+    io::stdout().flush()?;
-+
-+    let mut name = String::new();
-+    io::stdin().read_line(&mut name)?;
-+
-+    println!("Hello, {}!", name.trim());
-+    Ok(())
-+}`
+      finalCode: `use std::io::{self, Write};
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    println!("Hello, world!");
+
+    print!("Enter your name: ");
+    io::stdout().flush()?;
+
+    let mut name = String::new();
+    io::stdin().read_line(&mut name)?;
+
+    println!("Hello, {}!", name.trim());
+    Ok(())
+}`
     }
   ]);
   const isMultilineDraft = $derived(draft.description.includes('\n'));
@@ -902,12 +900,12 @@
                         </div>
                       </header>
                       <p class="solution-description">{solution.description}</p>
-                      <div class="diff-summary">
-                        {#each solution.diffs as diff}
-                          <span class="diff-file">{diff.file}: +{diff.added} -{diff.removed}</span>
-                        {/each}
-                      </div>
-                      <pre class="code-diff"><code>{@html solution.codeDiff.replace(/^\+(.+)$/gm, '<span class="added">+$1</span>').replace(/^-(.+)$/gm, '<span class="removed">-$1</span>').replace(/^@@(.+)$/gm, '<span class="diff-header">@@$1</span>')}</code></pre>
+                       <div class="diff-summary">
+                         {#each solution.diffs as diff}
+                           <span class="diff-file">{diff.file}: <span class="added">+{diff.added}</span> <span class="removed">-{diff.removed}</span></span>
+                         {/each}
+                       </div>
+                       <Highlight language="rust" code={solution.finalCode} />
                     </article>
                   {/each}
                 </section>
@@ -1772,6 +1770,33 @@
     transform: rotate(2.6deg);
   }
 
+  .solution-card .diff-summary .added {
+    color: #4CAF50;
+    font-weight: bold;
+  }
+
+  .solution-card .diff-summary .removed {
+    color: #F44336;
+    font-weight: bold;
+  }
+
+  .solution-card .code-diff .added {
+    background-color: rgba(76, 175, 80, 0.1);
+    display: block;
+  }
+
+  .solution-card .code-diff .removed {
+    background-color: rgba(244, 67, 54, 0.1);
+    display: block;
+    text-decoration: line-through;
+  }
+
+  .solution-card .code-diff .diff-header {
+    color: #9E9E9E;
+    font-weight: bold;
+    display: block;
+  }
+
   :global(:root[data-kefine-theme='dark']) lef-afe-flow {
     --afe-ink: #1c120b;
     --afe-ink-soft: #1c120b;
@@ -2055,8 +2080,19 @@
 
   .solutions-list {
     margin-top: 1rem;
-    display: grid;
-    gap: 1rem;
+    display: flex;
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    gap: 0.75rem;
+    padding-bottom: 0.5rem;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .solution-card {
+    flex-shrink: 0;
+    width: 350px;
+    min-width: 350px;
   }
 
   .solution-card {
