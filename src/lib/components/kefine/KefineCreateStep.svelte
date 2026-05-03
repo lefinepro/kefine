@@ -2665,5 +2665,21 @@
       width: 100%;
       min-height: 0;
     }
+
+    .solutions-list {
+      display: flex;
+      flex-direction: row;
+      overflow-x: auto;
+      overflow-y: hidden;
+      gap: 0.75rem;
+      padding-bottom: 0.5rem;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .solution-card {
+      flex-shrink: 0;
+      width: 280px;
+      min-width: 280px;
+    }
   }
 </style>
