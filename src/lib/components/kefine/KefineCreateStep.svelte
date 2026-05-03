@@ -846,6 +846,7 @@
     margin-inline: auto;
     border: 0;
     box-shadow: none;
+    background: none;
   }
 
   lef-afe-showcase {
