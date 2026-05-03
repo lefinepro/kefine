@@ -33,10 +33,8 @@ export default defineConfig({
   build: {
     target: 'esnext',
     chunkSizeWarningLimit: 600,
-    rolldownOptions: {
-      checks: {
-        pluginTimings: false
-      }
+    rollupOptions: {
+      // Use rollup instead of rolldown to avoid noble package issues
     }
   }
 });
