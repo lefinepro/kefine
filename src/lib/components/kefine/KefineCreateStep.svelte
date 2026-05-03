@@ -3,7 +3,6 @@
   import type { DraftOrder, OrderView, TemplatePresentation } from './kefine-workflow';
   import { scheduleAfter } from '$lib/utils/helpers';
   import KefineOrderListItem from '$lib/components/kefine/KefineOrderListItem.svelte';
-  import KefineModal from '$lib/components/kefine/KefineModal.svelte';
   import { createEditor } from 'prosekit/core';
   import { ProseKit } from 'prosekit/svelte';
   import { defineBasicExtension } from 'prosekit/basic';
@@ -744,7 +743,7 @@
 </article>
 
 {#if taskEditorOpen}
-  <KefineModal open={taskEditorOpen} onClose={() => { taskEditorOpen = false; }}>
+  <div class="task-editor-expanded">
     <h2>{taskCompleted ? "Task Results" : "Edit Task"}</h2>
     <div style="height: 400px;">
       <ProseKit {editor}>
@@ -755,7 +754,8 @@
         </div>
       </ProseKit>
     </div>
-  </KefineModal>
+    <button type="button" onclick={() => { taskEditorOpen = false; }}>Close</button>
+  </div>
 {/if}
 
 {#if pinnedServices.length > 0}
@@ -1893,6 +1893,14 @@
     margin: 0;
     width: 100%;
     cursor: pointer;
+  }
+
+  .task-editor-expanded {
+    margin-top: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--kef-line);
+    border-radius: var(--kef-radius-ui);
+    background: var(--kef-bg-card);
   }
 
   button[data-part='composer-chip'][data-part-tag='true'] {
