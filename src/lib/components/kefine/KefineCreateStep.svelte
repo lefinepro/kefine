@@ -3,8 +3,7 @@
   import type { DraftOrder, OrderView, TemplatePresentation } from './kefine-workflow';
   import { scheduleAfter } from '$lib/utils/helpers';
   import KefineOrderListItem from '$lib/components/kefine/KefineOrderListItem.svelte';
-  import 'prosekit/basic/style.css';
-  import 'prosekit/basic/typography.css';
+  import KefineModal from '$lib/components/kefine/KefineModal.svelte';
   import { createEditor } from 'prosekit/core';
   import { ProseKit } from 'prosekit/svelte';
   import { defineBasicExtension } from 'prosekit/basic';
@@ -782,10 +781,6 @@
   </lef-services-showcase>
 {/if}
 
- {#if afeIntroCard}
-   <lef-afe-showcase-heading>{afeIntroCard.title}</lef-afe-showcase-heading>
- {/if}
-
  {#if solverSearchActive && solverSearchText.trim()}
    <section data-part="tasks-list">
      <button type="button" data-part="task-item" onclick={() => { taskEditorOpen = true; }}>
@@ -797,6 +792,10 @@
        </kefine-solver-search-row>
      </button>
    </section>
+ {/if}
+
+ {#if afeIntroCard}
+   <lef-afe-showcase-heading>{afeIntroCard.title}</lef-afe-showcase-heading>
  {/if}
 
 <lef-afe-showcase>
