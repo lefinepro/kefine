@@ -288,7 +288,7 @@
   });
 
   $effect(() => {
-    if (solverSearchActive && solverSearchText.trim()) {
+    if (solverSearchActive && solverSearchText.trim() === "Нужен hello world на rust") {
       const timer = setTimeout(() => {
         // Simulate task completion
         taskCompleted = true;
