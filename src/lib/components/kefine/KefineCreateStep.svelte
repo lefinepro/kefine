@@ -792,7 +792,7 @@
    <section data-part="tasks-list">
      <div data-part="task-item" onclick={() => { taskEditorOpen = !taskEditorOpen; }}>
        {#if taskEditorOpen}
-         <div class="task-editor-expanded" onclick={() => { taskEditorOpen = false; }}>
+         <div class="task-editor-expanded" onclick={(e) => { e.stopPropagation(); taskEditorOpen = false; }}>
            <div class="task-editor-header">
              <h2>{taskCompleted ? "Task Results" : "Edit Task"}</h2>
            </div>
