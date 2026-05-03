@@ -792,11 +792,14 @@
    <section data-part="tasks-list">
      <button type="button" data-part="task-item" onclick={() => { taskEditorOpen = !taskEditorOpen; }}>
        {#if taskEditorOpen}
-         <div class="task-editor-expanded" onclick={(e) => e.stopPropagation()}>
-           <h2>{taskCompleted ? "Task Results" : "Edit Task"}</h2>
+         <div class="task-editor-expanded">
+           <div class="task-editor-header">
+             <h2>{taskCompleted ? "Task Results" : "Edit Task"}</h2>
+             <button type="button" onclick={() => { taskEditorOpen = false; }} class="close-button">×</button>
+           </div>
            <div style="height: 400px;">
              <ProseKit {editor}>
-               <div {@attach editor.mount} class="ProseMirror box-border min-h-full px-4 py-8 outline-hidden outline-0 text-left">
+               <div {@attach editor.mount} class="ProseMirror box-border min-h-full px-4 py-8 outline-hidden outline-0 text-left" onclick={(e) => e.stopPropagation()}>
                  {#if taskCompleted}
                    <p>Task completed successfully!</p>
                  {/if}
@@ -1913,11 +1916,35 @@
 
   .task-editor-expanded {
     margin-top: 1rem;
-    padding: 1rem;
     border: 2px solid var(--kef-line);
     border-radius: var(--kef-radius-ui);
     background: var(--kef-bg-card);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+  }
+
+  .task-editor-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background: var(--kef-bg);
+    border-bottom: 1px solid var(--kef-line);
+  }
+
+  .task-editor-header h2 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+  }
+
+  .close-button {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    color: var(--lefine-text);
   }
 
   button[data-part='composer-chip'][data-part-tag='true'] {
