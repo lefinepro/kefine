@@ -875,52 +875,53 @@
  {#if solverSearchActive && solverSearchText.trim()}
    <section data-part="tasks-list">
      <div data-part="task-item" onclick={() => { taskEditorOpen = !taskEditorOpen; }}>
-       {#if taskEditorOpen}
-         <div class="task-editor-expanded" onclick={(e) => { e.stopPropagation(); taskEditorOpen = false; }}>
-           <div class="task-editor-header">
-             <h2>{taskCompleted ? "Task Results" : "Edit Task"}</h2>
-           </div>
-           <div style="height: 400px;" onclick={(e) => e.stopPropagation()}>
-             <ProseKit {editor}>
-               <div {@attach editor.mount} class="ProseMirror box-border min-h-full px-4 py-8 outline-hidden outline-0 text-left">
-                 {#if taskCompleted}
-                   <p>Task completed successfully!</p>
-                 {/if}
-               </div>
-             </ProseKit>
-           </div>
-         </div>
-       {:else}
-         <kefine-solver-search-row aria-live="polite">
-           <lefine-text>{solverSearchText}</lefine-text>
-           <kefine-solver-search-indicator aria-label={taskCompleted ? 'Completed' : solverSearchLabel} title={taskCompleted ? 'Completed' : solverSearchLabel} data-completed={taskCompleted}>
-             <kefine-solver-search-dot aria-hidden="true"></kefine-solver-search-dot>
-           </kefine-solver-search-indicator>
-         </kefine-solver-search-row>
-       {/if}
-
-       {#if taskCompleted}
-         <section class="solutions-list">
-           {#each mockSolutions as solution (solution.id)}
-             <article class="solution-card">
-               <header class="solution-header">
-                 <img src={solution.avatar} alt={solution.solver} class="solver-avatar" />
-                 <div class="solution-meta">
-                   <strong>{solution.solver}</strong>
-                   <span>{solution.title}</span>
-                 </div>
-               </header>
-               <p class="solution-description">{solution.description}</p>
-               <div class="diff-summary">
-                 {#each solution.diffs as diff}
-                   <span class="diff-file">{diff.file}: +{diff.added} -{diff.removed}</span>
-                 {/each}
-               </div>
-               <pre class="code-diff"><code>{@html solution.codeDiff.replace(/^\+(.+)$/gm, '<span class="added">+$1</span>').replace(/^-(.+)$/gm, '<span class="removed">-$1</span>').replace(/^@@(.+)$/gm, '<span class="diff-header">@@$1</span>')}</code></pre>
-             </article>
-           {/each}
-         </section>
-       {/if}
+        {#if taskEditorOpen}
+          <div class="task-editor-expanded" onclick={(e) => { e.stopPropagation(); taskEditorOpen = false; }}>
+            <div class="task-editor-header">
+              <h2>{taskCompleted ? "Task Results" : "Edit Task"}</h2>
+            </div>
+            <div class="task-editor-content" onclick={(e) => e.stopPropagation()}>
+              <div style="height: 300px;" class="task-editor-editor">
+                <ProseKit {editor}>
+                  <div {@attach editor.mount} class="ProseMirror box-border min-h-full px-4 py-8 outline-hidden outline-0 text-left">
+                    {#if taskCompleted}
+                      <p>Task completed successfully!</p>
+                    {/if}
+                  </div>
+                </ProseKit>
+              </div>
+              {#if taskCompleted}
+                <section class="solutions-list">
+                  {#each mockSolutions as solution (solution.id)}
+                    <article class="solution-card">
+                      <header class="solution-header">
+                        <img src={solution.avatar} alt={solution.solver} class="solver-avatar" />
+                        <div class="solution-meta">
+                          <strong>{solution.solver}</strong>
+                          <span>{solution.title}</span>
+                        </div>
+                      </header>
+                      <p class="solution-description">{solution.description}</p>
+                      <div class="diff-summary">
+                        {#each solution.diffs as diff}
+                          <span class="diff-file">{diff.file}: +{diff.added} -{diff.removed}</span>
+                        {/each}
+                      </div>
+                      <pre class="code-diff"><code>{@html solution.codeDiff.replace(/^\+(.+)$/gm, '<span class="added">+$1</span>').replace(/^-(.+)$/gm, '<span class="removed">-$1</span>').replace(/^@@(.+)$/gm, '<span class="diff-header">@@$1</span>')}</code></pre>
+                    </article>
+                  {/each}
+                </section>
+              {/if}
+            </div>
+          </div>
+        {:else}
+          <kefine-solver-search-row aria-live="polite">
+            <lefine-text>{solverSearchText}</lefine-text>
+            <kefine-solver-search-indicator aria-label={taskCompleted ? 'Completed' : solverSearchLabel} title={taskCompleted ? 'Completed' : solverSearchLabel} data-completed={taskCompleted}>
+              <kefine-solver-search-dot aria-hidden="true"></kefine-solver-search-dot>
+            </kefine-solver-search-indicator>
+          </kefine-solver-search-row>
+        {/if}
    </section>
  {/if}
 
@@ -2047,16 +2048,18 @@
     color: var(--lefine-text);
   }
 
+  .task-editor-content {
+    max-height: 600px;
+    overflow-y: auto;
+  }
+
   .solutions-list {
     margin-top: 1rem;
-    display: flex;
+    display: grid;
     gap: 1rem;
-    overflow-x: auto;
-    padding-bottom: 0.5rem;
   }
 
   .solution-card {
-    flex: 0 0 400px;
     border: 1px solid var(--kef-line);
     border-radius: var(--kef-radius-ui);
     padding: 1rem;
