@@ -814,7 +814,7 @@
            </kefine-solver-search-indicator>
          </kefine-solver-search-row>
        {/if}
-     </button>
+     </div>
    </section>
  {/if}
 
