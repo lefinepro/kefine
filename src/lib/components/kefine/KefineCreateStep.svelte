@@ -139,6 +139,7 @@
   let placeholderCharIndex = $state(0);
   let placeholderDeleting = $state(false);
   let taskEditorOpen = $state(false);
+  let taskCompleted = $state(false);
   let editor = $state(createEditor({ extension: defineBasicExtension() }));
   const isMultilineDraft = $derived(draft.description.includes('\n'));
   const afeIntroCard = $derived(afe.cards[0] ?? null);
@@ -274,8 +275,8 @@
     if (solverSearchActive && solverSearchText.trim()) {
       const timer = setTimeout(() => {
         // Simulate task completion
+        taskCompleted = true;
         taskEditorOpen = false;
-        // Perhaps call onSubmit or notify completion
       }, 5000);
       return () => clearTimeout(timer);
     }
@@ -786,7 +787,7 @@
      <button type="button" data-part="task-item" onclick={() => { taskEditorOpen = true; }}>
        <kefine-solver-search-row aria-live="polite">
          <lefine-text>{solverSearchText}</lefine-text>
-         <kefine-solver-search-indicator aria-label={solverSearchLabel} title={solverSearchLabel}>
+         <kefine-solver-search-indicator aria-label={taskCompleted ? 'Completed' : solverSearchLabel} title={taskCompleted ? 'Completed' : solverSearchLabel} data-completed={taskCompleted}>
            <kefine-solver-search-dot aria-hidden="true"></kefine-solver-search-dot>
          </kefine-solver-search-indicator>
        </kefine-solver-search-row>
@@ -1966,6 +1967,12 @@
     animation: kefine-solver-search-pulse 1.65s var(--kef-ease-soft) infinite;
   }
 
+  kefine-solver-search-indicator[data-completed='true'] {
+    animation: none;
+    color: color-mix(in oklab, #22c55e 88%, #166534);
+    background: color-mix(in oklab, #22c55e 9%, var(--kef-bg-card));
+  }
+
   kefine-solver-search-indicator::before {
     content: '';
     position: absolute;
@@ -1974,6 +1981,12 @@
     border-top-color: currentColor;
     border-radius: inherit;
     animation: kefine-solver-search-spin 0.9s linear infinite;
+  }
+
+  kefine-solver-search-indicator[data-completed='true']::before {
+    animation: none;
+    border-color: currentColor;
+    border-top-color: transparent;
   }
 
   kefine-solver-search-dot {
