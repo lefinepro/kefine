@@ -792,17 +792,17 @@
    <section data-part="tasks-list">
      <button type="button" data-part="task-item" onclick={() => { taskEditorOpen = !taskEditorOpen; }}>
        {#if taskEditorOpen}
-         <div class="task-editor-expanded">
+         <div class="task-editor-expanded" onclick={(e) => e.stopPropagation()}>
            <h2>{taskCompleted ? "Task Results" : "Edit Task"}</h2>
-    <div style="height: 400px;">
-      <ProseKit {editor}>
-        <div {@attach editor.mount} class="ProseMirror box-border min-h-full px-4 py-8 outline-hidden outline-0">
-          {#if taskCompleted}
-            <p>Task completed successfully!</p>
-          {/if}
-        </div>
-      </ProseKit>
-    </div>
+           <div style="height: 400px;">
+             <ProseKit {editor}>
+               <div {@attach editor.mount} class="ProseMirror box-border min-h-full px-4 py-8 outline-hidden outline-0 text-left">
+                 {#if taskCompleted}
+                   <p>Task completed successfully!</p>
+                 {/if}
+               </div>
+             </ProseKit>
+           </div>
          </div>
        {:else}
          <kefine-solver-search-row aria-live="polite">
@@ -1914,9 +1914,10 @@
   .task-editor-expanded {
     margin-top: 1rem;
     padding: 1rem;
-    border: 1px solid var(--kef-line);
+    border: 2px solid var(--kef-line);
     border-radius: var(--kef-radius-ui);
     background: var(--kef-bg-card);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   }
 
   button[data-part='composer-chip'][data-part-tag='true'] {
