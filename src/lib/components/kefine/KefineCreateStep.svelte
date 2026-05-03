@@ -736,27 +736,11 @@
             onOpenKeydown={(event) => handleOpenOrderKeydown(order, event)}
             onDelete={(event) => handleDeleteClick(order, event)}
           />
-        {/each}
+        {/each>
       </ul>
     </section>
   {/if}
 </article>
-
-{#if taskEditorOpen}
-  <div class="task-editor-expanded">
-    <h2>{taskCompleted ? "Task Results" : "Edit Task"}</h2>
-    <div style="height: 400px;">
-      <ProseKit {editor}>
-        <div bind:this={editor.mount} class="p-4">
-          {#if taskCompleted}
-            <p>Task completed successfully!</p>
-          {/if}
-        </div>
-      </ProseKit>
-    </div>
-    <button type="button" onclick={() => { taskEditorOpen = false; }}>Close</button>
-  </div>
-{/if}
 
 {#if pinnedServices.length > 0}
   <lef-services-showcase>
@@ -789,13 +773,28 @@
 
  {#if solverSearchActive && solverSearchText.trim()}
    <section data-part="tasks-list">
-     <button type="button" data-part="task-item" onclick={() => { taskEditorOpen = true; }}>
-       <kefine-solver-search-row aria-live="polite">
-         <lefine-text>{solverSearchText}</lefine-text>
-         <kefine-solver-search-indicator aria-label={taskCompleted ? 'Completed' : solverSearchLabel} title={taskCompleted ? 'Completed' : solverSearchLabel} data-completed={taskCompleted}>
-           <kefine-solver-search-dot aria-hidden="true"></kefine-solver-search-dot>
-         </kefine-solver-search-indicator>
-       </kefine-solver-search-row>
+     <button type="button" data-part="task-item" onclick={() => { taskEditorOpen = !taskEditorOpen; }}>
+       {#if taskEditorOpen}
+         <div class="task-editor-expanded">
+           <h2>{taskCompleted ? "Task Results" : "Edit Task"}</h2>
+           <div style="height: 400px;">
+             <ProseKit {editor}>
+               <div bind:this={editor.mount} class="p-4">
+                 {#if taskCompleted}
+                   <p>Task completed successfully!</p>
+                 {/if}
+               </div>
+             </ProseKit>
+           </div>
+         </div>
+       {:else}
+         <kefine-solver-search-row aria-live="polite">
+           <lefine-text>{solverSearchText}</lefine-text>
+           <kefine-solver-search-indicator aria-label={taskCompleted ? 'Completed' : solverSearchLabel} title={taskCompleted ? 'Completed' : solverSearchLabel} data-completed={taskCompleted}>
+             <kefine-solver-search-dot aria-hidden="true"></kefine-solver-search-dot>
+           </kefine-solver-search-indicator>
+         </kefine-solver-search-row>
+       {/if}
      </button>
    </section>
  {/if}
