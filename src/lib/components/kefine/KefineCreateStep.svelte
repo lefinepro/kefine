@@ -899,22 +899,33 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
               {#if taskCompleted}
                 <section class="solutions-list">
                   {#each mockSolutions as solution (solution.id)}
-                    <article class="solution-card">
-                      <header class="solution-header">
-                        <img src={solution.avatar} alt={solution.solver} class="solver-avatar" />
-                        <div class="solution-meta">
-                          <strong>{solution.solver}</strong>
-                          <span>{solution.title}</span>
-                        </div>
-                      </header>
-                      <p class="solution-description">{solution.description}</p>
-                       <div class="diff-summary">
-                         {#each solution.diffs as diff}
-                           <span class="diff-file">{diff.file}: <span class="added">+{diff.added}</span> <span class="removed">-{diff.removed}</span></span>
-                         {/each}
+                     <article class="solution-card">
+                       <aside class="solution-sidebar">
+                         <h4 class="sidebar-title">Files</h4>
+                         <ul class="file-list">
+                           {#each solution.diffs as diff}
+                             <li class="file-item">
+                               <span class="file-name">{diff.file}</span>
+                               <span class="file-changes">
+                                 <span class="added">+{diff.added}</span>
+                                 <span class="removed">-{diff.removed}</span>
+                               </span>
+                             </li>
+                           {/each}
+                         </ul>
+                       </aside>
+                       <div class="solution-content">
+                         <header class="solution-header">
+                           <img src={solution.avatar} alt={solution.solver} class="solver-avatar" />
+                           <div class="solution-meta">
+                             <strong>{solution.solver}</strong>
+                             <span>{solution.title}</span>
+                           </div>
+                         </header>
+                         <p class="solution-description">{solution.description}</p>
+                         <pre class="code-block"><code class="language-rust">{solution.finalCode}</code></pre>
                        </div>
-                       <pre class="code-block"><code class="language-rust">{solution.finalCode}</code></pre>
-                    </article>
+                     </article>
                   {/each}
                 </section>
               {/if}
@@ -2187,12 +2198,100 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     font-weight: bold;
   }
 
+  .solution-card {
+    display: flex;
+    background: var(--kef-bg-card, #ffffff);
+    border: 1px solid var(--kef-border, #e9ecef);
+    border-radius: 0.75rem;
+    overflow: hidden;
+    margin-bottom: 1rem;
+    height: fit-content;
+  }
+
+  .solution-sidebar {
+    width: 200px;
+    background: var(--kef-bg-soft, #f8f9fa);
+    padding: 1rem;
+    border-right: 1px solid var(--kef-border, #e9ecef);
+  }
+
+  .sidebar-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem 0;
+    color: var(--lefine-text);
+  }
+
+  .file-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .file-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.25rem 0;
+    font-size: 0.8rem;
+  }
+
+  .file-name {
+    flex: 1;
+    color: var(--lefine-text);
+    font-family: monospace;
+  }
+
+  .file-changes {
+    font-size: 0.75rem;
+  }
+
+  .solution-content {
+    flex: 1;
+    padding: 1rem;
+  }
+
+  .solution-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .solver-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+  }
+
+  .solution-meta {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .solution-meta strong {
+    font-size: 1rem;
+    color: var(--lefine-text);
+  }
+
+  .solution-meta span {
+    font-size: 0.85rem;
+    color: var(--lefine-text-soft);
+  }
+
+  .solution-description {
+    margin: 0.5rem 0;
+    color: var(--lefine-text-soft);
+    line-height: 1.4;
+  }
+
   .code-block {
     padding: 1rem;
     border-radius: 0.5rem;
     overflow-x: auto;
     font-family: monospace;
     border: 1px solid #e9ecef;
+    margin-top: 0.5rem;
   }
 
   .code-block pre {
