@@ -2179,7 +2179,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
   }
 
   .code-block {
-    background: #f5f5f5;
+    background: #2d3748;
+    color: #e2e8f0;
     padding: 1rem;
     border-radius: 0.5rem;
     overflow-x: auto;
