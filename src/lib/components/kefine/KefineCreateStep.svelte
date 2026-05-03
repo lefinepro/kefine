@@ -777,15 +777,15 @@
        {#if taskEditorOpen}
          <div class="task-editor-expanded">
            <h2>{taskCompleted ? "Task Results" : "Edit Task"}</h2>
-           <div style="height: 400px;">
-             <ProseKit {editor}>
-               <div bind:this={editor.mount} class="p-4">
-                 {#if taskCompleted}
-                   <p>Task completed successfully!</p>
-                 {/if}
-               </div>
-             </ProseKit>
-           </div>
+    <div style="height: 400px;">
+      <ProseKit {editor}>
+        <div {@attach editor.mount} class="ProseMirror box-border min-h-full px-4 py-8 outline-hidden outline-0">
+          {#if taskCompleted}
+            <p>Task completed successfully!</p>
+          {/if}
+        </div>
+      </ProseKit>
+    </div>
          </div>
        {:else}
          <kefine-solver-search-row aria-live="polite">
