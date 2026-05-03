@@ -1,10 +1,9 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
 import { resolve } from 'node:path';
-import { nodePolyfills } from 'vite-plugin-node-polyfills';
 
 export default defineConfig({
-  plugins: [sveltekit(), nodePolyfills()],
+  plugins: [sveltekit()],
   resolve: {
     alias: {
       buffer: resolve(__dirname, 'node_modules/buffer')
@@ -12,6 +11,12 @@ export default defineConfig({
   },
   optimizeDeps: {
     exclude: ['@noble/curves', '@noble/hashes']
+  },
+  ssr: {
+    noExternal: ['@noble/curves', '@noble/hashes']
+  },
+  define: {
+    global: 'globalThis'
   },
   server: {
     allowedHosts: ['dev-proxy.col.pub'],
