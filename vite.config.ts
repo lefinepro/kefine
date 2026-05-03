@@ -1,9 +1,10 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
 import { resolve } from 'node:path';
+import { nodePolyfills } from 'vite-plugin-node-polyfills';
 
 export default defineConfig({
-  plugins: [sveltekit()],
+  plugins: [sveltekit(), nodePolyfills()],
   resolve: {
     alias: {
       buffer: resolve(__dirname, 'node_modules/buffer')
