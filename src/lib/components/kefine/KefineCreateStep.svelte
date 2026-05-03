@@ -736,7 +736,7 @@
             onOpenKeydown={(event) => handleOpenOrderKeydown(order, event)}
             onDelete={(event) => handleDeleteClick(order, event)}
           />
-        {/each>
+        {/each}
       </ul>
     </section>
   {/if}
