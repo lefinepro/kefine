@@ -2298,6 +2298,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     margin: 0;
   }
 
+  .solutions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    max-width: 100%;
+  }
+
   .code-block code {
     background: none;
     padding: 0;
