@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { browser } from '$app/environment';
   import KefineModal from '$lib/components/kefine/KefineModal.svelte';
   import KefineProfileSocialLinksCard from '$lib/components/kefine/KefineProfileSocialLinksCard.svelte';
   import type { ProfileSocialLink } from '$lib/types/user';
@@ -19,9 +18,8 @@
     addLink: string;
     save: string;
     signOut: string;
-    shareProfile: string;
     openPublicProfile: string;
-    closedTasks: string;
+    lepos: string;
     publicTask: string;
     viewAccess: string;
     watchAccess: string;
@@ -30,11 +28,8 @@
     cardHint: string;
     cardNumber: string;
     verifyCard: string;
-    bonusBalance: string;
     referralPercent: string;
-    profileCopied: string;
-    taskCopied: string;
-    shareTask: string;
+    openTask: string;
   };
 
   let {
@@ -42,7 +37,6 @@
     profile,
     tasks,
     profileUrl,
-    taskShareBaseUrl,
     labels,
     onClose,
     onSave,
@@ -54,7 +48,6 @@
     profile: Profile | null;
     tasks: OrderView[];
     profileUrl: string;
-    taskShareBaseUrl: string;
     labels: Labels;
     onClose: () => void;
     onSave: (payload: {
@@ -80,7 +73,6 @@
   let referralPercent = $state(10);
   let socialLinks = $state<ProfileSocialLink[]>([]);
   let cardNumber = $state('');
-  let copyStatus = $state<'idle' | 'profile' | 'task'>('idle');
 
   $effect(() => {
     username = profile?.username ?? '';
@@ -98,20 +90,6 @@
 
   function removeSocialLink(id: string) {
     socialLinks = socialLinks.filter((link) => link.id !== id);
-  }
-
-  async function copyLink(value: string, kind: 'profile' | 'task') {
-    if (!browser || !navigator.clipboard) {
-      return;
-    }
-
-    await navigator.clipboard.writeText(value);
-    copyStatus = kind;
-    setTimeout(() => {
-      if (copyStatus === kind) {
-        copyStatus = 'idle';
-      }
-    }, 1400);
   }
 
   function updateTaskRule(order: OrderView, mode: TaskAccessMode, patch: { enabled?: boolean; priceUsd?: number }) {
@@ -154,9 +132,6 @@
         <p>{labels.subtitle}</p>
       </lefine-box>
       <kefine-profile-header-actions>
-        <button type="button" data-variant="ghost" onclick={() => copyLink(profileUrl, 'profile')}>
-          {copyStatus === 'profile' ? labels.profileCopied : labels.shareProfile}
-        </button>
         <a href={profileUrl} target="_blank" rel="noreferrer">{labels.openPublicProfile}</a>
       </kefine-profile-header-actions>
     </kefine-profile-header>
@@ -183,10 +158,6 @@
             <input bind:checked={isPublic} type="checkbox" />
             <lefine-text>{labels.publicToggle}</lefine-text>
           </kefine-profile-toggle>
-          <kefine-profile-balance>
-            <strong>{labels.bonusBalance}</strong>
-            <lefine-text>${profile.bonusBalanceUsd.toFixed(2)}</lefine-text>
-          </kefine-profile-balance>
         </kefine-profile-card>
 
         <kefine-profile-card>
@@ -225,7 +196,7 @@
 
       <kefine-profile-card>
         <kefine-profile-card-head>
-          <strong>{labels.closedTasks}</strong>
+          <strong>{labels.lepos}</strong>
         </kefine-profile-card-head>
         <kefine-profile-tasks>
           {#each tasks as order (order.id)}
@@ -236,13 +207,7 @@
                   <p>{order.solver}</p>
                 </lefine-box>
                 <kefine-profile-task-actions>
-                  <button
-                    type="button"
-                    data-variant="ghost"
-                    onclick={() => copyLink(`${taskShareBaseUrl}/${order.shareId ?? encodeURIComponent(order.id)}`, 'task')}
-                  >
-                    {copyStatus === 'task' ? labels.taskCopied : labels.shareTask}
-                  </button>
+                  <a href={`/task/${encodeURIComponent(order.id)}`}>{labels.openTask}</a>
                 </kefine-profile-task-actions>
               </kefine-profile-task-head>
               <kefine-profile-toggle>
@@ -349,14 +314,6 @@
   kefine-profile-card label {
     display: grid;
     gap: 0.35rem;
-  }
-
-  kefine-profile-balance {
-    display: grid;
-    gap: 0.2rem;
-    padding: 0.85rem 0.9rem;
-    border-radius: 0.85rem;
-    background: color-mix(in oklab, var(--kef-primary) 8%, var(--kef-bg-card));
   }
 
   kefine-profile-verify,

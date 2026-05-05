@@ -9,6 +9,15 @@ export default defineConfig({
       buffer: resolve(__dirname, 'node_modules/buffer')
     }
   },
+  optimizeDeps: {
+    exclude: ['@noble/curves', '@noble/hashes']
+  },
+  ssr: {
+    noExternal: ['@noble/curves', '@noble/hashes']
+  },
+  define: {
+    global: 'globalThis'
+  },
   server: {
     allowedHosts: ['dev-proxy.col.pub'],
     fs: {
@@ -18,13 +27,14 @@ export default defineConfig({
       ignored: ['**/crater/lib/**']
     }
   },
+  ssr: {
+    noExternal: ['@noble/curves', '@noble/hashes']
+  },
   build: {
     target: 'esnext',
     chunkSizeWarningLimit: 600,
-    rolldownOptions: {
-      checks: {
-        pluginTimings: false
-      }
+    rollupOptions: {
+      // Use rollup instead of rolldown to avoid noble package issues
     }
   }
 });

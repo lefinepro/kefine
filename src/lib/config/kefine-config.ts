@@ -24,7 +24,10 @@ export function getCraterBaseUrl(): string {
       hostname === 'localhost' ||
       hostname === '127.0.0.1' ||
       hostname === '0.0.0.0' ||
-      hostname === '[::1]'
+      hostname === '[::1]' ||
+      hostname === 'crater' ||
+      hostname === 'kefine-crater' ||
+      hostname === 'host.docker.internal'
     ) {
       return window.location.origin;
     }
