@@ -12,7 +12,7 @@
   },
   "backend": {
     "craterBaseUrl": "http://127.0.0.1:3001",
-    "exchangeBaseUrl": "https://exchange.lefine.pro",
+    "exchangeBaseUrl": "https://problemsets.lefine.pro",
     "port": 3001,
     "host": "0.0.0.0",
     "environment": "development",

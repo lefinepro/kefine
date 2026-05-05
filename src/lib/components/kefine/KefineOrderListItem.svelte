@@ -1,28 +1,17 @@
 <script lang="ts">
   import Icon from '@iconify/svelte';
   import type { OrderView } from './kefine-workflow';
-  import {
-    formatKefineOrderStatus,
-    formatKefineOrderTime
-  } from '$lib/components/kefine/kefine-order-formatters';
 
   let {
     order,
-    statusLabel,
-    timeLeftLabel,
-    solverLabel,
     openTaskLabel,
-    summaryLabel,
-    executionLabel,
     relatedItemsLabel,
-    windowLabel,
     createServiceLabel = 'Transform to service',
     serviceVariablesLabel = 'Service variables',
     stopTaskLabel = '',
     deleteTaskLabel = '',
     itemTestId,
     openTestId,
-    etaTestId,
     stopTestId,
     deleteTestId,
     showStop = false,
@@ -39,21 +28,14 @@
     onStopPointerCancel
   }: {
     order: OrderView;
-    statusLabel: string;
-    timeLeftLabel: string;
-    solverLabel: string;
     openTaskLabel: string;
-    summaryLabel: string;
-    executionLabel: string;
     relatedItemsLabel: string;
-    windowLabel: string;
     createServiceLabel?: string;
     serviceVariablesLabel?: string;
     stopTaskLabel?: string;
     deleteTaskLabel?: string;
     itemTestId: string;
     openTestId: string;
-    etaTestId: string;
     stopTestId?: string;
     deleteTestId?: string;
     showStop?: boolean;
@@ -79,15 +61,9 @@
     return normalized.replace(/\b\w/g, (char) => char.toUpperCase());
   }
 
-  const formattedStatus = $derived(formatKefineOrderStatus(order.status));
-  const formattedTime = $derived(formatKefineOrderTime(order, timeLeftLabel));
-  const hasDescription = $derived(Boolean(order.description?.trim() && order.description !== order.title));
   const hasLabels = $derived((order.labels?.length ?? 0) > 0);
   const hasServiceVariables = $derived((order.templateVariables?.length ?? 0) > 0);
-  const hasSolverInfo = $derived(Boolean(order.solver?.trim() || order.solverHandle?.trim()));
-  const hasExpandedSections = $derived(
-    hasDescription || hasSolverInfo || hasLabels || hasServiceVariables || Boolean(order.executionEstimate)
-  );
+  const hasExpandedSections = $derived(hasLabels || hasServiceVariables);
   const canMakeTemplate = $derived(order.status === 'completed' || order.status === 'done');
 </script>
 
@@ -100,21 +76,17 @@
   >
     <summary ondblclick={onOpen}>
       <kefine-order-row>
+        <kefine-order-disclosure aria-hidden="true">
+          <Icon icon="mdi:chevron-down" width="16" height="16" />
+        </kefine-order-disclosure>
+
         <kefine-order-mark aria-hidden="true" data-status={order.status}>
           <task-dot></task-dot>
         </kefine-order-mark>
 
         <kefine-order-copy>
           <kefine-order-title>{order.title}</kefine-order-title>
-          <kefine-order-meta data-testid={etaTestId}>
-            <lefine-text>{formattedStatus}</lefine-text>
-            <lefine-text>{formattedTime}</lefine-text>
-          </kefine-order-meta>
         </kefine-order-copy>
-
-        <kefine-order-disclosure aria-hidden="true">
-          <Icon icon="mdi:chevron-down" width="18" height="18" />
-        </kefine-order-disclosure>
       </kefine-order-row>
     </summary>
 
@@ -175,48 +147,6 @@
       </kefine-order-actions>
 
       <kefine-order-sections>
-        <details open>
-          <summary>{summaryLabel}</summary>
-          <kefine-order-detail-grid>
-            <kefine-order-detail-row>
-              <dt>{statusLabel}</dt>
-              <dd>{formattedStatus}</dd>
-            </kefine-order-detail-row>
-            <kefine-order-detail-row>
-              <dt>{timeLeftLabel}</dt>
-              <dd>{order.executionEstimate || '-'}</dd>
-            </kefine-order-detail-row>
-          </kefine-order-detail-grid>
-          {#if hasDescription}
-            <p data-part="description">{order.description}</p>
-          {/if}
-        </details>
-
-        {#if hasSolverInfo || order.executionEstimate}
-          <details>
-            <summary>{executionLabel}</summary>
-            <kefine-order-detail-grid>
-              {#if hasSolverInfo}
-                <kefine-order-detail-row>
-                  <dt>{solverLabel}</dt>
-                  <dd>
-                    {order.solver}
-                    {#if order.solverHandle}
-                      <lefine-text>{order.solverHandle}</lefine-text>
-                    {/if}
-                  </dd>
-                </kefine-order-detail-row>
-              {/if}
-              {#if order.executionEstimate}
-                <kefine-order-detail-row>
-                  <dt>{windowLabel}</dt>
-                  <dd>{order.executionEstimate}</dd>
-                </kefine-order-detail-row>
-              {/if}
-            </kefine-order-detail-grid>
-          </details>
-        {/if}
-
         {#if hasLabels}
           <details>
             <summary>{relatedItemsLabel}</summary>
@@ -253,31 +183,15 @@
 
   li > details {
     border-radius: 0.8rem;
-    border: 1px solid color-mix(in oklab, var(--kef-line) 72%, transparent);
-    background:
-      linear-gradient(180deg, color-mix(in oklab, var(--kef-bg-card) 97%, #f6edd2 3%), color-mix(in oklab, var(--kef-bg-card) 99%, transparent)),
-      repeating-linear-gradient(
-        0deg,
-        transparent 0,
-        transparent 28px,
-        color-mix(in oklab, var(--kef-line) 8%, transparent) 28px,
-        color-mix(in oklab, var(--kef-line) 8%, transparent) 29px
-      );
-    box-shadow:
-      inset 0 0 0 1px color-mix(in oklab, var(--kef-line) 26%, transparent),
-      inset 0 1px 0 color-mix(in oklab, white 26%, transparent),
-      0 8px 18px color-mix(in oklab, var(--lefine-text) 4%, transparent);
+    border: 0;
+    background: transparent;
+    box-shadow: none;
     overflow: hidden;
-    transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease, background-color 140ms ease;
+    transition: background-color 140ms ease;
   }
 
   li > details:hover {
-    border-color: color-mix(in oklab, var(--kef-primary, #b97a28) 36%, transparent);
-    box-shadow:
-      inset 0 0 0 1px color-mix(in oklab, var(--kef-primary, #b97a28) 20%, transparent),
-      inset 0 1px 0 color-mix(in oklab, white 28%, transparent),
-      0 12px 24px color-mix(in oklab, var(--lefine-text) 9%, transparent);
-    transform: translateY(-1px);
+    box-shadow: none;
   }
 
   summary {
@@ -287,7 +201,7 @@
 
   summary:hover kefine-order-row,
   summary:focus-visible kefine-order-row {
-    background: color-mix(in oklab, var(--kef-bg-hover, #eadcbc) 42%, transparent);
+    background: transparent;
   }
 
   summary::-webkit-details-marker {
@@ -296,20 +210,19 @@
 
   kefine-order-row {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    align-items: start;
-    gap: 0.8rem;
-    padding: 0.9rem 1rem;
+    grid-template-columns: auto auto minmax(0, 1fr);
+    align-items: center;
+    gap: 0.62rem;
+    padding: 0.9rem 1rem 0.9rem 0;
   }
 
   kefine-order-mark {
     width: 1.2rem;
     height: 1.2rem;
-    margin-top: 0.1rem;
     border-radius: 999px;
     display: inline-grid;
     place-items: center;
-    border: 1px solid color-mix(in oklab, var(--kef-line) 58%, transparent);
+    border: 0;
     color: var(--lefine-text-soft);
     background: color-mix(in oklab, var(--kef-bg-card) 86%, transparent);
   }
@@ -357,21 +270,38 @@
     overflow-wrap: anywhere;
   }
 
-  kefine-order-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.35rem 0.8rem;
-    color: var(--lefine-text-soft);
-    font-size: 0.84rem;
+  kefine-order-disclosure {
+    display: inline-grid;
+    place-items: center;
+    width: 1.85rem;
+    height: 1.85rem;
+    border-radius: 999px;
+    color: color-mix(in oklab, var(--lefine-text-soft) 88%, var(--kef-primary) 12%);
+    background: transparent;
+    box-shadow: none;
+    opacity: 0;
+    transform: rotate(-90deg);
+    transform-origin: center;
+    transition:
+      background-color var(--kef-motion-fast) var(--kef-ease-soft),
+      color var(--kef-motion-fast) var(--kef-ease-soft),
+      opacity var(--kef-motion-fast) var(--kef-ease-soft),
+      transform var(--kef-motion-fast) var(--kef-ease-soft);
   }
 
-  kefine-order-disclosure {
-    color: var(--lefine-text-soft);
-    transition: transform var(--kef-motion-fast) var(--kef-ease-soft);
+  li > details:hover kefine-order-disclosure,
+  summary:focus-visible kefine-order-disclosure {
+    color: var(--lefine-text);
+    background: transparent;
+    opacity: 1;
   }
 
   li > details[open] kefine-order-disclosure {
-    transform: rotate(180deg);
+    transform: rotate(0deg);
+  }
+
+  kefine-order-disclosure :global(svg) {
+    display: block;
   }
 
   kefine-order-panel {
@@ -478,13 +408,6 @@
     gap: 0.2rem;
   }
 
-  p[data-part='description'] {
-    margin: 0;
-    padding: 0 0.78rem 0.78rem;
-    color: var(--lefine-text-soft);
-    line-height: 1.45;
-  }
-
   kefine-order-tag-list {
     margin: 0;
     padding: 0.2rem 0.78rem 0.82rem 1.7rem;
@@ -495,13 +418,7 @@
 
   @media (max-width: 760px) {
     kefine-order-row {
-      grid-template-columns: auto minmax(0, 1fr);
-    }
-
-    kefine-order-disclosure {
-      grid-column: 2;
-      justify-self: end;
-      margin-top: -1.65rem;
+      grid-template-columns: auto auto minmax(0, 1fr);
     }
 
     kefine-order-detail-row {

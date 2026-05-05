@@ -9,12 +9,15 @@ require "uuid"
 
 require "./order_queue"
 require "./utils/config"
+require "./lepos_config"
 
 module Crater
   module RepositoryStore
     DEFAULT_BRANCH = "main"
     AD_HOC_ORDER_PREFIX = "__repo__:"
-    EXCHANGE_FEED_ACTOR = "feed@exchange.lefine.pro"
+    EXCHANGE_FEED_ACTOR = "feed@problemsets.lefine.pro"
+    PLAN_DOCUMENT_PATH = "PLAN.org"
+    LEGACY_PLAN_DOCUMENT_PATH = ".meta/lefine.pro.org"
     ISSUE_ARTIFACT_EXTENSIONS = {".patch", ".diff", ".org"}
     ISSUE_ARTIFACT_MEDIA_TYPES = {"application/x-git-patch", "text/x-diff", "text/org", "application/org"}
 
@@ -143,6 +146,20 @@ module Crater
             PRIMARY KEY (repository_id, branch_name)
           )
         SQL
+
+        db.exec <<-SQL
+          CREATE TABLE IF NOT EXISTS repository_issue_artifacts (
+            repository_id TEXT NOT NULL,
+            order_id TEXT NOT NULL,
+            artifact_key TEXT NOT NULL,
+            content TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            PRIMARY KEY (repository_id, order_id, artifact_key)
+          )
+        SQL
+        db.exec "CREATE INDEX IF NOT EXISTS idx_repository_issue_artifacts_order ON repository_issue_artifacts(order_id)"
+        db.exec "CREATE INDEX IF NOT EXISTS idx_repository_issue_artifacts_repo ON repository_issue_artifacts(repository_id)"
 
         @@ready = true
       end
@@ -424,6 +441,19 @@ module Crater
       raise "git #{args.join(' ')} failed: #{presence(error.to_s.strip) || presence(output.to_s.strip) || status.exit_code}"
     end
 
+    private def self.run_git_output(args : Array(String), chdir : String? = nil) : String
+      output = IO::Memory.new
+      error = IO::Memory.new
+      status = if chdir
+                 Process.run("git", args, chdir: chdir, output: output, error: error)
+               else
+                 Process.run("git", args, output: output, error: error)
+               end
+      return output.to_s if status.success?
+
+      raise "git #{args.join(' ')} failed: #{presence(error.to_s.strip) || presence(output.to_s.strip) || status.exit_code}"
+    end
+
     private def self.glob_match?(pattern : String, value : String) : Bool
       regex = Regex.new("\\A" + Regex.escape(pattern).gsub("\\*", ".*") + "\\z")
       !!regex.match(value)
@@ -486,15 +516,16 @@ module Crater
       install_receive_hooks(record)
     end
 
-    private def self.meta_issue_readme_content : String
+    private def self.meta_issue_readme_content(config : LeposConfig::RepositorySettings) : String
       [
         "* Issue Template",
         "Use this directory for task decomposition, patch handoff, and context notes.",
+        "Repository readme: #{config.main_readme_path}",
         "",
         "** Recommended structure",
         "- Keep one subdirectory per task or issue.",
         "- Add `.org` planning notes next to `.patch` or `.diff` handoff files.",
-        "- Preserve product context in `.meta/lefine.pro.org`."
+        "- Preserve product context in `#{config.main_readme_path}`."
       ].join('\n')
     end
 
@@ -553,6 +584,35 @@ module Crater
       ].join('\n')
     end
 
+    private def self.order_document_content(order : OrderQueue::OrderRecord) : String?
+      raw = order.document_json
+      return nil unless raw
+
+      object = JSON.parse(raw).as_h?
+      presence(object.try(&.["content"]?).try(&.as_s?))
+    rescue
+      nil
+    end
+
+    private def self.plan_org_content(order : OrderQueue::OrderRecord, repository : RepositoryRecord) : String
+      existing = order_document_content(order)
+      return existing if existing && existing.match(/^\*+\s+/m)
+
+      body = existing || presence(order.description) || order.title
+      [
+        "* #{order.title}",
+        ":PROPERTIES:",
+        ":ID: #{order.id}-plan",
+        ":ORDER_ID: #{order.id}",
+        ":PROJECT_ID: #{repository.project_id}",
+        ":REPOSITORY_ID: #{repository.id}",
+        ":STATE: active",
+        ":END:",
+        "",
+        body
+      ].join('\n')
+    end
+
     private def self.deserialize_attachments(value : String?) : Array(JSON::Any)
       return [] of JSON::Any if value.nil? || value.empty?
 
@@ -587,17 +647,124 @@ module Crater
       sanitized.empty? ? "artifact-#{index + 1}" : sanitized
     end
 
-    private def self.write_seed_files(worktree_path : String, order : OrderQueue::OrderRecord, repository : RepositoryRecord) : Nil
-      issue_root = File.join(worktree_path, ".meta", "issues")
+    private def self.resolve_lepos_config(worktree_path : String) : LeposConfig::RepositorySettings
+      config_path = File.join(worktree_path, ".lepos.rcl")
+      settings = LeposConfig.load(config_path)
+      unless File.exists?(config_path)
+        File.write(config_path, settings.render_default_file)
+      end
+      settings
+    end
+
+    private def self.resolve_lepos_config(record : RepositoryRecord) : LeposConfig::RepositorySettings
+      content = run_git_output(["--git-dir", record.repo_path, "show", "HEAD:.lepos.rcl"])
+      LeposConfig.parse(content)
+    rescue
+      LeposConfig::RepositorySettings.default
+    end
+
+    private def self.resolve_reps_config(
+      record : RepositoryRecord,
+      lepos_settings : LeposConfig::RepositorySettings
+    ) : LeposConfig::RepsSettings
+      lepos_settings.reps_sources.each do |path|
+        normalized_path = path.strip
+        next if normalized_path.empty?
+
+        content = run_git_output(["--git-dir", record.repo_path, "show", "HEAD:#{normalized_path}"])
+        parsed = LeposConfig.parse_reps(content)
+        return LeposConfig::RepsSettings.new(
+          repositories: parsed.repositories,
+          repository_config_path: normalized_path,
+          agent_system_prompt_path: parsed.agent_system_prompt_path
+        )
+      rescue
+      end
+
+      LeposConfig::RepsSettings.default
+    end
+
+    private def self.write_repository_gitignore(worktree_path : String, main_readme : String) : Nil
+      gitignore_path = File.join(worktree_path, ".gitignore")
+      entry = main_readme
+      normalized_entry = entry.strip
+
+      return if normalized_entry.empty?
+      return if normalized_entry.starts_with?("#")
+      return if normalized_entry == PLAN_DOCUMENT_PATH
+
+      if File.exists?(gitignore_path)
+        existing = File.read(gitignore_path).split('\n').map(&.strip).reject(&.empty?)
+        return if existing.includes?(normalized_entry)
+        File.write(gitignore_path, existing.join('\n') + "\n#{normalized_entry}\n")
+      else
+        File.write(gitignore_path, "#{normalized_entry}\n")
+      end
+    end
+
+    private def self.ensure_issue_artifacts_table(config : Utils::Config) : Nil
+      setup(config)
+    end
+
+    private def self.persist_issue_artifact(
+      repository : RepositoryRecord,
+      order_id : String,
+      artifact_key : String,
+      content : String,
+      config : Utils::Config
+    ) : Nil
+      ensure_issue_artifacts_table(config)
+      now = current_time
+      database(config).exec(
+        <<-SQL,
+          INSERT INTO repository_issue_artifacts (repository_id, order_id, artifact_key, content, created_at, updated_at)
+          VALUES ($1, $2, $3, $4, $5, $6)
+          ON CONFLICT (repository_id, order_id, artifact_key) DO UPDATE SET
+            content = EXCLUDED.content,
+            updated_at = EXCLUDED.updated_at
+        SQL
+        repository.id,
+        order_id,
+        artifact_key,
+        content,
+        now,
+        now
+      )
+    end
+
+    private def self.write_issue_artifacts_to_database(
+      repository : RepositoryRecord,
+      order : OrderQueue::OrderRecord,
+      settings : LeposConfig::RepositorySettings,
+      config : Utils::Config
+    ) : Nil
+      ensure_issue_artifacts_table(config)
+
+      persist_issue_artifact(repository, order.id, settings.issue_readme_path(order.id), meta_issue_readme_content(settings), config)
+      persist_issue_artifact(repository, order.id, settings.issue_file_path(order.id), issue_org_content(order, repository), config)
+      deserialize_attachments(order.attachment_json).each_with_index do |attachment, index|
+        next unless issue_artifact?(attachment)
+
+        content = issue_artifact_content(attachment)
+        next unless content
+        key = settings.issue_attachment_path(order.id, issue_artifact_filename(attachment, index))
+        persist_issue_artifact(repository, order.id, key, content, config)
+      end
+    end
+
+    private def self.write_issue_artifacts_to_files(
+      worktree_path : String,
+      order : OrderQueue::OrderRecord,
+      repository : RepositoryRecord,
+      settings : LeposConfig::RepositorySettings
+    ) : Nil
+      issue_root = File.join(worktree_path, settings.issue_root_path)
       issue_dir = File.join(issue_root, order.id)
-      issue_attachments_dir = File.join(issue_dir, "attachments")
+      issue_attachments_dir = File.join(issue_dir, settings.issue_attachments_dir)
 
       FileUtils.mkdir_p(issue_attachments_dir)
-      File.write(File.join(issue_root, "README.org"), meta_issue_readme_content)
-      File.write(File.join(issue_dir, "issue.org"), issue_org_content(order, repository))
-      File.write(File.join(worktree_path, ".meta", "lefine.pro.org"), lefine_org_content(order, repository))
-      File.write(File.join(worktree_path, ".gitignore"), ".meta/lefine.pro.org\n")
-
+      File.write(File.join(issue_root, settings.issue_readme_name), meta_issue_readme_content(settings))
+      File.write(File.join(issue_dir, settings.issue_file_name), issue_org_content(order, repository))
       deserialize_attachments(order.attachment_json).each_with_index do |attachment, index|
         next unless issue_artifact?(attachment)
 
@@ -605,6 +772,93 @@ module Crater
         next unless content
 
         File.write(File.join(issue_attachments_dir, issue_artifact_filename(attachment, index)), content)
+      end
+    end
+
+    private def self.write_seed_files(
+      worktree_path : String,
+      order : OrderQueue::OrderRecord,
+      repository : RepositoryRecord,
+      config : Utils::Config
+    ) : Nil
+      settings = resolve_lepos_config(worktree_path)
+      main_readme_path = settings.repository_readme_path
+      plan_path = settings.plan_path
+      main_readme_full_path = File.join(worktree_path, main_readme_path)
+      plan_full_path = File.join(worktree_path, plan_path)
+      FileUtils.mkdir_p(File.dirname(main_readme_full_path))
+      FileUtils.mkdir_p(File.dirname(plan_full_path))
+
+      File.write(main_readme_full_path, lefine_org_content(order, repository))
+      File.write(plan_full_path, plan_org_content(order, repository))
+      write_repository_gitignore(worktree_path, main_readme_path)
+
+      if settings.filesystem_storage?
+        write_issue_artifacts_to_files(worktree_path, order, repository, settings)
+      else
+        write_issue_artifacts_to_database(repository, order, settings, config)
+      end
+    end
+
+    private def self.plan_document_paths(record : RepositoryRecord) : Array(String)
+      configured = begin
+        resolve_lepos_config(record).plan_path
+      rescue
+        PLAN_DOCUMENT_PATH
+      end
+
+      [configured, PLAN_DOCUMENT_PATH, LEGACY_PLAN_DOCUMENT_PATH].compact_map do |path|
+        normalized = LeposConfig::RepositorySettings.sanitize_path(path)
+        normalized.empty? ? nil : normalized
+      end.uniq
+    end
+
+    def self.read_plan_document(record : RepositoryRecord, config : Utils::Config = Utils::Config.load) : String?
+      plan_document_paths(record).each do |path|
+        begin
+          content = run_git_output(["--git-dir", record.repo_path, "show", "HEAD:#{path}"])
+          return content unless content.empty?
+        rescue
+        end
+      end
+
+      nil
+    end
+
+    def self.commit_plan_document(
+      record : RepositoryRecord,
+      actor_handle : String,
+      content : String,
+      config : Utils::Config = Utils::Config.load
+    ) : Nil
+      temp_path = File.join(worktrees_root, "plan-#{record.id}-#{UUID.random}")
+      FileUtils.rm_rf(temp_path)
+      FileUtils.mkdir_p(temp_path)
+
+      begin
+        begin
+          run_git!(["--git-dir", record.repo_path, "--work-tree", temp_path, "checkout", "-f", record.default_branch])
+        rescue
+        end
+
+        settings = resolve_lepos_config(temp_path)
+        plan_path = settings.plan_path
+        plan_path = PLAN_DOCUMENT_PATH if plan_path.empty?
+        full_path = File.join(temp_path, plan_path)
+        FileUtils.mkdir_p(File.dirname(full_path))
+        File.write(full_path, content)
+
+        run_git!(["--git-dir", record.repo_path, "--work-tree", temp_path, "config", "user.name", "Lefine"])
+        run_git!(["--git-dir", record.repo_path, "--work-tree", temp_path, "config", "user.email", "git@#{config.domain}"])
+        run_git!(["--git-dir", record.repo_path, "--work-tree", temp_path, "add", ".lepos.rcl", plan_path])
+        status = run_git_output(["--git-dir", record.repo_path, "--work-tree", temp_path, "status", "--porcelain"])
+        return if status.strip.empty?
+
+        author = normalize_handle(actor_handle)
+        run_git!(["--git-dir", record.repo_path, "--work-tree", temp_path, "commit", "-m", "Update PLAN.org", "--author", "#{author} <git@#{config.domain}>"])
+        run_git!(["--git-dir", record.repo_path, "update-server-info"])
+      ensure
+        FileUtils.rm_rf(temp_path)
       end
     end
 
@@ -626,7 +880,7 @@ module Crater
       run_git!(["config", "user.name", "Lefine"], chdir: worktree_path)
       run_git!(["config", "user.email", "git@#{config.domain}"], chdir: worktree_path)
 
-      write_seed_files(worktree_path, order, record)
+      write_seed_files(worktree_path, order, record, config)
 
       run_git!(["add", "."], chdir: worktree_path)
       run_git!(["commit", "-m", "Initial task repository"], chdir: worktree_path)
@@ -901,9 +1155,11 @@ module Crater
       actor_handle : String,
       old_revision : String,
       new_revision : String,
-      config : Utils::Config = Utils::Config.load
+      config : Utils::Config = Utils::Config.load,
+      lepos_settings : LeposConfig::RepositorySettings = LeposConfig::RepositorySettings.default
     ) : String
       setup(config)
+      return "" unless pull_push_allowed?(branch_name, lepos_settings)
       now = current_time
       owner_handle = owner_handle_for(record, config)
       title = "#{record.name}: #{branch_name}"
@@ -971,12 +1227,27 @@ module Crater
       order.id
     end
 
+    private def self.pull_push_allowed?(branch_name : String, settings : LeposConfig::RepositorySettings) : Bool
+      return true if branch_name.empty?
+      return true if settings.pull_issues_allowed? && settings.pull_patches_allowed?
+
+      normalized = branch_name.downcase
+      is_issue = normalized == "issues" || normalized.starts_with?("issue/") || normalized.starts_with?("issue-") || normalized.starts_with?("issues/")
+      is_patch = normalized == "patches" || normalized == "patch" || normalized.starts_with?("patch/") || normalized.starts_with?("patch-") || normalized.starts_with?("patches/") || normalized.ends_with?(".patch")
+
+      return false if is_issue && !settings.pull_issues_allowed?
+      return false if is_patch && !settings.pull_patches_allowed?
+      true
+    end
+
     def self.to_json_payload(record : RepositoryRecord) : Hash(String, JSON::Any)
       config = Utils::Config.load
       owner_handle = owner_handle_for(record, config)
       project_public_url = project_public_clone_url(record, config)
       project_ssh_url = project_ssh_clone_url(record, config)
       settings = git_settings(record, config)
+      lepos_settings = resolve_lepos_config(record)
+      reps_settings = resolve_reps_config(record, lepos_settings)
       {
         "id" => JSON::Any.new(record.id),
         "projectId" => JSON::Any.new(record.project_id),
@@ -985,7 +1256,7 @@ module Crater
         "ownerHandle" => JSON::Any.new(owner_handle),
         "name" => JSON::Any.new(record.name),
         "visibility" => JSON::Any.new(record.visibility),
-        "defaultBranch" => JSON::Any.new(record.default_branch),
+        "defaultBranch" => JSON::Any.new(lepos_settings.default_branch),
         "serverUuid" => JSON::Any.new(record.server_uuid),
         "publicCloneUrl" => JSON::Any.new(record.public_clone_url || ""),
         "sshCloneUrl" => JSON::Any.new(record.ssh_clone_url || ""),
@@ -994,11 +1265,17 @@ module Crater
         "projectSshCloneUrl" => JSON::Any.new(project_ssh_url),
         "projectArchiveUrl" => JSON::Any.new(project_archive_url(record, config)),
         "gitSettings" => settings_json_payload(settings),
+        "leposConfig" => JSON.parse(lepos_settings.payload.to_json),
+        "repsConfig" => JSON.parse(reps_settings.payload.to_json),
         "repositoryUrl" => JSON::Any.new("#{config.crater_url}/repositories/#{record.slug}"),
         "projectUrl" => JSON::Any.new("#{config.crater_url}/projects/#{record.project_id}"),
         "createdAt" => JSON::Any.new(record.created_at),
         "updatedAt" => JSON::Any.new(record.updated_at)
       }
+    end
+
+    def self.lepos_config(record : RepositoryRecord) : LeposConfig::RepositorySettings
+      resolve_lepos_config(record)
     end
   end
 end

@@ -12,6 +12,8 @@ import type {
   OrderNotebookStep,
   RepositoryGitAclRule,
   RepositoryGitSettings,
+  RepositoryLeposConfig,
+  RepositoryRepsConfig,
   OrderResultSection,
   OrderRepository,
   OrderStepComment,
@@ -90,6 +92,15 @@ function toStringRecord(value: unknown): Record<string, string> | undefined {
     .filter(([key]) => key.length > 0);
 
   return entries.length > 0 ? Object.fromEntries(entries) : undefined;
+}
+
+function toStringArray(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const items = value.map(toStringValue).filter(isDefined);
+  return items.length > 0 ? items : undefined;
 }
 
 function detectVpnScenario(payload: DraftOrder): boolean {
@@ -190,6 +201,73 @@ function toRepositoryGitSettings(value: unknown): RepositoryGitSettings | undefi
   };
 }
 
+function toRepositoryLeposConfig(value: unknown): RepositoryLeposConfig | undefined {
+  const record = toRecord(value);
+  if (!record) {
+    return undefined;
+  }
+
+  const issueStorage = toStringValue(record['issueStorage']);
+  if (!issueStorage) {
+    return undefined;
+  }
+
+  const readmeConfig = {
+    issueStorage,
+    issueRoot: toStringValue(record['issueRoot']) || '.meta/issues',
+    issueReadmeName: toStringValue(record['issueReadmeName']) || 'README.org',
+    issueFileName: toStringValue(record['issueFileName']) || 'issue.org',
+    issueAttachmentsDir: toStringValue(record['issueAttachmentsDir']) || 'attachments',
+    mainReadmePath: toStringValue(record['mainReadmePath']) || '.meta/lefine.pro.org',
+    planDocumentPath: toStringValue(record['planDocumentPath']) || 'PLAN.org',
+    repositoryReadme: toStringValue(record['repositoryReadme']) || 'Lefine repository metadata and task context',
+    repositoryIcon: toStringValue(record['repositoryIcon']) || '',
+    defaultBranch: toStringValue(record['defaultBranch']) || 'main',
+    acceptPullIssues: toBoolean(record['acceptPullIssues']) ?? true,
+    acceptPullPatches: toBoolean(record['acceptPullPatches']) ?? true,
+    repsConfigPaths: toStringArray(record['repsConfigPaths']) || ['reps.rcl', 'reps.toml'],
+    agentSystemPromptPath: toStringValue(record['agentSystemPromptPath']) || undefined
+  };
+
+  const normalizedStorage = readmeConfig.issueStorage === 'database' ? 'database' : 'filesystem';
+
+  return {
+    issueStorage: normalizedStorage,
+    issueRoot: readmeConfig.issueRoot,
+    issueReadmeName: readmeConfig.issueReadmeName,
+    issueFileName: readmeConfig.issueFileName,
+    issueAttachmentsDir: readmeConfig.issueAttachmentsDir,
+    mainReadmePath: readmeConfig.mainReadmePath,
+    planDocumentPath: readmeConfig.planDocumentPath,
+    repositoryReadme: readmeConfig.repositoryReadme,
+    repositoryIcon: readmeConfig.repositoryIcon,
+    defaultBranch: readmeConfig.defaultBranch,
+    acceptPullIssues: readmeConfig.acceptPullIssues,
+    acceptPullPatches: readmeConfig.acceptPullPatches,
+    repsConfigPaths: readmeConfig.repsConfigPaths,
+    agentSystemPromptPath: readmeConfig.agentSystemPromptPath
+  };
+}
+
+function toRepositoryRepsConfig(value: unknown): RepositoryRepsConfig | undefined {
+  const record = toRecord(value);
+  if (!record) {
+    return undefined;
+  }
+
+  const repositories = toStringArray(record['repositories']) || [];
+  const repositoryConfigPath = toStringValue(record['repositoryConfigPath']) || '';
+  if (!repositoryConfigPath && repositories.length === 0) {
+    return undefined;
+  }
+
+  return {
+    repositories,
+    repositoryConfigPath,
+    agentSystemPromptPath: toStringValue(record['agentSystemPromptPath']) || undefined
+  };
+}
+
 function toRepository(value: unknown): OrderRepository | undefined {
   const record = toRecord(value);
   if (!record) {
@@ -227,6 +305,8 @@ function toRepository(value: unknown): OrderRepository | undefined {
     projectUrl: toStringValue(record['projectUrl']) || undefined,
     patchTrackerUrl: toStringValue(record['patchTrackerUrl']) || undefined,
     gitSettings: toRepositoryGitSettings(record['gitSettings']) || undefined,
+    leposConfig: toRepositoryLeposConfig(record['leposConfig']) || undefined,
+    repsConfig: toRepositoryRepsConfig(record['repsConfig']) || undefined,
     createdAt: toStringValue(record['createdAt']) || undefined,
     updatedAt: toStringValue(record['updatedAt']) || undefined
   };
