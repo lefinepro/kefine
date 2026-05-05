@@ -6,8 +6,8 @@ const projectId = readBrowserPublicRuntimeConfig().app.reownProjectId;
 const metadata = {
 	name: 'Lefine | From task to best-fit solution.',
 	description: 'Lefine helps you describe a technical task and get the best-fitting solution path.',
-	url: typeof window !== 'undefined' ? window.location.origin : 'https://lefine.pro',
-	icons: ['https://lefine.pro/favicon.png']
+	url: typeof window !== 'undefined' ? window.location.origin : 'https://kefine.app',
+	icons: ['https://kefine.app/favicon.png']
 };
 
 const KEFINE_THEME_LIGHT = {

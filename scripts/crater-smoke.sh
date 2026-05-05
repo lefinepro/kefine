@@ -4,12 +4,12 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 cleanup() {
-  ./scripts/container-compose.sh down -v --remove-orphans
+  ./scripts/nerdctl-compose.sh down -v --remove-orphans
 }
 
 trap cleanup EXIT
 
-./scripts/container-compose.sh up -d postgres crater
+./scripts/nerdctl-compose.sh up -d postgres crater
 
 for attempt in $(seq 1 60); do
   if curl -fsS http://127.0.0.1:3001/health >/dev/null; then
