@@ -184,6 +184,15 @@ module Crater
           return({error: "Order not found", orderId: order_id}.to_json)
         end
 
+        begin
+          repository = RepositoryStore.find_by_order(record.id, config) || RepositoryStore.ensure_for_order(record, config)
+          content = JSON.parse(record.document_json || %({"format":"markdown","content":""})).as_h?.try(&.["content"]?).try(&.as_s?) || ""
+          actor = record.actor_handle || record.owner_username || config.actor_username
+          RepositoryStore.commit_plan_document(repository, actor, content, config) unless content.empty?
+        rescue ex
+          Log.error(exception: ex) { "[status] failed to persist PLAN.org for orderId=#{record.id}" }
+        end
+
         render_status(env, record.id, config)
       end
 

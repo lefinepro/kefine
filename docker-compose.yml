@@ -1,6 +1,8 @@
 services:
   postgres:
+    container_name: kefine-postgres
     image: postgres:17-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_DB: kefine
       POSTGRES_USER: kefine
@@ -14,18 +16,22 @@ services:
       - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
+    networks:
+      - kefine
 
   crater:
+    container_name: kefine-crater
     build:
       context: .
       dockerfile: crater/Dockerfile
+    restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql://kefine:kefine@postgres:5432/kefine
       KEFINE_PRIVATEKEY_DEFAULT: ${KEFINE_PRIVATEKEY_DEFAULT:-}
-      EXCHANGE_BASE_URL: ${EXCHANGE_BASE_URL:-https://exchange.lefine.pro}
+      EXCHANGE_BASE_URL: ${EXCHANGE_BASE_URL:-https://problemsets.lefine.pro}
     working_dir: /app
     command: ["crystal", "run", "src/crater.cr"]
     volumes:
@@ -40,19 +46,29 @@ services:
       retries: 20
     ports:
       - "3001:3001"
+    networks:
+      - kefine
 
   frontend:
+    container_name: kefine-frontend
     build:
       context: .
       dockerfile: Containerfile
+    restart: unless-stopped
     depends_on:
       crater:
         condition: service_healthy
     environment:
       CRATER_BASE_URL: http://crater:3001
-      EXCHANGE_BASE_URL: ${EXCHANGE_BASE_URL:-https://exchange.lefine.pro}
+      EXCHANGE_BASE_URL: ${EXCHANGE_BASE_URL:-https://problemsets.lefine.pro}
     ports:
       - "5173:5173"
+    networks:
+      - kefine
 
 volumes:
   postgres-data:
+
+networks:
+  kefine:
+    name: kefine

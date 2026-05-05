@@ -7,6 +7,8 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 COPY crater/shard.yml crater/shard.lock* ./
+COPY crater/lib/rcl /tmp/kefine-rcl
+RUN sed -i 's|path: .*|path: /tmp/kefine-rcl|' shard.yml
 RUN shards install
 
 EXPOSE 3001

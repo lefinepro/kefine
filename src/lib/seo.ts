@@ -17,7 +17,7 @@ export type SeoMeta = {
 
 const DEFAULT_TITLE = 'Lefine | From task to best-fit solution.';
 const DEFAULT_DESCRIPTION =
-  'Lefine is an Automated Freelance Marketplace: you describe the task, and we match the solution path that fits it best.';
+  'Lefine is an Automated Freelance Marketplace. You describe the work you need. Lefine finds the solvers and returns the result.';
 const DEFAULT_IMAGE_PATH = '/og-card.svg';
 
 function resolveLegalMeta(pathname: string): { id: LegalPageId; title: string; description: string } | null {

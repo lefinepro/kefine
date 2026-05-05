@@ -46,7 +46,7 @@
   let following = $state(false);
   let publicTasks = $state<OrderView[]>([]);
   let ownerTasks = $state<OrderView[]>([]);
-  let copyState = $state<'idle' | 'profile' | 'task'>('idle');
+  let copyState = $state<'idle' | 'profile'>('idle');
 
   let displayName = $state('');
   let username = $state('');
@@ -394,7 +394,7 @@
     }
   }
 
-  async function copyLink(value: string, kind: 'profile' | 'task') {
+  async function copyLink(value: string, kind: 'profile') {
     if (!browser || !navigator.clipboard) {
       return;
     }
@@ -957,7 +957,7 @@
         <aside class="profile-side">
           <article class="profile-surface profile-tasks">
             <lefine-box class="profile-section__head">
-              <strong>{localeText.profile.closedTasks}</strong>
+              <strong>{localeText.profile.lepos}</strong>
             </lefine-box>
             <lefine-box class="profile-task-list">
               {#each (isOwner ? ownerTasks : publicTasks) as order (order.id)}
@@ -969,19 +969,6 @@
                     </lefine-box>
                     <lefine-box class="profile-task__actions">
                       <a href={getTaskUrl(order)}>{localeText.profile.openTask}</a>
-                      <button
-                        type="button"
-                        data-variant="ghost"
-                        onclick={() =>
-                          copyLink(
-                            browser
-                              ? `${window.location.origin}${getTaskUrl(order)}`
-                              : getTaskUrl(order),
-                            'task'
-                          )}
-                      >
-                        {copyState === 'task' ? localeText.profile.taskCopied : localeText.profile.shareTask}
-                      </button>
                     </lefine-box>
                   </lefine-box>
 

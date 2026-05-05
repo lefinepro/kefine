@@ -42,8 +42,8 @@
   function fallbackGitSettings(repository: OrderRepository | undefined, isPublicRepo: boolean): RepositoryGitSettings {
     return {
       exchangeRunDefault: true,
-      exchangeActor: repository?.gitSettings?.exchangeActor || 'feed@exchange.lefine.pro',
-      agentSourceUrl: repository?.gitSettings?.agentSourceUrl || 'https://exchange.lefine.pro/subscribers',
+      exchangeActor: repository?.gitSettings?.exchangeActor || 'feed@problemsets.lefine.pro',
+      agentSourceUrl: repository?.gitSettings?.agentSourceUrl || 'https://problemsets.lefine.pro/subscribers',
       aclRules: [
         createRule('main', ['admin']),
         createRule('*', isPublicRepo ? ['authenticated'] : ['exchange'])
