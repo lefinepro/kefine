@@ -315,9 +315,7 @@
         onclick={handleBrandClick}
         ondblclick={handleBrandDoubleClick}
       >
-        <kefine-sidebar-brand-mark data-part="brand-mark" data-testid="kefine-brand-mark">
-          {brandLabel}
-        </kefine-sidebar-brand-mark>
+        <kefine-sidebar-brand-mark data-part="brand-mark" data-testid="kefine-brand-mark">{brandLabel}</kefine-sidebar-brand-mark>
       </button>
       <kefine-sidebar-popover
         bind:this={menuPopover}
@@ -356,7 +354,6 @@
               type="button"
               data-part="icon"
               data-role="theme"
-              data-testid="kefine-topbar-theme-toggle"
               aria-label={themeLabel}
               title={themeLabel}
               onclick={handleThemeButtonClick}
@@ -368,7 +365,6 @@
               type="button"
               data-part="icon"
               data-role="locale"
-              data-testid="kefine-topbar-locale-toggle"
               aria-label={localeLabel}
               title={localeLabel}
               onclick={handleLocaleButtonClick}
@@ -397,33 +393,15 @@
         ontoggle={handleThemePopoverToggle}
       >
         <kefine-picker-list>
-          <button
-            type="button"
-            data-part="picker-option"
-            data-testid="kefine-topbar-theme-option-auto"
-            data-active={themeMode === 'auto'}
-            onclick={() => selectTheme('auto')}
-          >
+          <button type="button" data-part="picker-option" data-active={themeMode === 'auto'} onclick={() => selectTheme('auto')}>
             <KefineTopbarIcon name="theme-auto" size={18} />
             <lefine-text>{themeAutoLabel}</lefine-text>
           </button>
-          <button
-            type="button"
-            data-part="picker-option"
-            data-testid="kefine-topbar-theme-option-light"
-            data-active={themeMode === 'light'}
-            onclick={() => selectTheme('light')}
-          >
+          <button type="button" data-part="picker-option" data-active={themeMode === 'light'} onclick={() => selectTheme('light')}>
             <KefineTopbarIcon name="theme-light" size={18} />
             <lefine-text>{themeLightLabel}</lefine-text>
           </button>
-          <button
-            type="button"
-            data-part="picker-option"
-            data-testid="kefine-topbar-theme-option-dark"
-            data-active={themeMode === 'dark'}
-            onclick={() => selectTheme('dark')}
-          >
+          <button type="button" data-part="picker-option" data-active={themeMode === 'dark'} onclick={() => selectTheme('dark')}>
             <KefineTopbarIcon name="theme-dark" size={18} />
             <lefine-text>{themeDarkLabel}</lefine-text>
           </button>
@@ -436,33 +414,15 @@
         ontoggle={handleLocalePopoverToggle}
       >
         <kefine-picker-list>
-          <button
-            type="button"
-            data-part="picker-option"
-            data-testid="kefine-topbar-locale-option-en"
-            data-active={locale === 'en'}
-            onclick={() => selectLocale('en')}
-          >
+          <button type="button" data-part="picker-option" data-active={locale === 'en'} onclick={() => selectLocale('en')}>
             <KefineTopbarIcon name={localeFlagIcons.en} size={18} />
             <lefine-text>{languageEnglishLabel}</lefine-text>
           </button>
-          <button
-            type="button"
-            data-part="picker-option"
-            data-testid="kefine-topbar-locale-option-ru"
-            data-active={locale === 'ru'}
-            onclick={() => selectLocale('ru')}
-          >
+          <button type="button" data-part="picker-option" data-active={locale === 'ru'} onclick={() => selectLocale('ru')}>
             <KefineTopbarIcon name={localeFlagIcons.ru} size={18} />
             <lefine-text>{languageRussianLabel}</lefine-text>
           </button>
-          <button
-            type="button"
-            data-part="picker-option"
-            data-testid="kefine-topbar-locale-option-hy"
-            data-active={locale === 'hy'}
-            onclick={() => selectLocale('hy')}
-          >
+          <button type="button" data-part="picker-option" data-active={locale === 'hy'} onclick={() => selectLocale('hy')}>
             <KefineTopbarIcon name={localeFlagIcons.hy} size={18} />
             <lefine-text>{languageArmenianLabel}</lefine-text>
           </button>
@@ -549,8 +509,8 @@
     display: grid;
     align-content: start;
     gap: 0.9rem;
-    width: 7.5rem;
-    min-width: 7.5rem;
+    width: 4.5rem;
+    min-width: 4.5rem;
     min-height: 0;
     pointer-events: auto;
   }
@@ -571,7 +531,7 @@
 
   kefine-sidebar-root > button[data-part='brand'] {
     width: 100%;
-    min-height: 2.5rem;
+    min-height: 2.9rem;
     border: 0;
     border-radius: var(--kef-radius-ui);
     background: transparent;
@@ -594,21 +554,19 @@
 
   kefine-sidebar-brand-mark[data-part='brand-mark'] {
     width: auto;
-    min-width: 6.55rem;
-    min-height: 2.5rem;
+    min-height: 0;
     flex: 0 0 auto;
-    border-radius: calc(var(--kef-radius-ui) - 0.12rem);
+    border-radius: 0;
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    background: color-mix(in oklab, var(--kef-bg-card) 82%, transparent);
+    justify-content: flex-start;
+    background: transparent;
     color: color-mix(in oklab, var(--lefine-text) 96%, transparent);
     font-family: var(--kef-font-family-brand);
-    font-size: 2rem;
+    font-size: 1.72rem;
     font-weight: 700;
     letter-spacing: 0.01em;
-    line-height: 1;
-    padding: 0 0.48rem;
+    padding: 0;
     transition:
       color var(--kef-motion-fast) var(--kef-ease-soft),
       transform var(--kef-motion-fast) var(--kef-ease-soft);
@@ -721,8 +679,7 @@
   }
 
   kefine-sidebar-stack {
-    display: flex;
-    flex-direction: row;
+    display: grid;
     gap: 0.45rem;
     width: 100%;
     border-radius: calc(var(--kef-radius-ui) - 0.06rem);
@@ -767,11 +724,10 @@
   }
 
   kefine-sidebar-toolbar {
-    display: flex;
-    flex-wrap: nowrap;
-    align-items: center;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 0.4rem;
-    width: fit-content;
+    width: 100%;
     padding: 0;
     overflow: visible;
     border-color: color-mix(in oklab, var(--kef-border) 62%, transparent);
@@ -779,12 +735,12 @@
   }
 
   kefine-sidebar-toolbar[data-kind='social'] {
-    justify-content: flex-start;
+    justify-items: stretch;
   }
 
   kefine-sidebar-toolbar [data-part='icon'] {
-    width: 2.55rem;
-    min-width: 2.55rem;
+    width: 100%;
+    min-width: 0;
     height: 2.55rem;
     border-radius: calc(var(--kef-radius-ui) - 0.06rem);
     background: transparent;
@@ -929,20 +885,18 @@
     }
 
     kefine-sidebar-root:not([data-expanded='true']) {
-      width: 7.5rem;
-      min-width: 7.5rem;
+      width: 4.5rem;
+      min-width: 4.5rem;
     }
 
     kefine-sidebar-root:not([data-expanded='true']) kefine-sidebar-toolbar {
-      display: flex;
-      flex-direction: row;
-      justify-content: center;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
+      display: grid;
+      justify-items: center;
+      overflow: visible;
     }
 
     kefine-sidebar-root:not([data-expanded='true']) kefine-sidebar-stack {
-      justify-content: center;
+      justify-items: center;
     }
 
     kefine-sidebar-popover {
@@ -960,25 +914,18 @@
 
     kefine-sidebar-stack {
       width: 100%;
-      overflow-x: auto;
-      overflow-y: hidden;
+      max-height: calc(100dvh - 5.25rem);
+      overflow-y: auto;
       background: transparent;
-      flex-wrap: nowrap;
     }
 
     kefine-sidebar-nav,
     kefine-sidebar-toolbar {
       width: 100%;
-      flex-shrink: 0;
     }
 
     kefine-sidebar-toolbar {
-      display: flex;
-      flex-direction: row;
-      flex-wrap: nowrap;
       gap: 0.35rem;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
     }
 
     button[data-part='auth'] {

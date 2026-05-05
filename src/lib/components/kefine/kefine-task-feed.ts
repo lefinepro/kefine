@@ -10,7 +10,6 @@ import type {
   OrderView,
   ProgressState
 } from '$lib/components/kefine/kefine-workflow';
-import { parseOrgPlanThreadNodes } from '$lib/components/kefine/kefine-org-plan';
 
 export type TaskThreadNode = {
   id: string;
@@ -18,10 +17,6 @@ export type TaskThreadNode = {
   title: string;
   detail?: string;
   branchLabel?: string;
-  branchVisibility?: 'visible' | 'hidden';
-  branchPlacement?: 'normal' | 'left';
-  branchTags?: string[];
-  editableSource?: string;
   state: ProgressState;
   mode: 'compact' | 'block' | 'loading';
   meta?: string;
@@ -31,460 +26,11 @@ export type TaskThreadNode = {
   children?: TaskThreadNode[];
 };
 
-export type TaskBranchPlacement = 'normal' | 'left';
-export type TaskBranchVisibility = 'visible' | 'hidden';
-
-export type TaskBranchStyle = {
-  visibility: TaskBranchVisibility;
-  placement: TaskBranchPlacement;
-  tags: string[];
-};
-
-const BRANCH_TAG_RE = /\[\[\s*branch:([^\]]+)\]\]/gi;
-
-export function parseTaskBranchStyle(raw: string): TaskBranchStyle {
-  const matches = Array.from(raw.matchAll(BRANCH_TAG_RE));
-  let visibility: TaskBranchVisibility = 'visible';
-  let placement: TaskBranchPlacement = 'normal';
-  const tags = new Set<string>();
-
-  for (const match of matches) {
-    const body = (match[1] ?? '').toLowerCase();
-    const normalized = body
-      .split(/[,\s]+/)
-      .map((item) => item.trim())
-      .filter(Boolean);
-
-    for (const token of normalized) {
-      tags.add(token);
-      if (token === 'left') {
-        placement = 'left';
-      } else if (token === 'hidden') {
-        visibility = 'hidden';
-      } else if (token === 'normal') {
-        placement = 'normal';
-      }
-    }
-  }
-
-  return {
-    visibility,
-    placement,
-    tags: Array.from(tags)
-  };
-}
-
-export function stripTaskBranchStyle(raw: string): string {
-  return raw.replace(BRANCH_TAG_RE, '').trim();
-}
-
-export function composeBranchInsertSource(
-  content: string,
-  style: Pick<TaskBranchStyle, 'placement' | 'visibility'>,
-  includeDefaultMarker = false
-): string {
-  const normalizedStyle: string[] = [];
-  if (style.placement === 'left') {
-    normalizedStyle.push('left');
-  }
-  if (style.visibility === 'hidden') {
-    normalizedStyle.push('hidden');
-  }
-  if (includeDefaultMarker && normalizedStyle.length === 0) {
-    normalizedStyle.push('normal');
-  }
-
-  const prefix = normalizedStyle.length ? `[[branch:${normalizedStyle.join(',')}]] ` : '';
-  return prefix ? `${prefix}${content}` : content;
-}
-
-const BRANCH_LEGACY_RE = /^branch:\s*/i;
-const BRANCH_LEGACY_LABEL_RE = /^branch:\s*(.+)$/i;
-
-function buildNodeVisibility(style: TaskBranchStyle, fallback: TaskBranchVisibility): TaskBranchVisibility {
-  const hasExplicitVisibility = style.tags.includes('visible') || style.tags.includes('hidden');
-  if (!hasExplicitVisibility) {
-    return fallback;
-  }
-
-  return style.visibility;
-}
-
-function buildNodePlacement(style: TaskBranchStyle, fallback: TaskBranchPlacement): TaskBranchPlacement {
-  const hasExplicitPlacement = style.tags.includes('left') || style.tags.includes('normal');
-  if (!hasExplicitPlacement) {
-    return fallback;
-  }
-
-  return style.placement;
-}
-
-function resolveLegacyBranchInsert(raw: string): boolean {
-  return BRANCH_LEGACY_LABEL_RE.test(raw.trim());
-}
-
 type ParsedTaskDocument = {
   body: string;
   systemComments: Record<string, OrderStepComment[]>;
   systemInserts: Record<string, OrderNotebookBlock[]>;
 };
-
-type TaskThreadNodePath = number[];
-
-function cloneTaskThreadNode(node: TaskThreadNode): TaskThreadNode {
-  return {
-    ...node,
-    children: node.children?.map((child) => cloneTaskThreadNode(child))
-  };
-}
-
-function cloneTaskThreadNodes(nodes: TaskThreadNode[]): TaskThreadNode[] {
-  return nodes.map((node) => cloneTaskThreadNode(node));
-}
-
-function findTaskThreadNodePath(nodes: TaskThreadNode[], nodeId: string, path: TaskThreadNodePath = []): TaskThreadNodePath | null {
-  for (let index = 0; index < nodes.length; index += 1) {
-    const candidate = nodes[index];
-    if (!candidate) {
-      continue;
-    }
-
-    if (candidate.id === nodeId) {
-      return [...path, index];
-    }
-
-    if (!candidate.children?.length) {
-      continue;
-    }
-
-    const nestedPath = findTaskThreadNodePath(candidate.children, nodeId, [...path, index]);
-    if (nestedPath) {
-      return nestedPath;
-    }
-  }
-
-  return null;
-}
-
-function buildTaskThreadRelationsById(nodes: TaskThreadNode[]): {
-  parentById: Record<string, string | null>;
-  indexById: Record<string, number>;
-  depthById: Record<string, number>;
-} {
-  const parentById: Record<string, string | null> = {};
-  const indexById: Record<string, number> = {};
-  const depthById: Record<string, number> = {};
-
-  function walk(list: TaskThreadNode[], parentId: string | null, depth: number): void {
-    list.forEach((node, index) => {
-      parentById[node.id] = parentId;
-      indexById[node.id] = index;
-      depthById[node.id] = depth;
-
-      if (node.children?.length) {
-        walk(node.children, node.id, depth + 1);
-      }
-    });
-  }
-
-  walk(nodes, null, 0);
-  return { parentById, indexById, depthById };
-}
-
-export function getTaskThreadNodeRelations(nodes: TaskThreadNode[]): {
-  parentById: Record<string, string | null>;
-  childByParentId: Record<string, string[]>;
-  depthById: Record<string, number>;
-} {
-  const direct = buildTaskThreadRelationsById(nodes);
-  const childByParentId: Record<string, string[]> = {};
-
-  for (const [nodeId, parentId] of Object.entries(direct.parentById)) {
-    const bucket = parentId === null ? '__root' : parentId;
-    childByParentId[bucket] = [...(childByParentId[bucket] ?? []), nodeId];
-  }
-
-  return {
-    parentById: direct.parentById,
-    childByParentId,
-    depthById: direct.depthById
-  };
-}
-
-export function getTaskThreadNodeBacklinks(nodes: TaskThreadNode[]): Record<string, string[]> {
-  const relations = getTaskThreadNodeRelations(nodes);
-  const backlinks: Record<string, string[]> = {};
-  for (const [id] of Object.entries(relations.parentById)) {
-    const chain: string[] = [];
-    let current = relations.parentById[id];
-    while (current) {
-      chain.push(current);
-      current = relations.parentById[current] ?? null;
-    }
-    backlinks[id] = chain;
-  }
-
-  return backlinks;
-}
-
-function getTaskThreadNodeAtPath(nodes: TaskThreadNode[], path: TaskThreadNodePath): TaskThreadNode | null {
-  if (!path.length) {
-    return null;
-  }
-
-  let current = nodes;
-  let currentNode: TaskThreadNode | null = null;
-  for (let depth = 0; depth < path.length; depth += 1) {
-    const segment = path[depth];
-    const target = current[segment];
-    if (!target) {
-      return null;
-    }
-
-    if (depth === path.length - 1) {
-      currentNode = target;
-      break;
-    }
-
-    if (!target.children?.length) {
-      return null;
-    }
-
-    current = target.children;
-  }
-
-  return currentNode;
-}
-
-function getTaskThreadChildrenByPath(nodes: TaskThreadNode[], path: TaskThreadNodePath): TaskThreadNode[] {
-  if (!path.length) {
-    return nodes;
-  }
-
-  const parentPath = path.slice(0, -1);
-  const parent = getTaskThreadNodeAtPath(nodes, parentPath);
-  return parent?.children ? [...parent.children] : [...nodes];
-}
-
-function removeTaskThreadNodeByPath(nodes: TaskThreadNode[], path: TaskThreadNodePath): { nodes: TaskThreadNode[]; removed?: TaskThreadNode } {
-  if (!path.length) {
-    return { nodes: cloneTaskThreadNodes(nodes) };
-  }
-
-  const cloned = cloneTaskThreadNodes(nodes);
-  const parentPath = path.slice(0, -1);
-  const index = path.at(-1);
-  if (index === undefined || index < 0) {
-    return { nodes: cloned };
-  }
-
-  if (!parentPath.length) {
-    const removed = cloned[index];
-    return {
-      nodes: [...cloned.slice(0, index), ...cloned.slice(index + 1)],
-      removed
-    };
-  }
-
-  const parent = getTaskThreadNodeAtPath(cloned, parentPath);
-  if (!parent?.children?.length) {
-    return { nodes: cloned };
-  }
-
-  const removed = parent.children[index];
-  parent.children = [...parent.children.slice(0, index), ...parent.children.slice(index + 1)];
-  return {
-    nodes: cloned,
-    removed
-  };
-}
-
-function insertTaskThreadNodeByPath(nodes: TaskThreadNode[], path: TaskThreadNodePath, node: TaskThreadNode): TaskThreadNode[] {
-  if (!path.length) {
-    return [...nodes, node];
-  }
-
-  const cloned = cloneTaskThreadNodes(nodes);
-  const parentPath = path.slice(0, -1);
-  const index = path.at(-1);
-  if (index === undefined || index < 0) {
-    return cloned;
-  }
-
-  if (!parentPath.length) {
-    const before = cloned.slice(0, Math.min(index, cloned.length));
-    const after = cloned.slice(Math.min(index, cloned.length));
-    return [...before, node, ...after];
-  }
-
-  const parent = getTaskThreadNodeAtPath(cloned, parentPath);
-  if (!parent) {
-    return cloned;
-  }
-
-  const children = parent.children ?? [];
-  parent.children = [...children.slice(0, Math.min(index, children.length)), node, ...children.slice(Math.min(index, children.length))];
-  return cloned;
-}
-
-function mergeTaskBranchStyle(parent?: TaskBranchStyle, own?: TaskBranchStyle): TaskBranchStyle {
-  const inherited = parent ?? { visibility: 'visible', placement: 'normal', tags: [] };
-  const nextTags = new Set<string>(inherited.tags);
-  for (const tag of own?.tags ?? []) {
-    nextTags.add(tag);
-  }
-
-  return {
-    visibility: buildNodeVisibility(own ?? inherited, inherited.visibility),
-    placement: buildNodePlacement(own ?? inherited, inherited.placement),
-    tags: Array.from(nextTags)
-  };
-}
-
-export function indentTaskThreadNode(nodes: TaskThreadNode[], nodeId: string): TaskThreadNode[] {
-  const path = findTaskThreadNodePath(nodes, nodeId);
-  if (!path || path.length < 1) {
-    return cloneTaskThreadNodes(nodes);
-  }
-
-  const index = path.at(-1) ?? -1;
-  if (index <= 0) {
-    return cloneTaskThreadNodes(nodes);
-  }
-
-  const removedResult = removeTaskThreadNodeByPath(nodes, path);
-  if (!removedResult.removed) {
-    return cloneTaskThreadNodes(nodes);
-  }
-
-  const targetPath = [...path];
-  targetPath[targetPath.length - 1] = index - 1;
-  const previousSibling = getTaskThreadNodeAtPath(removedResult.nodes, targetPath);
-  if (!previousSibling) {
-    return removedResult.nodes;
-  }
-
-  const insertPath = [...targetPath, previousSibling.children?.length ?? 0];
-  return insertTaskThreadNodeByPath(removedResult.nodes, insertPath, removedResult.removed);
-}
-
-export function outdentTaskThreadNode(nodes: TaskThreadNode[], nodeId: string): TaskThreadNode[] {
-  const path = findTaskThreadNodePath(nodes, nodeId);
-  if (!path || path.length < 2) {
-    return cloneTaskThreadNodes(nodes);
-  }
-
-  const removedResult = removeTaskThreadNodeByPath(nodes, path);
-  if (!removedResult.removed) {
-    return cloneTaskThreadNodes(nodes);
-  }
-
-  const parentPath = path.slice(0, -1);
-  const grandParentPath = path.slice(0, -2);
-  if (grandParentPath.length === 0) {
-    const insertPath = [Math.min(parentPath[0] + 1, removedResult.nodes.length)];
-    return insertTaskThreadNodeByPath(removedResult.nodes, insertPath, removedResult.removed);
-  }
-
-  const grandParent = getTaskThreadNodeAtPath(removedResult.nodes, grandParentPath);
-  if (!grandParent) {
-    return removedResult.nodes;
-  }
-
-  const insertAt = Math.min((parentPath.at(-1) ?? 0) + 1, grandParent.children?.length ?? 0);
-  const withInserted = insertTaskThreadNodeByPath(removedResult.nodes, [...grandParentPath, insertAt], removedResult.removed);
-  return withInserted;
-}
-
-export function addTaskThreadNode(
-  nodes: TaskThreadNode[],
-  node: TaskThreadNode,
-  options?: { parentId?: string; index?: number }
-): TaskThreadNode[] {
-  if (!options?.parentId) {
-    return insertTaskThreadNodeByPath(nodes, [Math.max(0, options?.index ?? nodes.length)], node);
-  }
-
-  const parentPath = findTaskThreadNodePath(nodes, options.parentId);
-  if (!parentPath) {
-    return cloneTaskThreadNodes(nodes);
-  }
-
-  const parent = getTaskThreadNodeAtPath(nodes, parentPath);
-  if (!parent) {
-    return cloneTaskThreadNodes(nodes);
-  }
-
-  const insertPath = [...parentPath, options.index ?? (parent.children?.length ?? 0)];
-  const next = insertTaskThreadNodeByPath(nodes, insertPath, node);
-  return next;
-}
-
-export function removeTaskThreadNode(nodes: TaskThreadNode[], nodeId: string): TaskThreadNode[] {
-  return removeTaskThreadNodeByPath(nodes, findTaskThreadNodePath(nodes, nodeId) || []).nodes;
-}
-
-export function moveTaskThreadNode(nodes: TaskThreadNode[], nodeId: string, targetParentId: string | null, index = 0): TaskThreadNode[] {
-  const path = findTaskThreadNodePath(nodes, nodeId);
-  if (!path) {
-    return cloneTaskThreadNodes(nodes);
-  }
-
-  const sourceParentId = path.length > 1 ? (getTaskThreadNodeAtPath(nodes, path.slice(0, -1))?.id ?? null) : null;
-  const targetPath = targetParentId ? findTaskThreadNodePath(nodes, targetParentId) : [];
-  if (targetParentId && !targetPath) {
-    return cloneTaskThreadNodes(nodes);
-  }
-
-  if (targetParentId && targetPath && isPathDescendantOrSelf(path, targetPath)) {
-    return cloneTaskThreadNodes(nodes);
-  }
-
-  const removedResult = removeTaskThreadNodeByPath(nodes, path);
-  if (!removedResult.removed) {
-    return removedResult.nodes;
-  }
-
-  const effectiveIndex = (() => {
-    const nextIndex = Math.max(0, index);
-    if (!targetParentId) {
-      const sourceIndex = path[0] ?? 0;
-      return Math.min(sourceIndex < nextIndex ? Math.max(0, nextIndex - 1) : nextIndex, removedResult.nodes.length);
-    }
-
-    const targetPath = findTaskThreadNodePath(nodes, targetParentId);
-    if (!targetPath) {
-      return Math.min(Math.max(0, index), removedResult.nodes.length);
-    }
-
-    const targetParent = getTaskThreadNodeAtPath(nodes, targetPath);
-    if (!targetParent) {
-      return Math.min(Math.max(0, index), removedResult.nodes.length);
-    }
-
-    if (
-      targetParentId === sourceParentId &&
-      (path.at(-1) ?? 0) < nextIndex
-    ) {
-      return Math.max(0, nextIndex - 1);
-    }
-
-    return Math.min(Math.max(0, index), getTaskThreadChildrenByPath(nodes, targetPath).length);
-  })();
-
-  const insertionPath = targetParentId
-    ? [...(targetPath || []), effectiveIndex]
-    : [effectiveIndex];
-  return insertTaskThreadNodeByPath(removedResult.nodes, insertionPath, removedResult.removed);
-}
-
-function isPathDescendantOrSelf(path: TaskThreadNodePath, candidate: TaskThreadNodePath): boolean {
-  if (candidate.length < path.length) {
-    return false;
-  }
-  return candidate.slice(0, path.length).every((segment, index) => segment === path[index]);
-}
-
 
 export type TaskDocumentCommentPayload = {
   content: string;
@@ -714,50 +260,6 @@ function appendSystemInsert(content: string | undefined, nodeKey: string, insert
   return blocks.filter(Boolean).join('\n\n').trim();
 }
 
-function replaceSystemInsert(content: string | undefined, nodeKey: string, insertContent: string): string {
-  const source = content?.trim() || '';
-  if (!source) {
-    return appendSystemInsert(source, nodeKey, insertContent);
-  }
-
-  const escapedKey = nodeKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const insertRe = new RegExp(
-    `(^|\\n)\\#\\+begin_node_insert:\\s*${escapedKey}\\n[\\s\\S]*?\\n\\#\\+end_node_insert(\\n|$)`,
-    'g'
-  );
-
-  let replaced = false;
-  const next = source.replace(insertRe, (_, prefix: string, suffix: string) => {
-    if (replaced) {
-      return `${prefix}#+begin_node_insert: ${nodeKey}\n${insertContent.trim()}\n#+end_node_insert${suffix}`;
-    }
-
-    replaced = true;
-    return `${prefix}#+begin_node_insert: ${nodeKey}\n${insertContent.trim()}\n#+end_node_insert${suffix}`;
-  });
-
-  if (replaced) {
-    return next.trim();
-  }
-
-  return appendSystemInsert(source, nodeKey, insertContent);
-}
-
-function normalizeBranchInsertSource(raw: string): string {
-  const styleless = stripTaskBranchStyle(raw);
-  const legacyFree = styleless.replace(BRANCH_LEGACY_RE, '').trim();
-  return legacyFree;
-}
-
-export function isBranchInsert(raw: string): boolean {
-  const style = parseTaskBranchStyle(raw);
-  if (style.tags.some((tag) => ['left', 'hidden', 'normal', 'visible'].includes(tag))) {
-    return true;
-  }
-
-  return resolveLegacyBranchInsert(raw);
-}
-
 function executorState(executor: OrderExecutor): ProgressState {
   if (executor.status === 'completed') return 'completed';
   if (executor.status === 'running' || executor.status === 'review' || executor.status === 'accepted') return 'active';
@@ -831,7 +333,7 @@ function isGenericSolverPlaceholder(value: string | undefined): boolean {
     const url = new URL(raw);
     const host = url.host.toLowerCase();
     const segments = url.pathname.split('/').filter(Boolean);
-    if (host === 'lefine.pro' && segments.length <= 1) {
+    if ((host === 'exchange.lefine.pro' || host === 'lefine.pro') && segments.length <= 1) {
       return true;
     }
     return segments.length === 0;
@@ -942,6 +444,21 @@ export function resolveOrderStage(order: OrderView): ExecutionStage {
 function exchangeSearchNode(order: OrderView): TaskThreadNode {
   const stage = resolveOrderStage(order);
   const comments = resolveSystemNodeComments(order, `${order.id}-exchange-search`);
+  const finalResultBlocks = order.result?.blocks;
+
+  if (finalResultBlocks?.length) {
+    return {
+      id: `${order.id}-exchange-search`,
+      stepId: `${order.id}-exchange-search`,
+      title: 'Solution',
+      detail: order.result?.summary || order.result?.title || 'The solution has been received.',
+      state: 'completed',
+      mode: 'block',
+      blocks: finalResultBlocks,
+      commentable: true,
+      comments
+    };
+  }
 
   if (stage === 'assigned' || stage === 'running' || stage === 'review' || stage === 'completed') {
     return compactNode(
@@ -1008,6 +525,7 @@ function deriveInsertTitle(content: string, fallback: string): string {
   }
 
   const normalized = firstLine
+    .replace(/^branch:\s+/i, '')
     .replace(/^\*+\s+/, '')
     .replace(/^[-+]\s+/, '')
     .replace(/^\d+\.\s+/, '')
@@ -1016,12 +534,7 @@ function deriveInsertTitle(content: string, fallback: string): string {
   return normalized || fallback;
 }
 
-function resolveSystemNodeInserts(
-  order: OrderView,
-  nodeKey: string,
-  inheritedBranchLabel?: string,
-  inheritedBranchStyle: TaskBranchStyle = { visibility: 'visible', placement: 'normal', tags: [] }
-): TaskThreadNode[] | undefined {
+function resolveSystemNodeInserts(order: OrderView, nodeKey: string, inheritedBranchLabel?: string): TaskThreadNode[] | undefined {
   const inserts = parseTaskDocumentContent(order.document?.content).systemInserts[nodeKey];
   if (!inserts?.length) {
     return undefined;
@@ -1031,25 +544,19 @@ function resolveSystemNodeInserts(
   let taskCounter = 0;
 
   return inserts.map((block, index) => {
-    const raw = block.content.trim();
-    const branchStyle = mergeTaskBranchStyle(inheritedBranchStyle, parseTaskBranchStyle(raw));
-    const branchDeclaration = isBranchInsert(raw);
-    if (branchDeclaration) {
+    const normalizedContent = block.content.trim();
+    const isBranchInsert = /^branch:\s+/i.test(normalizedContent);
+    if (isBranchInsert) {
       branchCounter += 1;
     } else {
       taskCounter += 1;
     }
 
-    const branchLabel = branchDeclaration ? `Branch ${branchCounter}` : inheritedBranchLabel;
-    const normalized = normalizeBranchInsertSource(raw);
+    const branchLabel = isBranchInsert ? `Branch ${branchCounter}` : inheritedBranchLabel;
+    const body = isBranchInsert ? normalizedContent.replace(/^branch:\s+/i, '').trim() : normalizedContent;
     const stepId = `${nodeKey}-insert-${index + 1}`;
-    const title = deriveInsertTitle(
-      normalized,
-      branchDeclaration ? `Branch task ${branchCounter}` : `Task ${taskCounter}`
-    );
-    const detail = normalized && normalized !== title ? normalized : undefined;
-    const visibility = branchStyle.visibility;
-    const placement = branchStyle.placement;
+    const title = deriveInsertTitle(body, isBranchInsert ? `Branch task ${branchCounter}` : `Task ${taskCounter}`);
+    const detail = body && body !== title ? body : undefined;
     const node = compactNode(
       stepId,
       title,
@@ -1061,14 +568,10 @@ function resolveSystemNodeInserts(
       resolveSystemNodeComments(order, stepId)
     );
 
-    const children = resolveSystemNodeInserts(order, stepId, branchLabel, branchStyle);
+    const children = resolveSystemNodeInserts(order, stepId, branchLabel);
     return {
       ...node,
       branchLabel,
-      branchVisibility: visibility,
-      branchPlacement: placement,
-      branchTags: branchStyle.tags,
-      editableSource: normalized,
       children
     };
   });
@@ -1157,7 +660,7 @@ function resultNode(section: OrderResultSection | undefined, id: string, title: 
     return null;
   }
 
-  return blockNode(id, title, undefined, 'completed', section.blocks);
+  return blockNode(id, title, section.summary || section.title, 'completed', section.blocks);
 }
 
 function solverNodes(order: OrderView): TaskThreadNode[] {
@@ -1202,46 +705,16 @@ function solverNodes(order: OrderView): TaskThreadNode[] {
   return [];
 }
 
-function attachDocumentInserts(order: OrderView, node: TaskThreadNode): TaskThreadNode {
-  const inheritedStyle = {
-    visibility: node.branchVisibility ?? 'visible',
-    placement: node.branchPlacement ?? 'normal',
-    tags: node.branchTags ?? []
-  };
-  const insertedChildren = resolveSystemNodeInserts(
-    order,
-    node.stepId || node.id,
-    node.branchLabel,
-    inheritedStyle
-  ) ?? [];
-
-  return {
-    ...node,
-    comments: node.comments ?? resolveSystemNodeComments(order, node.stepId || node.id),
-    children: [
-      ...(node.children ?? []).map((child) => attachDocumentInserts(order, child)),
-      ...insertedChildren.map((child) => attachDocumentInserts(order, child))
-    ]
-  };
-}
-
-export function buildTaskThreadNodes(
-  order: OrderView | null,
-  labels: { interimResult?: string; resultTitle?: string; finalResult?: string } = {}
-): TaskThreadNode[] {
+export function buildTaskThreadNodes(order: OrderView | null): TaskThreadNode[] {
   if (!order) {
     return [];
   }
 
   const description = descriptionNode(order);
-  const interim = resultNode(order.interimResult, `${order.id}-interim-result`, labels.interimResult || 'Interim result');
-  const final = resultNode(order.result, `${order.id}-final-result`, labels.resultTitle || labels.finalResult || 'Result');
+  const interim = resultNode(order.interimResult, `${order.id}-interim-result`, 'Interim result');
+  const final = resultNode(order.result, `${order.id}-final-result`, 'Final result');
   const exchangeNode = exchangeSearchNode(order);
-  const planNodes = parseOrgPlanThreadNodes(order.document?.content);
-
-  if (planNodes.length > 0) {
-    return planNodes.map((node) => attachDocumentInserts(order, node));
-  }
+  const exchangeShowsFinalResult = exchangeNode.mode === 'block' && exchangeNode.title === 'Solution';
 
   const nodes = [
     exchangeNode,
@@ -1250,20 +723,20 @@ export function buildTaskThreadNodes(
     ...executionNodes(order.executionSteps),
     ...notebookNodes(order.notebook?.steps),
     ...(interim ? [interim] : []),
-    ...(final ? [final] : [])
+    ...(final && !exchangeShowsFinalResult ? [final] : [])
   ];
 
-  return nodes.map((node) => attachDocumentInserts(order, node));
+  return nodes.map((node) => ({
+    ...node,
+    children: [...(node.children ?? []), ...(resolveSystemNodeInserts(order, node.stepId || node.id, node.branchLabel) ?? [])]
+  }));
 }
 
 // Preserve the previous export name so Vite HMR can survive the refactor without a hard reload.
 export const buildTaskFeedInserts = buildTaskThreadNodes;
 
-export function buildQueuedTaskRoot(
-  order: OrderView,
-  labels: { interimResult?: string; resultTitle?: string; finalResult?: string } = {}
-): TaskThreadNode {
-  const children = buildTaskThreadNodes(order, labels);
+export function buildQueuedTaskRoot(order: OrderView): TaskThreadNode {
+  const children = buildTaskThreadNodes(order);
   const title = resolveRootTitle(order);
   const summary = resolveTaskSummary(order);
   const status = (order.status === 'completed' || order.status === 'done') ? 'completed' : order.status === 'queued' ? 'active' : 'upcoming';
@@ -1334,26 +807,4 @@ export function appendTaskNodeInsert(order: OrderView | null, nodeKey: string, c
   }
 
   return appendSystemInsert(order.document?.content || order.description || '', nodeKey, content);
-}
-
-export function replaceTaskNodeInsert(order: OrderView | null, nodeKey: string, content: string): string {
-  if (!order) {
-    return content.trim();
-  }
-
-  return replaceSystemInsert(order.document?.content || order.description || '', nodeKey, content);
-}
-
-export function appendTaskNodeBranchInsert(
-  order: OrderView | null,
-  nodeKey: string,
-  content: string,
-  options?: { placement?: TaskBranchPlacement; visibility?: TaskBranchVisibility }
-): string {
-  const source = composeBranchInsertSource(content, {
-    placement: options?.placement ?? 'normal',
-    visibility: options?.visibility ?? 'visible'
-  }, true);
-  const normalized = source.trim() || content;
-  return appendTaskNodeInsert(order, nodeKey, normalized);
 }

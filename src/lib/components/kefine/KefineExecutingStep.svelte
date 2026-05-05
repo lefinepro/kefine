@@ -60,23 +60,12 @@
       interimResult: string;
       finalResult: string;
       leaveComment: string;
-      commentAction?: string;
-      createBranch?: string;
-      createBranchLeft?: string;
-      createBranchHidden?: string;
-      editCode?: string;
-      expandBranch?: string;
-      collapseBranch?: string;
-      showHiddenBranches?: string;
-      hideBranches?: string;
-      inlineCodeEditHint?: string;
       noNotebookYet: string;
       treeTitle: string;
       feedTitle: string;
       saving: string;
       apply: string;
       richEditorDescription: string;
-      resultTitle: string;
     };
     authLabels: {
       walletTitle: string;
@@ -168,6 +157,7 @@
       'default solver',
       'saved',
       'save',
+      'https://exchange.lefine.pro',
       'https://lefine.pro'
     ]);
 
@@ -176,7 +166,7 @@
       try {
         const url = new URL(profileUrl);
         const segments = url.pathname.split('/').filter(Boolean);
-        return (url.host === 'lefine.pro') && segments.length <= 1;
+        return (url.host === 'exchange.lefine.pro' || url.host === 'lefine.pro') && segments.length <= 1;
       } catch {
         return false;
       }
@@ -655,10 +645,7 @@
           saving: labels.saving,
           leaveComment: labels.leaveComment,
           apply: labels.apply,
-          richEditorDescription: labels.richEditorDescription,
-          interimResult: labels.interimResult,
-          finalResult: labels.finalResult,
-          resultTitle: labels.resultTitle
+          richEditorDescription: labels.richEditorDescription
         }}
       />
   </kefine-task-stage>

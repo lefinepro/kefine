@@ -3,22 +3,12 @@
   import type { DraftOrder, OrderView, TemplatePresentation } from './kefine-workflow';
   import { scheduleAfter } from '$lib/utils/helpers';
   import KefineOrderListItem from '$lib/components/kefine/KefineOrderListItem.svelte';
-  import { createEditor, type NodeJSON } from 'prosekit/core';
-  import { ProseKit } from 'prosekit/svelte';
-  import { defineBasicExtension } from 'prosekit/basic';
-  import { onMount } from 'svelte';
-  import hljs from 'highlight.js/lib/core';
-  import rust from 'highlight.js/lib/languages/rust';
-  import 'highlight.js/styles/xcode.css';
-  // TODO: Add BlockHandle and DropIndicator if available
-
-  hljs.registerLanguage('rust', rust);
+  import KefineRichTaskEditorDialog from '$lib/components/kefine/KefineRichTaskEditorDialog.svelte';
 
   const PLACEHOLDER_TYPE_DELAY_MS = 58;
   const PLACEHOLDER_DELETE_DELAY_MS = 34;
   const PLACEHOLDER_PAUSE_MS = 1150;
   const PLACEHOLDER_NEXT_DELAY_MS = 250;
-
   let {
     draft,
     template,
@@ -28,33 +18,44 @@
     pinnedServicesSubtitle,
     titleFontSize,
     title,
+    subtitle,
     afe,
     placeholder,
     placeholderVariants,
     executeAria,
     backgroundExecuteAria,
-    solverSearchActive = false,
-    solverSearchText = '',
-    solverSearchLabel,
     solverLabel,
+    recentOrders,
     matchedOrders,
     isSearching,
+    totalOrders,
+    hasMoreOrders,
     matchedTasksLabel,
     addFileLabel,
+    addDescriptionLabel,
     addExecutionEstimateLabel,
     fileCountLabel,
     composerHints,
+    richEditorDescription,
+    timeLeftLabel,
     openTaskLabel,
+    summaryLabel,
+    executionLabel,
     relatedItemsLabel,
+    windowLabel,
     createServiceLabel = 'Transform to service',
+    statusLabel,
+    stopTaskLabel,
     deleteTaskLabel,
     onSubmit,
     onQueueTask,
     onAttachFiles,
     onRemoveFile,
+    onStopOrder,
     onDeleteOrder,
     onOpenOrder,
     onCreateServiceFromOrder,
+    onLoadMoreOrders,
     onDescriptionChange,
     onTemplateVariableChange,
     onTagsChange,
@@ -79,6 +80,7 @@
     pinnedServicesSubtitle: string;
     titleFontSize: number;
     title: string;
+    subtitle: string;
     afe: {
       title: string;
       labels: {
@@ -97,28 +99,38 @@
     placeholderVariants: readonly string[];
     executeAria: string;
     backgroundExecuteAria: string;
-    solverSearchActive?: boolean;
-    solverSearchText?: string;
-    solverSearchLabel: string;
     solverLabel: string;
+    recentOrders: OrderView[];
     matchedOrders: OrderView[];
     isSearching: boolean;
+    totalOrders: number;
+    hasMoreOrders: boolean;
     matchedTasksLabel: string;
     addFileLabel: string;
+    addDescriptionLabel: string;
     addExecutionEstimateLabel: string;
     fileCountLabel: (count: number) => string;
     composerHints: string;
+    richEditorDescription: string;
+    timeLeftLabel: string;
     openTaskLabel: string;
+    summaryLabel: string;
+    executionLabel: string;
     relatedItemsLabel: string;
+    windowLabel: string;
     createServiceLabel?: string;
+    statusLabel: string;
+    stopTaskLabel: string;
     deleteTaskLabel: string;
     onSubmit: () => void;
     onQueueTask: () => Promise<void> | void;
     onAttachFiles: (files: File[]) => void;
     onRemoveFile: (index: number) => void;
+    onStopOrder: (order: OrderView, event: Event) => void;
     onDeleteOrder: (order: OrderView, event: Event) => void;
     onOpenOrder: (order: OrderView) => void;
     onCreateServiceFromOrder?: (order: OrderView, event: Event) => void;
+    onLoadMoreOrders: () => void;
     onDescriptionChange?: (value: string) => void;
     onTemplateVariableChange?: (key: string, value: string) => void;
     onTagsChange?: (tags: string[]) => void;
@@ -129,120 +141,26 @@
   let animatedPlaceholder = $state('');
   let placeholderVisible = $state(false);
   let placeholderFocused = $state(false);
-  let inputMetaOpen = $state(false);
+  let isLoadingMore = $state(false);
   let executionEditorOpen = $state(false);
   let tagEditorOpen = $state(false);
   let tagInputValue = $state('');
   let taskTextarea = $state<HTMLTextAreaElement | null>(null);
   let tagInput = $state<HTMLInputElement | null>(null);
   let fileInput = $state<HTMLInputElement | null>(null);
+  let recentLoadTrigger = $state<HTMLDivElement | null>(null);
   let filePreviews = $state<Map<number, string>>(new Map());
+  let touchStopTimers = new Map<string, () => void>();
+  let touchStopTriggered = new Set<string>();
   let queuePopoverOpen = $state(false);
   let queuePressTriggered = $state(false);
+  let richEditorOpen = $state(false);
   let cancelPlaceholderTick: (() => void) | null = null;
+  let cancelLoadMoreReset: (() => void) | null = null;
   let cancelQueuePress: (() => void) | null = null;
   let placeholderVariantIndex = $state(0);
   let placeholderCharIndex = $state(0);
   let placeholderDeleting = $state(false);
-  let taskEditorOpen = $state(false);
-  let taskCompleted = $state(false);
-
-  const sampleContent: NodeJSON = {
-    type: 'doc',
-    content: [
-      {
-        type: 'heading',
-        attrs: { level: 1 },
-        content: [{ type: 'text', text: 'Task Editor' }]
-      },
-      {
-        type: 'paragraph',
-        content: [{ type: 'text', text: 'Edit your task here...' }]
-      }
-    ]
-  };
-
-  let editor = $state(createEditor({ extension: defineBasicExtension(), defaultContent: sampleContent }));
-
-  const mockSolutions = $state([
-    {
-      id: '1',
-      solver: 'Basic Rust Dev',
-      avatar: 'https://via.placeholder.com/40/4CAF50/FFFFFF?text=BR',
-      title: 'Simple Hello World without comments',
-      description: 'Minimal implementation with just the basics',
-      diffs: [
-        { file: 'src/main.rs', added: 3, removed: 0 }
-      ],
-      finalCode: `fn main() {
-    println!("Hello, world!");
-}`
-    },
-    {
-      id: '2',
-      solver: 'Commented Rust Expert',
-      avatar: 'https://via.placeholder.com/40/2196F3/FFFFFF?text=CE',
-      title: 'Hello World with detailed comments',
-      description: 'Educational version with explanations for each line',
-      diffs: [
-        { file: 'src/main.rs', added: 10, removed: 0 }
-      ],
-      finalCode: `// This is the main function - entry point of every Rust program
-fn main() {
-    // Print a greeting message to the console
-    // println! is a macro that prints to stdout with a newline
-    println!("Hello, world!");
-
-    // The program will exit here
-    // Rust automatically returns () (unit type) from functions
-}`
-    },
-    {
-      id: '3',
-      solver: 'Interactive Rust',
-      avatar: 'https://via.placeholder.com/40/FF9800/FFFFFF?text=IR',
-      title: 'Interactive Hello World with user input',
-      description: 'Reads user input and responds accordingly',
-      diffs: [
-        { file: 'src/main.rs', added: 12, removed: 0 }
-      ],
-      finalCode: `use std::io;
-
-fn main() {
-    println!("Hello, world!");
-
-    println!("What's your name?");
-    let mut name = String::new();
-    io::stdin().read_line(&mut name).expect("Failed to read line");
-
-    println!("Hello, {}!", name.trim());
-}`
-    },
-    {
-      id: '4',
-      solver: 'Modern Rust Patterns',
-      avatar: 'https://via.placeholder.com/40/9C27B0/FFFFFF?text=MP',
-      title: 'Hello World using modern Rust patterns',
-      description: 'Uses Result handling and modern syntax',
-      diffs: [
-        { file: 'src/main.rs', added: 15, removed: 0 }
-      ],
-      finalCode: `use std::io::{self, Write};
-
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("Hello, world!");
-
-    print!("Enter your name: ");
-    io::stdout().flush()?;
-
-    let mut name = String::new();
-    io::stdin().read_line(&mut name)?;
-
-    println!("Hello, {}!", name.trim());
-    Ok(())
-}`
-    }
-  ]);
   const isMultilineDraft = $derived(draft.description.includes('\n'));
   const afeIntroCard = $derived(afe.cards[0] ?? null);
   const afeStepCards = $derived(afe.cards.slice(1));
@@ -374,33 +292,33 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
   });
 
   $effect(() => {
-    if (solverSearchActive && solverSearchText.trim() === "Нужен hello world на rust") {
-      const timer = setTimeout(() => {
-        // Simulate task completion
-        taskCompleted = true;
-        taskEditorOpen = false;
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  });
-
-  $effect(() => {
     return () => {
       cancelPlaceholderTick?.();
       cancelPlaceholderTick = null;
+      cancelLoadMoreReset?.();
+      cancelLoadMoreReset = null;
       cancelQueuePress?.();
       cancelQueuePress = null;
-    };
-  });
 
-  onMount(() => {
-    hljs.highlightAll();
+      for (const cancelTimer of touchStopTimers.values()) {
+        cancelTimer();
+      }
+
+      touchStopTimers = new Map();
+      touchStopTriggered = new Set();
+    };
   });
 
 
 
   function handleTaskInputKeydown(event: KeyboardEvent) {
     if (event.key !== 'Enter') {
+      return;
+    }
+
+    if ((event.ctrlKey || event.metaKey) && !(template && draft.templatePromptTemplate)) {
+      event.preventDefault();
+      richEditorOpen = true;
       return;
     }
 
@@ -456,6 +374,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
   function handleQueueTaskClick() {
     queuePopoverOpen = false;
     void onQueueTask();
+  }
+
+  function handleRichEditorApply(nextValue: string) {
+    onDescriptionChange?.(nextValue);
+    resizeTaskInput(nextValue);
   }
 
   $effect(() => {
@@ -525,6 +448,110 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     target.value = '';
   }
 
+  function requestRecentOrdersLoad() {
+    if (!hasMoreOrders || isLoadingMore) return;
+    isLoadingMore = true;
+    onLoadMoreOrders();
+    cancelLoadMoreReset?.();
+    cancelLoadMoreReset = scheduleAfter(180, () => {
+      isLoadingMore = false;
+      cancelLoadMoreReset = null;
+    });
+  }
+
+  function isRecentOrdersSentinelNearViewport() {
+    if (!browser || !recentLoadTrigger) {
+      return false;
+    }
+
+    const rect = recentLoadTrigger.getBoundingClientRect();
+    return rect.top - globalThis.innerHeight <= 240;
+  }
+
+  $effect(() => {
+    if (!browser || isSearching || totalOrders === 0 || !hasMoreOrders || !recentLoadTrigger) {
+      return;
+    }
+
+    if ('IntersectionObserver' in globalThis) {
+      const observer = new IntersectionObserver(
+        (entries) => {
+          if (entries.some((entry) => entry.isIntersecting)) {
+            requestRecentOrdersLoad();
+          }
+        },
+        {
+          root: null,
+          rootMargin: '0px 0px 240px 0px',
+          threshold: 0
+        }
+      );
+
+      observer.observe(recentLoadTrigger);
+
+      return () => {
+        observer.disconnect();
+      };
+    }
+
+    const handleWindowScroll = () => {
+      if (isRecentOrdersSentinelNearViewport()) {
+        requestRecentOrdersLoad();
+      }
+    };
+
+    handleWindowScroll();
+    globalThis.addEventListener('scroll', handleWindowScroll, { passive: true });
+    globalThis.addEventListener('resize', handleWindowScroll);
+
+    return () => {
+      globalThis.removeEventListener('scroll', handleWindowScroll);
+      globalThis.removeEventListener('resize', handleWindowScroll);
+    };
+  });
+
+  function startStopPress(order: OrderView, event: PointerEvent) {
+    if (event.pointerType === 'mouse') {
+      return;
+    }
+
+    clearStopPress(order.id);
+    event.preventDefault();
+    event.stopPropagation();
+
+    const cancelTimer = scheduleAfter(550, () => {
+      touchStopTriggered = new Set([...touchStopTriggered, order.id]);
+      onStopOrder(order, event);
+      clearStopPress(order.id);
+    });
+
+    touchStopTimers = new Map(touchStopTimers).set(order.id, cancelTimer);
+  }
+
+  function clearStopPress(orderId: string) {
+    const cancelTimer = touchStopTimers.get(orderId);
+    if (cancelTimer) {
+      cancelTimer();
+      const nextTimers = new Map(touchStopTimers);
+      nextTimers.delete(orderId);
+      touchStopTimers = nextTimers;
+    }
+  }
+
+  function handleStopClick(order: OrderView, event: MouseEvent) {
+    const wasTouchTriggered = touchStopTriggered.has(order.id);
+    if (wasTouchTriggered) {
+      const nextTriggered = new Set(touchStopTriggered);
+      nextTriggered.delete(order.id);
+      touchStopTriggered = nextTriggered;
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
+    onStopOrder(order, event);
+  }
+
   function handleDeleteClick(order: OrderView, event: MouseEvent) {
     event.preventDefault();
     event.stopPropagation();
@@ -541,7 +568,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
   }
 
   function handleTaskInputFocus() {
-    inputMetaOpen = true;
     placeholderFocused = true;
     stopPlaceholderAnimation({ hide: true });
   }
@@ -555,19 +581,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
   }
 
   function handleTaskInputPointerDown() {
-    inputMetaOpen = true;
     placeholderFocused = true;
     stopPlaceholderAnimation({ hide: true });
-  }
-
-  function handleCreateFocusOut(event: FocusEvent) {
-    const currentTarget = event.currentTarget as HTMLElement;
-
-    queueMicrotask(() => {
-      if (!currentTarget.contains(document.activeElement)) {
-        inputMetaOpen = false;
-      }
-    });
   }
 
   function normalizeTag(value: string): string {
@@ -622,12 +637,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 </script>
 
-{#if afeIntroCard}
-  <h1 class="lefine-title">Lefine</h1>
-  <p class="lefine-subtitle">{afeIntroCard.detail}</p>
-{/if}
-
-<article class="kefine-card kefine-card--wide" data-kefine-create onfocusout={handleCreateFocusOut}>
+<article class="kefine-card kefine-card--wide" data-kefine-create>
   {#if template}
     <section data-part="template-banner">
       <lefine-box>
@@ -663,188 +673,245 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     </section>
   {/if}
 
+  <h2 id="kefine-create-title">{title}</h2>
+  <p id="kefine-create-subtitle" data-part="subtitle">{subtitle}</p>
 
-
-  <fieldset data-part="exec-row" data-testid="kefine-create-form">
-    <kefine-task-shell>
-      <label data-part="sr-only" for="order-title">{title}</label>
-      <textarea
-        id="order-title"
-        bind:this={taskTextarea}
-        value={draft.description}
-        data-part="task-input"
-        data-empty={!draft.description.trim()}
-        data-multiline={isMultilineDraft}
-        readonly={Boolean(template && draft.templatePromptTemplate)}
-        data-testid="kefine-task-input"
-        data-size={getTaskFontSizeToken(titleFontSize)}
-        aria-label={title}
-        aria-describedby="kefine-composer-hints"
-        placeholder=""
-        rows="1"
-        wrap={isMultilineDraft ? 'soft' : 'off'}
-        onkeydown={handleTaskInputKeydown}
-        oninput={(e) => {
-          const target = e.currentTarget as HTMLTextAreaElement;
-          onDescriptionChange?.(target.value);
-          resizeTaskInput(target.value);
-        }}
-        onfocus={handleTaskInputFocus}
-        onblur={handleTaskInputBlur}
-        onpointerdown={handleTaskInputPointerDown}
-      ></textarea>
-      {#if !draft.description.trim()}
-        <kefine-task-placeholder
-          data-visible={placeholderVisible}
+  <lef-create-form data-part="form">
+    <fieldset data-part="exec-row" data-testid="kefine-create-form">
+      <kefine-task-shell>
+        <label data-part="sr-only" for="order-title">{title}</label>
+        <textarea
+          id="order-title"
+          bind:this={taskTextarea}
+          value={draft.description}
+          data-part="task-input"
+          data-empty={!draft.description.trim()}
+          data-multiline={isMultilineDraft}
+          readonly={Boolean(template && draft.templatePromptTemplate)}
+          data-testid="kefine-task-input"
           data-size={getTaskFontSizeToken(titleFontSize)}
-          aria-hidden="true"
-        >
-          {animatedPlaceholder}
-        </kefine-task-placeholder>
-      {/if}
-    </kefine-task-shell>
-    <button
-      type="button"
-      data-variant="primary"
-      data-part="exec-button"
-      data-testid="kefine-submit-task"
-      aria-label={executeAria}
-      aria-haspopup="dialog"
-      aria-expanded={queuePopoverOpen}
-      onclick={handleSubmitButtonClick}
-      onpointerdown={startQueuePress}
-      onpointerup={handleSubmitPressEnd}
-      onpointerleave={handleSubmitPressEnd}
-      onpointercancel={handleSubmitPressEnd}
-    >
-      <kefine-exec-arrow aria-hidden="true">➵</kefine-exec-arrow>
-    </button>
-    {#if queuePopoverOpen}
-      <kefine-submit-popover data-part="queue-popover" role="dialog" aria-label={backgroundExecuteAria}>
-        <button type="button" data-part="queue-popover-action" onclick={handleQueueTaskClick}>
-          {backgroundExecuteAria}
-        </button>
-      </kefine-submit-popover>
-    {/if}
-  </fieldset>
-
-  {#if inputMetaOpen}
-    <kefine-input-meta data-part="input-meta">
-      <kefine-composer-strip aria-label={composerHints}>
-        <button type="button" data-part="composer-chip" title={backgroundExecuteAria} onclick={() => fileInput?.click()}>
-          <lefine-text>{addFileLabel}</lefine-text>
-          {#if draft.files.length > 0}
-            <strong>{fileCountLabel(draft.files.length)}</strong>
-          {/if}
-        </button>
-        {#if executionEditorOpen}
-          <kefine-execution-editor>
-            <input
-              value={draft.executionEstimate}
-              data-part="execution-estimate-input"
-              placeholder={executionEstimateLabel}
-              oninput={(e) => onExecutionEstimateChange?.((e.currentTarget as HTMLInputElement).value)}
-            />
-          </kefine-execution-editor>
-        {:else}
-          <button type="button" data-part="composer-chip" onclick={() => { executionEditorOpen = true; }}>
-            <lefine-text>{addExecutionEstimateLabel}</lefine-text>
-          </button>
+          aria-labelledby="kefine-create-title"
+          aria-describedby="kefine-create-subtitle kefine-composer-hints"
+          placeholder=""
+          rows="1"
+          wrap={isMultilineDraft ? 'soft' : 'off'}
+          onkeydown={handleTaskInputKeydown}
+          oninput={(e) => {
+            const target = e.currentTarget as HTMLTextAreaElement;
+            onDescriptionChange?.(target.value);
+            resizeTaskInput(target.value);
+          }}
+          onfocus={handleTaskInputFocus}
+          onblur={handleTaskInputBlur}
+          onpointerdown={handleTaskInputPointerDown}
+        ></textarea>
+        {#if !draft.description.trim()}
+          <kefine-task-placeholder
+            data-visible={placeholderVisible}
+            data-size={getTaskFontSizeToken(titleFontSize)}
+            aria-hidden="true"
+          >
+            {animatedPlaceholder}
+          </kefine-task-placeholder>
         {/if}
-        {#if tagEditorOpen}
-          <input
-            bind:this={tagInput}
-            bind:value={tagInputValue}
-            data-part="tag-input"
-            placeholder="tag"
-            maxlength="32"
-            onkeydown={handleTagInputKeydown}
-            onblur={() => {
-              if (tagInputValue.trim()) {
-                commitTag(tagInputValue);
-                return;
-              }
-
-              tagEditorOpen = false;
-            }}
-          />
-        {:else}
-          <button type="button" data-part="composer-chip" data-part-tag="true" onclick={() => { tagEditorOpen = true; }}>
-            <lefine-text>+ tag</lefine-text>
+      </kefine-task-shell>
+      <button
+        type="button"
+        data-variant="primary"
+        data-part="exec-button"
+        data-testid="kefine-submit-task"
+        aria-label={executeAria}
+        aria-haspopup="dialog"
+        aria-expanded={queuePopoverOpen}
+        onclick={handleSubmitButtonClick}
+        onpointerdown={startQueuePress}
+        onpointerup={handleSubmitPressEnd}
+        onpointerleave={handleSubmitPressEnd}
+        onpointercancel={handleSubmitPressEnd}
+      >
+        <kefine-exec-arrow aria-hidden="true">➵</kefine-exec-arrow>
+      </button>
+      {#if queuePopoverOpen}
+        <kefine-submit-popover data-part="queue-popover" role="dialog" aria-label={backgroundExecuteAria}>
+          <button type="button" data-part="queue-popover-action" onclick={handleQueueTaskClick}>
+            {backgroundExecuteAria}
           </button>
+        </kefine-submit-popover>
+      {/if}
+    </fieldset>
+
+    <kefine-composer-strip aria-label={composerHints}>
+      <button type="button" data-part="composer-chip" title={backgroundExecuteAria} onclick={() => fileInput?.click()}>
+        <lefine-text>{addFileLabel}</lefine-text>
+        {#if draft.files.length > 0}
+          <strong>{fileCountLabel(draft.files.length)}</strong>
         {/if}
-      </kefine-composer-strip>
-
-      {#if (draft.tags?.length ?? 0) > 0}
-        <kefine-tag-strip data-has-tags="true">
-          {#each draft.tags ?? [] as tag (`tag-${tag}`)}
-            <button type="button" data-part="tag-pill" onclick={() => removeTag(tag)} aria-label={`Remove ${tag} tag`}>
-              <lefine-text>#{tag}</lefine-text>
-              <strong>×</strong>
-            </button>
-          {/each}
-        </kefine-tag-strip>
-      {/if}
-
-      {#if (draft.templateFiles?.length ?? 0) > 0}
-        <kefine-file-list data-template-files="true">
-          {#each draft.templateFiles ?? [] as file (`template-${file.id}`)}
-            <lefine-box data-part="template-file-pill">
-              <lefine-text>{file.name}</lefine-text>
-              <strong>{Math.max(1, Math.round((file.size ?? 1024) / 1024))} KB</strong>
-            </lefine-box>
-          {/each}
-        </kefine-file-list>
-      {/if}
-
-      {#if draft.files.length > 0}
-        <kefine-file-list>
-          {#each draft.files as file, index (`${file.name}-${file.size}-${index}`)}
-            <button type="button" data-part="file-pill" onclick={() => onRemoveFile(index)}>
-              {#if isImageFile(file) && filePreviews.has(index)}
-                <lefine-box data-part="file-preview-wrapper">
-                  <img
-                    src={filePreviews.get(index)}
-                    alt={file.name}
-                    data-part="file-preview"
-                  />
-                </lefine-box>
-              {/if}
-              <lefine-text>{file.name}</lefine-text>
-              <strong>{Math.max(1, Math.round(file.size / 1024))} KB</strong>
-            </button>
-          {/each}
-        </kefine-file-list>
-      {/if}
-    </kefine-input-meta>
-  {/if}
-
-  <input bind:this={fileInput} data-part="file-input" type="file" multiple onchange={handleFileChange} />
-  <p id="kefine-composer-hints" data-part="composer-hints" hidden>{composerHints}</p>
-
-  {#if isSearching && matchedOrders.length > 0}
-    <section data-part="recent" aria-label={isSearching ? matchedTasksLabel : solverLabel}>
-      <kefine-recent-title>{matchedTasksLabel}</kefine-recent-title>
-      <ul data-part="recent-list" data-compact="true" data-testid="kefine-search-results">
-        {#each matchedOrders as order (order.id)}
-          <KefineOrderListItem
-            {order}
-            {openTaskLabel}
-            {relatedItemsLabel}
-            {createServiceLabel}
-            {deleteTaskLabel}
-            showCreateService={false}
-            showDelete={true}
-            itemTestId={`kefine-search-order-${order.id}`}
-            openTestId={`kefine-open-search-order-${order.id}`}
-            deleteTestId={`kefine-delete-search-order-${order.id}`}
-            onOpen={() => onOpenOrder(order)}
-            onCreateService={(event) => onCreateServiceFromOrder?.(order, event)}
-            onOpenKeydown={(event) => handleOpenOrderKeydown(order, event)}
-            onDelete={(event) => handleDeleteClick(order, event)}
+      </button>
+      <button type="button" data-part="composer-chip" onclick={() => { richEditorOpen = !richEditorOpen; }}>
+        <lefine-text>{addDescriptionLabel}</lefine-text>
+      </button>
+      {#if executionEditorOpen}
+        <kefine-execution-editor>
+          <input 
+            value={draft.executionEstimate}
+            data-part="execution-estimate-input"
+            placeholder={executionEstimateLabel}
+            oninput={(e) => onExecutionEstimateChange?.((e.currentTarget as HTMLInputElement).value)}
           />
+        </kefine-execution-editor>
+      {:else}
+        <button type="button" data-part="composer-chip" onclick={() => { executionEditorOpen = true; }}>
+          <lefine-text>{addExecutionEstimateLabel}</lefine-text>
+        </button>
+      {/if}
+      {#if tagEditorOpen}
+        <input
+          bind:this={tagInput}
+          bind:value={tagInputValue}
+          data-part="tag-input"
+          placeholder="tag"
+          maxlength="32"
+          onkeydown={handleTagInputKeydown}
+          onblur={() => {
+            if (tagInputValue.trim()) {
+              commitTag(tagInputValue);
+              return;
+            }
+
+            tagEditorOpen = false;
+          }}
+        />
+      {:else}
+        <button type="button" data-part="composer-chip" data-part-tag="true" onclick={() => { tagEditorOpen = true; }}>
+          <lefine-text>+ tag</lefine-text>
+        </button>
+      {/if}
+      <input bind:this={fileInput} data-part="file-input" type="file" multiple onchange={handleFileChange} />
+    </kefine-composer-strip>
+
+    <kefine-tag-strip data-has-tags={(draft.tags?.length ?? 0) > 0}>
+      {#each draft.tags ?? [] as tag (`tag-${tag}`)}
+        <button type="button" data-part="tag-pill" onclick={() => removeTag(tag)} aria-label={`Remove ${tag} tag`}>
+          <lefine-text>#{tag}</lefine-text>
+          <strong>×</strong>
+        </button>
+      {/each}
+    </kefine-tag-strip>
+
+    {#if (draft.templateFiles?.length ?? 0) > 0}
+      <kefine-file-list data-template-files="true">
+        {#each draft.templateFiles ?? [] as file (`template-${file.id}`)}
+          <lefine-box data-part="template-file-pill">
+            <lefine-text>{file.name}</lefine-text>
+            <strong>{Math.max(1, Math.round((file.size ?? 1024) / 1024))} KB</strong>
+          </lefine-box>
         {/each}
-      </ul>
+      </kefine-file-list>
+    {/if}
+
+    {#if draft.files.length > 0}
+      <kefine-file-list>
+        {#each draft.files as file, index (`${file.name}-${file.size}-${index}`)}
+          <button type="button" data-part="file-pill" onclick={() => onRemoveFile(index)}>
+            {#if isImageFile(file) && filePreviews.has(index)}
+              <lefine-box data-part="file-preview-wrapper">
+                <img
+                  src={filePreviews.get(index)}
+                  alt={file.name}
+                  data-part="file-preview"
+                />
+              </lefine-box>
+            {/if}
+            <lefine-text>{file.name}</lefine-text>
+            <strong>{Math.max(1, Math.round(file.size / 1024))} KB</strong>
+          </button>
+        {/each}
+      </kefine-file-list>
+    {/if}
+
+    <p id="kefine-composer-hints" data-part="composer-hints" hidden>{composerHints}</p>
+  </lef-create-form>
+
+  <KefineRichTaskEditorDialog
+    open={richEditorOpen}
+    value={draft.description}
+    description={richEditorDescription}
+    onApply={handleRichEditorApply}
+  />
+
+  {#if (isSearching && matchedOrders.length > 0) || totalOrders > 0}
+    <section data-part="recent" aria-label={isSearching ? matchedTasksLabel : solverLabel}>
+      {#if isSearching && matchedOrders.length > 0}
+        <kefine-recent-title>{matchedTasksLabel}</kefine-recent-title>
+        <ul data-part="recent-list" data-compact="true" data-testid="kefine-search-results">
+          {#each matchedOrders as order (order.id)}
+            <KefineOrderListItem
+              {order}
+              {statusLabel}
+              {timeLeftLabel}
+              {solverLabel}
+              {openTaskLabel}
+              {summaryLabel}
+              {executionLabel}
+              {relatedItemsLabel}
+              {windowLabel}
+              {createServiceLabel}
+              {deleteTaskLabel}
+              showCreateService={false}
+              showDelete={true}
+              itemTestId={`kefine-search-order-${order.id}`}
+              openTestId={`kefine-open-search-order-${order.id}`}
+              etaTestId={`kefine-order-eta-${order.id}`}
+              deleteTestId={`kefine-delete-search-order-${order.id}`}
+              onOpen={() => onOpenOrder(order)}
+              onCreateService={(event) => onCreateServiceFromOrder?.(order, event)}
+              onOpenKeydown={(event) => handleOpenOrderKeydown(order, event)}
+              onDelete={(event) => handleDeleteClick(order, event)}
+            />
+          {/each}
+        </ul>
+      {:else if totalOrders > 0}
+        <section data-part="recent-scroll" data-testid="kefine-recent-scroll">
+          <ul data-part="recent-list" data-testid="kefine-recent-list">
+            {#each recentOrders as order (order.id)}
+              <KefineOrderListItem
+                {order}
+                {statusLabel}
+                {timeLeftLabel}
+                {solverLabel}
+                {openTaskLabel}
+                {summaryLabel}
+                {executionLabel}
+                {relatedItemsLabel}
+                {windowLabel}
+                {createServiceLabel}
+                {stopTaskLabel}
+                {deleteTaskLabel}
+                showCreateService={false}
+                showStop={true}
+                showDelete={true}
+                itemTestId={`kefine-order-item-${order.id}`}
+                openTestId={`kefine-open-order-${order.id}`}
+                etaTestId={`kefine-order-eta-${order.id}`}
+                stopTestId={`kefine-stop-order-${order.id}`}
+                deleteTestId={`kefine-delete-order-${order.id}`}
+                onOpen={() => onOpenOrder(order)}
+                onCreateService={(event) => onCreateServiceFromOrder?.(order, event)}
+                onOpenKeydown={(event) => handleOpenOrderKeydown(order, event)}
+                onStop={(event) => handleStopClick(order, event)}
+                onDelete={(event) => handleDeleteClick(order, event)}
+                onStopPointerDown={(event) => startStopPress(order, event)}
+                onStopPointerUp={() => clearStopPress(order.id)}
+                onStopPointerLeave={() => clearStopPress(order.id)}
+                onStopPointerCancel={() => clearStopPress(order.id)}
+              />
+            {/each}
+          </ul>
+          {#if hasMoreOrders}
+            <lefine-box bind:this={recentLoadTrigger} data-part="recent-load-trigger" aria-hidden="true"></lefine-box>
+          {/if}
+        </section>
+      {/if}
     </section>
   {/if}
 </article>
@@ -878,76 +945,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
   </lef-services-showcase>
 {/if}
 
- {#if solverSearchActive && solverSearchText.trim()}
-   <section data-part="tasks-list">
-     <div data-part="task-item" onclick={() => { taskEditorOpen = !taskEditorOpen; }}>
-        {#if taskEditorOpen}
-          <div class="task-editor-expanded" onclick={(e) => { e.stopPropagation(); taskEditorOpen = false; }}>
-            <div class="task-editor-header">
-              <h2>{taskCompleted ? "Task Results" : "Edit Task"}</h2>
-            </div>
-            <div class="task-editor-content" onclick={(e) => e.stopPropagation()}>
-              <div style="height: 300px;" class="task-editor-editor">
-                <ProseKit {editor}>
-                  <div {@attach editor.mount} class="ProseMirror box-border min-h-full px-4 py-8 outline-hidden outline-0 text-left">
-                    {#if taskCompleted}
-                      <p>Task completed successfully!</p>
-                    {/if}
-                  </div>
-                </ProseKit>
-              </div>
-              {#if taskCompleted}
-                <section class="solutions-list">
-                  {#each mockSolutions as solution (solution.id)}
-                     <article class="solution-card">
-                       <aside class="solution-sidebar">
-                         <h4 class="sidebar-title">Files</h4>
-                         <ul class="file-list">
-                           {#each solution.diffs as diff}
-                             <li class="file-item">
-                               <span class="file-name">{diff.file}</span>
-                               <span class="file-changes">
-                                 <span class="added">+{diff.added}</span>
-                                 <span class="removed">-{diff.removed}</span>
-                               </span>
-                             </li>
-                           {/each}
-                         </ul>
-                       </aside>
-                       <div class="solution-content">
-                         <header class="solution-header">
-                           <img src={solution.avatar} alt={solution.solver} class="solver-avatar" />
-                           <div class="solution-meta">
-                             <strong>{solution.solver}</strong>
-                             <span>{solution.title}</span>
-                           </div>
-                         </header>
-                         <p class="solution-description">{solution.description}</p>
-                         <pre class="code-block"><code class="language-rust">{solution.finalCode}</code></pre>
-                       </div>
-                     </article>
-                  {/each}
-                </section>
-              {/if}
-            </div>
-          </div>
-        {:else}
-          <kefine-solver-search-row aria-live="polite">
-            <lefine-text>{solverSearchText}</lefine-text>
-            <kefine-solver-search-indicator aria-label={taskCompleted ? 'Completed' : solverSearchLabel} title={taskCompleted ? 'Completed' : solverSearchLabel} data-completed={taskCompleted}>
-              <kefine-solver-search-dot aria-hidden="true"></kefine-solver-search-dot>
-            </kefine-solver-search-indicator>
-          </kefine-solver-search-row>
-        {/if}
-   </section>
- {/if}
-
- {#if afeIntroCard}
-   <lef-afe-showcase-heading>{afeIntroCard.title}</lef-afe-showcase-heading>
- {/if}
-
 <lef-afe-showcase>
   <lef-afe-layout>
+    {#if afeIntroCard}
+      <lef-afe-intro>
+        <lef-afe-intro-eyebrow>{afeIntroCard.title}</lef-afe-intro-eyebrow>
+        <h3>{afeIntroCard.detail}</h3>
+      </lef-afe-intro>
+    {/if}
+
     <lef-afe-steps>
       <lef-afe-flow aria-label={afe.title}>
         <lef-afe-diagram>
@@ -970,9 +976,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                   </lef-brief-sheet>
                 </lef-brief-writing>
               </lef-afe-step-head>
-              {#if afeStepCards[0].detail}
-                <p>{afeStepCards[0].detail}</p>
-              {/if}
+              <p>{afeStepCards[0].detail}</p>
             </lef-afe-node-step>
           {/if}
 
@@ -993,9 +997,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                   <lef-quote-box data-selected="true"></lef-quote-box>
                 </lef-quote-box-pick>
               </lef-afe-step-head>
-              {#if afeStepCards[1].detail}
-                <p>{afeStepCards[1].detail}</p>
-              {/if}
+              <p>{afeStepCards[1].detail}</p>
             </lef-afe-node-step>
           {/if}
 
@@ -1020,14 +1022,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
   [data-kefine-create] {
     grid-template-rows: auto auto auto minmax(0, auto);
     align-content: start;
-    gap: 0.62rem;
     width: min(100%, calc(100vw - 7rem));
     max-width: 64rem;
     justify-self: center;
     margin-inline: auto;
-    border: 0;
-    box-shadow: none;
-    background: none;
   }
 
   lef-afe-showcase {
@@ -1036,48 +1034,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     max-width: 64rem;
     justify-self: center;
     margin-inline: auto;
-  }
-
-  lef-afe-showcase-heading {
-    display: block;
-    width: min(100%, calc(100vw - 7rem));
-    max-width: 64rem;
-    justify-self: center;
-    margin: var(--kef-space-3) auto 0;
-    color: var(--lefine-text);
-    font-size: clamp(1.15rem, 2vw, 1.55rem);
-    font-weight: 740;
-    line-height: 1.08;
-    text-align: center;
-  }
-
-  lef-afe-layout {
-    display: grid;
-    gap: 0.55rem;
-  }
-
-  .lefine-title,
-  .lefine-subtitle {
-    width: min(100%, calc(100vw - 7rem));
-    max-width: 44rem;
-    justify-self: center;
-    margin-inline: auto;
-    text-align: center;
-  }
-
-  .lefine-title {
-    margin-block: 0 0.18rem;
-    color: var(--lefine-text);
-    font-size: clamp(2.65rem, 7.2vw, 5.8rem);
-    font-weight: 760;
-    line-height: 0.95;
-  }
-
-  .lefine-subtitle {
-    margin-block: 0 0.8rem;
-    color: var(--lefine-text-soft);
-    font-size: clamp(0.84rem, 1.3vw, 0.98rem);
-    line-height: 1.35;
   }
 
   lef-services-showcase {
@@ -1091,7 +1047,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     padding: 0.95rem 1rem 1rem;
     border-radius: var(--kef-radius-ui);
     background: color-mix(in oklab, var(--kef-bg-card) 90%, var(--kef-bg-soft) 10%);
-    border: 0;
+    border: 1px solid color-mix(in oklab, var(--kef-line-strong) 82%, transparent);
     box-shadow: none;
   }
 
@@ -1147,7 +1103,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     padding: 0.85rem 0.9rem;
     border-radius: var(--kef-radius-ui);
     background: color-mix(in oklab, var(--kef-bg-card) 94%, var(--kef-bg) 6%);
-    border: 0;
+    border: 1px solid color-mix(in oklab, var(--kef-line-strong) 72%, transparent);
     box-shadow: none;
     color: inherit;
     text-decoration: none;
@@ -1181,37 +1137,37 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
   lef-service-card-icon[data-accent='gold'] {
     background:
       linear-gradient(180deg, color-mix(in oklab, #d6a23d 72%, var(--kef-bg-soft)), color-mix(in oklab, #d6a23d 84%, black 16%));
-    border: 0;
+    border: 1px solid color-mix(in oklab, #d6a23d 34%, transparent);
   }
 
   lef-service-card-icon[data-accent='coral'] {
     background:
       linear-gradient(180deg, color-mix(in oklab, #d86c4b 72%, var(--kef-bg-soft)), color-mix(in oklab, #d86c4b 84%, black 16%));
-    border: 0;
+    border: 1px solid color-mix(in oklab, #d86c4b 34%, transparent);
   }
 
   lef-service-card-icon[data-accent='rose'] {
     background:
       linear-gradient(180deg, color-mix(in oklab, #cf5b7c 72%, var(--kef-bg-soft)), color-mix(in oklab, #cf5b7c 84%, black 16%));
-    border: 0;
+    border: 1px solid color-mix(in oklab, #cf5b7c 34%, transparent);
   }
 
   lef-service-card-icon[data-accent='plum'] {
     background:
       linear-gradient(180deg, color-mix(in oklab, #7f59c9 72%, var(--kef-bg-soft)), color-mix(in oklab, #7f59c9 84%, black 16%));
-    border: 0;
+    border: 1px solid color-mix(in oklab, #7f59c9 34%, transparent);
   }
 
   lef-service-card-icon[data-accent='sky'] {
     background:
       linear-gradient(180deg, color-mix(in oklab, #4d8fd8 72%, var(--kef-bg-soft)), color-mix(in oklab, #4d8fd8 84%, black 16%));
-    border: 0;
+    border: 1px solid color-mix(in oklab, #4d8fd8 34%, transparent);
   }
 
   lef-service-card-icon[data-accent='teal'] {
     background:
       linear-gradient(180deg, color-mix(in oklab, #2f9d88 72%, var(--kef-bg-soft)), color-mix(in oklab, #2f9d88 84%, black 16%));
-    border: 0;
+    border: 1px solid color-mix(in oklab, #2f9d88 34%, transparent);
   }
 
   lef-service-card-copy {
@@ -1235,6 +1191,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
   }
 
   lef-service-card:hover {
+    border-color: color-mix(in oklab, var(--kef-primary) 22%, transparent);
     background: color-mix(in oklab, var(--kef-bg-card) 88%, var(--kef-bg-soft));
   }
 
@@ -1281,12 +1238,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     min-width: 0;
     padding: clamp(1rem, 2vw, 1.5rem);
     border-radius: 1.35rem;
-    border: 0;
+    border: 1px solid color-mix(in oklab, var(--afe-edge-soft) 34%, transparent);
     background:
       radial-gradient(circle at 18% 22%, color-mix(in oklab, var(--afe-wash-a) 8%, transparent), transparent 18%),
       radial-gradient(circle at 82% 76%, color-mix(in oklab, var(--afe-wash-b) 7%, transparent), transparent 20%),
       color-mix(in oklab, var(--afe-paper) 92%, var(--afe-paper-deep) 8%);
     box-shadow:
+      inset 0 1px 0 color-mix(in oklab, var(--afe-paper-highlight) 28%, transparent),
+      inset 0 0 0 1px color-mix(in oklab, var(--afe-edge-warm) 14%, transparent),
       inset 0 0 40px color-mix(in oklab, var(--afe-wash-a) 4%, transparent),
       0 10px 20px color-mix(in oklab, var(--afe-shadow-deep) 6%, transparent);
     overflow: hidden;
@@ -1320,7 +1279,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     position: absolute;
     inset: 0;
     border-radius: inherit;
-    box-shadow: none;
+    box-shadow:
+      inset 0 0 16px color-mix(in oklab, var(--afe-wash-b) 5%, transparent),
+      inset 0 0 36px color-mix(in oklab, var(--afe-speck) 3%, transparent);
     pointer-events: none;
   }
 
@@ -1370,8 +1331,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     width: clamp(4.6rem, 8vw, 5.7rem);
     aspect-ratio: 1;
     border-radius: 999px;
-    border: 0;
-    box-shadow: none;
+    border: 2px solid color-mix(in oklab, var(--afe-edge) 86%, transparent);
+    box-shadow:
+      inset 0 0 0 1px color-mix(in oklab, var(--afe-paper-highlight) 20%, transparent),
+      0 0 0 1px color-mix(in oklab, var(--afe-edge) 14%, transparent);
     transform: rotate(-3deg);
   }
 
@@ -1388,8 +1351,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     min-height: 8.4rem;
     padding: 0.9rem 1rem 0.95rem;
     border-radius: 0.95rem;
-    border: 0;
-    box-shadow: 0 8px 18px color-mix(in oklab, var(--afe-shadow) 5%, transparent);
+    border: 2px solid color-mix(in oklab, var(--afe-edge) 78%, transparent);
+    box-shadow:
+      inset 0 0 0 1px color-mix(in oklab, var(--afe-paper-highlight) 18%, transparent),
+      0 8px 18px color-mix(in oklab, var(--afe-shadow) 5%, transparent);
     transform: rotate(-0.6deg);
     overflow: hidden;
   }
@@ -1789,33 +1754,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     transform: rotate(2.6deg);
   }
 
-  .solution-card .diff-summary .added {
-    color: #4CAF50;
-    font-weight: bold;
-  }
-
-  .solution-card .diff-summary .removed {
-    color: #F44336;
-    font-weight: bold;
-  }
-
-  .solution-card .code-diff .added {
-    background-color: rgba(76, 175, 80, 0.1);
-    display: block;
-  }
-
-  .solution-card .code-diff .removed {
-    background-color: rgba(244, 67, 54, 0.1);
-    display: block;
-    text-decoration: line-through;
-  }
-
-  .solution-card .code-diff .diff-header {
-    color: #9E9E9E;
-    font-weight: bold;
-    display: block;
-  }
-
   :global(:root[data-kefine-theme='dark']) lef-afe-flow {
     --afe-ink: #1c120b;
     --afe-ink-soft: #1c120b;
@@ -1849,11 +1787,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     --afe-wash-a: #7a5a36;
     --afe-wash-b: #5c4228;
     --afe-speck: #5b4126;
+    border-color: color-mix(in oklab, var(--afe-edge-soft) 42%, transparent);
     background:
       radial-gradient(circle at 18% 22%, color-mix(in oklab, var(--afe-wash-a) 12%, transparent), transparent 18%),
       radial-gradient(circle at 82% 76%, color-mix(in oklab, var(--afe-wash-b) 10%, transparent), transparent 20%),
       color-mix(in oklab, var(--afe-paper) 78%, var(--afe-paper-deep) 22%);
     box-shadow:
+      inset 0 1px 0 color-mix(in oklab, var(--afe-paper-highlight) 10%, transparent),
+      inset 0 0 0 1px color-mix(in oklab, var(--afe-edge-warm) 18%, transparent),
       inset 0 0 42px color-mix(in oklab, var(--afe-speck) 8%, transparent),
       0 10px 22px color-mix(in oklab, #000000 14%, transparent);
   }
@@ -1863,7 +1804,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
   }
 
   :global(:root[data-kefine-theme='dark']) lef-afe-flow::after {
-    box-shadow: none;
+    box-shadow:
+      inset 0 0 18px color-mix(in oklab, #3d2a19 12%, transparent),
+      inset 0 0 38px color-mix(in oklab, #24180f 9%, transparent);
   }
 
   :global(:root[data-kefine-theme='dark']) lef-afe-node-round,
@@ -1873,11 +1816,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
   }
 
   :global(:root[data-kefine-theme='dark']) lef-afe-node-round {
-    box-shadow: none;
+    border-color: color-mix(in oklab, #21150d 92%, transparent);
+    box-shadow:
+      inset 0 0 0 1px color-mix(in oklab, #fff3dc 10%, transparent),
+      0 0 0 1px color-mix(in oklab, #1d120b 18%, transparent);
   }
 
   :global(:root[data-kefine-theme='dark']) lef-afe-node-step {
-    box-shadow: 0 8px 18px color-mix(in oklab, #000000 14%, transparent);
+    border-color: color-mix(in oklab, #20140d 90%, transparent);
+    box-shadow:
+      inset 0 0 0 1px color-mix(in oklab, #fff3dc 9%, transparent),
+      0 8px 18px color-mix(in oklab, #000000 14%, transparent);
   }
 
   :global(:root[data-kefine-theme='dark']) lef-afe-node-round strong,
@@ -1969,6 +1918,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
   }
 
+  [data-kefine-create] h2 {
+    font-size: clamp(1.35rem, 2vw, 1.75rem);
+    margin: 0;
+  }
+
+  p[data-part='subtitle'] {
+    margin: 0;
+    max-width: 42rem;
+    color: var(--lefine-text-soft);
+  }
+
   label[data-part='sr-only'] {
     position: absolute;
     width: 1px;
@@ -1988,7 +1948,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     padding: 0.85rem 1rem;
     border-radius: 0.6rem;
     background: color-mix(in oklab, var(--kef-primary) 10%, var(--kef-bg-card));
-    border: 0;
+    border: 1px solid color-mix(in oklab, var(--kef-primary) 28%, transparent);
   }
 
   section[data-part='template-variables'] {
@@ -2003,7 +1963,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     padding: 0.95rem 1rem;
     border-radius: 0.75rem;
     background: color-mix(in oklab, var(--kef-primary) 8%, var(--kef-bg-card));
-    border: 0;
+    border: 1px solid color-mix(in oklab, var(--kef-primary) 24%, transparent);
   }
 
   section[data-part='service-setup-banner'] p {
@@ -2025,7 +1985,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     min-height: 2.6rem;
     padding: 0.55rem 0.8rem;
     border-radius: 0.55rem;
-    border: 0;
+    border: 1px solid color-mix(in oklab, var(--kef-border) 78%, transparent);
     background: color-mix(in oklab, var(--kef-bg-card) 94%, white 6%);
     color: var(--lefine-text);
   }
@@ -2049,265 +2009,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     min-height: 2rem;
     padding: 0.35rem 0.75rem;
     border-radius: 999px;
-    border: 0;
+    border: 1px solid color-mix(in oklab, var(--kef-border) 80%, transparent);
     background: color-mix(in oklab, var(--kef-bg-card) 92%, white 8%);
     color: var(--lefine-text);
     flex: 0 0 auto;
-  }
-
-  [data-part='task-item'] {
-    cursor: pointer;
-  }
-
-  .task-editor-expanded {
-    margin-top: 1rem;
-    border: 2px solid var(--kef-line);
-    border-radius: var(--kef-radius-ui);
-    background: var(--kef-bg-card);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
-  }
-
-  .task-editor-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem;
-    background: var(--kef-bg);
-    border-bottom: 1px solid var(--kef-line);
-  }
-
-  .task-editor-header h2 {
-    margin: 0;
-    font-size: 1.2rem;
-    font-weight: 600;
-  }
-
-  .close-button {
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    cursor: pointer;
-    padding: 0.5rem;
-    color: var(--lefine-text);
-  }
-
-  .task-editor-content {
-    max-height: 600px;
-    overflow-y: auto;
-  }
-
-  .solutions-list {
-    margin-top: 1rem;
-    display: flex;
-    flex-direction: row;
-    overflow-x: auto;
-    overflow-y: hidden;
-    gap: 0.75rem;
-    padding-bottom: 0.5rem;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .solution-card {
-    flex-shrink: 0;
-    width: 350px;
-    min-width: 350px;
-  }
-
-  .solution-card {
-    border: 1px solid var(--kef-line);
-    border-radius: var(--kef-radius-ui);
-    padding: 1rem;
-    background: var(--kef-bg-card);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  }
-
-  .solution-header {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 0.5rem;
-  }
-
-  .solver-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-  }
-
-  .solution-meta {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-  }
-
-  .solution-meta strong {
-    font-size: 1rem;
-    color: var(--lefine-text);
-  }
-
-  .solution-meta span {
-    font-size: 0.9rem;
-    color: var(--lefine-text-soft);
-  }
-
-  .solution-description {
-    margin: 0.5rem 0;
-    color: var(--lefine-text);
-  }
-
-  .diff-summary {
-    display: flex;
-    gap: 0.5rem;
-    margin-bottom: 0.5rem;
-  }
-
-  .diff-file {
-    font-size: 0.8rem;
-    background: var(--kef-bg);
-    padding: 0.25rem 0.5rem;
-    border-radius: 0.25rem;
-    color: var(--lefine-text-soft);
-  }
-
-  .code-diff {
-    background: var(--kef-bg);
-    padding: 1rem;
-    border-radius: 0.5rem;
-    overflow-x: auto;
-    font-size: 0.85rem;
-    color: var(--lefine-text);
-  }
-
-  .code-diff code {
-    font-family: monospace;
-  }
-
-  .code-diff .added {
-    color: #22c55e;
-    background: rgba(34, 197, 94, 0.1);
-  }
-
-  .code-diff .removed {
-    color: #ef4444;
-    background: rgba(239, 68, 68, 0.1);
-  }
-
-  .code-diff .diff-header {
-    color: #6366f1;
-    font-weight: bold;
-  }
-
-  .solution-card {
-    display: flex;
-    background: var(--kef-bg-card, #ffffff);
-    border: 1px solid var(--kef-border, #e9ecef);
-    border-radius: 0.75rem;
-    overflow: hidden;
-    margin-bottom: 1rem;
-    height: fit-content;
-  }
-
-  .solution-sidebar {
-    width: 200px;
-    background: var(--kef-bg-soft, #f8f9fa);
-    padding: 1rem;
-    border-right: 1px solid var(--kef-border, #e9ecef);
-  }
-
-  .sidebar-title {
-    font-size: 0.9rem;
-    font-weight: 600;
-    margin: 0 0 0.5rem 0;
-    color: var(--lefine-text);
-  }
-
-  .file-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-  }
-
-  .file-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.25rem 0;
-    font-size: 0.8rem;
-  }
-
-  .file-name {
-    flex: 1;
-    color: var(--lefine-text);
-    font-family: monospace;
-  }
-
-  .file-changes {
-    font-size: 0.75rem;
-  }
-
-  .solution-content {
-    flex: 1;
-    padding: 1rem;
-  }
-
-  .solution-header {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 0.5rem;
-  }
-
-  .solver-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-  }
-
-  .solution-meta {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .solution-meta strong {
-    font-size: 1rem;
-    color: var(--lefine-text);
-  }
-
-  .solution-meta span {
-    font-size: 0.85rem;
-    color: var(--lefine-text-soft);
-  }
-
-  .solution-description {
-    margin: 0.5rem 0;
-    color: var(--lefine-text-soft);
-    line-height: 1.4;
-  }
-
-  .code-block {
-    padding: 1rem;
-    border-radius: 0.5rem;
-    overflow-x: auto;
-    font-family: monospace;
-    border: 1px solid #e9ecef;
-    margin-top: 0.5rem;
-  }
-
-  .code-block pre {
-    margin: 0;
-  }
-
-  .solutions-list {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    max-width: 100%;
-  }
-
-  .code-block code {
-    background: none;
-    padding: 0;
   }
 
   button[data-part='composer-chip'][data-part-tag='true'] {
@@ -2325,7 +2030,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     min-height: 2rem;
     padding: 0.35rem 0.75rem;
     border-radius: 999px;
-    border: 0;
+    border: 1px dashed color-mix(in oklab, var(--kef-primary) 45%, transparent);
     background: color-mix(in oklab, var(--kef-bg-card) 94%, white 6%);
     color: var(--lefine-text);
     flex: 0 0 auto;
@@ -2333,6 +2038,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
   input[data-part='tag-input']:focus {
     outline: none;
+    border-color: color-mix(in oklab, var(--kef-primary) 80%, transparent);
   }
 
   section[data-part='template-banner'] p,
@@ -2349,72 +2055,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     text-align: right;
   }
 
-  kefine-solver-search-row {
+  lef-create-form[data-part='form'] {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 0.72rem;
-    min-height: 2.85rem;
-    padding: 0.42rem 0.5rem 0.42rem 0.78rem;
-    border-radius: 0.38rem;
-    background: color-mix(in oklab, var(--kef-bg-card) 96%, var(--kef-bg));
-    box-shadow: none;
-  }
-
-  kefine-solver-search-row lefine-text {
-    min-width: 0;
-    overflow: hidden;
-    color: color-mix(in oklab, var(--lefine-text) 92%, transparent);
-    font-size: 0.92rem;
-    font-weight: 650;
-    line-height: 1.15;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  kefine-solver-search-indicator {
-    position: relative;
-    display: inline-grid;
-    place-items: center;
-    width: 2rem;
-    height: 2rem;
-    border-radius: 999px;
-    color: color-mix(in oklab, var(--kef-primary) 88%, #5a4636);
-    background: color-mix(in oklab, var(--kef-primary) 9%, var(--kef-bg-card));
-    box-shadow:
-      inset 0 0 0 1px color-mix(in oklab, currentColor 18%, transparent),
-      0 0 0 0 color-mix(in oklab, currentColor 22%, transparent);
-    animation: kefine-solver-search-pulse 1.65s var(--kef-ease-soft) infinite;
-  }
-
-  kefine-solver-search-indicator[data-completed='true'] {
-    animation: none;
-    color: color-mix(in oklab, #22c55e 88%, #166534);
-    background: color-mix(in oklab, #22c55e 9%, var(--kef-bg-card));
-  }
-
-  kefine-solver-search-indicator::before {
-    content: '';
-    position: absolute;
-    inset: 0.28rem;
-    border: 2px solid color-mix(in oklab, currentColor 18%, transparent);
-    border-top-color: currentColor;
-    border-radius: inherit;
-    animation: kefine-solver-search-spin 0.9s linear infinite;
-  }
-
-  kefine-solver-search-indicator[data-completed='true']::before {
-    animation: none;
-    border-color: currentColor;
-    border-top-color: transparent;
-  }
-
-  kefine-solver-search-dot {
-    display: block;
-    width: 0.42rem;
-    height: 0.42rem;
-    border-radius: 999px;
-    background: currentColor;
+    gap: 0.75rem;
   }
 
   fieldset[data-part='exec-row'] {
@@ -2428,12 +2071,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     margin: 0;
     border: 0;
     min-inline-size: 0;
-    background: transparent;
-    box-shadow: none;
+    background: color-mix(in oklab, var(--kef-bg-card) 98%, var(--kef-bg));
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--kef-bg) 42%, transparent);
   }
 
   fieldset[data-part='exec-row']:focus-within {
-    box-shadow: none;
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--kef-bg-card) 78%, transparent), var(--kef-ring-focus);
   }
 
   kefine-task-shell {
@@ -2463,7 +2106,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     text-align: left;
     color: var(--kef-on-primary);
     background: var(--kef-primary);
-    border: var(--kef-border-width-strong) solid transparent;
+    border: var(--kef-border-width-strong) solid var(--kef-line-strong);
     border-radius: 0.3rem;
     resize: none;
     overflow-x: auto;
@@ -2480,7 +2123,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
   }
 
   textarea[data-part='task-input']:focus {
-    box-shadow: none;
+    box-shadow: 0 16px 24px color-mix(in oklab, var(--kef-primary) 14%, transparent);
   }
 
   textarea[data-part='task-input'][data-multiline='true'] {
@@ -2558,30 +2201,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     text-align: center;
   }
 
-  @keyframes kefine-solver-search-spin {
-    to {
-      transform: rotate(360deg);
-    }
-  }
-
-  @keyframes kefine-solver-search-pulse {
-    50% {
-      box-shadow:
-        inset 0 0 0 1px color-mix(in oklab, currentColor 18%, transparent),
-        0 0 0 0.42rem color-mix(in oklab, currentColor 0%, transparent);
-    }
-  }
-
-  kefine-input-meta {
-    display: grid;
-    gap: 0.55rem;
-    margin-top: -0.05rem;
-    padding: 0.52rem 0.58rem 0.62rem;
-    border-radius: 0.4rem;
-    background: color-mix(in oklab, var(--kef-bg-card) 86%, var(--kef-bg-soft) 14%);
-    box-shadow: none;
-  }
-
   kefine-composer-strip {
     display: flex;
     flex-wrap: wrap;
@@ -2596,11 +2215,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     min-height: 2.35rem;
     padding: 0.5rem 0.95rem;
     border-radius: 999px;
-    border: 0;
+    border: 1px solid color-mix(in oklab, var(--kef-line-strong) 88%, white 12%);
     background: color-mix(in oklab, var(--kef-bg-card) 90%, var(--kef-bg-soft) 10%);
     color: var(--lefine-text);
     font: inherit;
-    box-shadow: none;
+    box-shadow:
+      inset 0 1px 0 color-mix(in oklab, white 34%, transparent),
+      0 1px 2px color-mix(in oklab, var(--lefine-text) 4%, transparent);
   }
 
   button[data-part='composer-chip'] {
@@ -2732,12 +2353,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     gap: 0.42rem;
   }
 
-  lef-services-showcase {
-    margin-top: var(--kef-space-3);
+  section[data-part='recent-scroll'] {
+    display: grid;
+    gap: 0.5rem;
+    min-height: 0;
+    padding: clamp(0.3rem, 2vw, 0.5rem);
   }
 
+  lefine-box[data-part='recent-load-trigger'] {
+    width: 100%;
+    height: 1px;
+  }
+
+  lef-services-showcase,
   lef-afe-showcase {
-    margin-top: 0.45rem;
+    margin-top: var(--kef-space-3);
   }
 
   @media (min-width: 960px) {
@@ -2745,7 +2375,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
       width: min(64rem, calc(100vw - 8rem));
     }
 
-    lef-afe-showcase-heading,
     lef-afe-showcase {
       width: min(64rem, calc(100vw - 8rem));
     }
@@ -2787,7 +2416,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
       width: min(100%, calc(100vw - 2rem));
     }
 
-    lef-afe-showcase-heading,
     lef-afe-showcase {
       width: min(100%, calc(100vw - 2rem));
     }
@@ -2831,22 +2459,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     lef-service-card {
       width: 100%;
       min-height: 0;
-    }
-
-    .solutions-list {
-      display: flex;
-      flex-direction: row;
-      overflow-x: auto;
-      overflow-y: hidden;
-      gap: 0.75rem;
-      padding-bottom: 0.5rem;
-      -webkit-overflow-scrolling: touch;
-    }
-
-    .solution-card {
-      flex-shrink: 0;
-      width: 280px;
-      min-width: 280px;
     }
   }
 </style>

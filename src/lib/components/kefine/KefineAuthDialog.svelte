@@ -1,5 +1,7 @@
 <script lang="ts">
+  import { browser } from '$app/environment';
   import Icon from '@iconify/svelte';
+  import KefineModal from '$lib/components/kefine/KefineModal.svelte';
   import type { OrderView } from '$lib/components/kefine/kefine-workflow';
   import type { Profile } from '$lib/types/user';
 
@@ -19,12 +21,16 @@
     latestTasksTitle,
     latestTasksEmptyLabel,
     openWorkspaceLabel,
+    shareProfileLabel,
+    profileCopiedLabel,
     signOutLabel,
     openTaskLabel,
+    bonusBalanceLabel,
     showPrivateKey,
     isAuthenticated,
     profile,
     recentTasks,
+    profileUrl,
     closeLabel,
     onClose,
     onBrowserWallet,
@@ -53,12 +59,16 @@
     latestTasksTitle: string;
     latestTasksEmptyLabel: string;
     openWorkspaceLabel: string;
+    shareProfileLabel: string;
+    profileCopiedLabel: string;
     signOutLabel: string;
     openTaskLabel: string;
+    bonusBalanceLabel: string;
     showPrivateKey: boolean;
     isAuthenticated: boolean;
     profile: Profile | null;
     recentTasks: OrderView[];
+    profileUrl: string;
     closeLabel: string;
     onClose: () => void;
     onBrowserWallet: () => void;
@@ -72,6 +82,8 @@
     onOpenTask: (orderId: string) => void;
     onSignOut: () => void;
   } = $props();
+
+  let copyState = $state<'idle' | 'copied'>('idle');
 
   const profileHandle = $derived.by(() => {
     const handle = profile?.primaryHandle?.trim();
@@ -96,19 +108,29 @@
     return address.length > 14 ? `${address.slice(0, 6)}...${address.slice(-4)}` : address;
   }
 
+  async function copyProfileUrl() {
+    if (!browser || !navigator.clipboard || !profileUrl.trim()) {
+      return;
+    }
+
+    await navigator.clipboard.writeText(profileUrl);
+    copyState = 'copied';
+    window.setTimeout(() => {
+      if (copyState === 'copied') {
+        copyState = 'idle';
+      }
+    }, 1400);
+  }
 </script>
 
-<kefine-account-drawer
-  data-open={open}
-  data-authenticated={isAuthenticated}
-  data-state={open ? 'open' : 'closed'}
-  aria-hidden={!open}
+<KefineModal
+  open={open}
+  onClose={onClose}
+  closeLabel={closeLabel}
+  width="wide"
+  placement="right"
 >
-  {#if open}
-    <button type="button" data-variant="close" aria-label={closeLabel} onclick={onClose}>
-      ✕
-    </button>
-
+  <kefine-account-drawer data-authenticated={isAuthenticated}>
     {#if !isAuthenticated}
       <kefine-account-auth-grid>
         <button
@@ -181,13 +203,7 @@
           <small>Sign in with the GitHub identity handled by Crystal.</small>
         </button>
 
-        <button
-          type="button"
-          class="kefine-account-auth-card"
-          data-kind="passkey"
-          data-testid="kefine-passkey-auth-tile"
-          onclick={onPasskey}
-        >
+        <button type="button" class="kefine-account-auth-card" data-kind="passkey" data-testid="kefine-passkey-auth-tile" onclick={onPasskey}>
           <span class="kefine-account-auth-card__icon">
             <Icon icon="mdi:fingerprint" width="20" height="20" aria-hidden="true" />
           </span>
@@ -234,6 +250,10 @@
 
         <kefine-account-stats>
           <kefine-account-stat>
+            <small>{bonusBalanceLabel}</small>
+            <strong>${profile?.bonusBalanceUsd?.toFixed(2) ?? '0.00'}</strong>
+          </kefine-account-stat>
+          <kefine-account-stat>
             <small>{latestTasksTitle}</small>
             <strong>{recentTasks.length}</strong>
           </kefine-account-stat>
@@ -241,6 +261,9 @@
 
         <kefine-account-profile-actions>
           <button type="button" data-variant="primary" onclick={onOpenProfile}>{openWorkspaceLabel}</button>
+          <button type="button" data-variant="ghost" onclick={copyProfileUrl}>
+            {copyState === 'copied' ? profileCopiedLabel : shareProfileLabel}
+          </button>
         </kefine-account-profile-actions>
       </kefine-account-profile-card>
 
@@ -267,46 +290,15 @@
         {/if}
       </section>
     {/if}
-  {/if}
-</kefine-account-drawer>
+  </kefine-account-drawer>
+</KefineModal>
 
 <style>
   kefine-account-drawer {
-    --account-drawer-width: min(24rem, calc(100vw - 1rem));
-    position: fixed;
-    top: 0.5rem;
-    right: 0.5rem;
-    bottom: 0.5rem;
-    z-index: 35;
-    width: var(--account-drawer-width);
-    max-width: 100vw;
     display: grid;
-    gap: 0.55rem;
-    grid-template-rows: auto 1fr;
-    min-height: calc(100vh - 1rem);
+    gap: 0.85rem;
+    min-height: calc(100vh - 2.4rem);
     color: var(--kef-color-text, #2e2317);
-    overflow: auto;
-    padding: 0.9rem 1rem;
-    border-radius: 1.25rem 0 0 1.25rem;
-    border: 1px solid color-mix(in oklab, var(--kef-color-text, #2e2317) 12%, transparent);
-    background:
-      linear-gradient(
-        180deg,
-        color-mix(in oklab, var(--kef-color-bg-card, #f7ecd6) 96%, white 4%),
-        color-mix(in oklab, var(--kef-color-bg-soft, #eadcbc) 88%, var(--kef-color-bg-card, #f7ecd6) 12%)
-      );
-    transform: translateX(120%);
-    opacity: 0;
-    pointer-events: none;
-    transition:
-      transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
-      opacity 180ms ease;
-  }
-
-  kefine-account-drawer[data-state='open'] {
-    transform: translateX(0);
-    opacity: 1;
-    pointer-events: auto;
   }
 
   .kefine-account-surface,
@@ -524,11 +516,6 @@
     font: inherit;
   }
 
-  button[data-variant='close'] {
-    justify-self: end;
-    margin: 0;
-  }
-
   button[data-variant='primary'] {
     border: 0;
     background: var(--kef-color-primary, #7a4b2a);
@@ -581,18 +568,7 @@
 
   @media (max-width: 640px) {
     kefine-account-drawer {
-      --account-drawer-width: min(100vw - 1rem, 24.5rem);
-      top: 0.45rem;
-      right: 0.5rem;
-      left: 0.5rem;
-      width: var(--account-drawer-width);
-      border-radius: 1.25rem;
-      transform: translateX(120%);
-      max-width: none;
-    }
-
-    kefine-account-drawer[data-state='open'] {
-      transform: translateX(0);
+      min-height: calc(100vh - 1.8rem);
     }
 
     kefine-account-auth-grid {

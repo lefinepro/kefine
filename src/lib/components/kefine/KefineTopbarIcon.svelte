@@ -8,8 +8,6 @@
     | 'theme-light'
     | 'theme-dark'
     | 'email'
-    | 'menu'
-    | 'project'
     | 'copy'
     | 'check'
     | 'open'
@@ -83,14 +81,6 @@
   {:else if name === 'email'}
     <rect x="4" y="6" width="16" height="12" rx="2.4" />
     <path d="m5.6 7.8 6.4 5 6.4-5" />
-  {:else if name === 'menu'}
-    <path d="M5 7h14" />
-    <path d="M5 12h14" />
-    <path d="M5 17h14" />
-  {:else if name === 'project'}
-    <rect x="4" y="5" width="16" height="14" rx="2.4" />
-    <path d="M8 9h8" />
-    <path d="M8 13h5" />
   {:else if name === 'copy'}
     <rect x="9" y="7" width="10" height="12" rx="2.2" />
     <path d="M15 7V6.2A2.2 2.2 0 0 0 12.8 4H7.2A2.2 2.2 0 0 0 5 6.2v9.6A2.2 2.2 0 0 0 7.2 18H8" />
