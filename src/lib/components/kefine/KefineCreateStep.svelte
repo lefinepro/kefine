@@ -14,6 +14,18 @@
 
   hljs.registerLanguage('rust', rust);
 
+  function highlightCode(code: string): string {
+    try {
+      return hljs.highlight(code, { language: 'rust' }).value;
+    } catch {
+      return code;
+    }
+  }
+
+  function highlightLine(line: string): string {
+    return highlightCode(line).replace(/^<span class="hljs-.*">|<\/span>$/g, '');
+  }
+
   const PLACEHOLDER_TYPE_DELAY_MS = 58;
   const PLACEHOLDER_DELETE_DELAY_MS = 34;
   const PLACEHOLDER_PAUSE_MS = 1150;
@@ -146,6 +158,8 @@
   let placeholderDeleting = $state(false);
   let taskEditorOpen = $state(false);
   let taskCompleted = $state(false);
+  let showDiffColors = $state(true);
+  let isFlying = $state(false);
 
   const sampleContent: NodeJSON = {
     type: 'doc',
@@ -168,79 +182,83 @@
     {
       id: '1',
       solver: 'Basic Rust Dev',
-      avatar: 'https://via.placeholder.com/40/4CAF50/FFFFFF?text=BR',
       title: 'Simple Hello World without comments',
       description: 'Minimal implementation with just the basics',
       diffs: [
         { file: 'src/main.rs', added: 3, removed: 0 }
       ],
-      finalCode: `fn main() {
-    println!("Hello, world!");
-}`
+      codeLines: [
+        { text: 'fn main() {', type: 'added' },
+        { text: '    println!("Hello, world!");', type: 'added' },
+        { text: '}', type: 'added' }
+      ]
     },
     {
       id: '2',
       solver: 'Commented Rust Expert',
-      avatar: 'https://via.placeholder.com/40/2196F3/FFFFFF?text=CE',
       title: 'Hello World with detailed comments',
       description: 'Educational version with explanations for each line',
       diffs: [
         { file: 'src/main.rs', added: 10, removed: 0 }
       ],
-      finalCode: `// This is the main function - entry point of every Rust program
-fn main() {
-    // Print a greeting message to the console
-    // println! is a macro that prints to stdout with a newline
-    println!("Hello, world!");
-
-    // The program will exit here
-    // Rust automatically returns () (unit type) from functions
-}`
+      codeLines: [
+        { text: '// This is the main function - entry point of every Rust program', type: 'added' },
+        { text: 'fn main() {', type: 'added' },
+        { text: '    // Print a greeting message to the console', type: 'added' },
+        { text: '    // println! is a macro that prints to stdout with a newline', type: 'added' },
+        { text: '    println!("Hello, world!");', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: '    // The program will exit here', type: 'added' },
+        { text: '    // Rust automatically returns () (unit type) from functions', type: 'added' },
+        { text: '}', type: 'added' }
+      ]
     },
     {
       id: '3',
       solver: 'Interactive Rust',
-      avatar: 'https://via.placeholder.com/40/FF9800/FFFFFF?text=IR',
       title: 'Interactive Hello World with user input',
       description: 'Reads user input and responds accordingly',
       diffs: [
         { file: 'src/main.rs', added: 12, removed: 0 }
       ],
-      finalCode: `use std::io;
-
-fn main() {
-    println!("Hello, world!");
-
-    println!("What's your name?");
-    let mut name = String::new();
-    io::stdin().read_line(&mut name).expect("Failed to read line");
-
-    println!("Hello, {}!", name.trim());
-}`
+      codeLines: [
+        { text: 'use std::io;', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: 'fn main() {', type: 'added' },
+        { text: '    println!("Hello, world!");', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: '    println!("What\'s your name?");', type: 'added' },
+        { text: '    let mut name = String::new();', type: 'added' },
+        { text: '    io::stdin().read_line(&mut name).expect("Failed to read line");', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: '    println!("Hello, {}!", name.trim());', type: 'added' },
+        { text: '}', type: 'added' }
+      ]
     },
     {
       id: '4',
       solver: 'Modern Rust Patterns',
-      avatar: 'https://via.placeholder.com/40/9C27B0/FFFFFF?text=MP',
       title: 'Hello World using modern Rust patterns',
       description: 'Uses Result handling and modern syntax',
       diffs: [
         { file: 'src/main.rs', added: 15, removed: 0 }
       ],
-      finalCode: `use std::io::{self, Write};
-
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("Hello, world!");
-
-    print!("Enter your name: ");
-    io::stdout().flush()?;
-
-    let mut name = String::new();
-    io::stdin().read_line(&mut name)?;
-
-    println!("Hello, {}!", name.trim());
-    Ok(())
-}`
+      codeLines: [
+        { text: 'use std::io::{self, Write};', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: 'fn main() -> Result<(), Box<dyn std::error::Error>> {', type: 'added' },
+        { text: '    println!("Hello, world!");', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: '    print!("Enter your name: ");', type: 'added' },
+        { text: '    io::stdout().flush()?;', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: '    let mut name = String::new();', type: 'added' },
+        { text: '    io::stdin().read_line(&mut name)?;', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: '    println!("Hello, {}!", name.trim());', type: 'added' },
+        { text: '    Ok(())', type: 'added' },
+        { text: '}', type: 'added' }
+      ]
     }
   ]);
   const isMultilineDraft = $derived(draft.description.includes('\n'));
@@ -375,11 +393,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
   $effect(() => {
     if (solverSearchActive && solverSearchText.trim() === "Нужен hello world на rust") {
+      isFlying = true;
       const timer = setTimeout(() => {
-        // Simulate task completion
         taskCompleted = true;
+        isFlying = false;
         taskEditorOpen = false;
-      }, 5000);
+      }, 4000);
       return () => clearTimeout(timer);
     }
   });
@@ -897,43 +916,60 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 </ProseKit>
               </div>
               {#if taskCompleted}
-                <section class="solutions-list">
-                  {#each mockSolutions as solution (solution.id)}
-                     <article class="solution-card">
-                       <aside class="solution-sidebar">
-                         <h4 class="sidebar-title">Files</h4>
-                         <ul class="file-list">
-                           {#each solution.diffs as diff}
-                             <li class="file-item">
-                               <span class="file-name">{diff.file}</span>
-                               <span class="file-changes">
-                                 <span class="added">+{diff.added}</span>
-                                 <span class="removed">-{diff.removed}</span>
-                               </span>
-                             </li>
-                           {/each}
-                         </ul>
-                       </aside>
-                       <div class="solution-content">
-                         <header class="solution-header">
-                           <img src={solution.avatar} alt={solution.solver} class="solver-avatar" />
-                           <div class="solution-meta">
-                             <strong>{solution.solver}</strong>
-                             <span>{solution.title}</span>
-                           </div>
-                         </header>
-                         <p class="solution-description">{solution.description}</p>
-                         <pre class="code-block"><code class="language-rust">{solution.finalCode}</code></pre>
-                       </div>
-                     </article>
-                  {/each}
-                </section>
+                <div class="solutions-wrapper">
+                  <section class="solutions-list">
+                    {#each mockSolutions as solution (solution.id)}
+                       <article class="solution-card">
+                         <aside class="solution-sidebar">
+                           <h4 class="sidebar-title">Files</h4>
+                           <ul class="file-list">
+                             {#each solution.diffs as diff}
+                               <li class="file-item">
+                                 <span class="file-name">{diff.file}</span>
+                                 <span class="file-changes">
+                                   <span class="added">+{diff.added}</span>
+                                   <span class="removed">-{diff.removed}</span>
+                                 </span>
+                               </li>
+                             {/each}
+                           </ul>
+                         </aside>
+<div class="solution-content">
+                            <header class="solution-header">
+                              <div class="solution-meta">
+                                <strong>{solution.solver}</strong>
+                                <span>{solution.title}</span>
+                              </div>
+                            </header>
+                            <p class="solution-description">{solution.description}</p>
+                            <div class="code-block" class:show-diff={showDiffColors}>
+                              {#each solution.codeLines as line, i}
+                                <div class="code-line" class:added={line.type === 'added'} class:removed={line.type === 'removed'}>
+                                  <span class="line-number">{i + 1}</span>
+                                  <span class="line-content">{@html highlightLine(line.text)}</span>
+                                </div>
+                              {/each}
+                            </div>
+                          </div>
+                       </article>
+                    {/each}
+                  </section>
+                </div>
               {/if}
             </div>
           </div>
         {:else}
           <kefine-solver-search-row aria-live="polite">
             <lefine-text>{solverSearchText}</lefine-text>
+            {#if isFlying}
+              <span class="arrow-wrapper">
+                <span class="wind-flow">
+                  <span class="wind-line"></span>
+                  <span class="wind-line"></span>
+                </span>
+                <span class="flying-arrow">➵</span>
+              </span>
+            {/if}
             <kefine-solver-search-indicator aria-label={taskCompleted ? 'Completed' : solverSearchLabel} title={taskCompleted ? 'Completed' : solverSearchLabel} data-completed={taskCompleted}>
               <kefine-solver-search-dot aria-hidden="true"></kefine-solver-search-dot>
             </kefine-solver-search-indicator>
@@ -2065,7 +2101,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     border-radius: var(--kef-radius-ui);
     background: var(--kef-bg-card);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
+    overflow: visible;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  [data-part="tasks-list"] {
+    width: min(100%, calc(100vw - 7rem));
+    max-width: 64rem;
+    margin-inline: auto;
   }
 
   .task-editor-header {
@@ -2093,25 +2137,37 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
   }
 
   .task-editor-content {
-    max-height: 600px;
-    overflow-y: auto;
+    max-width: 100%;
+    overflow-x: visible;
+    overflow-y: visible;
+  }
+
+  .solutions-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: visible;
+    margin-top: 1rem;
+    padding: 0 1rem 0.5rem;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    box-sizing: border-box;
   }
 
   .solutions-list {
-    margin-top: 1rem;
     display: flex;
     flex-direction: row;
-    overflow-x: auto;
-    overflow-y: hidden;
     gap: 0.75rem;
-    padding-bottom: 0.5rem;
-    -webkit-overflow-scrolling: touch;
+    flex-shrink: 0;
+    width: max-content;
+    min-width: 100%;
   }
 
   .solution-card {
-    flex-shrink: 0;
-    width: 350px;
-    min-width: 350px;
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 520px;
+    max-width: 900px;
+    box-sizing: border-box;
   }
 
   .solution-card {
@@ -2120,6 +2176,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     padding: 1rem;
     background: var(--kef-bg-card);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    max-height: 500px;
+    overflow-x: auto;
   }
 
   .solution-header {
@@ -2209,10 +2267,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
   }
 
   .solution-sidebar {
-    width: 200px;
+    width: max-content;
+    min-width: 180px;
     background: var(--kef-bg-soft, #f8f9fa);
-    padding: 1rem;
+    padding: 0.75rem;
     border-right: 1px solid var(--kef-border, #e9ecef);
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
   }
 
   .sidebar-title {
@@ -2243,12 +2306,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
   }
 
   .file-changes {
+    display: flex;
+    gap: 0.5rem;
     font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .file-changes .added {
+    color: #22c55e;
+  }
+
+  .file-changes .removed {
+    color: #ef4444;
   }
 
   .solution-content {
     flex: 1;
     padding: 1rem;
+    min-width: 0;
+    overflow-x: auto;
   }
 
   .solution-header {
@@ -2286,28 +2362,97 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
   }
 
   .code-block {
-    padding: 1rem;
+    padding: 0.75rem;
     border-radius: 0.5rem;
     overflow-x: auto;
     font-family: monospace;
     border: 1px solid #e9ecef;
     margin-top: 0.5rem;
-  }
-
-  .code-block pre {
-    margin: 0;
-  }
-
-  .solutions-list {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
     max-width: 100%;
+    box-sizing: border-box;
+    font-size: 0.85rem;
+    line-height: 1.5;
   }
 
-  .code-block code {
-    background: none;
-    padding: 0;
+  .code-line {
+    display: flex;
+    padding: 0.1rem 0.5rem;
+    border-radius: 2px;
+  }
+
+  .code-line .line-number {
+    width: 2.5rem;
+    text-align: right;
+    padding-right: 1rem;
+    color: #6b7280;
+    user-select: none;
+    flex-shrink: 0;
+  }
+
+  .code-line .line-content {
+    white-space: pre;
+  }
+
+  .code-block.show-diff .code-line.added {
+    background: rgba(34, 197, 94, 0.15);
+    border-left: 3px solid #22c55e;
+  }
+
+  .code-block.show-diff .code-line.removed {
+    background: rgba(239, 68, 68, 0.15);
+    border-left: 3px solid #ef4444;
+  }
+
+  .code-block:not(.show-diff) .code-line.added,
+  .code-block:not(.show-diff) .code-line.removed {
+    background: transparent;
+    border-left: none;
+  }
+
+  .code-line .line-content .hljs-keyword,
+  .code-line .line-content .hljs-built_in {
+    color: #ff79c6;
+  }
+
+  .code-line .line-content .hljs-string,
+  .code-line .line-content .hljs-attr {
+    color: #f1fa8c;
+  }
+
+  .code-line .line-content .hljs-number,
+  .code-line .line-content .hljs-literal {
+    color: #bd93f9;
+  }
+
+  .code-line .line-content .hljs-comment {
+    color: #6272a4;
+    font-style: italic;
+  }
+
+  .code-line .line-content .hljs-function,
+  .code-line .line-content .hljs-title {
+    color: #50fa7b;
+  }
+
+  .code-line .line-content .hljs-type,
+  .code-line .line-content .hljs-class {
+    color: #8be9fd;
+  }
+
+  .code-line .line-content .hljs-params {
+    color: #ffb86c;
+  }
+
+  .code-line .line-content .hljs-meta {
+    color: #ff5555;
+  }
+
+  .code-line .line-content .hljs-punctuation {
+    color: #f8f8f2;
+  }
+
+  .code-line .line-content .hljs-operator {
+    color: #ff79c6;
   }
 
   button[data-part='composer-chip'][data-part-tag='true'] {
@@ -2361,6 +2506,238 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     box-shadow: none;
   }
 
+  kefine-solver-search-row:has(.arrow-wrapper) {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+
+.arrow-wrapper {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .flying-arrow {
+    display: inline-block;
+    font-size: 1.2rem;
+    color: var(--kef-color-primary, #c89a5a);
+    animation: arrow-fly-into 3.5s ease-in-out forwards;
+  }
+
+  @keyframes arrow-fly-into {
+    0% {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    30% {
+      transform: translateX(-5px);
+    }
+    50% {
+      transform: translateX(-2px);
+    }
+    70% {
+      transform: translateX(-1px);
+    }
+    85% {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    95% {
+      opacity: 0.5;
+      transform: translateX(2px);
+    }
+    100% {
+      opacity: 0;
+      transform: translateX(5px);
+    }
+  }
+
+  .wind-flow {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .wind-line {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--kef-color-primary, #c89a5a));
+    animation: wind-dash 1s linear infinite;
+  }
+
+  .wind-line:nth-child(1) {
+    width: 15px;
+    opacity: 0.6;
+  }
+
+  .wind-line:nth-child(2) {
+    width: 10px;
+    opacity: 0.4;
+    animation-delay: 0.3s;
+  }
+
+  @keyframes wind-dash {
+    0% {
+      transform: translateX(-15px);
+      opacity: 0;
+    }
+    50% {
+      opacity: 0.6;
+    }
+    100% {
+      transform: translateX(5px);
+      opacity: 0;
+    }
+  }
+
+  .arrow-container {
+    display: inline-flex;
+    align-items: center;
+    position: relative;
+  }
+
+  .arrow-container kefine-solver-search-indicator {
+    position: relative;
+    z-index: 5;
+  }
+
+  .arrow-container .flying-arrow {
+    position: absolute;
+    left: -25px;
+    z-index: 10;
+  }
+
+  .arrow-container .wind-trail {
+    position: absolute;
+    left: -45px;
+    z-index: 9;
+  }
+
+  @keyframes fly-into-indicator {
+    0% {
+      opacity: 1;
+      transform: translateX(-30px) rotate(0deg);
+    }
+    40% {
+      opacity: 1;
+      transform: translateX(-5px) rotate(-20deg) scale(1.2);
+    }
+    60% {
+      opacity: 1;
+      transform: translateX(5px) rotate(15deg) scale(1.1);
+    }
+    80% {
+      opacity: 1;
+      transform: translateX(10px) rotate(-8deg) scale(1);
+    }
+    95% {
+      opacity: 0.3;
+      transform: translateX(12px) rotate(0deg) scale(0.8);
+    }
+    100% {
+      opacity: 0;
+      transform: translateX(15px) rotate(0deg) scale(0);
+    }
+  }
+
+  .flying-arrow {
+    display: inline-block;
+    font-size: 1.5rem;
+    color: var(--kef-color-primary, #c89a5a);
+    animation: fly-to-indicator 4s ease-in-out forwards, wind-swoosh 0.6s ease-in-out infinite;
+    position: relative;
+    margin-left: 0.5rem;
+  }
+
+  @keyframes fly-to-indicator {
+    0% {
+      opacity: 1;
+      transform: translateX(0) scale(1) rotate(0deg);
+    }
+    40% {
+      opacity: 1;
+      transform: translateX(20px) scale(1.1) rotate(-10deg);
+    }
+    60% {
+      opacity: 1;
+      transform: translateX(40px) scale(1) rotate(5deg);
+    }
+    80% {
+      opacity: 1;
+      transform: translateX(55px) scale(0.9) rotate(-3deg);
+    }
+    95% {
+      opacity: 0.5;
+      transform: translateX(65px) scale(0.5) rotate(0deg);
+    }
+    100% {
+      opacity: 0;
+      transform: translateX(70px) scale(0.2) rotate(0deg);
+    }
+  }
+
+  @keyframes wind-swoosh {
+    0%, 100% {
+      transform: translateY(0) skewX(0deg);
+    }
+    25% {
+      transform: translateY(-4px) skewX(-8deg);
+    }
+    50% {
+      transform: translateY(3px) skewX(5deg);
+    }
+    75% {
+      transform: translateY(-2px) skewX(-3deg);
+    }
+  }
+
+  .wind-trail {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    margin-right: 0.25rem;
+  }
+
+  .wind-line {
+    display: block;
+    background: linear-gradient(90deg, transparent, var(--kef-color-primary, #c89a5a), transparent);
+    border-radius: 2px;
+    animation: wind-flow 0.8s linear infinite;
+  }
+
+  .wind-line:nth-child(1) {
+    width: 25px;
+    height: 2px;
+    opacity: 0.7;
+    animation-delay: 0s;
+  }
+
+  .wind-line:nth-child(2) {
+    width: 18px;
+    height: 1px;
+    opacity: 0.5;
+    animation-delay: 0.2s;
+  }
+
+  .wind-line:nth-child(3) {
+    width: 22px;
+    height: 1.5px;
+    opacity: 0.4;
+    animation-delay: 0.4s;
+  }
+
+  @keyframes wind-flow {
+    0% {
+      transform: translateX(-30px);
+      opacity: 0;
+    }
+    50% {
+      opacity: 0.6;
+    }
+    100% {
+      transform: translateX(10px);
+      opacity: 0;
+    }
+  }
+
   kefine-solver-search-row lefine-text {
     min-width: 0;
     overflow: hidden;
@@ -2390,7 +2767,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
   kefine-solver-search-indicator[data-completed='true'] {
     animation: none;
     color: color-mix(in oklab, #22c55e 88%, #166534);
-    background: color-mix(in oklab, #22c55e 9%, var(--kef-bg-card));
   }
 
   kefine-solver-search-indicator::before {
@@ -2839,14 +3215,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
       overflow-x: auto;
       overflow-y: hidden;
       gap: 0.75rem;
-      padding-bottom: 0.5rem;
+      padding: 0 1rem 0.5rem;
       -webkit-overflow-scrolling: touch;
+      flex-shrink: 0;
     }
 
     .solution-card {
       flex-shrink: 0;
-      width: 280px;
-      min-width: 280px;
+      width: 550px;
+      min-width: 550px;
+      max-height: 500px;
+      overflow-y: auto;
     }
   }
 </style>
