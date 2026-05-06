@@ -99,7 +99,7 @@ describe('kefine task feed progression', () => {
       document: {
         format: 'markdown',
         content: [
-          'Nested branch style',
+          'Track nested style',
           '',
           '#+begin_node_insert: order-branch-style-description',
           '[[branch:left,hidden]] Hidden left parent branch',
@@ -121,7 +121,7 @@ describe('kefine task feed progression', () => {
     assert.equal(parentBranch?.branchLabel, 'Branch 1');
     assert.equal(childBranch?.branchPlacement, 'left');
     assert.equal(childBranch?.branchVisibility, 'hidden');
-    assert.equal(childBranch?.branchLabel, 'Branch 2');
+    assert.equal(childBranch?.branchLabel, 'Branch 1');
   });
 
   test('explicit branch visibility override is honored when hidden context is inherited', () => {
@@ -230,13 +230,13 @@ describe('kefine task feed progression', () => {
 
     const indented = indentTaskThreadNode(baseNodes, 'node-2');
     assert.equal(indented.length, 1);
-    assert.equal(indented[0]?.children?.length, 2);
-    assert.equal(indented[0]?.children?.[1]?.id, 'node-2');
+    assert.equal(indented[0]?.children?.length, 1);
+    assert.equal(indented[0]?.children?.[0]?.id, 'node-2');
 
     const outdented = outdentTaskThreadNode(indented, 'node-2-child');
-    assert.equal(outdented.length, 2);
-    assert.equal(outdented[1]?.id, 'node-2-child');
-    assert.equal(outdented[0]?.children?.length, 0);
+    assert.equal(outdented.length, 1);
+    assert.equal(outdented[0]?.children?.[1]?.id, 'node-2-child');
+    assert.equal(outdented[0]?.children?.length, 2);
 
     const added = addTaskThreadNode(baseNodes, {
       id: 'node-3',

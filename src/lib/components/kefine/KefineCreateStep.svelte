@@ -882,7 +882,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
    <section data-part="tasks-list">
      <kefine-task-item data-part="task-item" onclick={() => { taskEditorOpen = !taskEditorOpen; }}>
         {#if taskEditorOpen}
-          <lefine-box class="task-notebook" onclick={(e) => { e.stopPropagation(); }}>
+          <lefine-box class="task-notebook" onclick={(e: MouseEvent) => { e.stopPropagation(); }}>
             <header class="task-notebook__header">
               <lefine-box class="task-notebook__title-row">
                 <lefine-text class="task-notebook__icon" aria-hidden="true">{taskCompleted ? '✓' : '◎'}</lefine-text>
@@ -891,12 +891,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
               <button
                 type="button"
                 class="task-notebook__close"
-                onclick={(e) => { e.stopPropagation(); taskEditorOpen = false; }}
+                onclick={(e: MouseEvent) => { e.stopPropagation(); taskEditorOpen = false; }}
                 aria-label="Close"
               >✕</button>
             </header>
 
-            <lefine-box class="task-notebook__body" onclick={(e) => e.stopPropagation()}>
+            <lefine-box class="task-notebook__body" onclick={(e: MouseEvent) => e.stopPropagation()}>
               <lefine-box class="task-notebook__editor">
                 <ProseKit {editor}>
                   <lefine-box {@attach editor.mount} class="task-notebook__prose ProseMirror">
