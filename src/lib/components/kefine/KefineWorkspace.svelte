@@ -57,6 +57,7 @@
   import {
     buildActorOrderPath,
     createGeneratedWalletAvatar,
+    buildTaskRouteHash,
     mergeOrdersById,
     normalizeActorHandle,
     normalizeDraftOrder,
@@ -1051,7 +1052,7 @@
         step === 'payment' && paymentStage === 'result-ready'
           ? '#result'
           : step === 'executing' && stagePreviewOpen
-            ? '#stages'
+            ? buildTaskRouteHash(orderRouteId, 'stages')
             : '';
 
       if (window.location.href !== nextUrl.toString()) {
@@ -1505,6 +1506,10 @@
       paymentStage = 'result-ready';
       step = 'payment';
       return;
+    }
+
+    if (preferredView === 'stages') {
+      stagePreviewOpen = true;
     }
 
     step = 'executing';

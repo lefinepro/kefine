@@ -194,7 +194,13 @@ export function readTaskRouteStateFromLocation(location: Location): { orderId: s
     actorPath.match(CANONICAL_ACTOR_ORDER_WITH_RESOURCE_PATH_PATTERN) ??
     actorPath.match(LEGACY_ACTOR_ORDER_PATH_PATTERN) ??
     actorPath.match(CANONICAL_ACTOR_ORDER_PATH_PATTERN);
-  const actorView = location.hash === '#result' ? 'result' : location.hash === '#stages' ? 'stages' : null;
+  const hashBody = location.hash.replace(/^#/, '').replace(/\/+$/, '');
+  const hashBodyParts = hashBody.split('/');
+  const hashViewSegment = (hashBody.startsWith('/orders/') || hashBody.startsWith('/order/'))
+    ? hashBodyParts[3] ?? null
+    : null;
+  const hashViewFromPath: TaskRouteView = hashViewSegment === 'stages' ? 'stages' : hashViewSegment === 'result' ? 'result' : null;
+  const actorView: TaskRouteView = location.hash === '#result' ? 'result' : location.hash === '#stages' ? 'stages' : hashViewFromPath;
   if (actorMatch?.[2]) {
     return {
       orderId: decodeURIComponent(actorMatch[2]),

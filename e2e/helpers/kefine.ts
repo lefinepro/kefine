@@ -116,6 +116,14 @@ export async function mockOrderApi(page: Page) {
   const orders = new Map<string, MockOrder>();
   let createDelayMs = 0;
 
+  await page.route('**/api/health', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ status: 'ok' })
+    });
+  });
+
   await page.route('**/create', async (route) => {
     createCounter += 1;
     const postData = route.request().postDataJSON() as { title?: string; name?: string };

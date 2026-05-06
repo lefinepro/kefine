@@ -637,6 +637,51 @@
   </article>
 {:else}
   <kefine-task-stage>
+    {#if isHydratingTitle}
+      <h2 class="kefine-title-skeleton" aria-label="Loading task title"></h2>
+    {:else if currentOrder?.title}
+      <h2>
+        <lefine-text data-part="task-icon">{taskMonogram}</lefine-text>
+        {currentOrder.title}
+      </h2>
+    {/if}
+
+    <kefine-task-meta>
+      {#if execution.primaryMetric.value}
+        <kefine-price-metric data-testid="kefine-price-metric">
+          <lefine-text data-part="label">{labels.price}</lefine-text>
+          <strong>{execution.primaryMetric.value} {execution.primaryMetric.unit}</strong>
+        </kefine-price-metric>
+      {/if}
+
+      <kefine-auth-tiles>
+        <button
+          type="button"
+          class="kefine-auth-tile kefine-auth-tile--wallet"
+          data-testid="kefine-wallet-tile"
+          onclick={onWalletLogin}
+        >
+          <KefineWalletProviderGrid />
+          <lefine-text>{authLabels.walletTitle}</lefine-text>
+        </button>
+        <button
+          type="button"
+          class="kefine-auth-tile kefine-auth-tile--anonymous"
+          data-testid="kefine-anonymous-tile"
+          onclick={onAnonymous}
+        >
+          <lefine-text>{authLabels.anonymousTitle}</lefine-text>
+        </button>
+      </kefine-auth-tiles>
+
+      {#if !solverIdentity.isReal}
+        <kefine-solver-fallback data-testid="kefine-solver-fallback">
+          <lefine-text>{labels.solver}: {solverIdentity.name || currentOrder?.solver || ''}</lefine-text>
+        </kefine-solver-fallback>
+      {/if}
+    </kefine-task-meta>
+
+    <kefine-subtask-list data-testid="kefine-subtask-list">
       <KefineTaskTreeFeed
         {currentOrder}
         {queuedOrders}
@@ -661,6 +706,7 @@
           resultTitle: labels.resultTitle
         }}
       />
+    </kefine-subtask-list>
   </kefine-task-stage>
 {/if}
 
@@ -690,9 +736,54 @@
   }
 
   kefine-task-stage {
-    display: block;
+    display: grid;
+    gap: 1.5rem;
     width: min(100%, 72rem);
     margin: 0 auto;
+  }
+
+  kefine-task-stage h2 {
+    font-size: clamp(1.35rem, 2vw, 2.1rem);
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+    margin: 0;
+  }
+
+  kefine-task-meta {
+    display: grid;
+    gap: 1rem;
+  }
+
+  kefine-price-metric {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.45rem 0.9rem;
+    border-radius: 999px;
+    border: 1px solid color-mix(in oklab, var(--kef-line-strong, #b69a77) 36%, transparent);
+    background: color-mix(in oklab, var(--kef-bg-card, #fff8ef) 92%, white 8%);
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+
+  kefine-auth-tiles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.7rem;
+  }
+
+  kefine-solver-fallback {
+    display: block;
+    padding: 0.6rem 0.9rem;
+    border-radius: 0.75rem;
+    border: 1px solid color-mix(in oklab, var(--kef-line, #d5bf91) 60%, transparent);
+    background: color-mix(in oklab, var(--kef-bg-card, #fff8ef) 88%, white);
+    font-size: 0.86rem;
+    color: color-mix(in oklab, var(--lefine-text, #453323) 82%, transparent);
+  }
+
+  kefine-subtask-list {
+    display: block;
   }
 
   .kefine-flow-topline-actions {
