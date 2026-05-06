@@ -487,13 +487,13 @@
         {#if isAuthLoading}
           <lef-auth-loading aria-hidden="true"></lef-auth-loading>
         {/if}
-        <span data-part="auth-label">
+        <lefine-text data-part="auth-label">
           {#if isAuthenticated}
             {authenticatedSecondaryLabel ?? authenticatedLabel ?? signedInLabel}
           {:else}
             {signInLabel}
           {/if}
-        </span>
+        </lefine-text>
       </button>
     {/if}
   </kefine-topbar-row>

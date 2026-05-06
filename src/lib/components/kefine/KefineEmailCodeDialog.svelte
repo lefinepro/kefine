@@ -74,7 +74,7 @@
     <form onsubmit={handleSubmit}>
       <lef-email-code-fields>
         <label>
-          <span>{emailLabel}</span>
+          <lefine-text>{emailLabel}</lefine-text>
           <input
             data-testid="kefine-email-code-email-input"
             type="email"
@@ -89,7 +89,7 @@
 
         {#if codeRequested}
           <label>
-            <span>{codeLabel}</span>
+            <lefine-text>{codeLabel}</lefine-text>
             <input
               data-testid="kefine-email-code-otp-input"
               type="text"

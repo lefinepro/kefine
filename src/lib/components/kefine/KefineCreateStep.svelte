@@ -880,14 +880,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
  {#if solverSearchActive && solverSearchText.trim()}
    <section data-part="tasks-list">
-     <div data-part="task-item" onclick={() => { taskEditorOpen = !taskEditorOpen; }}>
+     <kefine-task-item data-part="task-item" onclick={() => { taskEditorOpen = !taskEditorOpen; }}>
         {#if taskEditorOpen}
-          <div class="task-notebook" onclick={(e) => { e.stopPropagation(); }}>
+          <lefine-box class="task-notebook" onclick={(e) => { e.stopPropagation(); }}>
             <header class="task-notebook__header">
-              <div class="task-notebook__title-row">
-                <span class="task-notebook__icon" aria-hidden="true">{taskCompleted ? '✓' : '◎'}</span>
+              <lefine-box class="task-notebook__title-row">
+                <lefine-text class="task-notebook__icon" aria-hidden="true">{taskCompleted ? '✓' : '◎'}</lefine-text>
                 <h2 class="task-notebook__title">{taskCompleted ? 'Task Results' : 'Task Editor'}</h2>
-              </div>
+              </lefine-box>
               <button
                 type="button"
                 class="task-notebook__close"
@@ -896,50 +896,50 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
               >✕</button>
             </header>
 
-            <div class="task-notebook__body" onclick={(e) => e.stopPropagation()}>
-              <div class="task-notebook__editor">
+            <lefine-box class="task-notebook__body" onclick={(e) => e.stopPropagation()}>
+              <lefine-box class="task-notebook__editor">
                 <ProseKit {editor}>
-                  <div {@attach editor.mount} class="task-notebook__prose ProseMirror">
+                  <lefine-box {@attach editor.mount} class="task-notebook__prose ProseMirror">
                     {#if taskCompleted}
                       <p>Task completed successfully!</p>
                     {/if}
-                  </div>
+                  </lefine-box>
                 </ProseKit>
-              </div>
+              </lefine-box>
 
               {#if taskCompleted}
                 <section class="task-notebook__results">
                   <h3 class="task-notebook__section-title">Solutions</h3>
-                  <div class="solutions-scroll">
+                  <lefine-box class="solutions-scroll">
                     {#each mockSolutions as solution (solution.id)}
                       <article class="solution-card">
                         <header class="solution-card__header">
-                          <div class="solution-card__avatar" aria-hidden="true">{solution.solver.slice(0, 2)}</div>
-                          <div class="solution-card__meta">
+                          <lefine-box class="solution-card__avatar" aria-hidden="true">{solution.solver.slice(0, 2)}</lefine-box>
+                          <lefine-box class="solution-card__meta">
                             <strong>{solution.solver}</strong>
-                            <span>{solution.title}</span>
-                          </div>
+                            <lefine-text>{solution.title}</lefine-text>
+                          </lefine-box>
                         </header>
                         <p class="solution-card__description">{solution.description}</p>
-                        <div class="diff-summary">
+                        <lefine-box class="diff-summary">
                           {#each solution.diffs as diff}
-                            <span class="diff-file">
+                            <lefine-text class="diff-file">
                               {diff.file}
-                              <span class="diff-added">+{diff.added}</span>
-                              {#if diff.removed > 0}<span class="diff-removed">-{diff.removed}</span>{/if}
-                            </span>
+                              <lefine-text class="diff-added">+{diff.added}</lefine-text>
+                              {#if diff.removed > 0}<lefine-text class="diff-removed">-{diff.removed}</lefine-text>{/if}
+                            </lefine-text>
                           {/each}
-                        </div>
-                        <div class="code-diff">
+                        </lefine-box>
+                        <lefine-box class="code-diff">
                           <pre><code>{solution.finalCode}</code></pre>
-                        </div>
+                        </lefine-box>
                       </article>
                     {/each}
-                  </div>
+                  </lefine-box>
                 </section>
               {/if}
-            </div>
-          </div>
+            </lefine-box>
+          </lefine-box>
         {:else}
           <kefine-solver-search-row aria-live="polite">
             <lefine-text>{solverSearchText}</lefine-text>
@@ -948,7 +948,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             </kefine-solver-search-indicator>
           </kefine-solver-search-row>
         {/if}
-     </div>
+     </kefine-task-item>
    </section>
  {/if}
 
