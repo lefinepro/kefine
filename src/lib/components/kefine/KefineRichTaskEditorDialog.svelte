@@ -81,7 +81,8 @@
 
   let editorHost: HTMLDivElement | null = $state(null);
   let editor: Editor | null = $state(null);
-  let editorMode = $state<EditorMode>('visual');
+  const initialEditorMode: EditorMode = compact ? 'source' : 'visual';
+  let editorMode = $state<EditorMode>(initialEditorMode);
   let editorReady = $state(false);
   let editorLoading = $state(false);
   let editorLoadError = $state('');

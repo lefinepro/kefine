@@ -228,13 +228,22 @@
       return;
     }
 
-    globalThis.localStorage.setItem(
-      threadUiStorageKey,
-      JSON.stringify({
-        collapsed: collapsedNodeById,
-        hiddenVisible: hiddenBranchVisibleByNodeId
-      } as ThreadUiStorageState)
-    );
+    const key = threadUiStorageKey;
+
+    function saveState() {
+      globalThis.localStorage.setItem(
+        key,
+        JSON.stringify({
+          collapsed: collapsedNodeById,
+          hiddenVisible: hiddenBranchVisibleByNodeId
+        } as ThreadUiStorageState)
+      );
+    }
+
+    globalThis.addEventListener('beforeunload', saveState);
+    return () => {
+      globalThis.removeEventListener('beforeunload', saveState);
+    };
   });
 
   const nextOrders = $derived.by(() =>
@@ -824,6 +833,16 @@
               />
               {#if isCommentSubmitting(node)}
                 <lefine-text>{labels.saving}</lefine-text>
+              {:else}
+                <button
+                  type="button"
+                  disabled={!(commentDrafts[node.id] ?? '').trim()}
+                  data-kind="apply-comment"
+                  data-testid={`kefine-thread-action-apply-${node.id}`}
+                  onclick={() => void submitComment(node)}
+                >
+                  {labels.apply}
+                </button>
               {/if}
             </kefine-thread-inline-node-editor>
           {/if}
@@ -918,6 +937,16 @@
               />
               {#if isCommentSubmitting(node)}
                 <lefine-text>{labels.saving}</lefine-text>
+              {:else}
+                <button
+                  type="button"
+                  disabled={!(commentDrafts[node.id] ?? '').trim()}
+                  data-kind="apply-comment"
+                  data-testid={`kefine-thread-action-apply-${node.id}`}
+                  onclick={() => void submitComment(node)}
+                >
+                  {labels.apply}
+                </button>
               {/if}
             </kefine-thread-inline-node-editor>
           {/if}

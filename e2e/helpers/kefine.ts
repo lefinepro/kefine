@@ -182,6 +182,7 @@ export async function mockOrderApi(page: Page) {
       const payload = route.request().postDataJSON() as {
         vcsEnabled?: boolean;
         isPublicTask?: boolean;
+        shareId?: string;
         gitSettings?: NonNullable<NonNullable<MockOrder['repository']>['gitSettings']>;
       };
 
@@ -191,6 +192,10 @@ export async function mockOrderApi(page: Page) {
 
       if (payload.isPublicTask !== undefined) {
         order.isPublicTask = payload.isPublicTask;
+      }
+
+      if (payload.shareId !== undefined) {
+        order.shareId = payload.shareId;
       }
 
       if (order.vcsEnabled) {

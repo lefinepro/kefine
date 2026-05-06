@@ -410,6 +410,7 @@ export async function updateWorkspaceOrderSettings(args: {
   orderId: string;
   vcsEnabled?: boolean;
   isPublicTask?: boolean;
+  shareId?: string;
   gitSettings?: RepositoryGitSettings;
   fetchFn: typeof fetch;
   orderApiBaseUrl: string;
@@ -427,6 +428,7 @@ export async function updateWorkspaceOrderSettings(args: {
         body: JSON.stringify({
           ...(args.vcsEnabled !== undefined ? { vcsEnabled: args.vcsEnabled } : {}),
           ...(args.isPublicTask !== undefined ? { isPublicTask: args.isPublicTask } : {}),
+          ...(args.shareId !== undefined ? { shareId: args.shareId } : {}),
           ...(args.gitSettings ? { gitSettings: args.gitSettings } : {})
         })
       }

@@ -743,6 +743,37 @@ function replaceSystemInsert(content: string | undefined, nodeKey: string, inser
   return appendSystemInsert(source, nodeKey, insertContent);
 }
 
+function replaceSystemInsertAt(content: string | undefined, nodeKey: string, index: number, insertContent: string): string {
+  const source = content?.trim() || '';
+  if (!source) {
+    return appendSystemInsert(source, nodeKey, insertContent);
+  }
+
+  const escapedKey = nodeKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const insertRe = new RegExp(
+    `(^|\\n)(\\#\\+begin_node_insert:\\s*${escapedKey}\\n[\\s\\S]*?\\n\\#\\+end_node_insert)(\\n|$)`,
+    'g'
+  );
+
+  let matchIndex = 0;
+  let replaced = false;
+  const next = source.replace(insertRe, (match, prefix: string, block: string, suffix: string) => {
+    if (matchIndex === index) {
+      replaced = true;
+      matchIndex += 1;
+      return `${prefix}#+begin_node_insert: ${nodeKey}\n${insertContent.trim()}\n#+end_node_insert${suffix}`;
+    }
+    matchIndex += 1;
+    return match;
+  });
+
+  if (replaced) {
+    return next.trim();
+  }
+
+  return appendSystemInsert(source, nodeKey, insertContent);
+}
+
 function normalizeBranchInsertSource(raw: string): string {
   const styleless = stripTaskBranchStyle(raw);
   const legacyFree = styleless.replace(BRANCH_LEGACY_RE, '').trim();
@@ -1341,7 +1372,15 @@ export function replaceTaskNodeInsert(order: OrderView | null, nodeKey: string, 
     return content.trim();
   }
 
-  return replaceSystemInsert(order.document?.content || order.description || '', nodeKey, content);
+  const docContent = order.document?.content || order.description || '';
+  const insertIndexMatch = nodeKey.match(/-insert-(\d+)$/);
+  if (insertIndexMatch) {
+    const parentKey = nodeKey.slice(0, nodeKey.length - insertIndexMatch[0].length);
+    const insertIndex = parseInt(insertIndexMatch[1], 10) - 1;
+    return replaceSystemInsertAt(docContent, parentKey, insertIndex, content);
+  }
+
+  return replaceSystemInsert(docContent, nodeKey, content);
 }
 
 export function appendTaskNodeBranchInsert(

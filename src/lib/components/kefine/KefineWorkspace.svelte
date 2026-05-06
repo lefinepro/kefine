@@ -1970,12 +1970,11 @@
       resolveExecutionEstimate
     });
 
-    if (tempOrderId) {
-      createdOrders = createdOrders.filter((o) => o.id !== tempOrderId);
-      persistOrders();
-    }
-
     if (result.kind === 'error') {
+      if (tempOrderId) {
+        createdOrders = createdOrders.filter((o) => o.id !== tempOrderId);
+        persistOrders();
+      }
       if (!isBackground || focusInQueue) {
         currentOrder = null;
         errorMessage = result.message || localeText.errors.fallback;
@@ -2027,6 +2026,9 @@
 
     const ownerOrderWithActor = applyActorIdentityFallback(ownerOrder);
 
+    if (tempOrderId) {
+      createdOrders = createdOrders.filter((o) => o.id !== tempOrderId);
+    }
     upsertOrder(ownerOrderWithActor);
     startOrderPolling(ownerOrderWithActor);
 
@@ -2344,6 +2346,7 @@
       orderId: currentOrder.id,
       vcsEnabled: patch.vcsEnabled,
       isPublicTask: patch.isPublicTask,
+      shareId: patch.shareId,
       gitSettings: patch.gitSettings,
       fetchFn: fetch,
       orderApiBaseUrl: orderApiBaseUrl(),
@@ -2358,7 +2361,8 @@
       {
         ...currentOrder,
         ...updated,
-        id: currentOrder.id
+        id: currentOrder.id,
+        ...(patch.shareId !== undefined ? { shareId: patch.shareId } : {})
       },
       currentOrder
     );

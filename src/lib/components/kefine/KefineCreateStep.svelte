@@ -134,6 +134,7 @@
   let placeholderVisible = $state(false);
   let placeholderFocused = $state(false);
   let inputMetaOpen = $state(false);
+  let inputMetaPointerLock = $state(false);
   let executionEditorOpen = $state(false);
   let tagEditorOpen = $state(false);
   let tagInputValue = $state('');
@@ -410,6 +411,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     if (event.shiftKey) {
+      event.preventDefault();
+      void onQueueTask();
       return;
     }
 
@@ -569,7 +572,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     const currentTarget = event.currentTarget as HTMLElement;
 
     queueMicrotask(() => {
-      if (!currentTarget.contains(document.activeElement)) {
+      if (!inputMetaPointerLock && !currentTarget.contains(document.activeElement)) {
         inputMetaOpen = false;
       }
     });
@@ -855,7 +858,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 {/if}
 
 {#if backgroundOrders.length > 0}
-  <section class="kefine-task-history" aria-label={openTaskLabel}>
+  <section
+    class="kefine-task-history"
+    aria-label={openTaskLabel}
+    onpointerdown={() => { inputMetaPointerLock = true; }}
+    onpointerup={() => { inputMetaPointerLock = false; }}
+    onpointercancel={() => { inputMetaPointerLock = false; }}
+  >
     <ul data-part="recent-list" data-compact="true">
       {#each backgroundOrders as order (order.id)}
         <li

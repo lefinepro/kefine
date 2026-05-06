@@ -143,10 +143,14 @@
 
   function handleBrandClick() {
     cancelBrandClick?.();
-    cancelBrandClick = scheduleAfter(220, () => {
-      onExpandedChange(!isExpanded);
-      cancelBrandClick = null;
-    });
+    if (isExpanded) {
+      onExpandedChange(false);
+    } else {
+      cancelBrandClick = scheduleAfter(220, () => {
+        onExpandedChange(true);
+        cancelBrandClick = null;
+      });
+    }
   }
 
   function handleBrandDoubleClick() {
@@ -263,7 +267,7 @@
       return;
     }
 
-    if (themePickerOpen && isExpanded) {
+    if (themePickerOpen) {
       if (!themePopover.matches(':popover-open')) {
         themePopover.showPopover();
       }
@@ -280,7 +284,7 @@
       return;
     }
 
-    if (localePickerOpen && isExpanded) {
+    if (localePickerOpen) {
       if (!localePopover.matches(':popover-open')) {
         localePopover.showPopover();
       }
@@ -290,15 +294,6 @@
     if (localePopover.matches(':popover-open')) {
       localePopover.hidePopover();
     }
-  });
-
-  $effect(() => {
-    if (isExpanded) {
-      return;
-    }
-
-    themePickerOpen = false;
-    localePickerOpen = false;
   });
 </script>
 
@@ -350,46 +345,46 @@
               </a>
             {/each}
           </kefine-sidebar-nav>
-
-          <kefine-sidebar-toolbar aria-label={dockLabel}>
-            <button
-              type="button"
-              data-part="icon"
-              data-role="theme"
-              data-testid="kefine-topbar-theme-toggle"
-              aria-label={themeLabel}
-              title={themeLabel}
-              onclick={handleThemeButtonClick}
-              ondblclick={handleThemeButtonDoubleClick}
-            >
-              <KefineTopbarIcon name={isDarkTheme ? 'theme-light' : 'theme-dark'} size={20} />
-            </button>
-            <button
-              type="button"
-              data-part="icon"
-              data-role="locale"
-              data-testid="kefine-topbar-locale-toggle"
-              aria-label={localeLabel}
-              title={localeLabel}
-              onclick={handleLocaleButtonClick}
-              ondblclick={handleLocaleButtonDoubleClick}
-            >
-              <KefineTopbarIcon name={currentLocaleFlagIcon} size={20} />
-            </button>
-            {#if showEmailButton}
-              <button
-                type="button"
-                data-part="icon"
-                aria-label={mailLabel}
-                title={mailLabel}
-                onclick={handleEmailClick}
-              >
-                <KefineTopbarIcon name="email" size={20} />
-              </button>
-            {/if}
-          </kefine-sidebar-toolbar>
         </kefine-sidebar-stack>
       </kefine-sidebar-popover>
+
+      <kefine-sidebar-toolbar aria-label={dockLabel}>
+        <button
+          type="button"
+          data-part="icon"
+          data-role="theme"
+          data-testid="kefine-topbar-theme-toggle"
+          aria-label={themeLabel}
+          title={themeLabel}
+          onclick={handleThemeButtonClick}
+          ondblclick={handleThemeButtonDoubleClick}
+        >
+          <KefineTopbarIcon name={isDarkTheme ? 'theme-light' : 'theme-dark'} size={20} />
+        </button>
+        <button
+          type="button"
+          data-part="icon"
+          data-role="locale"
+          data-testid="kefine-topbar-locale-toggle"
+          aria-label={localeLabel}
+          title={localeLabel}
+          onclick={handleLocaleButtonClick}
+          ondblclick={handleLocaleButtonDoubleClick}
+        >
+          <KefineTopbarIcon name={currentLocaleFlagIcon} size={20} />
+        </button>
+        {#if showEmailButton}
+          <button
+            type="button"
+            data-part="icon"
+            aria-label={mailLabel}
+            title={mailLabel}
+            onclick={handleEmailClick}
+          >
+            <KefineTopbarIcon name="email" size={20} />
+          </button>
+        {/if}
+      </kefine-sidebar-toolbar>
       <kefine-picker-popover
         bind:this={themePopover}
         popover="manual"
@@ -954,9 +949,6 @@
       max-width: min(12rem, calc(100vw - 1.1rem));
     }
 
-    kefine-sidebar-popover:popover-open {
-      inset: auto auto auto auto;
-    }
 
     kefine-sidebar-stack {
       width: 100%;
