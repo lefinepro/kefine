@@ -2718,6 +2718,7 @@
           solverSearchLabel={localeText.create.solverSearchLabel}
           solverLabel={localeText.labels.solver}
           matchedOrders={matchedOrders}
+          backgroundOrders={createdOrders.filter((o) => o.status !== 'completed' && o.status !== 'done')}
           isSearching={draft.description.trim().length > 0}
           matchedTasksLabel={localeText.create.matchedTasks}
           addFileLabel={localeText.create.addFile}
@@ -2733,6 +2734,7 @@
           onAttachFiles={attachFiles}
           onRemoveFile={removeAttachedFile}
           onDeleteOrder={handleDeleteOrder}
+          onStopOrder={handleStopOrder}
           onOpenOrder={openOrder}
           onCreateServiceFromOrder={() => {}}
           onDescriptionChange={updateDescription}

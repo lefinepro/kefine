@@ -48,11 +48,13 @@
     relatedItemsLabel,
     createServiceLabel = 'Transform to service',
     deleteTaskLabel,
+    backgroundOrders = [],
     onSubmit,
     onQueueTask,
     onAttachFiles,
     onRemoveFile,
     onDeleteOrder,
+    onStopOrder,
     onOpenOrder,
     onCreateServiceFromOrder,
     onDescriptionChange,
@@ -112,11 +114,13 @@
     relatedItemsLabel: string;
     createServiceLabel?: string;
     deleteTaskLabel: string;
+    backgroundOrders?: OrderView[];
     onSubmit: () => void;
     onQueueTask: () => Promise<void> | void;
     onAttachFiles: (files: File[]) => void;
     onRemoveFile: (index: number) => void;
     onDeleteOrder: (order: OrderView, event: Event) => void;
+    onStopOrder?: (order: OrderView, event: Event) => void;
     onOpenOrder: (order: OrderView) => void;
     onCreateServiceFromOrder?: (order: OrderView, event: Event) => void;
     onDescriptionChange?: (value: string) => void;
@@ -141,6 +145,7 @@
   let queuePressTriggered = $state(false);
   let cancelPlaceholderTick: (() => void) | null = null;
   let cancelQueuePress: (() => void) | null = null;
+  const stopHoldTimers = new Map<string, ReturnType<typeof setTimeout>>();
   let placeholderVariantIndex = $state(0);
   let placeholderCharIndex = $state(0);
   let placeholderDeleting = $state(false);
@@ -844,6 +849,78 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
           onOpenKeydown={(event) => handleOpenOrderKeydown(order, event)}
           onDelete={(event) => handleDeleteClick(order, event)}
         />
+      {/each}
+    </ul>
+  </section>
+{/if}
+
+{#if backgroundOrders.length > 0}
+  <section class="kefine-task-history" aria-label={openTaskLabel}>
+    <ul data-part="recent-list" data-compact="true">
+      {#each backgroundOrders as order (order.id)}
+        <li
+          data-order-id={order.id}
+          data-status={order.status}
+        >
+          <kefine-order-row>
+            <kefine-order-mark aria-hidden="true" data-status={order.status}>
+              <task-dot></task-dot>
+            </kefine-order-mark>
+            <kefine-order-copy>
+              <kefine-order-title>{order.title}</kefine-order-title>
+              {#if order.executionEstimate}
+                <kefine-order-eta data-testid={`kefine-order-eta-${order.id}`}>{order.executionEstimate}</kefine-order-eta>
+              {/if}
+            </kefine-order-copy>
+            <kefine-order-actions>
+              <button
+                type="button"
+                data-part="status-toggle"
+                data-testid={`kefine-stop-order-${order.id}`}
+                data-status={order.status}
+                onpointerdown={(e) => {
+                  stopHoldTimers.set(order.id, setTimeout(() => {
+                    stopHoldTimers.delete(order.id);
+                    onStopOrder?.(order, e);
+                  }, 500));
+                }}
+                onpointerup={() => {
+                  const t = stopHoldTimers.get(order.id);
+                  if (t !== undefined) {
+                    clearTimeout(t);
+                    stopHoldTimers.delete(order.id);
+                  }
+                }}
+                onpointerleave={() => {
+                  const t = stopHoldTimers.get(order.id);
+                  if (t !== undefined) {
+                    clearTimeout(t);
+                    stopHoldTimers.delete(order.id);
+                  }
+                }}
+                onpointercancel={() => {
+                  const t = stopHoldTimers.get(order.id);
+                  if (t !== undefined) {
+                    clearTimeout(t);
+                    stopHoldTimers.delete(order.id);
+                  }
+                }}
+                onclick={(e) => onStopOrder?.(order, e)}
+              >
+                <status-mark aria-hidden="true" data-status={order.status}><task-dot></task-dot></status-mark>
+                <lefine-text>{deleteTaskLabel}</lefine-text>
+              </button>
+              <button
+                type="button"
+                data-part="open-task"
+                data-testid={`kefine-open-order-${order.id}`}
+                onclick={() => onOpenOrder(order)}
+              >
+                <lefine-text>{openTaskLabel}</lefine-text>
+              </button>
+            </kefine-order-actions>
+          </kefine-order-row>
+        </li>
       {/each}
     </ul>
   </section>

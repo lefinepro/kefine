@@ -135,6 +135,8 @@ export async function mockOrderApi(page: Page) {
         orderId: order.id,
         status: order.status,
         solver: order.solver,
+        actorHandle: order.actorHandle,
+        ownerUsername: order.ownerUsername,
         paymentUrl: null
       })
     });
