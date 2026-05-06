@@ -194,10 +194,29 @@
   }
 
   .kefine-solver-cohort-dialog__list {
-    display: grid;
+    display: flex;
+    flex-direction: row;
     gap: 0.7rem;
-    max-height: 24rem;
-    overflow: auto;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 0.5rem;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklab, #ead7b3 22%, transparent) transparent;
+  }
+
+  .kefine-solver-cohort-dialog__list::-webkit-scrollbar {
+    height: 4px;
+  }
+
+  .kefine-solver-cohort-dialog__list::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .kefine-solver-cohort-dialog__list::-webkit-scrollbar-thumb {
+    background: color-mix(in oklab, #ead7b3 22%, transparent);
+    border-radius: 999px;
   }
 
   .kefine-solver-cohort-dialog__solver {
@@ -211,6 +230,9 @@
     background: color-mix(in oklab, #1a120d 92%, black 8%);
     color: color-mix(in oklab, #ead7b3 84%, white 16%);
     text-align: left;
+    flex: 0 0 auto;
+    width: min(16rem, 80vw);
+    scroll-snap-align: start;
   }
 
   .kefine-solver-cohort-dialog__solver[data-selected='true'] {

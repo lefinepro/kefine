@@ -821,33 +821,33 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
   <input bind:this={fileInput} data-part="file-input" type="file" multiple onchange={handleFileChange} />
   <p id="kefine-composer-hints" data-part="composer-hints" hidden>{composerHints}</p>
-
-  {#if isSearching && matchedOrders.length > 0}
-    <section data-part="recent" aria-label={isSearching ? matchedTasksLabel : solverLabel}>
-      <kefine-recent-title>{matchedTasksLabel}</kefine-recent-title>
-      <ul data-part="recent-list" data-compact="true" data-testid="kefine-search-results">
-        {#each matchedOrders as order (order.id)}
-          <KefineOrderListItem
-            {order}
-            {openTaskLabel}
-            {relatedItemsLabel}
-            {createServiceLabel}
-            {deleteTaskLabel}
-            showCreateService={false}
-            showDelete={true}
-            itemTestId={`kefine-search-order-${order.id}`}
-            openTestId={`kefine-open-search-order-${order.id}`}
-            deleteTestId={`kefine-delete-search-order-${order.id}`}
-            onOpen={() => onOpenOrder(order)}
-            onCreateService={(event) => onCreateServiceFromOrder?.(order, event)}
-            onOpenKeydown={(event) => handleOpenOrderKeydown(order, event)}
-            onDelete={(event) => handleDeleteClick(order, event)}
-          />
-        {/each}
-      </ul>
-    </section>
-  {/if}
 </article>
+
+{#if isSearching && matchedOrders.length > 0}
+  <section class="kefine-task-history" aria-label={isSearching ? matchedTasksLabel : solverLabel}>
+    <kefine-recent-title>{matchedTasksLabel}</kefine-recent-title>
+    <ul data-part="recent-list" data-compact="true" data-testid="kefine-search-results">
+      {#each matchedOrders as order (order.id)}
+        <KefineOrderListItem
+          {order}
+          {openTaskLabel}
+          {relatedItemsLabel}
+          {createServiceLabel}
+          {deleteTaskLabel}
+          showCreateService={false}
+          showDelete={true}
+          itemTestId={`kefine-search-order-${order.id}`}
+          openTestId={`kefine-open-search-order-${order.id}`}
+          deleteTestId={`kefine-delete-search-order-${order.id}`}
+          onOpen={() => onOpenOrder(order)}
+          onCreateService={(event) => onCreateServiceFromOrder?.(order, event)}
+          onOpenKeydown={(event) => handleOpenOrderKeydown(order, event)}
+          onDelete={(event) => handleDeleteClick(order, event)}
+        />
+      {/each}
+    </ul>
+  </section>
+{/if}
 
 {#if pinnedServices.length > 0}
   <lef-services-showcase>
@@ -882,51 +882,60 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
    <section data-part="tasks-list">
      <div data-part="task-item" onclick={() => { taskEditorOpen = !taskEditorOpen; }}>
         {#if taskEditorOpen}
-          <div class="task-editor-expanded" onclick={(e) => { e.stopPropagation(); taskEditorOpen = false; }}>
-            <div class="task-editor-header">
-              <h2>{taskCompleted ? "Task Results" : "Edit Task"}</h2>
-            </div>
-            <div class="task-editor-content" onclick={(e) => e.stopPropagation()}>
-              <div style="height: 300px;" class="task-editor-editor">
+          <div class="task-notebook" onclick={(e) => { e.stopPropagation(); }}>
+            <header class="task-notebook__header">
+              <div class="task-notebook__title-row">
+                <span class="task-notebook__icon" aria-hidden="true">{taskCompleted ? '✓' : '◎'}</span>
+                <h2 class="task-notebook__title">{taskCompleted ? 'Task Results' : 'Task Editor'}</h2>
+              </div>
+              <button
+                type="button"
+                class="task-notebook__close"
+                onclick={(e) => { e.stopPropagation(); taskEditorOpen = false; }}
+                aria-label="Close"
+              >✕</button>
+            </header>
+
+            <div class="task-notebook__body" onclick={(e) => e.stopPropagation()}>
+              <div class="task-notebook__editor">
                 <ProseKit {editor}>
-                  <div {@attach editor.mount} class="ProseMirror box-border min-h-full px-4 py-8 outline-hidden outline-0 text-left">
+                  <div {@attach editor.mount} class="task-notebook__prose ProseMirror">
                     {#if taskCompleted}
                       <p>Task completed successfully!</p>
                     {/if}
                   </div>
                 </ProseKit>
               </div>
+
               {#if taskCompleted}
-                <section class="solutions-list">
-                  {#each mockSolutions as solution (solution.id)}
-                     <article class="solution-card">
-                       <aside class="solution-sidebar">
-                         <h4 class="sidebar-title">Files</h4>
-                         <ul class="file-list">
-                           {#each solution.diffs as diff}
-                             <li class="file-item">
-                               <span class="file-name">{diff.file}</span>
-                               <span class="file-changes">
-                                 <span class="added">+{diff.added}</span>
-                                 <span class="removed">-{diff.removed}</span>
-                               </span>
-                             </li>
-                           {/each}
-                         </ul>
-                       </aside>
-                       <div class="solution-content">
-                         <header class="solution-header">
-                           <img src={solution.avatar} alt={solution.solver} class="solver-avatar" />
-                           <div class="solution-meta">
-                             <strong>{solution.solver}</strong>
-                             <span>{solution.title}</span>
-                           </div>
-                         </header>
-                         <p class="solution-description">{solution.description}</p>
-                         <pre class="code-block"><code class="language-rust">{solution.finalCode}</code></pre>
-                       </div>
-                     </article>
-                  {/each}
+                <section class="task-notebook__results">
+                  <h3 class="task-notebook__section-title">Solutions</h3>
+                  <div class="solutions-scroll">
+                    {#each mockSolutions as solution (solution.id)}
+                      <article class="solution-card">
+                        <header class="solution-card__header">
+                          <div class="solution-card__avatar" aria-hidden="true">{solution.solver.slice(0, 2)}</div>
+                          <div class="solution-card__meta">
+                            <strong>{solution.solver}</strong>
+                            <span>{solution.title}</span>
+                          </div>
+                        </header>
+                        <p class="solution-card__description">{solution.description}</p>
+                        <div class="diff-summary">
+                          {#each solution.diffs as diff}
+                            <span class="diff-file">
+                              {diff.file}
+                              <span class="diff-added">+{diff.added}</span>
+                              {#if diff.removed > 0}<span class="diff-removed">-{diff.removed}</span>{/if}
+                            </span>
+                          {/each}
+                        </div>
+                        <div class="code-diff">
+                          <pre><code>{solution.finalCode}</code></pre>
+                        </div>
+                      </article>
+                    {/each}
+                  </div>
                 </section>
               {/if}
             </div>
@@ -939,6 +948,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             </kefine-solver-search-indicator>
           </kefine-solver-search-row>
         {/if}
+     </div>
    </section>
  {/if}
 
@@ -1789,33 +1799,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     transform: rotate(2.6deg);
   }
 
-  .solution-card .diff-summary .added {
-    color: #4CAF50;
-    font-weight: bold;
-  }
-
-  .solution-card .diff-summary .removed {
-    color: #F44336;
-    font-weight: bold;
-  }
-
-  .solution-card .code-diff .added {
-    background-color: rgba(76, 175, 80, 0.1);
-    display: block;
-  }
-
-  .solution-card .code-diff .removed {
-    background-color: rgba(244, 67, 54, 0.1);
-    display: block;
-    text-decoration: line-through;
-  }
-
-  .solution-card .code-diff .diff-header {
-    color: #9E9E9E;
-    font-weight: bold;
-    display: block;
-  }
-
   :global(:root[data-kefine-theme='dark']) lef-afe-flow {
     --afe-ink: #1c120b;
     --afe-ink-soft: #1c120b;
@@ -2059,255 +2042,247 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     cursor: pointer;
   }
 
-  .task-editor-expanded {
-    margin-top: 1rem;
-    border: 2px solid var(--kef-line);
-    border-radius: var(--kef-radius-ui);
+  /* Notebook-style post-execution task view */
+  .task-notebook {
+    display: grid;
+    border: var(--kef-border-width-soft) solid var(--kef-line);
+    border-radius: 0.85rem;
     background: var(--kef-bg-card);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    box-shadow:
+      0 8px 24px color-mix(in oklab, var(--lefine-text) 4%, transparent),
+      0 2px 6px color-mix(in oklab, var(--lefine-text) 2%, transparent);
     overflow: hidden;
+    cursor: default;
   }
 
-  .task-editor-header {
+  .task-notebook__header {
     display: flex;
+    align-items: center;
     justify-content: space-between;
-    align-items: center;
-    padding: 1rem;
-    background: var(--kef-bg);
-    border-bottom: 1px solid var(--kef-line);
-  }
-
-  .task-editor-header h2 {
-    margin: 0;
-    font-size: 1.2rem;
-    font-weight: 600;
-  }
-
-  .close-button {
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    cursor: pointer;
-    padding: 0.5rem;
-    color: var(--lefine-text);
-  }
-
-  .task-editor-content {
-    max-height: 600px;
-    overflow-y: auto;
-  }
-
-  .solutions-list {
-    margin-top: 1rem;
-    display: flex;
-    flex-direction: row;
-    overflow-x: auto;
-    overflow-y: hidden;
+    padding: 0.75rem 1rem;
+    background: color-mix(in oklab, var(--kef-bg) 72%, var(--kef-bg-card) 28%);
+    border-bottom: var(--kef-border-width-soft) solid var(--kef-line);
     gap: 0.75rem;
-    padding-bottom: 0.5rem;
-    -webkit-overflow-scrolling: touch;
   }
 
-  .solution-card {
-    flex-shrink: 0;
-    width: 350px;
-    min-width: 350px;
-  }
-
-  .solution-card {
-    border: 1px solid var(--kef-line);
-    border-radius: var(--kef-radius-ui);
-    padding: 1rem;
-    background: var(--kef-bg-card);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  }
-
-  .solution-header {
+  .task-notebook__title-row {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 0.5rem;
+    gap: 0.55rem;
+    min-width: 0;
   }
 
-  .solver-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-  }
-
-  .solution-meta {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-  }
-
-  .solution-meta strong {
+  .task-notebook__icon {
     font-size: 1rem;
+    color: var(--kef-primary);
+    flex: 0 0 auto;
+  }
+
+  .task-notebook__title {
+    margin: 0;
+    font-size: 0.98rem;
+    font-weight: 650;
+    color: var(--lefine-text);
+    letter-spacing: -0.01em;
+  }
+
+  .task-notebook__close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.8rem;
+    height: 1.8rem;
+    border-radius: 999px;
+    border: var(--kef-border-width-soft) solid var(--kef-line);
+    background: transparent;
+    color: var(--lefine-text-soft);
+    font-size: 0.75rem;
+    cursor: pointer;
+    flex: 0 0 auto;
+    transition: background var(--kef-motion-fast) var(--kef-ease-soft);
+  }
+
+  .task-notebook__close:hover {
+    background: color-mix(in oklab, var(--kef-bg) 80%, var(--kef-bg-card) 20%);
     color: var(--lefine-text);
   }
 
-  .solution-meta span {
-    font-size: 0.9rem;
+  .task-notebook__body {
+    display: grid;
+    gap: 0;
+  }
+
+  .task-notebook__editor {
+    min-height: 8rem;
+    padding: 1rem 1.2rem;
+    border-bottom: var(--kef-border-width-soft) solid var(--kef-line);
+  }
+
+  .task-notebook__prose {
+    min-height: 6rem;
+    outline: none;
+    font-size: 0.92rem;
+    line-height: 1.6;
+    color: var(--lefine-text);
+    caret-color: var(--kef-primary);
+  }
+
+  .task-notebook__prose p {
+    margin: 0 0 0.5em;
+  }
+
+  .task-notebook__results {
+    padding: 0.85rem 1rem 1rem;
+    display: grid;
+    gap: 0.65rem;
+  }
+
+  .task-notebook__section-title {
+    margin: 0;
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
     color: var(--lefine-text-soft);
   }
 
-  .solution-description {
-    margin: 0.5rem 0;
-    color: var(--lefine-text);
+  /* Horizontal solutions scroll */
+  .solutions-scroll {
+    display: flex;
+    flex-direction: row;
+    gap: 0.75rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 0.5rem;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklab, var(--kef-line) 60%, transparent) transparent;
   }
 
+  .solutions-scroll::-webkit-scrollbar {
+    height: 3px;
+  }
+
+  .solutions-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .solutions-scroll::-webkit-scrollbar-thumb {
+    background: color-mix(in oklab, var(--kef-line) 60%, transparent);
+    border-radius: 999px;
+  }
+
+  /* Solution card (diff view) */
+  .solution-card {
+    flex: 0 0 auto;
+    width: min(22rem, 80vw);
+    display: grid;
+    gap: 0.7rem;
+    border: var(--kef-border-width-soft) solid var(--kef-line);
+    border-radius: 0.75rem;
+    padding: 0.85rem;
+    background: color-mix(in oklab, var(--kef-bg-card) 96%, var(--kef-bg-soft) 4%);
+    scroll-snap-align: start;
+  }
+
+  .solution-card__header {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    min-width: 0;
+  }
+
+  .solution-card__avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.2rem;
+    height: 2.2rem;
+    border-radius: 999px;
+    background: linear-gradient(135deg, var(--kef-primary), color-mix(in oklab, var(--kef-primary) 72%, black 28%));
+    color: color-mix(in oklab, white 92%, var(--kef-primary) 8%);
+    font-size: 0.78rem;
+    font-weight: 700;
+    flex: 0 0 auto;
+  }
+
+  .solution-card__meta {
+    display: grid;
+    gap: 0.12rem;
+    min-width: 0;
+  }
+
+  .solution-card__meta strong {
+    font-size: 0.9rem;
+    color: var(--lefine-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .solution-card__meta span {
+    font-size: 0.8rem;
+    color: var(--lefine-text-soft);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .solution-card__description {
+    margin: 0;
+    font-size: 0.84rem;
+    color: var(--lefine-text-soft);
+    line-height: 1.45;
+  }
+
+  /* Diff view */
   .diff-summary {
     display: flex;
-    gap: 0.5rem;
-    margin-bottom: 0.5rem;
+    flex-wrap: wrap;
+    gap: 0.4rem;
   }
 
   .diff-file {
-    font-size: 0.8rem;
-    background: var(--kef-bg);
-    padding: 0.25rem 0.5rem;
-    border-radius: 0.25rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.76rem;
+    font-family: monospace;
+    background: color-mix(in oklab, var(--kef-bg) 88%, var(--kef-bg-soft) 12%);
+    padding: 0.22rem 0.55rem;
+    border-radius: 0.35rem;
     color: var(--lefine-text-soft);
+    border: var(--kef-border-width-soft) solid var(--kef-line);
+  }
+
+  .diff-added {
+    color: #22c55e;
+    font-weight: 700;
+  }
+
+  .diff-removed {
+    color: #ef4444;
+    font-weight: 700;
   }
 
   .code-diff {
-    background: var(--kef-bg);
-    padding: 1rem;
-    border-radius: 0.5rem;
+    background: color-mix(in oklab, var(--kef-bg) 88%, black 12%);
+    border-radius: 0.55rem;
     overflow-x: auto;
-    font-size: 0.85rem;
-    color: var(--lefine-text);
+    font-size: 0.82rem;
+    border: var(--kef-border-width-soft) solid color-mix(in oklab, var(--kef-line) 70%, transparent);
+  }
+
+  .code-diff pre {
+    margin: 0;
+    padding: 0.75rem 0.9rem;
   }
 
   .code-diff code {
-    font-family: monospace;
-  }
-
-  .code-diff .added {
-    color: #22c55e;
-    background: rgba(34, 197, 94, 0.1);
-  }
-
-  .code-diff .removed {
-    color: #ef4444;
-    background: rgba(239, 68, 68, 0.1);
-  }
-
-  .code-diff .diff-header {
-    color: #6366f1;
-    font-weight: bold;
-  }
-
-  .solution-card {
-    display: flex;
-    background: var(--kef-bg-card, #ffffff);
-    border: 1px solid var(--kef-border, #e9ecef);
-    border-radius: 0.75rem;
-    overflow: hidden;
-    margin-bottom: 1rem;
-    height: fit-content;
-  }
-
-  .solution-sidebar {
-    width: 200px;
-    background: var(--kef-bg-soft, #f8f9fa);
-    padding: 1rem;
-    border-right: 1px solid var(--kef-border, #e9ecef);
-  }
-
-  .sidebar-title {
-    font-size: 0.9rem;
-    font-weight: 600;
-    margin: 0 0 0.5rem 0;
+    font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, monospace;
     color: var(--lefine-text);
-  }
-
-  .file-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-  }
-
-  .file-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.25rem 0;
-    font-size: 0.8rem;
-  }
-
-  .file-name {
-    flex: 1;
-    color: var(--lefine-text);
-    font-family: monospace;
-  }
-
-  .file-changes {
-    font-size: 0.75rem;
-  }
-
-  .solution-content {
-    flex: 1;
-    padding: 1rem;
-  }
-
-  .solution-header {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 0.5rem;
-  }
-
-  .solver-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-  }
-
-  .solution-meta {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .solution-meta strong {
-    font-size: 1rem;
-    color: var(--lefine-text);
-  }
-
-  .solution-meta span {
-    font-size: 0.85rem;
-    color: var(--lefine-text-soft);
-  }
-
-  .solution-description {
-    margin: 0.5rem 0;
-    color: var(--lefine-text-soft);
-    line-height: 1.4;
-  }
-
-  .code-block {
-    padding: 1rem;
-    border-radius: 0.5rem;
-    overflow-x: auto;
-    font-family: monospace;
-    border: 1px solid #e9ecef;
-    margin-top: 0.5rem;
-  }
-
-  .code-block pre {
-    margin: 0;
-  }
-
-  .solutions-list {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    max-width: 100%;
-  }
-
-  .code-block code {
-    background: none;
-    padding: 0;
+    white-space: pre;
   }
 
   button[data-part='composer-chip'][data-part-tag='true'] {
@@ -2707,10 +2682,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     text-align: center;
   }
 
-  section[data-part='recent'] {
+  .kefine-task-history {
     display: grid;
     gap: 0.65rem;
     min-height: 0;
+  }
+
+  .kefine-task-history {
+    width: min(100%, calc(100vw - 7rem));
+    max-width: 64rem;
+    justify-self: center;
+    margin-inline: auto;
+    margin-top: var(--kef-space-3);
+    padding: 0.85rem 1rem;
+    border-radius: var(--kef-radius-ui);
+    background: color-mix(in oklab, var(--kef-bg-card) 88%, var(--kef-bg-soft) 12%);
+    border: var(--kef-border-width-soft) solid var(--kef-line);
   }
 
   kefine-recent-title {
@@ -2833,20 +2820,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
       min-height: 0;
     }
 
-    .solutions-list {
-      display: flex;
-      flex-direction: row;
-      overflow-x: auto;
-      overflow-y: hidden;
-      gap: 0.75rem;
-      padding-bottom: 0.5rem;
-      -webkit-overflow-scrolling: touch;
-    }
-
     .solution-card {
-      flex-shrink: 0;
-      width: 280px;
-      min-width: 280px;
+      width: min(17rem, 78vw);
     }
   }
 </style>
