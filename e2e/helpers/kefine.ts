@@ -1,5 +1,5 @@
 import { expect, type Page, type Route } from '@playwright/test';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { ml_dsa65 } from '@noble/post-quantum/ml-dsa.js';
 
@@ -324,6 +324,10 @@ export async function mockPrivateKeyAuth(page: Page) {
       body: JSON.stringify([])
     });
   });
+}
+
+export function actorPrivateKeyExists() {
+  return existsSync(path.resolve(process.cwd(), 'actor-privatekey.pem'));
 }
 
 export function readActorPrivateKeyPem() {
