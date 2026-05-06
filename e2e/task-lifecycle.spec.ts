@@ -334,14 +334,12 @@ test.describe('Task Lifecycle', () => {
     const commentText = 'Theme/locale keep this draft';
     await commentInput.fill(commentText);
 
-    await page.locator('[data-part="brand"]').click();
     await page.getByTestId('kefine-topbar-theme-toggle').click();
     await page.getByTestId('kefine-topbar-theme-option-dark').click();
 
     await expect(commentForm).toBeVisible();
     await expect(commentInput).toHaveValue(commentText);
 
-    await page.locator('[data-part="brand"]').click();
     await page.getByTestId('kefine-topbar-locale-toggle').click();
     await page.getByTestId('kefine-topbar-locale-option-ru').click();
 
