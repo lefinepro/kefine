@@ -505,7 +505,7 @@
     top: 0;
     left: 0;
     right: 0;
-    z-index: 3;
+    z-index: 10;
     display: grid;
     justify-items: stretch;
     align-content: start;
