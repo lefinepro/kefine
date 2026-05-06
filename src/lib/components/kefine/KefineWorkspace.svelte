@@ -2091,20 +2091,12 @@
       return;
     }
 
-    const submittedSearchText = normalized.description.trim() || normalized.title.trim() || localeText.defaults.taskTitle;
-    solverSearchText = submittedSearchText;
-    solverSearchActive = true;
     draft = createEmptyDraft();
 
-    void submitDraft(normalized, { background: true }).then((created) => {
+    void submitDraft(normalized).then((created) => {
       if (!created) {
         if (!draft.description.trim()) {
           draft = normalized;
-        }
-
-        if (solverSearchText === submittedSearchText) {
-          solverSearchActive = false;
-          solverSearchText = '';
         }
       }
     });
