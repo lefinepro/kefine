@@ -71,7 +71,8 @@
     onTemplateVariableChange,
     onTagsChange,
     executionEstimateLabel,
-    onExecutionEstimateChange
+    onExecutionEstimateChange,
+    onOpenSolution
   }: {
     draft: DraftOrder;
     template: TemplatePresentation | null;
@@ -136,6 +137,7 @@
     onTagsChange?: (tags: string[]) => void;
     executionEstimateLabel: string;
     onExecutionEstimateChange?: (value: string) => void;
+    onOpenSolution?: (solutionId: string) => void;
   } = $props();
 
   let animatedPlaceholder = $state('');
@@ -178,7 +180,19 @@
 
   let editor = $state(createEditor({ extension: defineBasicExtension(), defaultContent: sampleContent }));
 
-  const mockSolutions = $state([
+  import { solutionsStore } from '$lib/kefine/solutions-store';
+  import { get } from 'svelte/store';
+
+  interface Solution {
+    id: string;
+    solver: string;
+    title: string;
+    description: string;
+    diffs: Array<{ file: string; added: number; removed: number }>;
+    codeLines: Array<{ text: string; type: 'added' | 'removed' | 'unchanged' }>;
+  }
+
+  const defaultSolutions: Solution[] = [
     {
       id: '1',
       solver: 'Basic Rust Dev',
@@ -260,7 +274,14 @@
         { text: '}', type: 'added' }
       ]
     }
-  ]);
+];
+
+  $effect(() => {
+    const current = solutionsStore.getAll();
+    if (current.length === 0) {
+      solutionsStore.set(defaultSolutions);
+    }
+  });
   const isMultilineDraft = $derived(draft.description.includes('\n'));
   const afeIntroCard = $derived(afe.cards[0] ?? null);
   const afeStepCards = $derived(afe.cards.slice(1));
@@ -916,44 +937,45 @@
                 </ProseKit>
               </div>
               {#if taskCompleted}
-                <div class="solutions-wrapper">
-                  <section class="solutions-list">
-                    {#each mockSolutions as solution (solution.id)}
-                       <article class="solution-card">
-                         <aside class="solution-sidebar">
-                           <h4 class="sidebar-title">Files</h4>
-                           <ul class="file-list">
-                             {#each solution.diffs as diff}
-                               <li class="file-item">
-                                 <span class="file-name">{diff.file}</span>
-                                 <span class="file-changes">
-                                   <span class="added">+{diff.added}</span>
-                                   <span class="removed">-{diff.removed}</span>
-                                 </span>
-                               </li>
-                             {/each}
-                           </ul>
-                         </aside>
-<div class="solution-content">
-                            <header class="solution-header">
-                              <div class="solution-meta">
-                                <strong>{solution.solver}</strong>
-                                <span>{solution.title}</span>
-                              </div>
-                            </header>
-                            <p class="solution-description">{solution.description}</p>
-                            <div class="code-block" class:show-diff={showDiffColors}>
-                              {#each solution.codeLines as line, i}
-                                <div class="code-line" class:added={line.type === 'added'} class:removed={line.type === 'removed'}>
-                                  <span class="line-number">{i + 1}</span>
-                                  <span class="line-content">{@html highlightLine(line.text)}</span>
-                                </div>
-                              {/each}
-                            </div>
-                          </div>
-                       </article>
-                    {/each}
-                  </section>
+<div class="solutions-wrapper">
+                  <table class="solutions-table">
+                    <thead>
+                      <tr>
+                        <th>Solver</th>
+                        <th>Title</th>
+                        <th>Description</th>
+                        <th>Files</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {#each $solutionsStore as solution (solution.id)}
+                        <tr>
+                          <td class="solver-cell">{solution.solver}</td>
+                          <td class="title-cell">{solution.title}</td>
+                          <td class="description-cell">{solution.description}</td>
+                          <td class="files-cell">
+                            {#each solution.diffs as diff}
+                              <span class="file-badge">
+                                <span class="file-name">{diff.file}</span>
+                                <span class="file-changes">
+                                  <span class="added">+{diff.added}</span>
+                                  {#if diff.removed > 0}
+                                    <span class="removed">-{diff.removed}</span>
+                                  {/if}
+                                </span>
+                              </span>
+                            {/each}
+                          </td>
+                          <td class="action-cell">
+                            <button type="button" class="view-solution-btn" onclick={() => onOpenSolution?.(solution.id)}>
+                              View
+                            </button>
+                          </td>
+                        </tr>
+                      {/each}
+                    </tbody>
+                  </table>
                 </div>
               {/if}
             </div>
@@ -2151,6 +2173,114 @@
     -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
     box-sizing: border-box;
+  }
+
+  .solutions-table {
+    width: 100%;
+    min-width: 600px;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+    background: var(--kef-bg-card);
+    border-radius: var(--kef-radius-ui);
+    overflow: hidden;
+  }
+
+  .solutions-table th,
+  .solutions-table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--kef-line);
+  }
+
+  .solutions-table th {
+    background: color-mix(in oklab, var(--kef-bg-card) 95%, var(--kef-bg-soft));
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--lefine-text-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .solutions-table tr:hover td {
+    background: color-mix(in oklab, var(--kef-bg-card) 98%, var(--kef-bg-soft));
+  }
+
+  .solutions-table tr:last-child td {
+    border-bottom: none;
+  }
+
+  .solver-cell {
+    font-weight: 600;
+    color: var(--kef-color-primary);
+  }
+
+  .title-cell {
+    font-weight: 500;
+    color: var(--lefine-text);
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .description-cell {
+    color: var(--lefine-text-soft);
+    max-width: 250px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .files-cell {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+
+  .file-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.2rem 0.45rem;
+    background: color-mix(in oklab, var(--kef-bg) 45%, var(--kef-bg-card));
+    border: 1px solid color-mix(in oklab, var(--kef-line) 60%, transparent);
+    border-radius: 0.3rem;
+    font-size: 0.8rem;
+    font-family: 'Fira Code', 'Cascadia Code', monospace;
+  }
+
+  .file-badge .file-name {
+    color: var(--lefine-text);
+  }
+
+  .file-badge .file-changes {
+    display: flex;
+    gap: 0.2rem;
+    font-size: 0.75rem;
+  }
+
+  .file-badge .added { color: #22c55e; }
+  .file-badge .removed { color: #ef4444; }
+
+  .action-cell {
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .view-solution-btn {
+    padding: 0.35rem 0.85rem;
+    background: var(--kef-color-primary);
+    color: #fff;
+    border: none;
+    border-radius: 0.35rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 160ms ease;
+  }
+
+  .view-solution-btn:hover {
+    background: color-mix(in oklab, var(--kef-color-primary) 85%, black 15%);
   }
 
   .solutions-list {
