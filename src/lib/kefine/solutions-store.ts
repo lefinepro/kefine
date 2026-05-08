@@ -10,6 +10,10 @@ export interface Solution {
     text: string;
     type: 'added' | 'removed' | 'unchanged';
   }>;
+  fileCodeLines?: Record<string, Array<{
+    text: string;
+    type: 'added' | 'removed' | 'unchanged';
+  }>>;
   diffs: Array<{
     file: string;
     added: number;
