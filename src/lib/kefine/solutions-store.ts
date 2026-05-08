@@ -19,6 +19,7 @@ export interface Solution {
     added: number;
     removed: number;
   }>;
+  rated?: boolean;
 }
 
 const STORAGE_KEY = 'kefine-solutions';

@@ -16,6 +16,7 @@ export interface Solution {
     added: number;
     removed: number;
   }>;
+  rated?: boolean;
 }
 
 export const defaultSolutions: Solution[] = [
