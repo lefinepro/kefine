@@ -507,12 +507,46 @@
 
 $effect(() => {
     if (initialized) return;
-    initialized = true;
+initialized = true;
     const current = solutionsStore.getAll();
     if (current.length === 0) {
       solutionsStore.set([...defaultSolutions]);
     }
   });
+
+  const crownAnimating = $state<Record<string, boolean>>({});
+
+  function handleCrownClick(solutionId: string) {
+    if (crownAnimating[solutionId]) return;
+    const idx = $solutionsStore.findIndex(s => s.id === solutionId);
+    if (idx === -1) return;
+    const sol = $solutionsStore[idx];
+    if (sol.rated) {
+      crownAnimating[solutionId] = true;
+      const btn = document.querySelector(`[data-crown-btn="${solutionId}"]`);
+      if (btn) {
+        btn.classList.remove('is-active');
+        void btn.offsetWidth;
+        crownAnimating[solutionId] = false;
+      }
+      solutionsStore.update(list => {
+        const newList = [...list];
+        newList[idx] = { ...newList[idx], rated: false };
+        return newList;
+      });
+    } else {
+      crownAnimating[solutionId] = true;
+      solutionsStore.update(list => {
+        const newList = [...list];
+        newList[idx] = { ...newList[idx], rated: true };
+        return newList;
+      });
+      setTimeout(() => {
+        crownAnimating[solutionId] = false;
+      }, 800);
+    }
+  }
+
   const isMultilineDraft = $derived(draft.description.includes('\n'));
   const displayedSolutions = $derived.by(() => {
     const all = $solutionsStore;
@@ -1222,6 +1256,18 @@ $effect(() => {
                   </div>
                 </ProseKit>
               </div>
+              <button
+                type="button"
+                data-variant="primary"
+                data-part="exec-button-small"
+                data-testid="kefine-submit-task-small"
+                aria-label={executeAria}
+                aria-haspopup="dialog"
+                aria-expanded="false"
+                onclick={handleSubmitButtonClick}
+              >
+                <kefine-exec-arrow aria-hidden="true">➵</kefine-exec-arrow>
+              </button>
               {#if taskCompleted}
 <div class="solutions-wrapper">
                   <table class="solutions-table">
@@ -1231,6 +1277,7 @@ $effect(() => {
                         <th>Title</th>
                         <th>Description</th>
                         <th>Files</th>
+                        <th>Rating</th>
                         <th>Action</th>
                       </tr>
                     </thead>
@@ -1252,6 +1299,25 @@ $effect(() => {
                                 </span>
                               </span>
                             {/each}
+                          </td>
+                          <td class="rating-cell">
+                            <button
+                              type="button"
+                              class="crown-button"
+                              class:is-active={solution.rated}
+                              data-crown-btn={solution.id}
+                              onclick={() => handleCrownClick(solution.id)}
+                              aria-label="Rate solution"
+                            >
+                              <svg class="crown-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M2 17L4 7L8 11L12 4L16 11L20 7L22 17H2Z"/>
+                                <path d="M4 7C4 7 5.5 8.5 6 9C6.5 9.5 7.5 9.5 8 9C8.5 8.5 8 7 8 7"/>
+                                <path d="M20 7C20 7 18.5 8.5 18 9C17.5 9.5 16.5 9.5 16 9C15.5 8.5 16 7 16 7"/>
+                                <path d="M12 4C12 4 11 6 11 6.5C11 7 12 7.5 12 7.5C12 7.5 13 7 13 6.5C13 6 12 4 12 4"/>
+                                <path d="M6 17V20H18V17" stroke-width="1.2"/>
+                                <path d="M8 14H16" stroke-width="1" opacity="0.5"/>
+                              </svg>
+                            </button>
                           </td>
                           <td class="action-cell">
                             <button type="button" class="view-solution-btn" onclick={() => onOpenSolution?.(solution.id)}>
@@ -2448,6 +2514,14 @@ $effect(() => {
     max-width: 100%;
     overflow-x: visible;
     overflow-y: visible;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .task-editor-content button[data-part='exec-button-small'] {
+    margin-left: 0.5rem;
   }
 
   .solutions-wrapper {
@@ -2547,6 +2621,103 @@ $effect(() => {
 
   .file-badge .added { color: #22c55e; }
   .file-badge .removed { color: #ef4444; }
+
+  .rating-cell {
+    text-align: center;
+    width: 80px;
+  }
+
+  .crown-button {
+    position: relative;
+    width: 48px;
+    height: 48px;
+    background: transparent;
+    border: 1.8px solid var(--kef-line);
+    border-radius: 12px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 200ms cubic-bezier(0.23, 0.09, 0.08, 1.13), box-shadow 200ms cubic-bezier(0.23, 0.09, 0.08, 1.13);
+    overflow: visible;
+    padding: 0;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .crown-button:hover {
+    border-color: var(--kef-color-primary);
+    box-shadow: 0 0 20px rgba(200, 154, 90, 0.15);
+  }
+
+  .crown-button:active {
+    transform: scale(0.96);
+  }
+
+  .crown-svg {
+    width: 24px;
+    height: 24px;
+    transform-origin: center bottom;
+    will-change: transform, stroke, fill;
+  }
+
+  .crown-svg path {
+    fill: none;
+    stroke: var(--lefine-text-soft);
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: stroke 400ms cubic-bezier(0.23, 0.09, 0.08, 1.13), fill 400ms cubic-bezier(0.23, 0.09, 0.08, 1.13), filter 400ms cubic-bezier(0.23, 0.09, 0.08, 1.13);
+  }
+
+  .crown-button.is-active .crown-svg {
+    animation: crown-wobble 0.8s cubic-bezier(0.77, 0.09, 0.23, 1.13) forwards;
+  }
+
+  .crown-button.is-active .crown-svg path {
+    stroke: #d3a45c;
+    fill: rgba(211, 164, 92, 0.12);
+    filter: drop-shadow(0 0 8px rgba(211, 164, 92, 0.4));
+  }
+
+  @keyframes crown-wobble {
+    0% { transform: rotate(0deg); }
+    20% { transform: rotate(18deg); }
+    45% { transform: rotate(-6deg); }
+    70% { transform: rotate(-10deg); }
+    85% { transform: rotate(2deg); }
+    100% { transform: rotate(0deg); }
+  }
+
+  .crown-button.is-active::before,
+  .crown-button.is-active::after {
+    content: '';
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: #d3a45c;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .crown-button.is-active::before {
+    animation: crown-particle-1 0.6s ease-out forwards;
+  }
+
+  .crown-button.is-active::after {
+    animation: crown-particle-2 0.6s ease-out 0.1s forwards;
+  }
+
+  @keyframes crown-particle-1 {
+    0% { opacity: 1; transform: translate(0, 0) scale(1); }
+    100% { opacity: 0; transform: translate(-12px, -18px) scale(0); }
+  }
+
+  @keyframes crown-particle-2 {
+    0% { opacity: 1; transform: translate(0, 0) scale(1); }
+    100% { opacity: 0; transform: translate(12px, -15px) scale(0); }
+  }
 
   .action-cell {
     text-align: center;
@@ -3336,6 +3507,37 @@ $effect(() => {
     align-items: center;
     justify-content: center;
     font-size: 0;
+  }
+
+  button[data-part='exec-button-small'] {
+    width: 48px;
+    height: 32px;
+    min-width: 48px;
+    border-radius: 6px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0;
+    background: var(--kef-color-primary);
+    border: 1.5px solid var(--kef-color-primary);
+    color: var(--kef-bg);
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  button[data-part='exec-button-small']:hover {
+    background: var(--kef-color-primary-hover, #d4a86a);
+    border-color: var(--kef-color-primary-hover, #d4a86a);
+    box-shadow: 0 0 12px rgba(200, 154, 90, 0.3);
+  }
+
+  button[data-part='exec-button-small']:active {
+    transform: scale(0.95);
+  }
+
+  button[data-part='exec-button-small'] kefine-exec-arrow {
+    font-size: 1.4rem;
   }
 
   kefine-exec-arrow {
