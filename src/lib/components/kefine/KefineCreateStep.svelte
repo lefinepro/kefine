@@ -162,6 +162,7 @@
   let taskCompleted = $state(false);
   let showDiffColors = $state(true);
   let isFlying = $state(false);
+  let initialized = $state(false);
 
   const sampleContent: NodeJSON = {
     type: 'doc',
@@ -190,6 +191,7 @@
     description: string;
     diffs: Array<{ file: string; added: number; removed: number }>;
     codeLines: Array<{ text: string; type: 'added' | 'removed' | 'unchanged' }>;
+    fileCodeLines?: Record<string, Array<{ text: string; type: 'added' | 'removed' | 'unchanged' }>>;
   }
 
   const defaultSolutions: Solution[] = [
@@ -273,16 +275,270 @@
         { text: '    Ok(())', type: 'added' },
         { text: '}', type: 'added' }
       ]
+},
+    {
+      id: '5',
+      solver: 'Go Proxy Basic',
+      title: 'Simple HTTP Proxy',
+      description: 'Minimal HTTP proxy with forward functionality',
+      diffs: [
+        { file: 'main.go', added: 28, removed: 0 },
+        { file: 'config.yaml', added: 5, removed: 0 },
+        { file: 'go.mod', added: 2, removed: 0 }
+      ],
+      fileCodeLines: {
+        'main.go': [
+          { text: 'package main', type: 'added' },
+          { text: '', type: 'unchanged' },
+          { text: 'import (', type: 'added' },
+          { text: '    "fmt"', type: 'added' },
+          { text: '    "net/http"', type: 'added' },
+          { text: '    "log"', type: 'added' },
+          { text: ')', type: 'added' },
+          { text: '', type: 'unchanged' },
+          { text: 'func handleRequest(w http.ResponseWriter, r *http.Request) {', type: 'added' },
+          { text: '    fmt.Printf("Proxying: %s %s\\n", r.Method, r.URL)', type: 'added' },
+          { text: '    r.RequestURI = ""', type: 'added' },
+          { text: '    r.URL.Scheme = "http"', type: 'added' },
+          { text: '    r.URL.Host = "localhost:8080"', type: 'added' },
+          { text: '', type: 'unchanged' },
+          { text: '    client := &http.Client{}', type: 'added' },
+          { text: '    resp, err := client.Do(r)', type: 'added' },
+          { text: '    if err != nil {', type: 'added' },
+          { text: '        http.Error(w, err.Error(), 500)', type: 'added' },
+          { text: '        return', type: 'added' },
+          { text: '    }', type: 'added' },
+          { text: '    defer resp.Body.Close()', type: 'added' },
+          { text: '', type: 'unchanged' },
+          { text: '    for k, v := range resp.Header {', type: 'added' },
+          { text: '        w.Header()[k] = v', type: 'added' },
+          { text: '    }', type: 'added' },
+          { text: '    w.WriteHeader(resp.StatusCode)', type: 'added' },
+          { text: '}', type: 'added' },
+          { text: '', type: 'unchanged' },
+          { text: 'func main() {', type: 'added' },
+          { text: '    http.HandleFunc("/", handleRequest)', type: 'added' },
+          { text: '    log.Println("Proxy server on :9090")', type: 'added' },
+          { text: '    log.Fatal(http.ListenAndServe(":9090", nil))', type: 'added' },
+          { text: '}', type: 'added' }
+        ],
+        'config.yaml': [
+          { text: 'server:', type: 'added' },
+          { text: '  port: 9090', type: 'added' },
+          { text: '  host: "0.0.0.0"', type: 'added' },
+          { text: '', type: 'unchanged' },
+          { text: 'proxy:', type: 'added' },
+          { text: '  target: "http://localhost:8080"', type: 'added' },
+          { text: '  timeout: 30', type: 'added' }
+        ],
+        'go.mod': [
+          { text: 'module github.com/example/proxy', type: 'added' },
+          { text: '', type: 'unchanged' },
+          { text: 'go 1.21', type: 'added' }
+        ]
+      },
+      codeLines: [
+        { text: 'package main', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: 'import (', type: 'added' },
+        { text: '    "fmt"', type: 'added' },
+        { text: '    "net/http"', type: 'added' },
+        { text: '    "log"', type: 'added' },
+        { text: ')', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: 'func handleRequest(w http.ResponseWriter, r *http.Request) {', type: 'added' },
+        { text: '    fmt.Printf("Proxying: %s %s\\n", r.Method, r.URL)', type: 'added' },
+        { text: '    r.RequestURI = ""', type: 'added' },
+        { text: '    r.URL.Scheme = "http"', type: 'added' },
+        { text: '    r.URL.Host = "localhost:8080"', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: '    client := &http.Client{}', type: 'added' },
+        { text: '    resp, err := client.Do(r)', type: 'added' },
+        { text: '    if err != nil {', type: 'added' },
+        { text: '        http.Error(w, err.Error(), 500)', type: 'added' },
+        { text: '        return', type: 'added' },
+        { text: '    }', type: 'added' },
+        { text: '    defer resp.Body.Close()', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: '    for k, v := range resp.Header {', type: 'added' },
+        { text: '        w.Header()[k] = v', type: 'added' },
+        { text: '    }', type: 'added' },
+        { text: '    w.WriteHeader(resp.StatusCode)', type: 'added' },
+        { text: '    // w.CopyFrom(resp.Body)', type: 'added' },
+        { text: '}', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: 'func main() {', type: 'added' },
+        { text: '    http.HandleFunc("/", handleRequest)', type: 'added' },
+        { text: '    log.Println("Proxy server on :9090")', type: 'added' },
+        { text: '    log.Fatal(http.ListenAndServe(":9090", nil))', type: 'added' },
+        { text: '}', type: 'added' }
+      ]
+    },
+    {
+      id: '6',
+      solver: 'Go Proxy Pro',
+      title: 'Production-ready Proxy with Logging',
+      description: 'Proxy with request/response logging and error handling',
+      diffs: [
+        { file: 'main.go', added: 48, removed: 0 },
+        { file: 'config.go', added: 12, removed: 0 },
+        { file: 'logger.go', added: 8, removed: 0 },
+        { file: 'go.mod', added: 2, removed: 0 }
+      ],
+      codeLines: [
+        { text: 'package main', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: 'import (', type: 'added' },
+        { text: '    "bytes"', type: 'added' },
+        { text: '    "fmt"', type: 'added' },
+        { text: '    "io"', type: 'added' },
+        { text: '    "log"', type: 'added' },
+        { text: '    "net/http"', type: 'added' },
+        { text: '    "time"', type: 'added' },
+        { text: ')', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: 'type ProxyHandler struct {', type: 'added' },
+        { text: '    targetURL string', type: 'added' },
+        { text: '    timeout time.Duration', type: 'added' },
+        { text: '}', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: 'func (p *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {', type: 'added' },
+        { text: '    start := time.Now()', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: '    r.RequestURI = ""', type: 'added' },
+        { text: '    r.URL.Scheme = "http"', type: 'added' },
+        { text: '    r.URL.Host = p.targetURL', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: '    log.Printf("%s %s -> %s", r.Method, r.URL.Path, r.URL)', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: '    client := &http.Client{Timeout: p.timeout}', type: 'added' },
+        { text: '    resp, err := client.Do(r)', type: 'added' },
+        { text: '    if err != nil {', type: 'added' },
+        { text: '        log.Printf("Error: %v", err)', type: 'added' },
+        { text: '        http.Error(w, err.Error(), 502)', type: 'added' },
+        { text: '        return', type: 'added' },
+        { text: '    }', type: 'added' },
+        { text: '    defer resp.Body.Close()', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: '    body, err := io.ReadAll(resp.Body)', type: 'added' },
+        { text: '    if err != nil {', type: 'added' },
+        { text: '        http.Error(w, err.Error(), 500)', type: 'added' },
+        { text: '        return', type: 'added' },
+        { text: '    }', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: '    for k, v := range resp.Header {', type: 'added' },
+        { text: '        w.Header()[k] = v', type: 'added' },
+        { text: '    }', type: 'added' },
+        { text: '    w.WriteHeader(resp.StatusCode)', type: 'added' },
+        { text: '    w.Write(body)', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: '    log.Printf("Completed in %v", time.Since(start))', type: 'added' },
+        { text: '}', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: 'func main() {', type: 'added' },
+        { text: '    handler := &ProxyHandler{', type: 'added' },
+        { text: '        targetURL: "localhost:8080",', type: 'added' },
+        { text: '        timeout: 30 * time.Second,', type: 'added' },
+        { text: '    }', type: 'added' },
+        { text: '    log.Println("Starting proxy on :9090")', type: 'added' },
+        { text: '    log.Fatal(http.ListenAndServe(":9090", handler))', type: 'added' },
+        { text: '}', type: 'added' }
+      ]
+    },
+    {
+      id: '7',
+      solver: 'Go Reverse Proxy',
+      title: 'Reverse Proxy with Path Rewrite',
+      description: 'Reverse proxy that rewrites paths and handles routing',
+      diffs: [
+        { file: 'main.go', added: 55, removed: 0 },
+        { file: 'proxy.go', added: 15, removed: 0 },
+        { file: 'config.go', added: 10, removed: 0 },
+        { file: 'middleware.go', added: 8, removed: 0 },
+        { file: 'go.mod', added: 2, removed: 0 }
+      ],
+      codeLines: [
+        { text: 'package main', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: 'import (', type: 'added' },
+        { text: '    "fmt"', type: 'added' },
+        { text: '    "net/http"', type: 'added' },
+        { text: '    "net/http/httputil"', type: 'added' },
+        { text: '    "net/url"', type: 'added' },
+        { text: ')', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: 'type ReverseProxy struct {', type: 'added' },
+        { text: '    target *url.URL', type: 'added' },
+        { text: '    director func(*http.Request)', type: 'added' },
+        { text: '}', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: 'func NewReverseProxy(target string) *ReverseProxy {', type: 'added' },
+        { text: '    targetURL, _ := url.Parse(target)', type: 'added' },
+        { text: '    return &ReverseProxy{', type: 'added' },
+        { text: '        target: targetURL,', type: 'added' },
+        { text: '        director: func(req *http.Request) {', type: 'added' },
+        { text: '            req.URL.Scheme = targetURL.Scheme', type: 'added' },
+        { text: '            req.URL.Host = targetURL.Host', type: 'added' },
+        { text: '            req.Header.Set("X-Forwarded-Host", req.Host)', type: 'added' },
+        { text: '            req.Header.Set("X-Real-IP", req.RemoteAddr)', type: 'added' },
+        { text: '        },', type: 'added' },
+        { text: '    }', type: 'added' },
+        { text: '}', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: 'func (rp *ReverseProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {', type: 'added' },
+        { text: '    fmt.Printf("[%s] %s -> %s\\n", r.Method, r.URL.Path, rp.target)', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: '    proxy := &httputil.ReverseProxy{', type: 'added' },
+        { text: '        Director: rp.director,', type: 'added' },
+        { text: '    }', type: 'added' },
+        { text: '    proxy.ServeHTTP(w, r)', type: 'added' },
+        { text: '}', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: 'func main() {', type: 'added' },
+        { text: '    proxy := NewReverseProxy("http://localhost:8080")', type: 'added' },
+        { text: '    http.Handle("/", proxy)', type: 'added' },
+        { text: '    fmt.Println("Reverse proxy listening on :9090")', type: 'added' },
+        { text: '    fmt.Println("Forwarding to http://localhost:8080")', type: 'added' },
+        { text: '    http.ListenAndServe(":9090", nil)', type: 'added' },
+        { text: '}', type: 'added' }
+      ]
     }
-];
+  ];
 
-  $effect(() => {
+$effect(() => {
+    if (initialized) return;
+    initialized = true;
     const current = solutionsStore.getAll();
     if (current.length === 0) {
-      solutionsStore.set(defaultSolutions);
+      solutionsStore.set([...defaultSolutions]);
     }
   });
   const isMultilineDraft = $derived(draft.description.includes('\n'));
+  const displayedSolutions = $derived.by(() => {
+    const all = $solutionsStore;
+    const text = solverSearchText.trim().toLowerCase();
+    if (taskCompleted) {
+      const taskLower = taskSearchText.toLowerCase();
+      if (taskLower.includes('мини прокси') && taskLower.includes('go')) {
+        return all.filter(s => ['5', '6', '7'].includes(s.id));
+      }
+      if (taskLower.includes('hello world') && taskLower.includes('rust')) {
+        return all.filter(s => ['1', '2', '3', '4'].includes(s.id));
+      }
+      return all;
+    }
+    if (!text) return all;
+    if (text.includes('мини прокси') && text.includes('go')) {
+      return all.filter(s => ['5', '6', '7'].includes(s.id));
+    }
+    if (text.includes('hello world') && text.includes('rust')) {
+      return all.filter(s => ['1', '2', '3', '4'].includes(s.id));
+    }
+    return all;
+  });
+
+  let taskSearchText = $state('');
+
   const afeIntroCard = $derived(afe.cards[0] ?? null);
   const afeStepCards = $derived(afe.cards.slice(1));
 
@@ -413,12 +669,42 @@
   });
 
   $effect(() => {
-    if (solverSearchActive && solverSearchText.trim() === "Нужен hello world на rust") {
+    const text = solverSearchText.trim().toLowerCase();
+    if (solverSearchActive && text.includes('hello world') && text.includes('rust')) {
+      taskSearchText = solverSearchText.trim();
       isFlying = true;
       const timer = setTimeout(() => {
         taskCompleted = true;
         isFlying = false;
         taskEditorOpen = false;
+        const current = solutionsStore.getAll();
+        const rustSolutions = defaultSolutions.filter(s => ['1', '2', '3', '4'].includes(s.id));
+        const existingIds = current.map(s => s.id);
+        const newSolutions = rustSolutions.filter(s => !existingIds.includes(s.id));
+        if (newSolutions.length > 0) {
+          solutionsStore.set([...current, ...newSolutions]);
+        }
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  });
+
+  $effect(() => {
+    const text = solverSearchText.trim().toLowerCase();
+    if (solverSearchActive && text.includes('мини прокси') && text.includes('go')) {
+      taskSearchText = solverSearchText.trim();
+      isFlying = true;
+      const timer = setTimeout(() => {
+        taskCompleted = true;
+        isFlying = false;
+        taskEditorOpen = false;
+        const current = solutionsStore.getAll();
+        const goSolutions = defaultSolutions.filter(s => ['5', '6', '7'].includes(s.id));
+        const existingIds = current.map(s => s.id);
+        const newSolutions = goSolutions.filter(s => !existingIds.includes(s.id));
+        if (newSolutions.length > 0) {
+          solutionsStore.set([...current, ...newSolutions]);
+        }
       }, 4000);
       return () => clearTimeout(timer);
     }
@@ -949,7 +1235,7 @@
                       </tr>
                     </thead>
                     <tbody>
-                      {#each $solutionsStore as solution (solution.id)}
+                      {#each displayedSolutions as solution (solution.id)}
                         <tr>
                           <td class="solver-cell">{solution.solver}</td>
                           <td class="title-cell">{solution.title}</td>

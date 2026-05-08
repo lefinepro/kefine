@@ -3,11 +3,26 @@
   import { onMount } from 'svelte';
   import hljs from 'highlight.js/lib/core';
   import rust from 'highlight.js/lib/languages/rust';
+  import go from 'highlight.js/lib/languages/go';
   import 'highlight.js/styles/xcode.css';
   import { solutionsStore } from '$lib/kefine/solutions-store';
   import { get } from 'svelte/store';
 
   hljs.registerLanguage('rust', rust);
+  hljs.registerLanguage('go', go);
+  hljs.registerLanguage('yaml', () => ({}));
+
+  import {
+    defaultSolutions,
+    type Solution
+  } from '$lib/kefine/solutions-data';
+
+  onMount(() => {
+    const current = solutionsStore.getAll();
+    if (current.length === 0) {
+      solutionsStore.set([...defaultSolutions]);
+    }
+  });
 
   let {
     data
@@ -102,11 +117,23 @@
     }
   ];
 
-let activeFile = $state('main.rs');
+let activeFile = $state('main.go');
+  let fileOrder = $state<string[]>([]);
 
-  const solution = $derived(get(solutionsStore).find(s => s.id === data.solverId) ?? null);
-  const codeLines = $derived(solution?.codeLines ?? []);
+  const solution = $derived(defaultSolutions.find(s => s.id === data.solverId) ?? get(solutionsStore).find(s => s.id === data.solverId) ?? null);
   const diffs = $derived(solution?.diffs ?? []);
+
+  $effect(() => {
+    if (diffs.length > 0 && fileOrder.length === 0) {
+      fileOrder = diffs.map(d => d.file);
+    }
+  });
+
+  function getFileCodeLines(file: string) {
+    const sol = solution;
+    if (!sol) return [];
+    return sol.fileCodeLines?.[file] ?? sol.codeLines ?? [];
+  }
 
   function goBack() {
     if (window.history.length > 1) {
@@ -117,12 +144,45 @@ let activeFile = $state('main.rs');
   }
 
   function selectFile(file: string) {
+    if (!solution) return;
+    const currentOrder = [...fileOrder];
+    const fileIndex = currentOrder.indexOf(file);
+    if (fileIndex <= 0) {
+      activeFile = file;
+      return;
+    }
+    const firstRect = document.getElementById(`card-${file}`)?.getBoundingClientRect();
+    currentOrder.splice(fileIndex, 1);
+    currentOrder.unshift(file);
+    fileOrder = currentOrder;
     activeFile = file;
+    requestAnimationFrame(() => {
+      const card = document.getElementById(`card-${file}`);
+      if (card && firstRect) {
+        const lastRect = card.getBoundingClientRect();
+        const invertY = firstRect.top - lastRect.top;
+        card.style.transform = `translateY(${invertY}px)`;
+        card.style.transition = 'none';
+        requestAnimationFrame(() => {
+          card.style.transform = '';
+          card.style.transition = 'transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1)';
+        });
+      }
+    });
   }
 
-  function highlightLine(line: string): string {
+  function getLanguage(file: string): string {
+    const ext = file.split('.').pop()?.toLowerCase();
+    if (ext === 'go') return 'go';
+    if (ext === 'rs') return 'rust';
+    if (ext === 'yaml' || ext === 'yml') return 'yaml';
+    return 'plaintext' in hljs.registeredLanguages ? 'plaintext' : 'text';
+  }
+
+  function highlightLine(line: string, file: string): string {
     try {
-      return hljs.highlight(line, { language: 'rust' }).value;
+      const lang = getLanguage(file);
+      return hljs.highlight(line, { language: lang }).value;
     } catch {
       return line;
     }
@@ -168,31 +228,41 @@ let activeFile = $state('main.rs');
 
     <main class="code-area">
       {#if solution}
-        <div class="editor-window">
-          <div class="editor-header">
-            <div class="editor-controls">
-              <div class="dot red"></div>
-              <div class="dot yellow"></div>
-              <div class="dot green"></div>
+        <div class="cards-container">
+          {#each fileOrder as file, index}
+            {@const lines = getFileCodeLines(file)}
+            {@const diff = diffs.find(d => d.file === file)}
+            <div class="code-card" class:active-card={activeFile === file} id="card-{file}">
+              <div class="card-header">
+                <div class="card-title-group">
+                  <div class="window-controls">
+                    <div class="dot red"></div>
+                    <div class="dot yellow"></div>
+                    <div class="dot green"></div>
+                  </div>
+                  <span class="card-filename">{file}</span>
+                </div>
+                {#if diff}
+                  <span class="file-badge">+{diff.added}</span>
+                {/if}
+              </div>
+              <div class="card-body">
+                {#each lines as line, i}
+                  {#if line.text}
+                    <div class="code-line" class:added={line.type === 'added'} class:removed={line.type === 'removed'}>
+                      <span class="line-number">{i + 1}</span>
+                      <span class="line-content">{@html highlightLine(line.text, file)}</span>
+                    </div>
+                  {:else}
+                    <div class="code-line code-line--empty">
+                      <span class="line-number"></span>
+                      <span class="line-content"></span>
+                    </div>
+                  {/if}
+                {/each}
+              </div>
             </div>
-            <div class="editor-filename">{activeFile}</div>
-          </div>
-
-          <div class="code-content">
-            {#each codeLines as line, i}
-              {#if line.text}
-                <div class="code-line" class:added={line.type === 'added'} class:removed={line.type === 'removed'}>
-                  <span class="line-number">{i + 1}</span>
-                  <span class="line-content">{@html highlightLine(line.text)}</span>
-                </div>
-              {:else}
-                <div class="code-line code-line--empty">
-                  <span class="line-number"></span>
-                  <span class="line-content"></span>
-                </div>
-              {/if}
-            {/each}
-          </div>
+          {/each}
         </div>
       {:else}
         <p class="not-found">Solution not found</p>
@@ -471,5 +541,69 @@ let activeFile = $state('main.rs');
       border-left: none;
       border-right: none;
     }
+  }
+
+  .cards-container {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .code-card {
+    background: var(--kef-bg-card);
+    border: 1px solid var(--kef-line);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .code-card.active-card {
+    border-color: var(--kef-primary);
+    box-shadow: 0 0 0 1px var(--kef-primary), 0 8px 24px rgba(0,0,0,0.4);
+  }
+
+  .card-header {
+    background: var(--kef-bg-soft);
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--kef-line);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .card-title-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .window-controls {
+    display: flex;
+    gap: 6px;
+  }
+
+  .card-filename {
+    font-family: 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 0.85rem;
+    color: var(--kef-text);
+    font-weight: 600;
+  }
+
+  .card-body {
+    padding: 16px;
+    font-family: 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--kef-text);
+    background: var(--kef-bg);
+    overflow-x: auto;
+  }
+
+  .file-badge {
+    font-size: 0.7rem;
+    background: color-mix(in oklab, var(--kef-success) 20%, transparent);
+    color: var(--kef-success);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 600;
   }
 </style>
