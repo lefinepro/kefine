@@ -1,7 +1,7 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
-  import 'highlight.js/styles/github-dark.css';
+  import '$lib/kefine/jetbrains-hljs.css';
   import { solutionsStore } from '$lib/kefine/solutions-store';
   import { defaultSolutions } from '$lib/kefine/solutions-data';
   import SolutionFileTree from '$lib/components/kefine/SolutionFileTree.svelte';

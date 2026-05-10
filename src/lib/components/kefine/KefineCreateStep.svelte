@@ -9,7 +9,7 @@
   import { onMount } from 'svelte';
   import hljs from 'highlight.js/lib/core';
   import rust from 'highlight.js/lib/languages/rust';
-  import 'highlight.js/styles/xcode.css';
+  import '$lib/kefine/jetbrains-hljs.css';
   // TODO: Add BlockHandle and DropIndicator if available
 
   hljs.registerLanguage('rust', rust);
@@ -1282,8 +1282,8 @@ initialized = true;
                       </tr>
                     </thead>
                     <tbody>
-                      {#each displayedSolutions as solution (solution.id)}
-                        <tr>
+                      {#each displayedSolutions as solution, solutionIndex (solution.id)}
+                        <tr class="solution-row" style="--row-i: {solutionIndex}">
                           <td class="solver-cell">{solution.solver}</td>
                           <td class="title-cell">{solution.title}</td>
                           <td class="description-cell">{solution.description}</td>
@@ -2567,6 +2567,36 @@ initialized = true;
 
   .solutions-table tr:last-child td {
     border-bottom: none;
+  }
+
+  .solution-row {
+    --row-i: 0;
+    animation: solution-row-appear 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: calc(var(--row-i) * 70ms);
+    transform-origin: top center;
+    will-change: opacity, transform;
+  }
+
+  @keyframes solution-row-appear {
+    0% {
+      opacity: 0;
+      transform: translateY(8px) scale(0.97);
+      filter: blur(2px);
+    }
+    60% {
+      filter: blur(0);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      filter: blur(0);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .solution-row {
+      animation: none;
+    }
   }
 
   .solver-cell {
