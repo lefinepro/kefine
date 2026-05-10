@@ -1,0 +1,125 @@
+/*
+  JetBrains-inspired highlight.js theme.
+  Adapts to the current Kefine theme via :root[data-kefine-theme].
+  Default palette mirrors the JetBrains Default IntelliJ light scheme;
+  the dark variant mirrors Darcula.
+*/
+
+.hljs {
+  display: block;
+  background: transparent;
+  color: var(--kef-hljs-fg, #080808);
+  padding: 0;
+}
+
+/* Comments and metadata */
+.hljs-comment,
+.hljs-quote,
+.hljs-meta {
+  color: var(--kef-hljs-comment, #8c8c8c);
+  font-style: italic;
+}
+
+/* Keywords, control flow */
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-literal,
+.hljs-built_in,
+.hljs-doctag {
+  color: var(--kef-hljs-keyword, #0033b3);
+  font-weight: 600;
+}
+
+/* Strings, regex */
+.hljs-string,
+.hljs-regexp,
+.hljs-template-tag,
+.hljs-template-variable {
+  color: var(--kef-hljs-string, #067d17);
+}
+
+/* Numbers */
+.hljs-number,
+.hljs-symbol,
+.hljs-bullet {
+  color: var(--kef-hljs-number, #1750eb);
+}
+
+/* Function and method names */
+.hljs-title,
+.hljs-title.function_,
+.hljs-section {
+  color: var(--kef-hljs-function, #00627a);
+  font-weight: 600;
+}
+
+/* Class names, types */
+.hljs-class .hljs-title,
+.hljs-title.class_,
+.hljs-type {
+  color: var(--kef-hljs-type, #000080);
+  font-weight: 600;
+}
+
+/* Variables, parameters */
+.hljs-variable,
+.hljs-params,
+.hljs-attr,
+.hljs-property {
+  color: var(--kef-hljs-variable, #871094);
+}
+
+/* Tags, attributes (yaml/html) */
+.hljs-name,
+.hljs-tag,
+.hljs-selector-id,
+.hljs-selector-class {
+  color: var(--kef-hljs-tag, #0033b3);
+}
+
+.hljs-attribute {
+  color: var(--kef-hljs-attribute, #0033b3);
+}
+
+/* Links, addition/deletion markers */
+.hljs-link {
+  color: var(--kef-hljs-link, #1750eb);
+  text-decoration: underline;
+}
+.hljs-addition { background: rgba(6, 125, 23, 0.12); }
+.hljs-deletion { background: rgba(199, 37, 37, 0.12); }
+
+/* Emphasis */
+.hljs-emphasis { font-style: italic; }
+.hljs-strong { font-weight: 700; }
+
+/* Light theme tokens (default) */
+:root,
+:root[data-kefine-theme='light'] {
+  --kef-hljs-fg: #080808;
+  --kef-hljs-comment: #8c8c8c;
+  --kef-hljs-keyword: #0033b3;
+  --kef-hljs-string: #067d17;
+  --kef-hljs-number: #1750eb;
+  --kef-hljs-function: #00627a;
+  --kef-hljs-type: #000080;
+  --kef-hljs-variable: #871094;
+  --kef-hljs-tag: #0033b3;
+  --kef-hljs-attribute: #174ad4;
+  --kef-hljs-link: #1750eb;
+}
+
+/* Darcula tokens */
+:root[data-kefine-theme='dark'] {
+  --kef-hljs-fg: #a9b7c6;
+  --kef-hljs-comment: #808080;
+  --kef-hljs-keyword: #cc7832;
+  --kef-hljs-string: #6a8759;
+  --kef-hljs-number: #6897bb;
+  --kef-hljs-function: #ffc66d;
+  --kef-hljs-type: #b9bcd1;
+  --kef-hljs-variable: #9876aa;
+  --kef-hljs-tag: #e8bf6a;
+  --kef-hljs-attribute: #bababa;
+  --kef-hljs-link: #287bde;
+}

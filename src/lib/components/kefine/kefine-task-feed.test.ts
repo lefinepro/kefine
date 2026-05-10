@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { describe, test } from 'node:test';
+import { describe, test } from 'bun:test';
 
 import { KEFINE_TEXT_EN } from '$lib/constants/kefine-locale-en';
 import {
@@ -230,13 +230,16 @@ describe('kefine task feed progression', () => {
 
     const indented = indentTaskThreadNode(baseNodes, 'node-2');
     assert.equal(indented.length, 1);
-    assert.equal(indented[0]?.children?.length, 2);
-    assert.equal(indented[0]?.children?.[1]?.id, 'node-2');
+    assert.equal(indented[0]?.children?.length, 1);
+    assert.equal(indented[0]?.children?.[0]?.id, 'node-2');
+    assert.equal(indented[0]?.children?.[0]?.children?.[0]?.id, 'node-2-child');
 
     const outdented = outdentTaskThreadNode(indented, 'node-2-child');
-    assert.equal(outdented.length, 2);
-    assert.equal(outdented[1]?.id, 'node-2-child');
-    assert.equal(outdented[0]?.children?.length, 0);
+    assert.equal(outdented.length, 1);
+    assert.equal(outdented[0]?.children?.length, 2);
+    assert.equal(outdented[0]?.children?.[0]?.id, 'node-2');
+    assert.equal(outdented[0]?.children?.[0]?.children?.length, 0);
+    assert.equal(outdented[0]?.children?.[1]?.id, 'node-2-child');
 
     const added = addTaskThreadNode(baseNodes, {
       id: 'node-3',
