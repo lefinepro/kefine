@@ -40,24 +40,17 @@
   <lef-task-card>
     <lef-task-head>
       <strong>Task</strong>
+      {#if comments.length > 0}
+        <lefine-text>{comments.length} {comments.length === 1 ? 'comment' : 'comments'}</lefine-text>
+      {/if}
     </lef-task-head>
-    <h2 class="lef-task-title">{title}</h2>
     {#if description && description !== title}
       <p class="lef-task-description">{description}</p>
-    {/if}
-  </lef-task-card>
-
-  <lef-comments-card>
-    <lef-comments-head>
-      <strong>Comments</strong>
-      <lefine-text>{comments.length} {comments.length === 1 ? 'message' : 'messages'}</lefine-text>
-    </lef-comments-head>
-
-    {#if comments.length === 0}
-      <lef-comments-empty>
-        <lefine-text>No corrections yet. Send a correction below to refine the task.</lefine-text>
-      </lef-comments-empty>
     {:else}
+      <p class="lef-task-description">{title}</p>
+    {/if}
+
+    {#if comments.length > 0}
       <lef-comments-list>
         {#each comments as comment (comment.id)}
           <lef-comment-row class:lef-comment-row--pending={comment.pending}>
@@ -106,72 +99,52 @@
         {/if}
       </button>
     </form>
-  </lef-comments-card>
+  </lef-task-card>
 </lef-task-panel>
 
 <style>
   lef-task-panel {
     display: flex;
     flex-direction: column;
-    gap: 0.85rem;
+    gap: 0.6rem;
   }
 
-  lef-task-card,
-  lef-comments-card {
+  lef-task-card {
     display: flex;
     flex-direction: column;
-    gap: 0.6rem;
-    padding: 0.95rem 1.1rem 1rem;
+    gap: 0.55rem;
+    padding: 0.7rem 0.95rem 0.85rem;
     background: var(--kef-bg-card);
     border: 1px solid var(--kef-line);
-    border-radius: 0.75rem;
+    border-radius: 0.6rem;
   }
 
-  lef-task-head,
-  lef-comments-head {
+  lef-task-head {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
     gap: 0.5rem;
   }
 
-  lef-task-head strong,
-  lef-comments-head strong {
-    font-size: 0.78rem;
+  lef-task-head strong {
+    font-size: 0.72rem;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     color: var(--lefine-text-soft);
     font-weight: 700;
   }
 
-  lef-comments-head lefine-text {
-    font-size: 0.75rem;
+  lef-task-head lefine-text {
+    font-size: 0.72rem;
     color: var(--lefine-text-soft);
-  }
-
-  .lef-task-title {
-    margin: 0;
-    font-size: 1.1rem;
-    line-height: 1.25;
-    font-weight: 700;
-    color: var(--lefine-text);
   }
 
   .lef-task-description {
     margin: 0;
-    font-size: 0.88rem;
+    font-size: 0.84rem;
     color: var(--lefine-text-soft);
     line-height: 1.45;
     white-space: pre-wrap;
-  }
-
-  lef-comments-empty {
-    display: block;
-    padding: 0.75rem 0.5rem;
-    border-radius: 0.5rem;
-    background: color-mix(in oklab, var(--kef-bg-soft) 60%, var(--kef-bg-card));
-    color: var(--lefine-text-soft);
-    font-size: 0.82rem;
   }
 
   lef-comments-list {

@@ -3,12 +3,11 @@
   import { onMount, onDestroy } from 'svelte';
   import '$lib/kefine/jetbrains-hljs.css';
   import { solutionsStore } from '$lib/kefine/solutions-store';
-  import { defaultSolutions, defaultMetrics } from '$lib/kefine/solutions-data';
+  import { defaultSolutions } from '$lib/kefine/solutions-data';
   import SolutionFileTree from '$lib/components/kefine/SolutionFileTree.svelte';
   import SolutionCodeEditor from '$lib/components/kefine/SolutionCodeEditor.svelte';
   import SolutionTopbar from '$lib/components/kefine/SolutionTopbar.svelte';
   import SolutionTaskPanel from '$lib/components/kefine/SolutionTaskPanel.svelte';
-  import SolutionMetricsBlock from '$lib/components/kefine/SolutionMetricsBlock.svelte';
 
   let {
     data
@@ -30,6 +29,7 @@
   let comments = $state<CommentEntry[]>([]);
   let showCorrected = $state(false);
   let isCorrectingTask = $state(false);
+  let isMerged = $state(false);
   let correctionTimer: ReturnType<typeof setTimeout> | null = null;
 
   onMount(() => {
@@ -63,6 +63,7 @@
     void solution?.id;
     showCorrected = Boolean(solution?.correctedCodeLines);
     isCorrectingTask = false;
+    isMerged = false;
     if (correctionTimer) {
       clearTimeout(correctionTimer);
       correctionTimer = null;
@@ -131,6 +132,11 @@
       correctionTimer = null;
     }, 5000);
   }
+
+  function handleMerge() {
+    if (isCorrectingTask || isMerged) return;
+    isMerged = true;
+  }
 </script>
 
 <svelte:head>
@@ -144,25 +150,18 @@
       author={solution.solver}
       backHref={`/order/${data.orderId}`}
       onBack={goBack}
+      onMerge={handleMerge}
+      isMerged={isMerged}
+      isMerging={isCorrectingTask}
     />
 
     <lef-solver-grid>
       <lef-solver-aside>
-        <SolutionTaskPanel
-          title={taskTitle}
-          description={taskDescription}
-          {comments}
-          {isCorrectingTask}
-          onSubmitCorrection={handleSubmitCorrection}
-        />
-
         <SolutionFileTree
           files={files}
           activeFile={activeFile}
           onSelect={selectFile}
         />
-
-        <SolutionMetricsBlock metrics={defaultMetrics} activeSolverId={data.solverId} />
       </lef-solver-aside>
 
       <lef-solver-main>
@@ -193,6 +192,14 @@
           lines={activeLines}
           onSelect={selectFile}
         />
+
+        <SolutionTaskPanel
+          title={taskTitle}
+          description={taskDescription}
+          {comments}
+          {isCorrectingTask}
+          onSubmitCorrection={handleSubmitCorrection}
+        />
       </lef-solver-main>
     </lef-solver-grid>
   {:else}
@@ -211,9 +218,9 @@
 
   lef-solver-grid {
     display: grid;
-    grid-template-columns: 320px minmax(0, 1fr);
-    gap: 1.25rem;
-    padding: 1.25rem 1.75rem 2rem;
+    grid-template-columns: 240px minmax(0, 1fr);
+    gap: 1rem;
+    padding: 1rem 1.5rem 1.5rem;
     flex: 1;
     min-height: 0;
   }
@@ -221,11 +228,11 @@
   lef-solver-aside {
     display: flex;
     flex-direction: column;
-    gap: 0.85rem;
+    gap: 0.6rem;
     align-self: start;
     position: sticky;
-    top: 1.25rem;
-    max-height: calc(100vh - 2.5rem);
+    top: 1rem;
+    max-height: calc(100vh - 2rem);
     overflow: auto;
     padding-right: 0.25rem;
   }
@@ -241,11 +248,11 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.45rem 0.85rem;
+    padding: 0.4rem 0.75rem;
     background: var(--kef-bg-card);
     border: 1px solid var(--kef-line-soft);
-    border-radius: 0.6rem;
-    font-size: 0.8rem;
+    border-radius: 0.5rem;
+    font-size: 0.78rem;
   }
 
   lef-correction-status[data-active='true'] {
@@ -267,7 +274,7 @@
 
   lef-arrow-track {
     display: inline-block;
-    width: 1.8rem;
+    width: 1.6rem;
     height: 1rem;
     position: relative;
     overflow: hidden;
