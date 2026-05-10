@@ -3,29 +3,6 @@
   import type { DraftOrder, OrderView, TemplatePresentation } from './kefine-workflow';
   import { scheduleAfter } from '$lib/utils/helpers';
   import KefineOrderListItem from '$lib/components/kefine/KefineOrderListItem.svelte';
-  import { createEditor, type NodeJSON } from 'prosekit/core';
-  import { ProseKit } from 'prosekit/svelte';
-  import { defineBasicExtension } from 'prosekit/basic';
-  import { onMount } from 'svelte';
-  import hljs from 'highlight.js/lib/core';
-  import rust from 'highlight.js/lib/languages/rust';
-  import '$lib/kefine/jetbrains-hljs.css';
-  // TODO: Add BlockHandle and DropIndicator if available
-
-  hljs.registerLanguage('rust', rust);
-
-  function highlightCode(code: string): string {
-    try {
-      return hljs.highlight(code, { language: 'rust' }).value;
-    } catch {
-      return code;
-    }
-  }
-
-  function highlightLine(line: string): string {
-    return highlightCode(line).replace(/^<span class="hljs-.*">|<\/span>$/g, '');
-  }
-
   const PLACEHOLDER_TYPE_DELAY_MS = 58;
   const PLACEHOLDER_DELETE_DELAY_MS = 34;
   const PLACEHOLDER_PAUSE_MS = 1150;
@@ -158,28 +135,9 @@
   let placeholderVariantIndex = $state(0);
   let placeholderCharIndex = $state(0);
   let placeholderDeleting = $state(false);
-  let taskEditorOpen = $state(false);
   let taskCompleted = $state(false);
-  let showDiffColors = $state(true);
   let isFlying = $state(false);
   let initialized = $state(false);
-
-  const sampleContent: NodeJSON = {
-    type: 'doc',
-    content: [
-      {
-        type: 'heading',
-        attrs: { level: 1 },
-        content: [{ type: 'text', text: 'Task Editor' }]
-      },
-      {
-        type: 'paragraph',
-        content: [{ type: 'text', text: 'Edit your task here...' }]
-      }
-    ]
-  };
-
-  let editor = $state(createEditor({ extension: defineBasicExtension(), defaultContent: sampleContent }));
 
   import { solutionsStore } from '$lib/kefine/solutions-store';
   import { get } from 'svelte/store';
@@ -710,7 +668,6 @@ initialized = true;
       const timer = setTimeout(() => {
         taskCompleted = true;
         isFlying = false;
-        taskEditorOpen = false;
         const current = solutionsStore.getAll();
         const rustSolutions = defaultSolutions.filter(s => ['1', '2', '3', '4'].includes(s.id));
         const existingIds = current.map(s => s.id);
@@ -731,7 +688,6 @@ initialized = true;
       const timer = setTimeout(() => {
         taskCompleted = true;
         isFlying = false;
-        taskEditorOpen = false;
         const current = solutionsStore.getAll();
         const goSolutions = defaultSolutions.filter(s => ['5', '6', '7'].includes(s.id));
         const existingIds = current.map(s => s.id);
@@ -753,9 +709,6 @@ initialized = true;
     };
   });
 
-  onMount(() => {
-    hljs.highlightAll();
-  });
 
 
 
@@ -1240,115 +1193,75 @@ initialized = true;
 
  {#if solverSearchActive && solverSearchText.trim()}
    <section data-part="tasks-list">
-     <div data-part="task-item" onclick={() => { taskEditorOpen = !taskEditorOpen; }}>
-        {#if taskEditorOpen}
-          <div class="task-editor-expanded" onclick={(e) => { e.stopPropagation(); taskEditorOpen = false; }}>
-            <div class="task-editor-header">
-              <h2>{taskCompleted ? "Task Results" : "Edit Task"}</h2>
-            </div>
-            <div class="task-editor-content" onclick={(e) => e.stopPropagation()}>
-              <div style="height: 300px;" class="task-editor-editor">
-                <ProseKit {editor}>
-                  <div {@attach editor.mount} class="ProseMirror box-border min-h-full px-4 py-8 outline-hidden outline-0 text-left">
-                    {#if taskCompleted}
-                      <p>Task completed successfully!</p>
-                    {/if}
-                  </div>
-                </ProseKit>
-              </div>
-              <button
-                type="button"
-                data-variant="primary"
-                data-part="exec-button-small"
-                data-testid="kefine-submit-task-small"
-                aria-label={executeAria}
-                aria-haspopup="dialog"
-                aria-expanded="false"
-                onclick={handleSubmitButtonClick}
-              >
-                <kefine-exec-arrow aria-hidden="true">➵</kefine-exec-arrow>
-              </button>
-              {#if taskCompleted}
-<div class="solutions-wrapper">
-                  <table class="solutions-table">
-                    <thead>
-                      <tr>
-                        <th>Solver</th>
-                        <th>Title</th>
-                        <th>Description</th>
-                        <th>Files</th>
-                        <th>Rating</th>
-                        <th>Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {#each displayedSolutions as solution, solutionIndex (solution.id)}
-                        <tr class="solution-row" style="--row-i: {solutionIndex}">
-                          <td class="solver-cell">{solution.solver}</td>
-                          <td class="title-cell">{solution.title}</td>
-                          <td class="description-cell">{solution.description}</td>
-                          <td class="files-cell">
-                            {#each solution.diffs as diff}
-                              <span class="file-badge">
-                                <span class="file-name">{diff.file}</span>
-                                <span class="file-changes">
-                                  <span class="added">+{diff.added}</span>
-                                  {#if diff.removed > 0}
-                                    <span class="removed">-{diff.removed}</span>
-                                  {/if}
-                                </span>
-                              </span>
-                            {/each}
-                          </td>
-                          <td class="rating-cell">
-                            <button
-                              type="button"
-                              class="crown-button"
-                              class:is-active={solution.rated}
-                              data-crown-btn={solution.id}
-                              onclick={() => handleCrownClick(solution.id)}
-                              aria-label="Rate solution"
-                            >
-                              <svg class="crown-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M2 17L4 7L8 11L12 4L16 11L20 7L22 17H2Z"/>
-                                <path d="M4 7C4 7 5.5 8.5 6 9C6.5 9.5 7.5 9.5 8 9C8.5 8.5 8 7 8 7"/>
-                                <path d="M20 7C20 7 18.5 8.5 18 9C17.5 9.5 16.5 9.5 16 9C15.5 8.5 16 7 16 7"/>
-                                <path d="M12 4C12 4 11 6 11 6.5C11 7 12 7.5 12 7.5C12 7.5 13 7 13 6.5C13 6 12 4 12 4"/>
-                                <path d="M6 17V20H18V17" stroke-width="1.2"/>
-                                <path d="M8 14H16" stroke-width="1" opacity="0.5"/>
-                              </svg>
-                            </button>
-                          </td>
-                          <td class="action-cell">
-                            <button type="button" class="view-solution-btn" onclick={() => onOpenSolution?.(solution.id)}>
-                              View
-                            </button>
-                          </td>
-                        </tr>
-                      {/each}
-                    </tbody>
-                  </table>
-                </div>
-              {/if}
-            </div>
-          </div>
-        {:else}
-          <kefine-solver-search-row aria-live="polite">
-            <lefine-text>{solverSearchText}</lefine-text>
-            {#if isFlying}
-              <span class="arrow-wrapper">
-                <span class="wind-flow">
-                  <span class="wind-line"></span>
-                  <span class="wind-line"></span>
-                </span>
-                <span class="flying-arrow">➵</span>
-              </span>
-            {/if}
-            <kefine-solver-search-indicator aria-label={taskCompleted ? 'Completed' : solverSearchLabel} title={taskCompleted ? 'Completed' : solverSearchLabel} data-completed={taskCompleted}>
-              <kefine-solver-search-dot aria-hidden="true"></kefine-solver-search-dot>
-            </kefine-solver-search-indicator>
-          </kefine-solver-search-row>
-        {/if}
+     <kefine-solver-search-row aria-live="polite">
+       <lefine-text>{solverSearchText}</lefine-text>
+       {#if isFlying}
+         <lef-arrow-wrapper>
+           <lef-wind-flow>
+             <lef-wind-line></lef-wind-line>
+             <lef-wind-line></lef-wind-line>
+           </lef-wind-flow>
+           <lef-flying-arrow>➵</lef-flying-arrow>
+         </lef-arrow-wrapper>
+       {/if}
+       <kefine-solver-search-indicator aria-label={taskCompleted ? 'Completed' : solverSearchLabel} title={taskCompleted ? 'Completed' : solverSearchLabel} data-completed={taskCompleted}>
+         <kefine-solver-search-dot aria-hidden="true"></kefine-solver-search-dot>
+       </kefine-solver-search-indicator>
+     </kefine-solver-search-row>
+
+     {#if taskCompleted}
+       <lef-solutions-list>
+         {#each displayedSolutions as solution, solutionIndex (solution.id)}
+           <article class="solution-card" style="--card-i: {solutionIndex}">
+             <header class="solution-card-header">
+               <lef-solver-avatar data-accent={getServiceAccentToken(solution.solver)} aria-hidden="true">
+                 <lefine-text>{getServiceInitial(solution.solver)}</lefine-text>
+               </lef-solver-avatar>
+               <lef-solution-meta>
+                 <strong>{solution.solver}</strong>
+                 <lefine-text>{solution.title}</lefine-text>
+               </lef-solution-meta>
+               <button
+                 type="button"
+                 class="crown-button"
+                 class:is-active={solution.rated}
+                 data-crown-btn={solution.id}
+                 onclick={() => handleCrownClick(solution.id)}
+                 aria-label="Rate solution"
+               >
+                 <svg class="crown-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                   <path d="M2 17L4 7L8 11L12 4L16 11L20 7L22 17H2Z"/>
+                   <path d="M4 7C4 7 5.5 8.5 6 9C6.5 9.5 7.5 9.5 8 9C8.5 8.5 8 7 8 7"/>
+                   <path d="M20 7C20 7 18.5 8.5 18 9C17.5 9.5 16.5 9.5 16 9C15.5 8.5 16 7 16 7"/>
+                   <path d="M12 4C12 4 11 6 11 6.5C11 7 12 7.5 12 7.5C12 7.5 13 7 13 6.5C13 6 12 4 12 4"/>
+                   <path d="M6 17V20H18V17" stroke-width="1.2"/>
+                   <path d="M8 14H16" stroke-width="1" opacity="0.5"/>
+                 </svg>
+               </button>
+             </header>
+             <p class="solution-description">{solution.description}</p>
+             <lef-file-list aria-label="Files">
+               {#each solution.diffs as diff}
+                 <lef-file-row>
+                   <lef-file-name>{diff.file}</lef-file-name>
+                   <lef-file-changes>
+                     <lef-file-added>+{diff.added}</lef-file-added>
+                     {#if diff.removed > 0}
+                       <lef-file-removed>-{diff.removed}</lef-file-removed>
+                     {/if}
+                   </lef-file-changes>
+                 </lef-file-row>
+               {/each}
+             </lef-file-list>
+             <lef-card-actions>
+               <button type="button" class="view-solution-btn" onclick={() => onOpenSolution?.(solution.id)}>
+                 View Code →
+               </button>
+             </lef-card-actions>
+           </article>
+         {/each}
+       </lef-solutions-list>
+     {/if}
    </section>
  {/if}
 
@@ -2199,33 +2112,6 @@ initialized = true;
     transform: rotate(2.6deg);
   }
 
-  .solution-card .diff-summary .added {
-    color: #4CAF50;
-    font-weight: bold;
-  }
-
-  .solution-card .diff-summary .removed {
-    color: #F44336;
-    font-weight: bold;
-  }
-
-  .solution-card .code-diff .added {
-    background-color: rgba(76, 175, 80, 0.1);
-    display: block;
-  }
-
-  .solution-card .code-diff .removed {
-    background-color: rgba(244, 67, 54, 0.1);
-    display: block;
-    text-decoration: line-through;
-  }
-
-  .solution-card .code-diff .diff-header {
-    color: #9E9E9E;
-    font-weight: bold;
-    display: block;
-  }
-
   :global(:root[data-kefine-theme='dark']) lef-afe-flow {
     --afe-ink: #1c120b;
     --afe-ink-soft: #1c120b;
@@ -2465,119 +2351,37 @@ initialized = true;
     flex: 0 0 auto;
   }
 
-  [data-part='task-item'] {
-    cursor: pointer;
-  }
-
-  .task-editor-expanded {
-    margin-top: 1rem;
-    border: 2px solid var(--kef-line);
-    border-radius: var(--kef-radius-ui);
-    background: var(--kef-bg-card);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    overflow: visible;
-    width: 100%;
-    box-sizing: border-box;
-  }
-
   [data-part="tasks-list"] {
     width: min(100%, calc(100vw - 7rem));
     max-width: 64rem;
     margin-inline: auto;
+    display: grid;
+    gap: 1rem;
   }
 
-  .task-editor-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem;
-    background: var(--kef-bg);
-    border-bottom: 1px solid var(--kef-line);
-  }
-
-  .task-editor-header h2 {
-    margin: 0;
-    font-size: 1.2rem;
-    font-weight: 600;
-  }
-
-  .close-button {
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    cursor: pointer;
-    padding: 0.5rem;
-    color: var(--lefine-text);
-  }
-
-  .task-editor-content {
-    max-width: 100%;
-    overflow-x: visible;
-    overflow-y: visible;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.75rem;
-  }
-
-  .task-editor-content button[data-part='exec-button-small'] {
-    margin-left: 0.5rem;
-  }
-
-  .solutions-wrapper {
+  lef-solutions-list {
+    display: grid;
+    gap: 0.85rem;
     width: 100%;
-    overflow-x: auto;
-    overflow-y: visible;
-    margin-top: 1rem;
-    padding: 0 1rem 0.5rem;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: thin;
-    box-sizing: border-box;
   }
 
-  .solutions-table {
-    width: 100%;
-    min-width: 600px;
-    border-collapse: collapse;
-    font-size: 0.9rem;
+  .solution-card {
+    --card-i: 0;
+    display: grid;
+    gap: 0.65rem;
+    padding: 1rem 1.1rem;
     background: var(--kef-bg-card);
-    border-radius: var(--kef-radius-ui);
-    overflow: hidden;
-  }
-
-  .solutions-table th,
-  .solutions-table td {
-    padding: 0.75rem 1rem;
-    text-align: left;
-    border-bottom: 1px solid var(--kef-line);
-  }
-
-  .solutions-table th {
-    background: color-mix(in oklab, var(--kef-bg-card) 95%, var(--kef-bg-soft));
-    font-weight: 600;
-    font-size: 0.85rem;
-    color: var(--lefine-text-soft);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  .solutions-table tr:hover td {
-    background: color-mix(in oklab, var(--kef-bg-card) 98%, var(--kef-bg-soft));
-  }
-
-  .solutions-table tr:last-child td {
-    border-bottom: none;
-  }
-
-  .solution-row {
-    --row-i: 0;
-    animation: solution-row-appear 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
-    animation-delay: calc(var(--row-i) * 70ms);
+    border: 1px solid var(--kef-line);
+    border-radius: var(--kef-radius-ui, 0.75rem);
+    box-shadow: 0 1px 0 color-mix(in oklab, var(--kef-line) 60%, transparent);
+    box-sizing: border-box;
+    animation: solution-card-appear 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: calc(var(--card-i) * 70ms);
     transform-origin: top center;
     will-change: opacity, transform;
   }
 
-  @keyframes solution-row-appear {
+  @keyframes solution-card-appear {
     0% {
       opacity: 0;
       transform: translateY(8px) scale(0.97);
@@ -2594,76 +2398,118 @@ initialized = true;
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .solution-row {
+    .solution-card {
       animation: none;
     }
   }
 
-  .solver-cell {
-    font-weight: 600;
-    color: var(--kef-color-primary);
+  .solution-card-header {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.75rem;
   }
 
-  .title-cell {
-    font-weight: 500;
-    color: var(--lefine-text);
-    max-width: 200px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .description-cell {
-    color: var(--lefine-text-soft);
-    max-width: 250px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .files-cell {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.35rem;
-  }
-
-  .file-badge {
+  lef-solver-avatar {
     display: inline-flex;
     align-items: center;
-    gap: 0.25rem;
-    padding: 0.2rem 0.45rem;
-    background: color-mix(in oklab, var(--kef-bg) 45%, var(--kef-bg-card));
-    border: 1px solid color-mix(in oklab, var(--kef-line) 60%, transparent);
-    border-radius: 0.3rem;
-    font-size: 0.8rem;
-    font-family: 'Fira Code', 'Cascadia Code', monospace;
-  }
-
-  .file-badge .file-name {
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: color-mix(in oklab, var(--kef-color-primary) 22%, var(--kef-bg-card));
     color: var(--lefine-text);
+    font-weight: 700;
+    font-size: 0.95rem;
+    border: 1px solid color-mix(in oklab, var(--kef-line) 75%, transparent);
   }
 
-  .file-badge .file-changes {
+  lef-solver-avatar[data-accent='gold']  { background: color-mix(in oklab, #c89a5a 30%, var(--kef-bg-card)); }
+  lef-solver-avatar[data-accent='coral'] { background: color-mix(in oklab, #d97757 30%, var(--kef-bg-card)); }
+  lef-solver-avatar[data-accent='rose']  { background: color-mix(in oklab, #d05a7e 30%, var(--kef-bg-card)); }
+  lef-solver-avatar[data-accent='plum']  { background: color-mix(in oklab, #8d5fb1 30%, var(--kef-bg-card)); }
+  lef-solver-avatar[data-accent='sky']   { background: color-mix(in oklab, #5993c2 30%, var(--kef-bg-card)); }
+  lef-solver-avatar[data-accent='teal']  { background: color-mix(in oklab, #4a9c8c 30%, var(--kef-bg-card)); }
+
+  lef-solution-meta {
+    display: grid;
+    gap: 0.1rem;
+    min-width: 0;
+  }
+
+  lef-solution-meta strong {
+    color: var(--lefine-text);
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.25;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  lef-solution-meta lefine-text {
+    color: var(--lefine-text-soft);
+    font-size: 0.875rem;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .solution-description {
+    margin: 0;
+    color: var(--lefine-text-soft);
+    font-size: 0.92rem;
+    line-height: 1.45;
+  }
+
+  lef-file-list {
+    display: grid;
+    gap: 0.3rem;
+    padding: 0.5rem 0.65rem;
+    background: color-mix(in oklab, var(--kef-bg) 55%, var(--kef-bg-card));
+    border: 1px solid color-mix(in oklab, var(--kef-line) 65%, transparent);
+    border-radius: 0.5rem;
+    font-family: 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
+    font-size: 0.82rem;
+  }
+
+  lef-file-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  lef-file-name {
+    color: var(--lefine-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  lef-file-changes {
+    display: inline-flex;
+    gap: 0.4rem;
+    font-weight: 600;
+    font-size: 0.78rem;
+  }
+
+  lef-file-added { color: var(--kef-success, #22c55e); }
+  lef-file-removed { color: var(--kef-error, #ef4444); }
+
+  lef-card-actions {
     display: flex;
-    gap: 0.2rem;
-    font-size: 0.75rem;
-  }
-
-  .file-badge .added { color: #22c55e; }
-  .file-badge .removed { color: #ef4444; }
-
-  .rating-cell {
-    text-align: center;
-    width: 80px;
+    justify-content: flex-end;
   }
 
   .crown-button {
     position: relative;
-    width: 48px;
-    height: 48px;
+    width: 38px;
+    height: 38px;
     background: transparent;
-    border: 1.8px solid var(--kef-line);
-    border-radius: 12px;
+    border: 1.5px solid var(--kef-line);
+    border-radius: 10px;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
@@ -2672,6 +2518,7 @@ initialized = true;
     overflow: visible;
     padding: 0;
     outline: none;
+    flex-shrink: 0;
     -webkit-tap-highlight-color: transparent;
   }
 
@@ -2685,8 +2532,8 @@ initialized = true;
   }
 
   .crown-svg {
-    width: 24px;
-    height: 24px;
+    width: 22px;
+    height: 22px;
     transform-origin: center bottom;
     will-change: transform, stroke, fill;
   }
@@ -2749,327 +2596,24 @@ initialized = true;
     100% { opacity: 0; transform: translate(12px, -15px) scale(0); }
   }
 
-  .action-cell {
-    text-align: center;
-    white-space: nowrap;
-  }
-
   .view-solution-btn {
-    padding: 0.35rem 0.85rem;
+    padding: 0.4rem 0.95rem;
     background: var(--kef-color-primary);
     color: #fff;
     border: none;
-    border-radius: 0.35rem;
+    border-radius: 0.45rem;
     font-size: 0.85rem;
     font-weight: 500;
     cursor: pointer;
-    transition: background-color 160ms ease;
+    transition: background-color 160ms ease, transform 120ms ease;
   }
 
   .view-solution-btn:hover {
     background: color-mix(in oklab, var(--kef-color-primary) 85%, black 15%);
   }
 
-  .solutions-list {
-    display: flex;
-    flex-direction: row;
-    gap: 0.75rem;
-    flex-shrink: 0;
-    width: max-content;
-    min-width: 100%;
-  }
-
-  .solution-card {
-    flex: 0 0 auto;
-    width: auto;
-    min-width: 520px;
-    max-width: 900px;
-    box-sizing: border-box;
-  }
-
-  .solution-card {
-    border: 1px solid var(--kef-line);
-    border-radius: var(--kef-radius-ui);
-    padding: 1rem;
-    background: var(--kef-bg-card);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    max-height: 500px;
-    overflow-x: auto;
-  }
-
-  .solution-header {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 0.5rem;
-  }
-
-  .solver-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-  }
-
-  .solution-meta {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-  }
-
-  .solution-meta strong {
-    font-size: 1rem;
-    color: var(--lefine-text);
-  }
-
-  .solution-meta span {
-    font-size: 0.9rem;
-    color: var(--lefine-text-soft);
-  }
-
-  .solution-description {
-    margin: 0.5rem 0;
-    color: var(--lefine-text);
-  }
-
-  .diff-summary {
-    display: flex;
-    gap: 0.5rem;
-    margin-bottom: 0.5rem;
-  }
-
-  .diff-file {
-    font-size: 0.8rem;
-    background: var(--kef-bg);
-    padding: 0.25rem 0.5rem;
-    border-radius: 0.25rem;
-    color: var(--lefine-text-soft);
-  }
-
-  .code-diff {
-    background: var(--kef-bg);
-    padding: 1rem;
-    border-radius: 0.5rem;
-    overflow-x: auto;
-    font-size: 0.85rem;
-    color: var(--lefine-text);
-  }
-
-  .code-diff code {
-    font-family: monospace;
-  }
-
-  .code-diff .added {
-    color: #22c55e;
-    background: rgba(34, 197, 94, 0.1);
-  }
-
-  .code-diff .removed {
-    color: #ef4444;
-    background: rgba(239, 68, 68, 0.1);
-  }
-
-  .code-diff .diff-header {
-    color: #6366f1;
-    font-weight: bold;
-  }
-
-  .solution-card {
-    display: flex;
-    background: var(--kef-bg-card, #ffffff);
-    border: 1px solid var(--kef-border, #e9ecef);
-    border-radius: 0.75rem;
-    overflow: hidden;
-    margin-bottom: 1rem;
-    height: fit-content;
-  }
-
-  .solution-sidebar {
-    width: max-content;
-    min-width: 180px;
-    background: var(--kef-bg-soft, #f8f9fa);
-    padding: 0.75rem;
-    border-right: 1px solid var(--kef-border, #e9ecef);
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .sidebar-title {
-    font-size: 0.9rem;
-    font-weight: 600;
-    margin: 0 0 0.5rem 0;
-    color: var(--lefine-text);
-  }
-
-  .file-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-  }
-
-  .file-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.25rem 0;
-    font-size: 0.8rem;
-  }
-
-  .file-name {
-    flex: 1;
-    color: var(--lefine-text);
-    font-family: monospace;
-  }
-
-  .file-changes {
-    display: flex;
-    gap: 0.5rem;
-    font-size: 0.75rem;
-    font-weight: 600;
-  }
-
-  .file-changes .added {
-    color: #22c55e;
-  }
-
-  .file-changes .removed {
-    color: #ef4444;
-  }
-
-  .solution-content {
-    flex: 1;
-    padding: 1rem;
-    min-width: 0;
-    overflow-x: auto;
-  }
-
-  .solution-header {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 0.5rem;
-  }
-
-  .solver-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-  }
-
-  .solution-meta {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .solution-meta strong {
-    font-size: 1rem;
-    color: var(--lefine-text);
-  }
-
-  .solution-meta span {
-    font-size: 0.85rem;
-    color: var(--lefine-text-soft);
-  }
-
-  .solution-description {
-    margin: 0.5rem 0;
-    color: var(--lefine-text-soft);
-    line-height: 1.4;
-  }
-
-  .code-block {
-    padding: 0.75rem;
-    border-radius: 0.5rem;
-    overflow-x: auto;
-    font-family: monospace;
-    border: 1px solid #e9ecef;
-    margin-top: 0.5rem;
-    max-width: 100%;
-    box-sizing: border-box;
-    font-size: 0.85rem;
-    line-height: 1.5;
-  }
-
-  .code-line {
-    display: flex;
-    padding: 0.1rem 0.5rem;
-    border-radius: 2px;
-  }
-
-  .code-line .line-number {
-    width: 2.5rem;
-    text-align: right;
-    padding-right: 1rem;
-    color: #6b7280;
-    user-select: none;
-    flex-shrink: 0;
-  }
-
-  .code-line .line-content {
-    white-space: pre;
-  }
-
-  .code-block.show-diff .code-line.added {
-    background: rgba(34, 197, 94, 0.15);
-    border-left: 3px solid #22c55e;
-  }
-
-  .code-block.show-diff .code-line.removed {
-    background: rgba(239, 68, 68, 0.15);
-    border-left: 3px solid #ef4444;
-  }
-
-  .code-block:not(.show-diff) .code-line.added,
-  .code-block:not(.show-diff) .code-line.removed {
-    background: transparent;
-    border-left: none;
-  }
-
-  .code-line .line-content .hljs-keyword,
-  .code-line .line-content .hljs-built_in {
-    color: #ff79c6;
-  }
-
-  .code-line .line-content .hljs-string,
-  .code-line .line-content .hljs-attr {
-    color: #f1fa8c;
-  }
-
-  .code-line .line-content .hljs-number,
-  .code-line .line-content .hljs-literal {
-    color: #bd93f9;
-  }
-
-  .code-line .line-content .hljs-comment {
-    color: #6272a4;
-    font-style: italic;
-  }
-
-  .code-line .line-content .hljs-function,
-  .code-line .line-content .hljs-title {
-    color: #50fa7b;
-  }
-
-  .code-line .line-content .hljs-type,
-  .code-line .line-content .hljs-class {
-    color: #8be9fd;
-  }
-
-  .code-line .line-content .hljs-params {
-    color: #ffb86c;
-  }
-
-  .code-line .line-content .hljs-meta {
-    color: #ff5555;
-  }
-
-  .code-line .line-content .hljs-punctuation {
-    color: #f8f8f2;
-  }
-
-  .code-line .line-content .hljs-operator {
-    color: #ff79c6;
+  .view-solution-btn:active {
+    transform: scale(0.97);
   }
 
   button[data-part='composer-chip'][data-part-tag='true'] {
@@ -3123,17 +2667,17 @@ initialized = true;
     box-shadow: none;
   }
 
-  kefine-solver-search-row:has(.arrow-wrapper) {
+  kefine-solver-search-row:has(lef-arrow-wrapper) {
     grid-template-columns: minmax(0, 1fr) auto auto;
   }
 
-.arrow-wrapper {
+  lef-arrow-wrapper {
     display: inline-flex;
     align-items: center;
     gap: 8px;
   }
 
-  .flying-arrow {
+  lef-flying-arrow {
     display: inline-block;
     font-size: 1.2rem;
     color: var(--kef-color-primary, #c89a5a);
@@ -3168,24 +2712,25 @@ initialized = true;
     }
   }
 
-  .wind-flow {
+  lef-wind-flow {
     display: flex;
     flex-direction: column;
     gap: 3px;
   }
 
-  .wind-line {
+  lef-wind-line {
+    display: block;
     height: 1px;
     background: linear-gradient(90deg, transparent, var(--kef-color-primary, #c89a5a));
     animation: wind-dash 1s linear infinite;
   }
 
-  .wind-line:nth-child(1) {
+  lef-wind-line:nth-child(1) {
     width: 15px;
     opacity: 0.6;
   }
 
-  .wind-line:nth-child(2) {
+  lef-wind-line:nth-child(2) {
     width: 10px;
     opacity: 0.4;
     animation-delay: 0.3s;
@@ -3201,156 +2746,6 @@ initialized = true;
     }
     100% {
       transform: translateX(5px);
-      opacity: 0;
-    }
-  }
-
-  .arrow-container {
-    display: inline-flex;
-    align-items: center;
-    position: relative;
-  }
-
-  .arrow-container kefine-solver-search-indicator {
-    position: relative;
-    z-index: 5;
-  }
-
-  .arrow-container .flying-arrow {
-    position: absolute;
-    left: -25px;
-    z-index: 10;
-  }
-
-  .arrow-container .wind-trail {
-    position: absolute;
-    left: -45px;
-    z-index: 9;
-  }
-
-  @keyframes fly-into-indicator {
-    0% {
-      opacity: 1;
-      transform: translateX(-30px) rotate(0deg);
-    }
-    40% {
-      opacity: 1;
-      transform: translateX(-5px) rotate(-20deg) scale(1.2);
-    }
-    60% {
-      opacity: 1;
-      transform: translateX(5px) rotate(15deg) scale(1.1);
-    }
-    80% {
-      opacity: 1;
-      transform: translateX(10px) rotate(-8deg) scale(1);
-    }
-    95% {
-      opacity: 0.3;
-      transform: translateX(12px) rotate(0deg) scale(0.8);
-    }
-    100% {
-      opacity: 0;
-      transform: translateX(15px) rotate(0deg) scale(0);
-    }
-  }
-
-  .flying-arrow {
-    display: inline-block;
-    font-size: 1.5rem;
-    color: var(--kef-color-primary, #c89a5a);
-    animation: fly-to-indicator 4s ease-in-out forwards, wind-swoosh 0.6s ease-in-out infinite;
-    position: relative;
-    margin-left: 0.5rem;
-  }
-
-  @keyframes fly-to-indicator {
-    0% {
-      opacity: 1;
-      transform: translateX(0) scale(1) rotate(0deg);
-    }
-    40% {
-      opacity: 1;
-      transform: translateX(20px) scale(1.1) rotate(-10deg);
-    }
-    60% {
-      opacity: 1;
-      transform: translateX(40px) scale(1) rotate(5deg);
-    }
-    80% {
-      opacity: 1;
-      transform: translateX(55px) scale(0.9) rotate(-3deg);
-    }
-    95% {
-      opacity: 0.5;
-      transform: translateX(65px) scale(0.5) rotate(0deg);
-    }
-    100% {
-      opacity: 0;
-      transform: translateX(70px) scale(0.2) rotate(0deg);
-    }
-  }
-
-  @keyframes wind-swoosh {
-    0%, 100% {
-      transform: translateY(0) skewX(0deg);
-    }
-    25% {
-      transform: translateY(-4px) skewX(-8deg);
-    }
-    50% {
-      transform: translateY(3px) skewX(5deg);
-    }
-    75% {
-      transform: translateY(-2px) skewX(-3deg);
-    }
-  }
-
-  .wind-trail {
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
-    margin-right: 0.25rem;
-  }
-
-  .wind-line {
-    display: block;
-    background: linear-gradient(90deg, transparent, var(--kef-color-primary, #c89a5a), transparent);
-    border-radius: 2px;
-    animation: wind-flow 0.8s linear infinite;
-  }
-
-  .wind-line:nth-child(1) {
-    width: 25px;
-    height: 2px;
-    opacity: 0.7;
-    animation-delay: 0s;
-  }
-
-  .wind-line:nth-child(2) {
-    width: 18px;
-    height: 1px;
-    opacity: 0.5;
-    animation-delay: 0.2s;
-  }
-
-  .wind-line:nth-child(3) {
-    width: 22px;
-    height: 1.5px;
-    opacity: 0.4;
-    animation-delay: 0.4s;
-  }
-
-  @keyframes wind-flow {
-    0% {
-      transform: translateX(-30px);
-      opacity: 0;
-    }
-    50% {
-      opacity: 0.6;
-    }
-    100% {
-      transform: translateX(10px);
       opacity: 0;
     }
   }
@@ -3855,25 +3250,6 @@ initialized = true;
     lef-service-card {
       width: 100%;
       min-height: 0;
-    }
-
-    .solutions-list {
-      display: flex;
-      flex-direction: row;
-      overflow-x: auto;
-      overflow-y: hidden;
-      gap: 0.75rem;
-      padding: 0 1rem 0.5rem;
-      -webkit-overflow-scrolling: touch;
-      flex-shrink: 0;
-    }
-
-    .solution-card {
-      flex-shrink: 0;
-      width: 550px;
-      min-width: 550px;
-      max-height: 500px;
-      overflow-y: auto;
     }
   }
 </style>
