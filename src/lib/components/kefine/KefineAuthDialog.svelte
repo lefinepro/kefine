@@ -118,9 +118,9 @@
           data-testid="kefine-browser-wallet-auth-tile"
           onclick={onBrowserWallet}
         >
-          <span class="kefine-account-auth-card__icon">
+          <kefine-account-auth-card-icon class="kefine-account-auth-card__icon">
             <Icon icon="mdi:wallet-outline" width="20" height="20" aria-hidden="true" />
-          </span>
+          </kefine-account-auth-card-icon>
           <strong>{browserWalletTitle}</strong>
           <small>Connect the injected wallet from this browser.</small>
         </button>
@@ -132,9 +132,9 @@
           data-testid="kefine-walletconnect-auth-tile"
           onclick={onWalletConnect}
         >
-          <span class="kefine-account-auth-card__icon">
+          <kefine-account-auth-card-icon class="kefine-account-auth-card__icon">
             <Icon icon="simple-icons:walletconnect" width="20" height="20" aria-hidden="true" />
-          </span>
+          </kefine-account-auth-card-icon>
           <strong>{walletConnectTitle}</strong>
           <small>Scan a WalletConnect QR code with your wallet app.</small>
         </button>
@@ -146,9 +146,9 @@
           data-testid="kefine-tonconnect-auth-tile"
           onclick={onTonConnect}
         >
-          <span class="kefine-account-auth-card__icon">
+          <kefine-account-auth-card-icon class="kefine-account-auth-card__icon">
             <Icon icon="simple-icons:ton" width="20" height="20" aria-hidden="true" />
-          </span>
+          </kefine-account-auth-card-icon>
           <strong>{tonConnectTitle}</strong>
           <small>Connect a TON wallet through TonConnect.</small>
         </button>
@@ -160,9 +160,9 @@
           data-testid="kefine-google-auth-tile"
           onclick={onGoogle}
         >
-          <span class="kefine-account-auth-card__icon">
+          <kefine-account-auth-card-icon class="kefine-account-auth-card__icon">
             <Icon icon="mdi:google" width="20" height="20" aria-hidden="true" />
-          </span>
+          </kefine-account-auth-card-icon>
           <strong>{googleTitle}</strong>
           <small>Continue through the Crystal OAuth callback.</small>
         </button>
@@ -174,9 +174,9 @@
           data-testid="kefine-github-auth-tile"
           onclick={onGithub}
         >
-          <span class="kefine-account-auth-card__icon">
+          <kefine-account-auth-card-icon class="kefine-account-auth-card__icon">
             <Icon icon="mdi:github" width="20" height="20" aria-hidden="true" />
-          </span>
+          </kefine-account-auth-card-icon>
           <strong>{githubTitle}</strong>
           <small>Sign in with the GitHub identity handled by Crystal.</small>
         </button>
@@ -188,9 +188,9 @@
           data-testid="kefine-passkey-auth-tile"
           onclick={onPasskey}
         >
-          <span class="kefine-account-auth-card__icon">
+          <kefine-account-auth-card-icon class="kefine-account-auth-card__icon">
             <Icon icon="mdi:fingerprint" width="20" height="20" aria-hidden="true" />
-          </span>
+          </kefine-account-auth-card-icon>
           <strong>{passkeyTitle}</strong>
           <small>Use a device-bound secure login.</small>
         </button>
@@ -203,9 +203,9 @@
             data-testid="kefine-privatekey-auth-tile"
             onclick={onPrivateKey}
           >
-            <span class="kefine-account-auth-card__icon">
+            <kefine-account-auth-card-icon class="kefine-account-auth-card__icon">
               <Icon icon="mdi:key-variant" width="20" height="20" aria-hidden="true" />
-            </span>
+            </kefine-account-auth-card-icon>
             <strong>{privateKeyTitle}</strong>
             <small>Use the generated actor key directly.</small>
           </button>
@@ -218,14 +218,14 @@
             {#if profile?.avatarUrl}
               <img src={profile.avatarUrl} alt={profileName ?? connectedTitle} />
             {:else}
-              <span>{(profileName ?? connectedTitle).slice(0, 1).toUpperCase()}</span>
+              <kefine-account-avatar-initial>{(profileName ?? connectedTitle).slice(0, 1).toUpperCase()}</kefine-account-avatar-initial>
             {/if}
           </kefine-account-avatar>
           <lefine-box class="kefine-account-profile-copy">
             <small>{connectedTitle}</small>
             <strong>{profileName ?? connectedTitle}</strong>
             {#if profileHandle}
-              <span>{profileHandle}</span>
+              <kefine-account-profile-handle>{profileHandle}</kefine-account-profile-handle>
             {/if}
           </lefine-box>
         </kefine-account-profile-head>
@@ -258,7 +258,7 @@
                   <strong>{task.title}</strong>
                   <small>{task.status}</small>
                 </lefine-box>
-                <span>{openTaskLabel}</span>
+                <kefine-account-task-action>{openTaskLabel}</kefine-account-task-action>
               </button>
             {/each}
           </kefine-account-task-list>
@@ -470,7 +470,7 @@
     color: color-mix(in oklab, var(--kef-color-text, #2e2317) 62%, transparent);
   }
 
-  .kefine-account-profile-copy span {
+  kefine-account-profile-handle {
     color: color-mix(in oklab, var(--kef-color-primary, #7a4b2a) 76%, var(--kef-color-text, #2e2317));
     font-size: 0.92rem;
   }
