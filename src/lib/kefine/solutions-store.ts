@@ -1,26 +1,8 @@
 import { writable, get } from 'svelte/store';
 import { browser } from '$app/environment';
+import type { Solution } from './solutions-data';
 
-export interface Solution {
-  id: string;
-  solver: string;
-  title: string;
-  description: string;
-  codeLines: Array<{
-    text: string;
-    type: 'added' | 'removed' | 'unchanged';
-  }>;
-  fileCodeLines?: Record<string, Array<{
-    text: string;
-    type: 'added' | 'removed' | 'unchanged';
-  }>>;
-  diffs: Array<{
-    file: string;
-    added: number;
-    removed: number;
-  }>;
-  rated?: boolean;
-}
+export type { Solution };
 
 const STORAGE_KEY = 'kefine-solutions';
 

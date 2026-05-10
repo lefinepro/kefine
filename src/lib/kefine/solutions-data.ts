@@ -17,7 +17,33 @@ export interface Solution {
     removed: number;
   }>;
   rated?: boolean;
+  correctedCodeLines?: Array<{
+    text: string;
+    type: 'added' | 'removed' | 'unchanged';
+  }>;
+  correctedFileCodeLines?: Record<string, Array<{
+    text: string;
+    type: 'added' | 'removed' | 'unchanged';
+  }>>;
+  correctedDiffs?: Array<{
+    file: string;
+    added: number;
+    removed: number;
+  }>;
 }
+
+export interface SolutionMetric {
+  solverId: string;
+  solver: string;
+  executionTimeSec: number;
+  solutionWeightKb: number;
+}
+
+export const defaultMetrics: SolutionMetric[] = [
+  { solverId: '5', solver: 'Go Proxy Basic', executionTimeSec: 1.2, solutionWeightKb: 2.4 },
+  { solverId: '6', solver: 'Go Proxy Pro', executionTimeSec: 2.4, solutionWeightKb: 5.1 },
+  { solverId: '7', solver: 'Go Proxy Enterprise', executionTimeSec: 3.8, solutionWeightKb: 7.6 }
+];
 
 export const defaultSolutions: Solution[] = [
   {
@@ -197,6 +223,104 @@ export const defaultSolutions: Solution[] = [
       { text: '    log.Println("Proxy server on :9090")', type: 'added' },
       { text: '    log.Fatal(http.ListenAndServe(":9090", nil))', type: 'added' },
       { text: '}', type: 'added' }
+    ],
+    correctedDiffs: [
+      { file: 'main.go', added: 4, removed: 1 },
+      { file: 'config.yaml', added: 7, removed: 0 },
+      { file: 'go.mod', added: 3, removed: 0 }
+    ],
+    correctedFileCodeLines: {
+      'main.go': [
+        { text: 'package main', type: 'unchanged' },
+        { text: '', type: 'unchanged' },
+        { text: 'import (', type: 'unchanged' },
+        { text: '    "fmt"', type: 'unchanged' },
+        { text: '    "net/http"', type: 'unchanged' },
+        { text: '    "log"', type: 'unchanged' },
+        { text: ')', type: 'unchanged' },
+        { text: '', type: 'unchanged' },
+        { text: 'func handleRequest(w http.ResponseWriter, r *http.Request) {', type: 'unchanged' },
+        { text: '    fmt.Printf("Proxying: %s %s\\n", r.Method, r.URL)', type: 'removed' },
+        { text: '    for i := 0; i < 10; i++ {', type: 'added' },
+        { text: '        fmt.Printf("[%d] Proxying: %s %s\\n", i+1, r.Method, r.URL)', type: 'added' },
+        { text: '    }', type: 'added' },
+        { text: '    r.RequestURI = ""', type: 'unchanged' },
+        { text: '    r.URL.Scheme = "http"', type: 'unchanged' },
+        { text: '    r.URL.Host = "localhost:8080"', type: 'unchanged' },
+        { text: '', type: 'unchanged' },
+        { text: '    client := &http.Client{}', type: 'unchanged' },
+        { text: '    resp, err := client.Do(r)', type: 'unchanged' },
+        { text: '    if err != nil {', type: 'unchanged' },
+        { text: '        http.Error(w, err.Error(), 500)', type: 'unchanged' },
+        { text: '        return', type: 'unchanged' },
+        { text: '    }', type: 'unchanged' },
+        { text: '    defer resp.Body.Close()', type: 'unchanged' },
+        { text: '', type: 'unchanged' },
+        { text: '    for k, v := range resp.Header {', type: 'unchanged' },
+        { text: '        w.Header()[k] = v', type: 'unchanged' },
+        { text: '    }', type: 'unchanged' },
+        { text: '    w.WriteHeader(resp.StatusCode)', type: 'unchanged' },
+        { text: '}', type: 'unchanged' },
+        { text: '', type: 'unchanged' },
+        { text: 'func main() {', type: 'unchanged' },
+        { text: '    http.HandleFunc("/", handleRequest)', type: 'unchanged' },
+        { text: '    log.Println("Proxy server on :9090")', type: 'unchanged' },
+        { text: '    log.Fatal(http.ListenAndServe(":9090", nil))', type: 'unchanged' },
+        { text: '}', type: 'unchanged' }
+      ],
+      'config.yaml': [
+        { text: 'server:', type: 'unchanged' },
+        { text: '  port: 9090', type: 'unchanged' },
+        { text: '  host: "0.0.0.0"', type: 'unchanged' },
+        { text: '', type: 'unchanged' },
+        { text: 'proxy:', type: 'unchanged' },
+        { text: '  target: "http://localhost:8080"', type: 'unchanged' },
+        { text: '  timeout: 30', type: 'unchanged' }
+      ],
+      'go.mod': [
+        { text: 'module github.com/example/proxy', type: 'unchanged' },
+        { text: '', type: 'unchanged' },
+        { text: 'go 1.21', type: 'unchanged' }
+      ]
+    },
+    correctedCodeLines: [
+      { text: 'package main', type: 'unchanged' },
+      { text: '', type: 'unchanged' },
+      { text: 'import (', type: 'unchanged' },
+      { text: '    "fmt"', type: 'unchanged' },
+      { text: '    "net/http"', type: 'unchanged' },
+      { text: '    "log"', type: 'unchanged' },
+      { text: ')', type: 'unchanged' },
+      { text: '', type: 'unchanged' },
+      { text: 'func handleRequest(w http.ResponseWriter, r *http.Request) {', type: 'unchanged' },
+      { text: '    fmt.Printf("Proxying: %s %s\\n", r.Method, r.URL)', type: 'removed' },
+      { text: '    for i := 0; i < 10; i++ {', type: 'added' },
+      { text: '        fmt.Printf("[%d] Proxying: %s %s\\n", i+1, r.Method, r.URL)', type: 'added' },
+      { text: '    }', type: 'added' },
+      { text: '    r.RequestURI = ""', type: 'unchanged' },
+      { text: '    r.URL.Scheme = "http"', type: 'unchanged' },
+      { text: '    r.URL.Host = "localhost:8080"', type: 'unchanged' },
+      { text: '', type: 'unchanged' },
+      { text: '    client := &http.Client{}', type: 'unchanged' },
+      { text: '    resp, err := client.Do(r)', type: 'unchanged' },
+      { text: '    if err != nil {', type: 'unchanged' },
+      { text: '        http.Error(w, err.Error(), 500)', type: 'unchanged' },
+      { text: '        return', type: 'unchanged' },
+      { text: '    }', type: 'unchanged' },
+      { text: '    defer resp.Body.Close()', type: 'unchanged' },
+      { text: '', type: 'unchanged' },
+      { text: '    for k, v := range resp.Header {', type: 'unchanged' },
+      { text: '        w.Header()[k] = v', type: 'unchanged' },
+      { text: '    }', type: 'unchanged' },
+      { text: '    w.WriteHeader(resp.StatusCode)', type: 'unchanged' },
+      { text: '    // w.CopyFrom(resp.Body)', type: 'unchanged' },
+      { text: '}', type: 'unchanged' },
+      { text: '', type: 'unchanged' },
+      { text: 'func main() {', type: 'unchanged' },
+      { text: '    http.HandleFunc("/", handleRequest)', type: 'unchanged' },
+      { text: '    log.Println("Proxy server on :9090")', type: 'unchanged' },
+      { text: '    log.Fatal(http.ListenAndServe(":9090", nil))', type: 'unchanged' },
+      { text: '}', type: 'unchanged' }
     ]
   },
   {

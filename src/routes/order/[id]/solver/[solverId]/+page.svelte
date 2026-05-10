@@ -1,12 +1,14 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import '$lib/kefine/jetbrains-hljs.css';
   import { solutionsStore } from '$lib/kefine/solutions-store';
-  import { defaultSolutions } from '$lib/kefine/solutions-data';
+  import { defaultSolutions, defaultMetrics } from '$lib/kefine/solutions-data';
   import SolutionFileTree from '$lib/components/kefine/SolutionFileTree.svelte';
   import SolutionCodeEditor from '$lib/components/kefine/SolutionCodeEditor.svelte';
   import SolutionTopbar from '$lib/components/kefine/SolutionTopbar.svelte';
+  import SolutionTaskPanel from '$lib/components/kefine/SolutionTaskPanel.svelte';
+  import SolutionMetricsBlock from '$lib/components/kefine/SolutionMetricsBlock.svelte';
 
   let {
     data
@@ -17,7 +19,18 @@
     };
   } = $props();
 
+  type CommentEntry = {
+    id: string;
+    text: string;
+    timestamp: number;
+    pending?: boolean;
+  };
+
   let stored = $state(solutionsStore.getAll());
+  let comments = $state<CommentEntry[]>([]);
+  let showCorrected = $state(false);
+  let isCorrectingTask = $state(false);
+  let correctionTimer: ReturnType<typeof setTimeout> | null = null;
 
   onMount(() => {
     if (stored.length === 0) {
@@ -28,23 +41,57 @@
     });
   });
 
+  onDestroy(() => {
+    if (correctionTimer) {
+      clearTimeout(correctionTimer);
+      correctionTimer = null;
+    }
+  });
+
   const solution = $derived(
     defaultSolutions.find(s => s.id === data.solverId)
       ?? stored.find(s => s.id === data.solverId)
       ?? null
   );
 
-  const files = $derived(solution?.diffs ?? []);
+  const taskTitle = $derived(solution?.title ?? 'Solution');
+  const taskDescription = $derived(solution?.description ?? '');
+
+  const hasCorrection = $derived(Boolean(solution?.correctedCodeLines));
+
+  $effect(() => {
+    void solution?.id;
+    showCorrected = Boolean(solution?.correctedCodeLines);
+    isCorrectingTask = false;
+    if (correctionTimer) {
+      clearTimeout(correctionTimer);
+      correctionTimer = null;
+    }
+    comments = [];
+  });
+
+  const files = $derived(
+    showCorrected && solution?.correctedDiffs ? solution.correctedDiffs : (solution?.diffs ?? [])
+  );
   let activeFile = $state('');
 
   $effect(() => {
-    if (files.length > 0 && !files.some(f => f.file === activeFile)) {
+    if (files.length > 0 && !files.some((f: { file: string }) => f.file === activeFile)) {
       activeFile = files[0].file;
     }
   });
 
   const activeLines = $derived.by(() => {
     if (!solution) return [];
+    if (showCorrected) {
+      return (
+        solution.correctedFileCodeLines?.[activeFile]
+          ?? solution.correctedCodeLines
+          ?? solution.fileCodeLines?.[activeFile]
+          ?? solution.codeLines
+          ?? []
+      );
+    }
     return solution.fileCodeLines?.[activeFile] ?? solution.codeLines ?? [];
   });
 
@@ -59,6 +106,30 @@
     } else {
       goto(`/order/${data.orderId}`);
     }
+  }
+
+  function handleSubmitCorrection(text: string) {
+    if (isCorrectingTask) return;
+
+    const id = `c-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+    comments = [
+      ...comments,
+      { id, text, timestamp: Date.now(), pending: true }
+    ];
+
+    isCorrectingTask = true;
+    showCorrected = false;
+
+    if (correctionTimer) {
+      clearTimeout(correctionTimer);
+    }
+
+    correctionTimer = setTimeout(() => {
+      isCorrectingTask = false;
+      showCorrected = Boolean(solution?.correctedCodeLines);
+      comments = comments.map(c => (c.id === id ? { ...c, pending: false } : c));
+      correctionTimer = null;
+    }, 5000);
   }
 </script>
 
@@ -77,14 +148,45 @@
 
     <lef-solver-grid>
       <lef-solver-aside>
+        <SolutionTaskPanel
+          title={taskTitle}
+          description={taskDescription}
+          {comments}
+          {isCorrectingTask}
+          onSubmitCorrection={handleSubmitCorrection}
+        />
+
         <SolutionFileTree
           files={files}
           activeFile={activeFile}
           onSelect={selectFile}
         />
+
+        <SolutionMetricsBlock metrics={defaultMetrics} activeSolverId={data.solverId} />
       </lef-solver-aside>
 
       <lef-solver-main>
+        {#if hasCorrection}
+          <lef-correction-status data-active={isCorrectingTask} data-show-corrected={showCorrected}>
+            {#if isCorrectingTask}
+              <lef-correction-arrow aria-label="Applying correction">
+                <lef-arrow-track>
+                  <lef-arrow-tip>➵</lef-arrow-tip>
+                </lef-arrow-track>
+                <lefine-text>Applying correction…</lefine-text>
+              </lef-correction-arrow>
+            {:else if showCorrected}
+              <lef-correction-applied>
+                <lefine-text>Showing corrected code</lefine-text>
+              </lef-correction-applied>
+            {:else}
+              <lef-correction-pending>
+                <lefine-text>Original code (correction pending)</lefine-text>
+              </lef-correction-pending>
+            {/if}
+          </lef-correction-status>
+        {/if}
+
         <SolutionCodeEditor
           activeFile={activeFile}
           files={files}
@@ -109,7 +211,7 @@
 
   lef-solver-grid {
     display: grid;
-    grid-template-columns: 280px minmax(0, 1fr);
+    grid-template-columns: 320px minmax(0, 1fr);
     gap: 1.25rem;
     padding: 1.25rem 1.75rem 2rem;
     flex: 1;
@@ -117,21 +219,85 @@
   }
 
   lef-solver-aside {
-    background: var(--kef-bg-card);
-    border: 1px solid var(--kef-line);
-    border-radius: 0.75rem;
-    padding: 1rem 0.85rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
     align-self: start;
     position: sticky;
     top: 1.25rem;
     max-height: calc(100vh - 2.5rem);
     overflow: auto;
+    padding-right: 0.25rem;
   }
 
   lef-solver-main {
     min-width: 0;
     display: flex;
     flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  lef-correction-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem 0.85rem;
+    background: var(--kef-bg-card);
+    border: 1px solid var(--kef-line-soft);
+    border-radius: 0.6rem;
+    font-size: 0.8rem;
+  }
+
+  lef-correction-status[data-active='true'] {
+    border-color: color-mix(in oklab, var(--kef-color-primary, #3a7afe) 50%, var(--kef-line-soft));
+    background: color-mix(in oklab, var(--kef-color-primary, #3a7afe) 8%, var(--kef-bg-card));
+  }
+
+  lef-correction-status[data-show-corrected='true']:not([data-active='true']) {
+    border-color: color-mix(in oklab, var(--kef-success, #16a34a) 45%, var(--kef-line-soft));
+  }
+
+  lef-correction-arrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--kef-color-primary, #3a7afe);
+    font-weight: 600;
+  }
+
+  lef-arrow-track {
+    display: inline-block;
+    width: 1.8rem;
+    height: 1rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  lef-arrow-tip {
+    display: inline-block;
+    position: absolute;
+    left: 0;
+    top: 0;
+    font-size: 1rem;
+    line-height: 1rem;
+    color: currentColor;
+    animation: lef-arrow-fly 1.1s linear infinite;
+  }
+
+  @keyframes lef-arrow-fly {
+    0%   { transform: translateX(-90%); opacity: 0; }
+    20%  { opacity: 1; }
+    80%  { opacity: 1; }
+    100% { transform: translateX(110%); opacity: 0; }
+  }
+
+  lef-correction-applied {
+    color: var(--kef-success, #16a34a);
+    font-weight: 600;
+  }
+
+  lef-correction-pending {
+    color: var(--lefine-text-soft);
   }
 
   lef-empty-state {
@@ -139,6 +305,10 @@
     padding: 4rem 0;
     text-align: center;
     color: var(--lefine-text-soft);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    lef-arrow-tip { animation: none; }
   }
 
   @media (max-width: 900px) {
