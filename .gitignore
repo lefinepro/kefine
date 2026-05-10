@@ -26,3 +26,7 @@ vite.config.ts.timestamp-*
 
 # Claude
 .claude
+
+# Local experiment artifacts
+experiments/frames/
+experiments/*.log
