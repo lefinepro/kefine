@@ -341,6 +341,11 @@ function mergeTaskBranchStyle(parent?: TaskBranchStyle, own?: TaskBranchStyle): 
   };
 }
 
+function nextBranchLabel(inheritedBranchLabel: string | undefined, branchCounter: number): string {
+  const inheritedIndex = Number(inheritedBranchLabel?.match(/^Branch\s+(\d+)$/i)?.[1] ?? 0);
+  return `Branch ${inheritedIndex + Math.max(1, branchCounter)}`;
+}
+
 export function indentTaskThreadNode(nodes: TaskThreadNode[], nodeId: string): TaskThreadNode[] {
   const path = findTaskThreadNodePath(nodes, nodeId);
   if (!path || path.length < 1) {
@@ -789,10 +794,6 @@ function blockNode(
   return { id, title, detail, state, mode: 'block', blocks, meta, ...options };
 }
 
-function loadingNode(id: string, title: string, detail: string): TaskThreadNode {
-  return { id, title, detail, state: 'active', mode: 'loading' };
-}
-
 function deriveSolverHandleFromUrl(value: string | undefined): string {
   const raw = value?.trim();
   if (!raw || !/^https?:\/\//i.test(raw)) {
@@ -1040,7 +1041,9 @@ function resolveSystemNodeInserts(
       taskCounter += 1;
     }
 
-    const branchLabel = branchDeclaration ? `Branch ${branchCounter}` : inheritedBranchLabel;
+    const branchLabel = branchDeclaration || inheritedBranchLabel
+      ? nextBranchLabel(inheritedBranchLabel, branchDeclaration ? branchCounter : 1)
+      : undefined;
     const normalized = normalizeBranchInsertSource(raw);
     const stepId = `${nodeKey}-insert-${index + 1}`;
     const title = deriveInsertTitle(
@@ -1092,21 +1095,27 @@ function resolveRootTitle(order: OrderView): string {
 
 function descriptionNode(order: OrderView): TaskThreadNode | null {
   const content = resolveTaskSummary(order);
-  if (!content || content === order.title.trim()) {
+  const nodeKey = `${order.id}-description`;
+  const parsedDocument = parseTaskDocumentContent(order.document?.content);
+  const hasAttachedContent = Boolean(
+    parsedDocument.systemComments[nodeKey]?.length ||
+      parsedDocument.systemInserts[nodeKey]?.length
+  );
+  if (!content || (content === order.title.trim() && !hasAttachedContent)) {
     return null;
   }
 
   return blockNode(
-    `${order.id}-description`,
+    nodeKey,
     'Description',
     undefined,
     'completed',
-    [{ id: `${order.id}-description-block`, type: 'markdown', content }],
+    [{ id: `${nodeKey}-block`, type: 'markdown', content }],
     undefined,
     {
-      stepId: `${order.id}-description`,
+      stepId: nodeKey,
       commentable: true,
-      comments: resolveSystemNodeComments(order, `${order.id}-description`)
+      comments: resolveSystemNodeComments(order, nodeKey)
     }
   );
 }
