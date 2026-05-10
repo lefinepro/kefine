@@ -4,27 +4,32 @@
     <meta charset="utf-8" />
     <title>Kefine main page — 3-column tasks layout</title>
     <style>
+      /* Tokens mirror src/routes/styles/+page.base.css so the demo matches the real app */
       :root[data-kefine-theme='light'] {
-        --kef-bg: #f5efe1;
-        --kef-bg-card: #fbf7eb;
-        --kef-bg-soft: #ece4d2;
-        --kef-line: #d6cdb6;
-        --kef-line-soft: #e6dfc9;
-        --kef-color-primary: #c89a5a;
-        --lefine-text: #2b2415;
-        --lefine-text-soft: #6f6650;
-        --kef-success: #2c8a2c;
+        --kef-bg: #f5f0e7;
+        --kef-bg-card: #fbf7f1;
+        --kef-bg-soft: #efe7dc;
+        --kef-border: #c8bbab;
+        --kef-border-soft: #ddd2c3;
+        --kef-line: color-mix(in oklab, var(--kef-border) 52%, transparent);
+        --kef-line-soft: color-mix(in oklab, var(--kef-border-soft) 38%, transparent);
+        --kef-color-primary: #6f5540;
+        --lefine-text: #30281f;
+        --lefine-text-soft: #4b4034;
+        --kef-success: #5f7962;
       }
       :root[data-kefine-theme='dark'] {
-        --kef-bg: #1c1a16;
-        --kef-bg-card: #25221c;
-        --kef-bg-soft: #2d2a23;
-        --kef-line: #3a3528;
-        --kef-line-soft: #2f2b22;
-        --kef-color-primary: #d8cba1;
-        --lefine-text: #ece4cd;
-        --lefine-text-soft: #aea58b;
-        --kef-success: #6abf6a;
+        --kef-bg: #17110d;
+        --kef-bg-card: #1d1510;
+        --kef-bg-soft: #221912;
+        --kef-border: color-mix(in oklab, #e7d6b7 18%, transparent);
+        --kef-border-soft: color-mix(in oklab, #e7d6b7 10%, transparent);
+        --kef-line: color-mix(in oklab, var(--kef-border) 52%, transparent);
+        --kef-line-soft: color-mix(in oklab, var(--kef-border-soft) 38%, transparent);
+        --kef-color-primary: #c89a5a;
+        --lefine-text: #e7d6b7;
+        --lefine-text-soft: #c9b89a;
+        --kef-success: #6f9a72;
       }
       :root {
         font-family: 'Inter', system-ui, sans-serif;

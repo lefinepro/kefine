@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'bun:test';
 
-import { defaultSolutions, type Solution } from '$lib/kefine/solutions-data';
+import { defaultSolutions, type Solution } from './solutions-data';
 
 type CodeLine = Solution['codeLines'][number];
 
