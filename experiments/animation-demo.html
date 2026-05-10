@@ -1,0 +1,157 @@
+<!doctype html>
+<html data-kefine-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <title>matcha.xyz solver row animation demo</title>
+    <style>
+      :root {
+        --kef-bg: #f5efe1;
+        --kef-bg-card: #fbf7eb;
+        --kef-bg-soft: #ece4d2;
+        --kef-line: #d6cdb6;
+        --kef-line-soft: #e6dfc9;
+        --kef-color-primary: #4a3b1a;
+        --lefine-text: #2b2415;
+        --kef-success: #2c8a2c;
+        --kef-error: #c0392b;
+        font-family: 'Inter', system-ui, sans-serif;
+      }
+      :root[data-kefine-theme='dark'] {
+        --kef-bg: #1c1a16;
+        --kef-bg-card: #25221c;
+        --kef-bg-soft: #2d2a23;
+        --kef-line: #3a3528;
+        --kef-line-soft: #2f2b22;
+        --kef-color-primary: #d8cba1;
+        --lefine-text: #ece4cd;
+      }
+      body {
+        margin: 0;
+        background: var(--kef-bg);
+        color: var(--lefine-text);
+        padding: 32px;
+      }
+      .header {
+        font-weight: 700;
+        font-size: 22px;
+        margin-bottom: 16px;
+        color: var(--kef-color-primary);
+      }
+      .solutions-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--kef-bg-card);
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 1px 0 var(--kef-line);
+      }
+      .solutions-table th,
+      .solutions-table td {
+        padding: 14px 18px;
+        border-bottom: 1px solid var(--kef-line);
+        text-align: left;
+        font-size: 14px;
+      }
+      .solutions-table thead {
+        background: var(--kef-bg-soft);
+        color: var(--kef-color-primary);
+        font-weight: 600;
+      }
+      .solutions-table tr:last-child td {
+        border-bottom: none;
+      }
+      .solver-cell {
+        font-weight: 600;
+        color: var(--kef-color-primary);
+      }
+      .title-cell {
+        font-weight: 500;
+      }
+      .diff-stats {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 12px;
+      }
+      .added {
+        color: var(--kef-success);
+      }
+      .removed {
+        color: var(--kef-error);
+      }
+
+      .solution-row {
+        --row-i: 0;
+        animation: solution-row-appear 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+        animation-delay: calc(var(--row-i) * 70ms);
+        transform-origin: top center;
+        will-change: opacity, transform;
+      }
+      @keyframes solution-row-appear {
+        0% {
+          opacity: 0;
+          transform: translateY(8px) scale(0.97);
+          filter: blur(2px);
+        }
+        60% {
+          filter: blur(0);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+          filter: blur(0);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">Solvers</div>
+    <table class="solutions-table">
+      <thead>
+        <tr>
+          <th>Solver</th>
+          <th>Title</th>
+          <th>Description</th>
+          <th>Changes</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+
+    <script>
+      const data = [
+        ['Basic Rust Dev', 'Simple Hello World', 'Minimal implementation', '+3 −0'],
+        ['Commented Rust Expert', 'Detailed comments version', 'Educational with explanations', '+10 −0'],
+        ['Performance Specialist', 'Optimized release build', 'Aggressive inlining and LTO', '+18 −4'],
+        ['Test-First Engineer', 'Hello World with tests', 'Property tests and benchmarks', '+24 −1'],
+        ['Cross-platform Wizard', 'Builds for 5 targets', 'WASM, ARM64, x86_64, RISC-V', '+33 −7'],
+        ['Refactor Aficionado', 'Cleaned up structure', 'Split into modules', '+12 −9'],
+        ['Idiomatic Rustacean', 'Iterator-style rewrite', 'Replaces all loops', '+15 −8'],
+        ['Macros Maestro', 'Custom println macro', 'Compile-time formatting', '+27 −2']
+      ];
+      const rows = document.getElementById('rows');
+      data.forEach((d, i) => {
+        const tr = document.createElement('tr');
+        tr.className = 'solution-row';
+        tr.style.setProperty('--row-i', String(i));
+        const m = /^(\+\d+)\s+(−\d+)$/.exec(d[3]);
+        const stats = m
+          ? `<span class="added">${m[1]}</span> <span class="removed">${m[2]}</span>`
+          : d[3];
+        tr.innerHTML = `
+          <td class="solver-cell">${d[0]}</td>
+          <td class="title-cell">${d[1]}</td>
+          <td>${d[2]}</td>
+          <td class="diff-stats">${stats}</td>
+        `;
+        rows.appendChild(tr);
+      });
+
+      // Allow external code to restart the animation by replaying it.
+      window.replayAnimation = () => {
+        const tbody = document.getElementById('rows');
+        const clone = tbody.cloneNode(true);
+        tbody.parentNode.replaceChild(clone, tbody);
+        clone.id = 'rows';
+      };
+    </script>
+  </body>
+</html>
