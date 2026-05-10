@@ -483,7 +483,7 @@ initialized = true;
     const sol = $solutionsStore[idx];
     if (sol.rated) {
       crownAnimating[solutionId] = true;
-      const btn = document.querySelector(`[data-crown-btn="${solutionId}"]`);
+      const btn = document.querySelector<HTMLElement>(`[data-crown-btn="${solutionId}"]`);
       if (btn) {
         btn.classList.remove('is-active');
         void btn.offsetWidth;
@@ -1227,9 +1227,6 @@ initialized = true;
            {#each displayedSolutions as solution, solutionIndex (solution.id)}
              <article class="solution-card" style="--card-i: {solutionIndex}">
                <header class="solution-card-header">
-                 <lef-solver-avatar data-accent={getServiceAccentToken(solution.solver)} aria-hidden="true">
-                   <lefine-text>{getServiceInitial(solution.solver)}</lefine-text>
-                 </lef-solver-avatar>
                  <lef-solution-meta>
                    <strong>{solution.solver}</strong>
                    <lefine-text>{solution.title}</lefine-text>
@@ -2434,7 +2431,7 @@ initialized = true;
   lef-tasks-aside-item {
     display: grid;
     grid-template-columns: 1.4rem minmax(0, 1fr);
-    align-items: center;
+    align-items: start;
     gap: 0.5rem;
     padding: 0.5rem 0.6rem;
     border-radius: 0.55rem;
@@ -2462,9 +2459,10 @@ initialized = true;
   }
 
   lef-tasks-aside-item lefine-text {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    white-space: normal;
+    line-height: 1.3;
     color: var(--lefine-text);
   }
 
@@ -2612,31 +2610,10 @@ initialized = true;
 
   .solution-card-header {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     gap: 0.75rem;
   }
-
-  lef-solver-avatar {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    background: color-mix(in oklab, var(--kef-color-primary) 22%, var(--kef-bg-card));
-    color: var(--lefine-text);
-    font-weight: 700;
-    font-size: 0.95rem;
-    border: 1px solid color-mix(in oklab, var(--kef-line) 75%, transparent);
-  }
-
-  lef-solver-avatar[data-accent='gold']  { background: color-mix(in oklab, #c89a5a 30%, var(--kef-bg-card)); }
-  lef-solver-avatar[data-accent='coral'] { background: color-mix(in oklab, #d97757 30%, var(--kef-bg-card)); }
-  lef-solver-avatar[data-accent='rose']  { background: color-mix(in oklab, #d05a7e 30%, var(--kef-bg-card)); }
-  lef-solver-avatar[data-accent='plum']  { background: color-mix(in oklab, #8d5fb1 30%, var(--kef-bg-card)); }
-  lef-solver-avatar[data-accent='sky']   { background: color-mix(in oklab, #5993c2 30%, var(--kef-bg-card)); }
-  lef-solver-avatar[data-accent='teal']  { background: color-mix(in oklab, #4a9c8c 30%, var(--kef-bg-card)); }
 
   lef-solution-meta {
     display: grid;
@@ -2671,28 +2648,26 @@ initialized = true;
   }
 
   lef-file-list {
-    display: grid;
-    gap: 0.3rem;
-    padding: 0.5rem 0.65rem;
-    background: color-mix(in oklab, var(--kef-bg) 55%, var(--kef-bg-card));
-    border: 1px solid color-mix(in oklab, var(--kef-line) 65%, transparent);
-    border-radius: 0.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.8rem;
     font-family: 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
-    font-size: 0.82rem;
+    font-size: 0.78rem;
   }
 
   lef-file-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    display: inline-flex;
     align-items: center;
-    gap: 0.6rem;
+    gap: 0.35rem;
+    min-width: 0;
   }
 
   lef-file-name {
-    color: var(--lefine-text);
+    color: var(--lefine-text-soft);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    max-width: 11rem;
   }
 
   lef-file-changes {
@@ -3140,37 +3115,6 @@ initialized = true;
     align-items: center;
     justify-content: center;
     font-size: 0;
-  }
-
-  button[data-part='exec-button-small'] {
-    width: 48px;
-    height: 32px;
-    min-width: 48px;
-    border-radius: 6px;
-    padding: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0;
-    background: var(--kef-color-primary);
-    border: 1.5px solid var(--kef-color-primary);
-    color: var(--kef-bg);
-    cursor: pointer;
-    transition: all 0.2s ease;
-  }
-
-  button[data-part='exec-button-small']:hover {
-    background: var(--kef-color-primary-hover, #d4a86a);
-    border-color: var(--kef-color-primary-hover, #d4a86a);
-    box-shadow: 0 0 12px rgba(200, 154, 90, 0.3);
-  }
-
-  button[data-part='exec-button-small']:active {
-    transform: scale(0.95);
-  }
-
-  button[data-part='exec-button-small'] kefine-exec-arrow {
-    font-size: 1.4rem;
   }
 
   kefine-exec-arrow {

@@ -4,7 +4,6 @@
   import '$lib/kefine/jetbrains-hljs.css';
   import { solutionsStore } from '$lib/kefine/solutions-store';
   import { defaultSolutions } from '$lib/kefine/solutions-data';
-  import SolutionFileTree from '$lib/components/kefine/SolutionFileTree.svelte';
   import SolutionCodeEditor from '$lib/components/kefine/SolutionCodeEditor.svelte';
   import SolutionTopbar from '$lib/components/kefine/SolutionTopbar.svelte';
   import SolutionTaskPanel from '$lib/components/kefine/SolutionTaskPanel.svelte';
@@ -156,14 +155,6 @@
     />
 
     <lef-solver-grid>
-      <lef-solver-aside>
-        <SolutionFileTree
-          files={files}
-          activeFile={activeFile}
-          onSelect={selectFile}
-        />
-      </lef-solver-aside>
-
       <lef-solver-main>
         {#if hasCorrection}
           <lef-correction-status data-active={isCorrectingTask} data-show-corrected={showCorrected}>
@@ -217,24 +208,10 @@
   }
 
   lef-solver-grid {
-    display: grid;
-    grid-template-columns: 240px minmax(0, 1fr);
-    gap: 1rem;
+    display: block;
     padding: 1rem 1.5rem 1.5rem;
     flex: 1;
     min-height: 0;
-  }
-
-  lef-solver-aside {
-    display: flex;
-    flex-direction: column;
-    gap: 0.6rem;
-    align-self: start;
-    position: sticky;
-    top: 1rem;
-    max-height: calc(100vh - 2rem);
-    overflow: auto;
-    padding-right: 0.25rem;
   }
 
   lef-solver-main {
@@ -320,12 +297,7 @@
 
   @media (max-width: 900px) {
     lef-solver-grid {
-      grid-template-columns: 1fr;
       padding: 1rem;
-    }
-    lef-solver-aside {
-      position: static;
-      max-height: none;
     }
   }
 </style>
