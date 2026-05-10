@@ -3,6 +3,8 @@
   import type { DraftOrder, OrderView, TemplatePresentation } from './kefine-workflow';
   import { scheduleAfter } from '$lib/utils/helpers';
   import KefineOrderListItem from '$lib/components/kefine/KefineOrderListItem.svelte';
+  import SolutionMetricsMini from '$lib/components/kefine/SolutionMetricsMini.svelte';
+  import { defaultMetrics } from '$lib/kefine/solutions-data';
   const PLACEHOLDER_TYPE_DELAY_MS = 58;
   const PLACEHOLDER_DELETE_DELAY_MS = 34;
   const PLACEHOLDER_PAUSE_MS = 1150;
@@ -1210,57 +1212,92 @@ initialized = true;
      </kefine-solver-search-row>
 
      {#if taskCompleted}
-       <lef-solutions-list>
-         {#each displayedSolutions as solution, solutionIndex (solution.id)}
-           <article class="solution-card" style="--card-i: {solutionIndex}">
-             <header class="solution-card-header">
-               <lef-solver-avatar data-accent={getServiceAccentToken(solution.solver)} aria-hidden="true">
-                 <lefine-text>{getServiceInitial(solution.solver)}</lefine-text>
-               </lef-solver-avatar>
-               <lef-solution-meta>
-                 <strong>{solution.solver}</strong>
-                 <lefine-text>{solution.title}</lefine-text>
-               </lef-solution-meta>
-               <button
-                 type="button"
-                 class="crown-button"
-                 class:is-active={solution.rated}
-                 data-crown-btn={solution.id}
-                 onclick={() => handleCrownClick(solution.id)}
-                 aria-label="Rate solution"
-               >
-                 <svg class="crown-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                   <path d="M2 17L4 7L8 11L12 4L16 11L20 7L22 17H2Z"/>
-                   <path d="M4 7C4 7 5.5 8.5 6 9C6.5 9.5 7.5 9.5 8 9C8.5 8.5 8 7 8 7"/>
-                   <path d="M20 7C20 7 18.5 8.5 18 9C17.5 9.5 16.5 9.5 16 9C15.5 8.5 16 7 16 7"/>
-                   <path d="M12 4C12 4 11 6 11 6.5C11 7 12 7.5 12 7.5C12 7.5 13 7 13 6.5C13 6 12 4 12 4"/>
-                   <path d="M6 17V20H18V17" stroke-width="1.2"/>
-                   <path d="M8 14H16" stroke-width="1" opacity="0.5"/>
-                 </svg>
-               </button>
-             </header>
-             <p class="solution-description">{solution.description}</p>
-             <lef-file-list aria-label="Files">
-               {#each solution.diffs as diff}
-                 <lef-file-row>
-                   <lef-file-name>{diff.file}</lef-file-name>
-                   <lef-file-changes>
-                     <lef-file-added>+{diff.added}</lef-file-added>
-                     {#if diff.removed > 0}
-                       <lef-file-removed>-{diff.removed}</lef-file-removed>
-                     {/if}
-                   </lef-file-changes>
-                 </lef-file-row>
-               {/each}
-             </lef-file-list>
-             <lef-card-actions>
-               <button type="button" class="view-solution-btn" onclick={() => onOpenSolution?.(solution.id)}>
-                 View Code →
-               </button>
-             </lef-card-actions>
-           </article>
-         {/each}
-       </lef-solutions-list>
+       <lef-tasks-grid>
+         <lef-tasks-aside aria-label="Tasks">
+           <lef-tasks-aside-head>Tasks</lef-tasks-aside-head>
+           <lef-tasks-aside-list>
+             <lef-tasks-aside-item data-active="true">
+               <lef-tasks-aside-index>1</lef-tasks-aside-index>
+               <lefine-text>{taskSearchText}</lefine-text>
+             </lef-tasks-aside-item>
+           </lef-tasks-aside-list>
+         </lef-tasks-aside>
+
+         <lef-solutions-list>
+           {#each displayedSolutions as solution, solutionIndex (solution.id)}
+             <article class="solution-card" style="--card-i: {solutionIndex}">
+               <header class="solution-card-header">
+                 <lef-solver-avatar data-accent={getServiceAccentToken(solution.solver)} aria-hidden="true">
+                   <lefine-text>{getServiceInitial(solution.solver)}</lefine-text>
+                 </lef-solver-avatar>
+                 <lef-solution-meta>
+                   <strong>{solution.solver}</strong>
+                   <lefine-text>{solution.title}</lefine-text>
+                 </lef-solution-meta>
+                 <button
+                   type="button"
+                   class="crown-button"
+                   class:is-active={solution.rated}
+                   data-crown-btn={solution.id}
+                   onclick={() => handleCrownClick(solution.id)}
+                   aria-label="Rate solution"
+                 >
+                   <svg class="crown-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                     <path d="M2 17L4 7L8 11L12 4L16 11L20 7L22 17H2Z"/>
+                     <path d="M4 7C4 7 5.5 8.5 6 9C6.5 9.5 7.5 9.5 8 9C8.5 8.5 8 7 8 7"/>
+                     <path d="M20 7C20 7 18.5 8.5 18 9C17.5 9.5 16.5 9.5 16 9C15.5 8.5 16 7 16 7"/>
+                     <path d="M12 4C12 4 11 6 11 6.5C11 7 12 7.5 12 7.5C12 7.5 13 7 13 6.5C13 6 12 4 12 4"/>
+                     <path d="M6 17V20H18V17" stroke-width="1.2"/>
+                     <path d="M8 14H16" stroke-width="1" opacity="0.5"/>
+                   </svg>
+                 </button>
+               </header>
+               <p class="solution-description">{solution.description}</p>
+               <lef-file-list aria-label="Files">
+                 {#each solution.diffs as diff}
+                   <lef-file-row>
+                     <lef-file-name>{diff.file}</lef-file-name>
+                     <lef-file-changes>
+                       <lef-file-added>+{diff.added}</lef-file-added>
+                       {#if diff.removed > 0}
+                         <lef-file-removed>-{diff.removed}</lef-file-removed>
+                       {/if}
+                     </lef-file-changes>
+                   </lef-file-row>
+                 {/each}
+               </lef-file-list>
+               <lef-card-actions>
+                 <button type="button" class="view-solution-btn" onclick={() => onOpenSolution?.(solution.id)}>
+                   View Code →
+                 </button>
+               </lef-card-actions>
+             </article>
+           {/each}
+         </lef-solutions-list>
+
+         <lef-task-rail aria-label="Task description and actions">
+           <lef-task-rail-card>
+             <lef-task-rail-head>Task description</lef-task-rail-head>
+             <lef-task-rail-body>{taskSearchText}</lef-task-rail-body>
+           </lef-task-rail-card>
+
+           <lef-task-rail-actions>
+             <button type="button" class="task-rail-btn" aria-label="Settings">
+               <lef-task-rail-icon aria-hidden="true">⚙</lef-task-rail-icon>
+               <lefine-text>Settings</lefine-text>
+             </button>
+             <button type="button" class="task-rail-btn task-rail-btn--primary" aria-label="Clone">
+               <lef-task-rail-icon aria-hidden="true">⤓</lef-task-rail-icon>
+               <lefine-text>Clone</lefine-text>
+             </button>
+           </lef-task-rail-actions>
+
+           <SolutionMetricsMini
+             metrics={defaultMetrics}
+             activeSolverId={displayedSolutions[0]?.id ?? '5'}
+           />
+         </lef-task-rail>
+       </lef-tasks-grid>
      {/if}
    </section>
  {/if}
@@ -2353,10 +2390,180 @@ initialized = true;
 
   [data-part="tasks-list"] {
     width: min(100%, calc(100vw - 7rem));
-    max-width: 64rem;
+    max-width: 92rem;
     margin-inline: auto;
     display: grid;
     gap: 1rem;
+  }
+
+  lef-tasks-grid {
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr) 320px;
+    gap: 1rem;
+    align-items: start;
+  }
+
+  lef-tasks-aside {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding: 0.85rem 0.85rem 0.95rem;
+    background: var(--kef-bg-card);
+    border: 1px solid var(--kef-line);
+    border-radius: 0.75rem;
+    position: sticky;
+    top: 1rem;
+  }
+
+  lef-tasks-aside-head {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--lefine-text-soft);
+    padding: 0.1rem 0.25rem 0.4rem;
+  }
+
+  lef-tasks-aside-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  lef-tasks-aside-item {
+    display: grid;
+    grid-template-columns: 1.4rem minmax(0, 1fr);
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.6rem;
+    border-radius: 0.55rem;
+    border: 1px solid var(--kef-line-soft);
+    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 8%, var(--kef-bg-card));
+    color: var(--lefine-text);
+    font-size: 0.85rem;
+  }
+
+  lef-tasks-aside-item[data-active='true'] {
+    border-color: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 50%, var(--kef-line-soft));
+  }
+
+  lef-tasks-aside-index {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.4rem;
+    height: 1.4rem;
+    border-radius: 999px;
+    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 30%, var(--kef-bg-card));
+    color: var(--lefine-text);
+    font-weight: 700;
+    font-size: 0.78rem;
+  }
+
+  lef-tasks-aside-item lefine-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--lefine-text);
+  }
+
+  lef-task-rail {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    position: sticky;
+    top: 1rem;
+  }
+
+  lef-task-rail-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 0.85rem 0.95rem 1rem;
+    background: var(--kef-bg-card);
+    border: 1px solid var(--kef-line);
+    border-radius: 0.75rem;
+  }
+
+  lef-task-rail-head {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--lefine-text-soft);
+  }
+
+  lef-task-rail-body {
+    display: block;
+    font-size: 0.95rem;
+    color: var(--lefine-text);
+    line-height: 1.4;
+    word-break: break-word;
+  }
+
+  lef-task-rail-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+
+  .task-rail-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 0.55rem 0.75rem;
+    border-radius: 0.55rem;
+    border: 1px solid var(--kef-line);
+    background: var(--kef-bg-card);
+    color: var(--lefine-text);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 160ms ease, border-color 160ms ease;
+  }
+
+  .task-rail-btn:hover {
+    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 8%, var(--kef-bg-card));
+    border-color: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 30%, var(--kef-line));
+  }
+
+  .task-rail-btn--primary {
+    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 14%, var(--kef-bg-card));
+    border-color: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 35%, var(--kef-line));
+  }
+
+  lef-task-rail-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.05rem;
+    height: 1.05rem;
+    font-size: 0.95rem;
+    line-height: 1;
+    color: var(--lefine-text);
+  }
+
+  @media (max-width: 1180px) {
+    lef-tasks-grid {
+      grid-template-columns: 200px minmax(0, 1fr);
+    }
+    lef-task-rail {
+      grid-column: 1 / -1;
+      position: static;
+    }
+  }
+
+  @media (max-width: 760px) {
+    lef-tasks-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    lef-tasks-aside,
+    lef-task-rail {
+      position: static;
+    }
   }
 
   lef-solutions-list {
