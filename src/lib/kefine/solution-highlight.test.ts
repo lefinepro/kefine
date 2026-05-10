@@ -6,7 +6,7 @@ import {
   highlightLine,
   highlightLines,
   splitHighlightedByLine
-} from '$lib/kefine/solution-highlight';
+} from './solution-highlight';
 
 describe('detectLanguage', () => {
   test('returns "go" for .go files', () => {
