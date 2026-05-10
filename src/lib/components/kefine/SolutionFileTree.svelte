@@ -17,11 +17,16 @@
 
   const totalAdded = $derived(files.reduce((sum, f) => sum + f.added, 0));
   const totalRemoved = $derived(files.reduce((sum, f) => sum + f.removed, 0));
+
+  function fileBaseName(path: string): string {
+    const idx = path.lastIndexOf('/');
+    return idx === -1 ? path : path.slice(idx + 1);
+  }
 </script>
 
 <lef-file-tree>
   <lef-file-tree-header>
-    <lef-text-label>Changes</lef-text-label>
+    <lef-text-label>{files.length} {files.length === 1 ? 'change' : 'changes'}</lef-text-label>
     <lef-file-tree-totals>
       {#if totalAdded > 0}
         <lef-text-add>+{totalAdded}</lef-text-add>
@@ -38,15 +43,16 @@
         type="button"
         class="lef-file-tree-item"
         class:lef-file-tree-item--active={activeFile === entry.file}
+        title={entry.file}
         onclick={() => onSelect(entry.file)}
       >
         <lef-file-icon aria-hidden="true">
-          <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4">
+          <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.4">
             <path d="M3.5 1.5h6L13 5v9.5H3.5z" />
             <path d="M9.5 1.5V5H13" />
           </svg>
         </lef-file-icon>
-        <lef-file-name>{entry.file}</lef-file-name>
+        <lef-file-name>{fileBaseName(entry.file)}</lef-file-name>
         <lef-file-stats>
           {#if entry.added > 0}
             <lef-text-add-soft>+{entry.added}</lef-text-add-soft>
@@ -64,7 +70,7 @@
   lef-file-tree {
     display: flex;
     flex-direction: column;
-    gap: 0.65rem;
+    gap: 0.5rem;
     min-width: 0;
   }
 
@@ -77,7 +83,7 @@
   }
 
   lef-text-label {
-    font-size: 0.72rem;
+    font-size: 0.7rem;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     font-weight: 700;
@@ -88,7 +94,7 @@
     display: inline-flex;
     gap: 0.4rem;
     font-family: 'Fira Mono', 'Fira Code', ui-monospace, monospace;
-    font-size: 0.72rem;
+    font-size: 0.7rem;
     font-weight: 600;
   }
 
@@ -103,21 +109,21 @@
   lef-file-tree-list {
     display: flex;
     flex-direction: column;
-    gap: 0.15rem;
+    gap: 0.1rem;
   }
 
   .lef-file-tree-item {
     display: grid;
-    grid-template-columns: auto 1fr auto;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
-    gap: 0.55rem;
-    padding: 0.45rem 0.65rem;
-    border-radius: 0.5rem;
+    gap: 0.4rem;
+    padding: 0.32rem 0.5rem;
+    border-radius: 0.4rem;
     background: transparent;
     border: 1px solid transparent;
     color: var(--lefine-text);
     font-family: 'Fira Mono', 'Fira Code', ui-monospace, monospace;
-    font-size: 0.82rem;
+    font-size: 0.78rem;
     text-align: left;
     cursor: pointer;
     transition:
@@ -157,8 +163,8 @@
 
   lef-file-stats {
     display: inline-flex;
-    gap: 0.35rem;
-    font-size: 0.72rem;
+    gap: 0.3rem;
+    font-size: 0.7rem;
     font-weight: 600;
     flex: 0 0 auto;
   }

@@ -2804,19 +2804,20 @@ initialized = true;
   }
 
   .view-solution-btn {
-    padding: 0.4rem 0.95rem;
-    background: var(--kef-color-primary);
-    color: #fff;
-    border: none;
-    border-radius: 0.45rem;
-    font-size: 0.85rem;
+    padding: 0.22rem 0.55rem;
+    background: transparent;
+    color: var(--kef-color-primary);
+    border: 1px solid color-mix(in oklab, var(--kef-color-primary) 35%, var(--kef-line));
+    border-radius: 0.35rem;
+    font-size: 0.74rem;
     font-weight: 500;
     cursor: pointer;
-    transition: background-color 160ms ease, transform 120ms ease;
+    transition: background-color 160ms ease, color 160ms ease, transform 120ms ease;
   }
 
   .view-solution-btn:hover {
-    background: color-mix(in oklab, var(--kef-color-primary) 85%, black 15%);
+    background: color-mix(in oklab, var(--kef-color-primary) 10%, transparent);
+    color: color-mix(in oklab, var(--kef-color-primary) 85%, black 15%);
   }
 
   .view-solution-btn:active {
