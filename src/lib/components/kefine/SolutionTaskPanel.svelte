@@ -54,7 +54,7 @@
       <lef-comments-list>
         {#each comments as comment (comment.id)}
           <lef-comment-row class:lef-comment-row--pending={comment.pending}>
-            <lef-comment-bubble>
+            <lef-comment-quote>
               <p>{comment.text}</p>
               <lef-comment-meta>
                 <lefine-text>{formatTime(comment.timestamp)}</lefine-text>
@@ -67,7 +67,7 @@
                   </lef-correction-arrow>
                 {/if}
               </lef-comment-meta>
-            </lef-comment-bubble>
+            </lef-comment-quote>
           </lef-comment-row>
         {/each}
       </lef-comments-list>
@@ -164,25 +164,27 @@
     100% { opacity: 1; transform: translateY(0); }
   }
 
-  lef-comment-bubble {
+  lef-comment-quote {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
-    padding: 0.55rem 0.75rem 0.5rem;
-    background: color-mix(in oklab, var(--kef-color-primary, #3a7afe) 8%, var(--kef-bg-soft));
-    border: 1px solid color-mix(in oklab, var(--kef-color-primary, #3a7afe) 25%, transparent);
-    border-radius: 0.5rem 0.5rem 0.5rem 0.15rem;
-    align-self: flex-end;
-    max-width: 90%;
+    gap: 0.2rem;
+    padding: 0.1rem 0 0.1rem 0.7rem;
+    border-left: 2px solid color-mix(in oklab, var(--lefine-text-soft) 40%, transparent);
+    background: transparent;
+    max-width: 100%;
   }
 
-  lef-comment-bubble p {
+  lef-comment-quote p {
     margin: 0;
-    font-size: 0.86rem;
-    color: var(--lefine-text);
+    font-size: 0.84rem;
+    font-style: italic;
+    color: var(--lefine-text-soft);
     white-space: pre-wrap;
     overflow-wrap: break-word;
   }
+
+  lef-comment-quote p::before { content: '\201C'; margin-right: 1px; }
+  lef-comment-quote p::after { content: '\201D'; margin-left: 1px; }
 
   lef-comment-meta {
     display: inline-flex;

@@ -122,13 +122,27 @@
       .line { white-space: pre; padding: 0 12px; }
       .add { background: color-mix(in oklab, var(--kef-success) 22%, transparent); }
       .rem { background: color-mix(in oklab, var(--kef-error) 22%, transparent); }
-      .kw { color: #9876aa; }
-      .fn { color: #4c83b6; }
-      .str { color: #6a8759; }
+      :root[data-kefine-theme='light'] .kw { color: #0033b3; font-weight: 600; }
+      :root[data-kefine-theme='light'] .fn { color: #00627a; font-weight: 600; }
+      :root[data-kefine-theme='light'] .str { color: #067d17; }
+      :root[data-kefine-theme='light'] .num-t { color: #1750eb; }
+      :root[data-kefine-theme='dark'] .kw { color: #cc7832; font-weight: 600; }
+      :root[data-kefine-theme='dark'] .fn { color: #ffc66d; font-weight: 600; }
+      :root[data-kefine-theme='dark'] .str { color: #6a8759; }
+      :root[data-kefine-theme='dark'] .num-t { color: #6897bb; }
       .task { padding: 14px; display: grid; gap: 10px; }
       .task strong { color: var(--lefine-text-soft); text-transform: uppercase; font-size: 12px; }
       .task p { margin: 0; color: var(--lefine-text-soft); }
-      .comment { justify-self: end; max-width: 520px; padding: 10px 12px; border-radius: 9px 9px 9px 3px; background: color-mix(in oklab, var(--kef-color-primary) 10%, var(--kef-bg-soft)); }
+      .comment-list { display: flex; flex-direction: column; gap: 6px; margin-top: 2px; }
+      .comment {
+        font-size: 13px;
+        color: var(--lefine-text-soft);
+        font-style: italic;
+        padding-left: 12px;
+        border-left: 2px solid color-mix(in oklab, var(--lefine-text-soft) 40%, transparent);
+      }
+      .comment::before { content: '\201C'; margin-right: 2px; }
+      .comment::after { content: '\201D'; margin-left: 2px; }
     </style>
   </head>
   <body>
@@ -148,10 +162,10 @@
         <div class="code-toolbar"><span>main.go</span><span class="stats">+14 -1</span></div>
         <div class="headers"><span>Original</span><span>Modified</span></div>
         <div class="rows">
-          <div class="row"><div class="side"><b class="num">8</b><span class="line">func main() {</span></div><div class="side"><b class="num">8</b><span class="line">func main() {</span></div></div>
-          <div class="row"><div class="side rem"><b class="num">9</b><span class="line">  fmt.Println("proxy ready")</span></div><div class="side"><b class="num"></b><span class="line"></span></div></div>
-          <div class="row"><div class="side"><b class="num"></b><span class="line"></span></div><div class="side add"><b class="num">9</b><span class="line">  for i := 0; i < 10; i++ {</span></div></div>
-          <div class="row"><div class="side"><b class="num"></b><span class="line"></span></div><div class="side add"><b class="num">10</b><span class="line">    fmt.Println("proxy ready")</span></div></div>
+          <div class="row"><div class="side"><b class="num">8</b><span class="line"><span class="kw">func</span> <span class="fn">main</span>() {</span></div><div class="side"><b class="num">8</b><span class="line"><span class="kw">func</span> <span class="fn">main</span>() {</span></div></div>
+          <div class="row"><div class="side rem"><b class="num">9</b><span class="line">  fmt.<span class="fn">Println</span>(<span class="str">"proxy ready"</span>)</span></div><div class="side"><b class="num"></b><span class="line"></span></div></div>
+          <div class="row"><div class="side"><b class="num"></b><span class="line"></span></div><div class="side add"><b class="num">9</b><span class="line">  <span class="kw">for</span> i := <span class="num-t">0</span>; i &lt; <span class="num-t">10</span>; i++ {</span></div></div>
+          <div class="row"><div class="side"><b class="num"></b><span class="line"></span></div><div class="side add"><b class="num">10</b><span class="line">    fmt.<span class="fn">Println</span>(<span class="str">"proxy ready"</span>)</span></div></div>
           <div class="row"><div class="side"><b class="num"></b><span class="line"></span></div><div class="side add"><b class="num">11</b><span class="line">  }</span></div></div>
           <div class="row"><div class="side"><b class="num">10</b><span class="line">}</span></div><div class="side"><b class="num">12</b><span class="line">}</span></div></div>
         </div>
@@ -159,7 +173,9 @@
       <section class="task">
         <strong>Task</strong>
         <p>Need a small Go proxy with a correction that prints the result 10 times.</p>
-        <div class="comment">make it print 10 times</div>
+        <div class="comment-list">
+          <div class="comment">make it print 10 times</div>
+        </div>
       </section>
     </main>
   </body>
