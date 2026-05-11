@@ -36,23 +36,63 @@
         font: 14px Inter, ui-sans-serif, system-ui, sans-serif;
       }
       .topbar {
-        height: 58px;
+        height: 48px;
         display: flex;
         align-items: center;
-        gap: 14px;
-        padding: 0 24px;
+        gap: 10px;
+        padding: 0 18px;
         background: var(--kef-bg-card);
         border-bottom: 1px solid var(--kef-line-soft);
       }
       .back {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
         color: var(--lefine-text-soft);
-        border: 1px solid transparent;
+        border: 1px solid var(--kef-line-soft);
+        background: var(--kef-bg-soft);
         border-radius: 7px;
-        padding: 6px 10px;
       }
-      .title { flex: 1; min-width: 0; display: flex; gap: 10px; align-items: baseline; }
-      .title strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-      .title small { color: var(--kef-color-primary); font-weight: 700; }
+      .topbar-meta {
+        flex: 1;
+        min-width: 0;
+        display: inline-flex;
+        gap: 8px;
+        align-items: center;
+        overflow: hidden;
+      }
+      .project-crumb,
+      .slug-crumb {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 13px;
+      }
+      .project-crumb { color: var(--lefine-text-soft); }
+      .slug-crumb { color: var(--kef-color-primary); font-weight: 600; }
+      .sep { color: color-mix(in oklab, var(--lefine-text-soft) 50%, transparent); }
+      .title-row {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        min-width: 0;
+        overflow: hidden;
+      }
+      .check {
+        display: inline-flex;
+        align-items: center;
+        color: var(--kef-success);
+      }
+      .title-row strong {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 14px;
+        font-weight: 700;
+      }
+      .title-row small { color: var(--kef-color-primary); font-weight: 600; font-size: 12px; }
       .merge {
         border: 1px solid color-mix(in oklab, var(--kef-success) 55%, var(--kef-line));
         color: var(--kef-success);
@@ -146,13 +186,59 @@
       }
       .comment::before { content: '\201C'; margin-right: 2px; }
       .comment::after { content: '\201D'; margin-left: 2px; }
+      @media (max-width: 720px) {
+        .topbar { padding: 0 12px; gap: 8px; min-height: 48px; height: auto; }
+        .topbar-meta { flex-wrap: wrap; gap: 6px; }
+        .sep { display: none; }
+        main { padding: 14px 12px 22px; }
+        .row { min-width: 540px; }
+      }
     </style>
   </head>
   <body>
     <header class="topbar">
-      <div class="back">Back to solutions</div>
-      <div class="title"><strong>Go Proxy Basic</strong><small>Simple HTTP Proxy</small></div>
-      <button class="merge">Merge</button>
+      <a class="back" aria-label="Back to solutions" title="Back to solutions">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M15 18l-6-6 6-6"></path>
+        </svg>
+      </a>
+      <div class="topbar-meta">
+        <span class="project-crumb">
+          <svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true">
+            <path d="M2 2.5A1.5 1.5 0 0 1 3.5 1h6.879a1.5 1.5 0 0 1 1.06.44l3.122 3.12c.281.282.439.664.439 1.061V13.5a1.5 1.5 0 0 1-1.5 1.5h-10A1.5 1.5 0 0 1 2 13.5v-11Z"></path>
+          </svg>
+          <span>kefine/go-proxy</span>
+        </span>
+        <span class="slug-crumb">
+          <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="5" cy="3.5" r="1.5"></circle>
+            <circle cx="5" cy="12.5" r="1.5"></circle>
+            <circle cx="11.5" cy="8" r="1.5"></circle>
+            <path d="M5 5v6"></path>
+            <path d="M5 8h3a3 3 0 0 0 3-3"></path>
+          </svg>
+          <span>feat/basic-forward</span>
+        </span>
+        <span class="sep">/</span>
+        <span class="title-row">
+          <span class="check" aria-hidden="true">
+            <svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true">
+              <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0Zm3.78 5.97a.75.75 0 0 0-1.06-1.06L7 8.63 5.28 6.91a.75.75 0 1 0-1.06 1.06l2.25 2.25c.293.293.767.293 1.06 0l4.25-4.25Z"></path>
+            </svg>
+          </span>
+          <strong>Go Proxy Basic</strong>
+          <small>Simple HTTP Proxy</small>
+        </span>
+      </div>
+      <button class="merge">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align: middle; margin-right: 4px;">
+          <circle cx="6" cy="18" r="2"></circle>
+          <circle cx="6" cy="6" r="2"></circle>
+          <circle cx="18" cy="14" r="2"></circle>
+          <path d="M6 8v8M6 8c0 4 6 6 12 6"></path>
+        </svg>
+        Merge
+      </button>
     </header>
     <main>
       <section class="status">Showing corrected code</section>

@@ -2,7 +2,7 @@
 <html data-kefine-theme="light">
   <head>
     <meta charset="utf-8" />
-    <title>Kefine main page — 3-column tasks layout</title>
+    <title>Kefine main page — round 10 layout</title>
     <style>
       /* Tokens mirror src/routes/styles/+page.base.css so the demo matches the real app */
       :root[data-kefine-theme='light'] {
@@ -50,11 +50,7 @@
         padding: 14px 18px;
         margin-bottom: 18px;
       }
-      .search-row .text {
-        flex: 1;
-        font-size: 15px;
-        line-height: 1;
-      }
+      .search-row .text { flex: 1; font-size: 15px; line-height: 1; }
       .search-row .indicator {
         flex: 0 0 auto;
         width: 12px;
@@ -75,9 +71,7 @@
         border: 1px solid var(--kef-line);
         border-radius: 12px;
       }
-      .aside {
-        padding: 14px;
-      }
+      .aside { padding: 14px; }
       .aside-head,
       .rail-head,
       .metrics-mini-head strong {
@@ -123,12 +117,14 @@
       .solutions-list {
         display: flex;
         flex-direction: column;
-        gap: 14px;
+        gap: 12px;
+        max-width: 38rem;
       }
       .card {
-        display: grid;
-        gap: 10px;
-        padding: 16px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 12px 14px;
         background: var(--kef-bg-card);
         border: 1px solid var(--kef-line);
         border-radius: 12px;
@@ -138,82 +134,105 @@
         display: grid;
         grid-template-columns: minmax(0, 1fr) auto;
         align-items: center;
-        gap: 12px;
+        gap: 10px;
       }
       .meta strong {
         display: block;
-        font-size: 16px;
+        font-size: 15px;
       }
       .meta .sub {
         display: block;
         font-size: 12.5px;
         color: var(--lefine-text-soft);
       }
-      .crown {
-        width: 32px;
-        height: 32px;
+      .pin-button {
+        width: 28px;
+        height: 28px;
         border-radius: 8px;
         border: 1px solid var(--kef-line);
         background: var(--kef-bg-card);
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        color: var(--kef-color-primary);
-        font-size: 16px;
+        color: var(--lefine-text-soft);
+        cursor: pointer;
       }
+      .pin-button.is-active {
+        color: var(--kef-color-primary);
+        border-color: color-mix(in oklab, var(--kef-color-primary) 45%, var(--kef-line));
+        background: color-mix(in oklab, var(--kef-color-primary) 10%, var(--kef-bg-card));
+      }
+      .pin-svg { width: 16px; height: 16px; }
       .desc {
         margin: 0;
-        font-size: 14px;
+        font-size: 13.5px;
         color: var(--lefine-text);
       }
       .file-list {
         display: flex;
-        flex-wrap: wrap;
-        gap: 6px 12px;
-        margin-top: 2px;
+        flex-direction: column;
+        gap: 3px;
       }
       .file-row {
-        display: inline-flex;
+        display: flex;
         align-items: center;
-        gap: 6px;
+        justify-content: space-between;
+        gap: 8px;
         font-family: 'Fira Mono', ui-monospace, monospace;
         font-size: 12.5px;
         color: var(--lefine-text-soft);
       }
+      .file-name {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
       .file-changes {
         display: inline-flex;
         gap: 8px;
-        font-family: 'Fira Mono', ui-monospace, monospace;
+        flex: 0 0 auto;
       }
-      .file-added {
-        color: var(--kef-success);
+      .file-added { color: var(--kef-success); }
+      .file-removed { color: var(--kef-error, #c65353); }
+
+      .card-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
       }
       .view-btn {
-        justify-self: start;
-        padding: 4px 10px;
-        margin-top: 6px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 30px;
+        height: 28px;
         border-radius: 6px;
         background: transparent;
         color: var(--kef-color-primary);
         border: 1px solid color-mix(in oklab, var(--kef-color-primary) 35%, var(--kef-line));
-        font-weight: 500;
-        font-size: 12px;
         cursor: pointer;
       }
+      .view-btn svg { width: 14px; height: 14px; }
+      .merge-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: 6px;
+        border: 1px solid color-mix(in oklab, var(--kef-success) 45%, var(--kef-line));
+        background: color-mix(in oklab, var(--kef-success) 12%, var(--kef-bg-card));
+        color: var(--kef-success);
+        font-weight: 600;
+        font-size: 12.5px;
+        cursor: pointer;
+      }
+      .merge-btn svg { width: 13px; height: 13px; }
 
-      .rail {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-      }
-      .rail-card {
-        padding: 14px 16px;
-      }
-      .rail-body {
-        margin-top: 6px;
-        font-size: 14.5px;
-        line-height: 1.4;
-      }
+      .rail { display: flex; flex-direction: column; gap: 10px; }
+      .rail-card { padding: 14px 16px; }
+      .rail-body { margin-top: 6px; font-size: 14.5px; line-height: 1.4; }
       .rail-actions {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -243,6 +262,26 @@
         gap: 10px;
         padding: 14px 16px;
       }
+      .metrics-mini-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .metrics-mini-head .project-crumb {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 12px;
+        color: var(--lefine-text-soft);
+      }
+      .metrics-mini-head .slug-crumb {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 12px;
+        color: var(--kef-color-primary);
+        font-weight: 600;
+      }
       .chart-card {
         padding: 12px;
         background: color-mix(in oklab, var(--kef-bg-soft) 50%, var(--kef-bg-card));
@@ -250,9 +289,7 @@
         border-radius: 9px;
         --chart-accent: var(--kef-color-primary);
       }
-      .chart-card.alt {
-        --chart-accent: #14b8a6;
-      }
+      .chart-card.alt { --chart-accent: #14b8a6; }
       .chart-head {
         display: flex;
         justify-content: space-between;
@@ -283,25 +320,15 @@
         fill: var(--lefine-text-soft);
         font-family: 'Fira Mono', ui-monospace, monospace;
       }
-      .bar {
-        fill: color-mix(in oklab, var(--chart-accent) 28%, transparent);
-      }
-      .bar.active {
-        fill: color-mix(in oklab, var(--chart-accent) 70%, transparent);
-      }
-      .line {
-        fill: none;
-        stroke: var(--chart-accent);
-        stroke-width: 1.6;
-      }
+      .bar { fill: color-mix(in oklab, var(--chart-accent) 28%, transparent); }
+      .bar.active { fill: color-mix(in oklab, var(--chart-accent) 70%, transparent); }
+      .line { fill: none; stroke: var(--chart-accent); stroke-width: 1.6; }
       .dot {
         fill: var(--chart-accent);
         stroke: var(--kef-bg-card);
         stroke-width: 1.5;
       }
-      .dot.active {
-        stroke-width: 2.5;
-      }
+      .dot.active { stroke-width: 2.5; }
       .legend {
         margin-top: 6px;
         font-size: 11.5px;
@@ -334,6 +361,15 @@
         font-family: 'Fira Mono', ui-monospace, monospace;
         font-size: 11px;
       }
+      @media (max-width: 720px) {
+        body { padding: 14px; }
+        .grid {
+          grid-template-columns: minmax(0, 1fr);
+          gap: 12px;
+        }
+        .solutions-list { max-width: 100%; }
+        .rail { gap: 12px; }
+      }
     </style>
   </head>
   <body>
@@ -360,15 +396,36 @@
               <strong>Go Proxy Basic</strong>
               <span class="sub">Simple HTTP Proxy</span>
             </span>
-            <button class="crown" aria-label="Rate solution">♔</button>
+            <button class="pin-button" aria-label="Pin solution">
+              <svg class="pin-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 2l2.39 6.95H21l-5.31 3.86L17.78 20 12 16.27 6.22 20l2.09-7.19L3 8.95h6.61L12 2z"/>
+              </svg>
+            </button>
           </header>
           <p class="desc">Minimal HTTP proxy with forward functionality</p>
           <div class="file-list">
-            <div class="file-row"><span class="file-name">main.go</span><span class="file-changes"><span class="file-added">+28</span></span></div>
-            <div class="file-row"><span class="file-name">config.yaml</span><span class="file-changes"><span class="file-added">+5</span></span></div>
+            <div class="file-row"><span class="file-name">cmd/proxy/main.go</span><span class="file-changes"><span class="file-added">+28</span></span></div>
+            <div class="file-row"><span class="file-name">internal/forward/forward.go</span><span class="file-changes"><span class="file-added">+18</span></span></div>
+            <div class="file-row"><span class="file-name">configs/proxy.yaml</span><span class="file-changes"><span class="file-added">+5</span></span></div>
             <div class="file-row"><span class="file-name">go.mod</span><span class="file-changes"><span class="file-added">+2</span></span></div>
           </div>
-          <button class="view-btn">View Code →</button>
+          <div class="card-actions">
+            <button class="view-btn" aria-label="View code" title="View code">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="16 18 22 12 16 6"></polyline>
+                <polyline points="8 6 2 12 8 18"></polyline>
+              </svg>
+            </button>
+            <button class="merge-btn" aria-label="Merge solution">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="6" cy="18" r="2"/>
+                <circle cx="6" cy="6" r="2"/>
+                <circle cx="18" cy="14" r="2"/>
+                <path d="M6 8v8M6 8c0 4 6 6 12 6"/>
+              </svg>
+              <span>Merge</span>
+            </button>
+          </div>
         </article>
 
         <article class="card">
@@ -377,15 +434,36 @@
               <strong>Go Proxy Pro</strong>
               <span class="sub">HTTP Proxy with Logging</span>
             </span>
-            <button class="crown" aria-label="Rate solution">♔</button>
+            <button class="pin-button is-active" aria-label="Selected solution">
+              <svg class="pin-svg" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 2l2.39 6.95H21l-5.31 3.86L17.78 20 12 16.27 6.22 20l2.09-7.19L3 8.95h6.61L12 2z"/>
+              </svg>
+            </button>
           </header>
           <p class="desc">Production-ready proxy with structured logging</p>
           <div class="file-list">
-            <div class="file-row"><span class="file-name">main.go</span><span class="file-changes"><span class="file-added">+62</span></span></div>
-            <div class="file-row"><span class="file-name">logger.go</span><span class="file-changes"><span class="file-added">+24</span></span></div>
-            <div class="file-row"><span class="file-name">config.yaml</span><span class="file-changes"><span class="file-added">+11</span></span></div>
+            <div class="file-row"><span class="file-name">cmd/proxy/main.go</span><span class="file-changes"><span class="file-added">+62</span></span></div>
+            <div class="file-row"><span class="file-name">internal/logging/logger.go</span><span class="file-changes"><span class="file-added">+24</span></span></div>
+            <div class="file-row"><span class="file-name">internal/forward/forward.go</span><span class="file-changes"><span class="file-added">+33</span><span class="file-removed">-9</span></span></div>
+            <div class="file-row"><span class="file-name">configs/proxy.yaml</span><span class="file-changes"><span class="file-added">+11</span></span></div>
           </div>
-          <button class="view-btn">View Code →</button>
+          <div class="card-actions">
+            <button class="view-btn" aria-label="View code" title="View code">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="16 18 22 12 16 6"></polyline>
+                <polyline points="8 6 2 12 8 18"></polyline>
+              </svg>
+            </button>
+            <button class="merge-btn" aria-label="Merged">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="6" cy="18" r="2"/>
+                <circle cx="6" cy="6" r="2"/>
+                <circle cx="18" cy="14" r="2"/>
+                <path d="M6 8v8M6 8c0 4 6 6 12 6"/>
+              </svg>
+              <span>Merged</span>
+            </button>
+          </div>
         </article>
 
         <article class="card">
@@ -394,16 +472,36 @@
               <strong>Go Proxy Enterprise</strong>
               <span class="sub">Auth + retry + metrics proxy</span>
             </span>
-            <button class="crown" aria-label="Rate solution">♔</button>
+            <button class="pin-button" aria-label="Pin solution">
+              <svg class="pin-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 2l2.39 6.95H21l-5.31 3.86L17.78 20 12 16.27 6.22 20l2.09-7.19L3 8.95h6.61L12 2z"/>
+              </svg>
+            </button>
           </header>
           <p class="desc">Robust forward proxy with auth, retry, and Prometheus metrics</p>
           <div class="file-list">
-            <div class="file-row"><span class="file-name">main.go</span><span class="file-changes"><span class="file-added">+118</span></span></div>
-            <div class="file-row"><span class="file-name">auth.go</span><span class="file-changes"><span class="file-added">+44</span></span></div>
-            <div class="file-row"><span class="file-name">retry.go</span><span class="file-changes"><span class="file-added">+33</span></span></div>
-            <div class="file-row"><span class="file-name">metrics.go</span><span class="file-changes"><span class="file-added">+22</span></span></div>
+            <div class="file-row"><span class="file-name">cmd/proxy/main.go</span><span class="file-changes"><span class="file-added">+118</span><span class="file-removed">-12</span></span></div>
+            <div class="file-row"><span class="file-name">internal/auth/auth.go</span><span class="file-changes"><span class="file-added">+44</span></span></div>
+            <div class="file-row"><span class="file-name">internal/retry/retry.go</span><span class="file-changes"><span class="file-added">+33</span></span></div>
+            <div class="file-row"><span class="file-name">internal/metrics/prometheus.go</span><span class="file-changes"><span class="file-added">+22</span></span></div>
           </div>
-          <button class="view-btn">View Code →</button>
+          <div class="card-actions">
+            <button class="view-btn" aria-label="View code" title="View code">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="16 18 22 12 16 6"></polyline>
+                <polyline points="8 6 2 12 8 18"></polyline>
+              </svg>
+            </button>
+            <button class="merge-btn" aria-label="Merge solution">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="6" cy="18" r="2"/>
+                <circle cx="6" cy="6" r="2"/>
+                <circle cx="18" cy="14" r="2"/>
+                <path d="M6 8v8M6 8c0 4 6 6 12 6"/>
+              </svg>
+              <span>Merge</span>
+            </button>
+          </div>
         </article>
       </div>
 
@@ -418,7 +516,24 @@
         </div>
 
         <div class="metrics-mini">
-          <div class="metrics-mini-head"><strong>Metrics</strong></div>
+          <div class="metrics-mini-head">
+            <span class="project-crumb">
+              <svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true">
+                <path d="M2 2.5A1.5 1.5 0 0 1 3.5 1h6.879a1.5 1.5 0 0 1 1.06.44l3.122 3.12c.281.282.439.664.439 1.061V13.5a1.5 1.5 0 0 1-1.5 1.5h-10A1.5 1.5 0 0 1 2 13.5v-11Z"></path>
+              </svg>
+              <span>kefine/go-proxy</span>
+            </span>
+            <span class="slug-crumb">
+              <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="5" cy="3.5" r="1.5"></circle>
+                <circle cx="5" cy="12.5" r="1.5"></circle>
+                <circle cx="11.5" cy="8" r="1.5"></circle>
+                <path d="M5 5v6"></path>
+                <path d="M5 8h3a3 3 0 0 0 3-3"></path>
+              </svg>
+              <span>feat/basic-forward</span>
+            </span>
+          </div>
 
           <div class="chart-card">
             <div class="chart-head"><span>Execution time</span><span class="unit">seconds</span></div>
