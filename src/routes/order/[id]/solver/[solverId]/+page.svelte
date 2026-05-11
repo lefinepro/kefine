@@ -147,6 +147,8 @@
     <SolutionTopbar
       title={solution.title}
       author={solution.solver}
+      project={solution.project}
+      slug={solution.slug}
       backHref={`/order/${data.orderId}`}
       onBack={goBack}
       onMerge={handleMerge}
