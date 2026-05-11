@@ -78,11 +78,14 @@
       }
       .tabs { display: flex; gap: 6px; overflow-x: auto; }
       .tab {
+        appearance: none;
+        background: transparent;
         border: 1px solid transparent;
         border-radius: 9px 9px 0 0;
         padding: 9px 14px;
         color: var(--lefine-text-soft);
         font: 13px "Fira Mono", ui-monospace, monospace;
+        cursor: pointer;
       }
       .tab.active {
         color: var(--kef-color-primary);
