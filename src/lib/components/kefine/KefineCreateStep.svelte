@@ -2418,7 +2418,7 @@ initialized = true;
 
   lef-tasks-grid {
     display: grid;
-    grid-template-columns: 220px minmax(0, 1fr) 320px;
+    grid-template-columns: 220px 38rem minmax(0, 1fr);
     gap: 1rem;
     align-items: start;
   }
@@ -2567,13 +2567,19 @@ initialized = true;
     color: var(--lefine-text);
   }
 
-  @media (max-width: 1180px) {
+  @media (max-width: 1280px) {
     lef-tasks-grid {
-      grid-template-columns: 200px minmax(0, 1fr);
+      grid-template-columns: 220px minmax(0, 1fr);
     }
     lef-task-rail {
       grid-column: 1 / -1;
       position: static;
+    }
+  }
+
+  @media (max-width: 1180px) {
+    lef-tasks-grid {
+      grid-template-columns: 200px minmax(0, 1fr);
     }
   }
 
@@ -2591,7 +2597,6 @@ initialized = true;
     display: grid;
     gap: 0.7rem;
     width: 100%;
-    max-width: 38rem;
   }
 
   .solution-card {

@@ -60,7 +60,7 @@
       }
       .grid {
         display: grid;
-        grid-template-columns: 220px minmax(0, 1fr) 320px;
+        grid-template-columns: 220px 38rem minmax(0, 1fr);
         gap: 16px;
         align-items: start;
       }
@@ -118,7 +118,6 @@
         display: flex;
         flex-direction: column;
         gap: 12px;
-        max-width: 38rem;
       }
       .card {
         display: flex;
@@ -360,6 +359,12 @@
       .legend-value {
         font-family: 'Fira Mono', ui-monospace, monospace;
         font-size: 11px;
+      }
+      @media (max-width: 1280px) {
+        .grid {
+          grid-template-columns: 220px minmax(0, 1fr);
+        }
+        .rail { grid-column: 1 / -1; }
       }
       @media (max-width: 720px) {
         body { padding: 14px; }
