@@ -2,7 +2,7 @@
 <html data-kefine-theme="light">
   <head>
     <meta charset="utf-8" />
-    <title>Kefine main page — round 10 layout</title>
+    <title>Kefine main page — round 12 layout</title>
     <style>
       /* Tokens mirror src/routes/styles/+page.base.css so the demo matches the real app */
       :root[data-kefine-theme='light'] {
@@ -60,7 +60,7 @@
       }
       .grid {
         display: grid;
-        grid-template-columns: 220px 38rem minmax(0, 1fr);
+        grid-template-columns: minmax(220px, 1fr) 38rem 320px;
         gap: 16px;
         align-items: start;
       }
@@ -362,7 +362,7 @@
       }
       @media (max-width: 1280px) {
         .grid {
-          grid-template-columns: 220px minmax(0, 1fr);
+          grid-template-columns: minmax(220px, 1fr) minmax(0, 38rem);
         }
         .rail { grid-column: 1 / -1; }
       }

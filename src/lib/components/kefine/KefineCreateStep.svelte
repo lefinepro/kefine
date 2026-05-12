@@ -2418,7 +2418,7 @@ initialized = true;
 
   lef-tasks-grid {
     display: grid;
-    grid-template-columns: 220px 38rem minmax(0, 1fr);
+    grid-template-columns: minmax(220px, 1fr) 38rem 320px;
     gap: 1rem;
     align-items: start;
   }
@@ -2569,7 +2569,7 @@ initialized = true;
 
   @media (max-width: 1280px) {
     lef-tasks-grid {
-      grid-template-columns: 220px minmax(0, 1fr);
+      grid-template-columns: minmax(220px, 1fr) minmax(0, 38rem);
     }
     lef-task-rail {
       grid-column: 1 / -1;
@@ -2579,7 +2579,7 @@ initialized = true;
 
   @media (max-width: 1180px) {
     lef-tasks-grid {
-      grid-template-columns: 200px minmax(0, 1fr);
+      grid-template-columns: minmax(200px, 1fr) minmax(0, 38rem);
     }
   }
 
