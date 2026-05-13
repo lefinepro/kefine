@@ -132,15 +132,45 @@
         gap: 12px;
       }
       .testing-row { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: stretch; }
+      .method-select-shell {
+        position: relative;
+        display: flex;
+        min-width: 91px;
+        color: var(--kef-color-primary);
+      }
+      .method-select-shell::before {
+        content: "";
+        position: absolute;
+        top: 7px;
+        right: 30px;
+        bottom: 7px;
+        width: 1px;
+        background: color-mix(in oklab, var(--kef-color-primary) 34%, var(--kef-line));
+        pointer-events: none;
+      }
+      .method-select-shell::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        right: 12px;
+        width: 7px;
+        height: 7px;
+        border-right: 2px solid currentColor;
+        border-bottom: 2px solid currentColor;
+        transform: translateY(-68%) rotate(45deg);
+        pointer-events: none;
+      }
       .method-select {
         appearance: none;
-        padding: 8px 28px 8px 12px;
+        width: 100%;
+        padding: 8px 38px 8px 12px;
         border-radius: 7px;
         border: 1px solid var(--kef-line);
         background: var(--kef-bg-soft);
-        color: var(--kef-color-primary);
+        color: currentColor;
         font: 13px "Fira Mono", ui-monospace, monospace;
         font-weight: 700;
+        cursor: pointer;
       }
       .url-input {
         appearance: none;
@@ -292,7 +322,15 @@
 
       <section class="testing-panel">
         <div class="testing-row">
-          <select class="method-select" aria-label="HTTP method"><option>POST</option></select>
+          <label class="method-select-shell">
+            <select class="method-select" aria-label="HTTP method">
+              <option>GET</option>
+              <option selected>POST</option>
+              <option>PUT</option>
+              <option>PATCH</option>
+              <option>DELETE</option>
+            </select>
+          </label>
           <input class="url-input" value="http://localhost:9090/" aria-label="Request URL" spellcheck="false" readonly />
           <button class="send-btn">Send</button>
         </div>

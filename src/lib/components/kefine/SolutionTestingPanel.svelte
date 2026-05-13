@@ -1,5 +1,5 @@
 <script lang="ts">
-  type Method = 'GET' | 'POST' | 'PUT' | 'DELETE';
+  type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
   let {
     endpoint = '/',
@@ -38,19 +38,19 @@
     }, 650);
   }
 
-  const methods: Method[] = ['GET', 'POST', 'PUT', 'DELETE'];
+  const methods: Method[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
 </script>
 
 <lef-testing-panel>
   <form class="lef-testing-form" onsubmit={handleSend}>
     <lef-testing-row>
-      <label class="lef-method-select" aria-label="HTTP method">
-        <select bind:value={method}>
+      <lef-method-select>
+        <select bind:value={method} aria-label="HTTP method">
           {#each methods as m (m)}
             <option value={m}>{m}</option>
           {/each}
         </select>
-      </label>
+      </lef-method-select>
       <input
         class="lef-url-input"
         type="text"
@@ -124,29 +124,53 @@
     align-items: stretch;
   }
 
-  .lef-method-select select {
+  lef-method-select {
+    position: relative;
+    display: flex;
+    min-width: 5.7rem;
+    color: var(--kef-color-primary, var(--kef-primary));
+  }
+
+  lef-method-select::before {
+    content: '';
+    position: absolute;
+    top: 0.45rem;
+    right: 1.85rem;
+    bottom: 0.45rem;
+    width: 1px;
+    background: color-mix(in oklab, var(--kef-color-primary, #3a7afe) 34%, var(--kef-line));
+    pointer-events: none;
+  }
+
+  lef-method-select::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: 0.75rem;
+    width: 0.42rem;
+    height: 0.42rem;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: translateY(-68%) rotate(45deg);
+    pointer-events: none;
+  }
+
+  lef-method-select select {
     appearance: none;
+    width: 100%;
     height: 100%;
-    padding: 0.45rem 1.6rem 0.45rem 0.7rem;
+    padding: 0.45rem 2.35rem 0.45rem 0.7rem;
     border-radius: 0.45rem;
     border: 1px solid var(--kef-line);
     background: var(--kef-bg-soft);
-    color: var(--kef-color-primary, var(--kef-primary));
+    color: currentColor;
     font-family: 'Fira Mono', 'Fira Code', ui-monospace, monospace;
     font-size: 0.82rem;
     font-weight: 700;
     cursor: pointer;
-    background-image:
-      linear-gradient(45deg, transparent 50%, currentColor 50%),
-      linear-gradient(135deg, currentColor 50%, transparent 50%);
-    background-position:
-      calc(100% - 12px) 50%,
-      calc(100% - 7px) 50%;
-    background-size: 5px 5px;
-    background-repeat: no-repeat;
   }
 
-  .lef-method-select select:focus {
+  lef-method-select select:focus {
     outline: none;
     border-color: color-mix(in oklab, var(--kef-color-primary, #3a7afe) 60%, var(--kef-line));
   }
