@@ -1,19 +1,33 @@
 <script lang="ts">
+  import {
+    bodyFromFields,
+    createBodyFields,
+    parseBodyFields,
+    type SolutionBodyField
+  } from './solution-testing-body';
+
   type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+  type BodyMode = 'form' | 'json';
 
   let {
     endpoint = '/',
     sampleBody = '{\n  "ping": "hello"\n}',
-    sampleResponse = '{\n  "ok": true,\n  "message": "proxy ready"\n}'
+    sampleResponse = '{\n  "ok": true,\n  "message": "proxy ready"\n}',
+    sampleTestTitle = 'POST / returns proxy ready',
+    sampleTestDetail = 'ping=hello expects 200 with proxy ready'
   }: {
     endpoint?: string;
     sampleBody?: string;
     sampleResponse?: string;
+    sampleTestTitle?: string;
+    sampleTestDetail?: string;
   } = $props();
 
   let method = $state<Method>('POST');
   let url = $state('');
   let body = $state('');
+  let bodyMode = $state<BodyMode>('form');
+  let bodyFields = $state<SolutionBodyField[]>([]);
   let response = $state<string | null>(null);
   let isSending = $state(false);
   let status = $state<number | null>(null);
@@ -21,9 +35,31 @@
   $effect(() => {
     url = `http://localhost:9090${endpoint}`;
     body = sampleBody;
-    response = null;
-    status = null;
+    bodyMode = 'form';
+    bodyFields = createBodyFields(sampleBody);
+    response = sampleResponse;
+    status = 200;
   });
+
+  function readInput(event: Event) {
+    return (event.currentTarget as HTMLInputElement | HTMLTextAreaElement).value;
+  }
+
+  function updateBodyField(id: string, patch: Partial<Pick<SolutionBodyField, 'key' | 'value'>>) {
+    const nextFields = bodyFields.map(field => (field.id === id ? { ...field, ...patch } : field));
+    bodyFields = nextFields;
+    body = bodyFromFields(nextFields);
+  }
+
+  function handleJsonInput(event: Event) {
+    const nextBody = readInput(event);
+    body = nextBody;
+
+    const nextFields = parseBodyFields(nextBody);
+    if (nextFields) {
+      bodyFields = nextFields;
+    }
+  }
 
   function handleSend(event: Event) {
     event.preventDefault();
@@ -63,18 +99,73 @@
       </button>
     </lef-testing-row>
 
+    <lef-testing-case>
+      <lefine-text>Test 1</lefine-text>
+      <strong>{sampleTestTitle}</strong>
+      <lefine-text>{sampleTestDetail}</lefine-text>
+    </lef-testing-case>
+
     <lef-testing-split>
       <lef-testing-pane>
         <lef-testing-pane-head>
           <strong>Request body</strong>
-          <lefine-text>application/json</lefine-text>
+          <lef-body-mode role="tablist" aria-label="Request body mode">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={bodyMode === 'form'}
+              class:lef-body-mode-active={bodyMode === 'form'}
+              onclick={() => (bodyMode = 'form')}
+            >
+              Form
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={bodyMode === 'json'}
+              class:lef-body-mode-active={bodyMode === 'json'}
+              onclick={() => (bodyMode = 'json')}
+            >
+              {'{} JSON'}
+            </button>
+          </lef-body-mode>
         </lef-testing-pane-head>
-        <textarea
-          class="lef-body-input"
-          bind:value={body}
-          spellcheck="false"
-          aria-label="Request body"
-        ></textarea>
+        {#if bodyMode === 'form'}
+          <lef-body-form aria-label="Request body form">
+            {#each bodyFields as field (field.id)}
+              <lef-body-field>
+                <label>
+                  <lefine-text>Field</lefine-text>
+                  <input
+                    type="text"
+                    value={field.key}
+                    spellcheck="false"
+                    aria-label="Request body field name"
+                    oninput={(event) => updateBodyField(field.id, { key: readInput(event) })}
+                  />
+                </label>
+                <label>
+                  <lefine-text>Value</lefine-text>
+                  <input
+                    type="text"
+                    value={field.value}
+                    spellcheck="false"
+                    aria-label={`Request body ${field.key || 'field'} value`}
+                    oninput={(event) => updateBodyField(field.id, { value: readInput(event) })}
+                  />
+                </label>
+              </lef-body-field>
+            {/each}
+          </lef-body-form>
+        {:else}
+          <textarea
+            class="lef-body-input"
+            value={body}
+            spellcheck="false"
+            aria-label="Request body JSON"
+            oninput={handleJsonInput}
+          ></textarea>
+        {/if}
       </lef-testing-pane>
 
       <lef-testing-pane>
@@ -122,6 +213,50 @@
     grid-template-columns: auto 1fr auto;
     gap: 0.45rem;
     align-items: stretch;
+  }
+
+  lef-testing-case {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.55rem;
+    min-height: 2.2rem;
+    padding: 0.45rem 0.55rem;
+    border: 1px solid var(--kef-line-soft);
+    border-radius: 0.45rem;
+    background: color-mix(in oklab, var(--kef-bg-soft) 70%, var(--kef-bg-card));
+  }
+
+  lef-testing-case lefine-text:first-child {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 3.1rem;
+    padding: 0.18rem 0.45rem;
+    border-radius: 0.35rem;
+    background: color-mix(in oklab, var(--kef-color-primary, #3a7afe) 12%, var(--kef-bg-card));
+    color: var(--kef-color-primary, #3a7afe);
+    font-size: 0.72rem;
+    font-weight: 700;
+  }
+
+  lef-testing-case strong {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.82rem;
+    color: var(--lefine-text);
+  }
+
+  lef-testing-case lefine-text:last-child {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--lefine-text-soft);
+    font-family: 'Fira Mono', 'Fira Code', ui-monospace, monospace;
+    font-size: 0.75rem;
   }
 
   lef-method-select {
@@ -248,6 +383,36 @@
     color: var(--lefine-text-soft);
   }
 
+  lef-body-mode {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.15rem;
+    padding: 0.15rem;
+    border: 1px solid var(--kef-line-soft);
+    border-radius: 0.4rem;
+    background: var(--kef-bg-soft);
+  }
+
+  lef-body-mode button {
+    appearance: none;
+    border: 1px solid transparent;
+    border-radius: 0.3rem;
+    background: transparent;
+    color: var(--lefine-text-soft);
+    cursor: pointer;
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1;
+    padding: 0.28rem 0.45rem;
+  }
+
+  lef-body-mode button:hover,
+  lef-body-mode button.lef-body-mode-active {
+    border-color: var(--kef-line);
+    background: var(--kef-bg-card);
+    color: var(--lefine-text);
+  }
+
   lef-testing-status {
     display: inline-flex;
     align-items: center;
@@ -284,6 +449,56 @@
     border-color: color-mix(in oklab, var(--kef-color-primary, #3a7afe) 60%, var(--kef-line));
   }
 
+  lef-body-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    border: 1px solid var(--kef-line);
+    border-radius: 0.45rem;
+    background: var(--kef-bg-soft);
+    padding: 0.65rem;
+    min-height: 8rem;
+  }
+
+  lef-body-field {
+    display: grid;
+    grid-template-columns: minmax(7rem, 0.45fr) minmax(0, 1fr);
+    gap: 0.55rem;
+  }
+
+  lef-body-field label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+  }
+
+  lef-body-field label lefine-text {
+    color: var(--lefine-text-soft);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  lef-body-field input {
+    appearance: none;
+    min-width: 0;
+    border: 1px solid var(--kef-line-soft);
+    border-radius: 0.35rem;
+    background: var(--kef-bg-card);
+    color: var(--lefine-text);
+    font-family: 'Fira Mono', 'Fira Code', ui-monospace, monospace;
+    font-size: 0.8rem;
+    line-height: 1.35;
+    padding: 0.5rem 0.55rem;
+  }
+
+  lef-body-field input:focus {
+    outline: none;
+    border-color: color-mix(in oklab, var(--kef-color-primary, #3a7afe) 60%, var(--kef-line));
+  }
+
   lef-response-box {
     display: block;
     border: 1px solid var(--kef-line);
@@ -311,6 +526,10 @@
 
   @media (max-width: 720px) {
     lef-testing-row {
+      grid-template-columns: 1fr;
+    }
+    lef-testing-case,
+    lef-body-field {
       grid-template-columns: 1fr;
     }
     .lef-send-btn {

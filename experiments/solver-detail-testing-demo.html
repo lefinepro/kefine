@@ -196,6 +196,44 @@
         line-height: 1;
         min-height: 34px;
       }
+      .testing-case {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 9px;
+        min-height: 35px;
+        padding: 7px 9px;
+        border: 1px solid var(--kef-line-soft);
+        border-radius: 7px;
+        background: color-mix(in oklab, var(--kef-bg-soft) 70%, var(--kef-bg-card));
+      }
+      .testing-case .case-index {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 50px;
+        padding: 3px 7px;
+        border-radius: 6px;
+        background: color-mix(in oklab, var(--kef-color-primary) 12%, var(--kef-bg-card));
+        color: var(--kef-color-primary);
+        font-size: 11.5px;
+        font-weight: 700;
+      }
+      .testing-case strong {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 13px;
+      }
+      .testing-case .case-detail {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        color: var(--lefine-text-soft);
+        font: 12px "Fira Mono", ui-monospace, monospace;
+      }
       .testing-split { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
       .testing-pane { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
       .pane-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
@@ -207,6 +245,32 @@
         font-weight: 700;
       }
       .pane-head em { font-style: normal; font-size: 11.5px; color: var(--lefine-text-soft); }
+      .body-mode {
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+        padding: 2px;
+        border: 1px solid var(--kef-line-soft);
+        border-radius: 6px;
+        background: var(--kef-bg-soft);
+      }
+      .body-mode button {
+        appearance: none;
+        border: 1px solid transparent;
+        border-radius: 5px;
+        background: transparent;
+        color: var(--lefine-text-soft);
+        cursor: pointer;
+        font-size: 11.5px;
+        font-weight: 700;
+        line-height: 1;
+        padding: 5px 7px;
+      }
+      .body-mode button[data-active='true'] {
+        border-color: var(--kef-line);
+        background: var(--kef-bg-card);
+        color: var(--lefine-text);
+      }
       .status-pill {
         display: inline-flex;
         align-items: center;
@@ -227,6 +291,45 @@
         color: var(--lefine-text);
         white-space: pre;
       }
+      .body-form {
+        display: flex;
+        flex-direction: column;
+        gap: 9px;
+        border: 1px solid var(--kef-line);
+        border-radius: 7px;
+        background: var(--kef-bg-soft);
+        padding: 10px;
+        min-height: 130px;
+      }
+      .body-field {
+        display: grid;
+        grid-template-columns: minmax(112px, .45fr) minmax(0, 1fr);
+        gap: 9px;
+      }
+      .body-field label {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 0;
+      }
+      .body-field label span {
+        color: var(--lefine-text-soft);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: .06em;
+        text-transform: uppercase;
+      }
+      .body-field input {
+        appearance: none;
+        min-width: 0;
+        border: 1px solid var(--kef-line-soft);
+        border-radius: 6px;
+        background: var(--kef-bg-card);
+        color: var(--lefine-text);
+        font: 13px/1.35 "Fira Mono", ui-monospace, monospace;
+        padding: 8px 9px;
+      }
+      .body-input[hidden], .body-form[hidden] { display: none; }
       .response-box pre { margin: 0; }
 
       .task {
@@ -256,6 +359,7 @@
         .sep { display: none; }
         main { padding: 14px 12px 22px; }
         .testing-row, .testing-split { grid-template-columns: 1fr; }
+        .testing-case, .body-field { grid-template-columns: 1fr; }
         .send-btn { width: 100%; min-height: 44px; padding: 12px 18px; }
       }
     </style>
@@ -340,10 +444,33 @@
           <input class="url-input" value="http://localhost:9090/" aria-label="Request URL" spellcheck="false" readonly />
           <button class="send-btn">Send</button>
         </div>
+        <div class="testing-case">
+          <span class="case-index">Test 1</span>
+          <strong>POST / returns proxy ready</strong>
+          <span class="case-detail">ping=hello expects 200 with proxy ready</span>
+        </div>
         <div class="testing-split">
           <div class="testing-pane">
-            <div class="pane-head"><strong>Request body</strong><em>application/json</em></div>
-            <pre class="body-input">{
+            <div class="pane-head">
+              <strong>Request body</strong>
+              <div class="body-mode" role="tablist" aria-label="Request body mode">
+                <button type="button" role="tab" aria-selected="true" data-active="true" data-body-mode="form">Form</button>
+                <button type="button" role="tab" aria-selected="false" data-active="false" data-body-mode="json">{} JSON</button>
+              </div>
+            </div>
+            <div class="body-form" aria-label="Request body form">
+              <div class="body-field">
+                <label>
+                  <span>Field</span>
+                  <input type="text" value="ping" aria-label="Request body field name" readonly />
+                </label>
+                <label>
+                  <span>Value</span>
+                  <input type="text" value="hello" aria-label="Request body ping value" readonly />
+                </label>
+              </div>
+            </div>
+            <pre class="body-input" hidden>{
   "ping": "hello"
 }</pre>
           </div>
@@ -365,5 +492,25 @@
         </div>
       </section>
     </main>
+    <script>
+      const bodyModeButtons = document.querySelectorAll('[data-body-mode]');
+      const bodyForm = document.querySelector('.body-form');
+      const bodyJson = document.querySelector('.body-input');
+
+      bodyModeButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+          const mode = button.getAttribute('data-body-mode');
+
+          bodyModeButtons.forEach((candidate) => {
+            const active = candidate === button;
+            candidate.setAttribute('data-active', String(active));
+            candidate.setAttribute('aria-selected', String(active));
+          });
+
+          bodyForm.hidden = mode !== 'form';
+          bodyJson.hidden = mode !== 'json';
+        });
+      });
+    </script>
   </body>
 </html>
