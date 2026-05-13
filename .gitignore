@@ -30,6 +30,7 @@ vite.config.ts.timestamp-*
 # Local experiment artifacts
 experiments/frames/
 experiments/*.log
+experiments/*.png
 
 # Playwright MCP scratch
 .playwright-mcp/
