@@ -10,8 +10,8 @@
   } = $props();
 
   const items: Array<{ id: SolutionView; label: string; hint: string }> = [
-    { id: 'source', label: 'Source', hint: 'View the modified files' },
-    { id: 'testing', label: 'Testing', hint: 'Send a sample request to the solver' }
+    { id: 'testing', label: 'Testing', hint: 'Send a sample request to the solver' },
+    { id: 'source', label: 'Source', hint: 'View the modified files' }
   ];
 </script>
 
