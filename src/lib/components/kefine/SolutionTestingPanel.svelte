@@ -194,6 +194,9 @@
 
   .lef-send-btn {
     appearance: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     border: none;
     border-radius: 0.45rem;
     padding: 0 1rem;
@@ -201,8 +204,10 @@
     color: #ffffff;
     font-weight: 700;
     font-size: 0.85rem;
+    line-height: 1;
     cursor: pointer;
     min-width: 4.5rem;
+    min-height: 2.15rem;
   }
 
   .lef-send-btn:disabled {
@@ -307,6 +312,11 @@
   @media (max-width: 720px) {
     lef-testing-row {
       grid-template-columns: 1fr;
+    }
+    .lef-send-btn {
+      width: 100%;
+      min-height: 2.75rem;
+      padding: 0.75rem 1rem;
     }
     lef-testing-split {
       grid-template-columns: 1fr;

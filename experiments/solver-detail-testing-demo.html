@@ -183,6 +183,9 @@
       }
       .send-btn {
         appearance: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
         border: none;
         border-radius: 7px;
         padding: 0 18px;
@@ -190,6 +193,8 @@
         color: #fff;
         font-weight: 700;
         font-size: 13px;
+        line-height: 1;
+        min-height: 34px;
       }
       .testing-split { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
       .testing-pane { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
@@ -251,6 +256,7 @@
         .sep { display: none; }
         main { padding: 14px 12px 22px; }
         .testing-row, .testing-split { grid-template-columns: 1fr; }
+        .send-btn { width: 100%; min-height: 44px; padding: 12px 18px; }
       }
     </style>
   </head>
