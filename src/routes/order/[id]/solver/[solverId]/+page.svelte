@@ -78,7 +78,7 @@
     showCorrected && solution?.correctedDiffs ? solution.correctedDiffs : (solution?.diffs ?? [])
   );
   let activeFile = $state('');
-  let activeView = $state<SolutionView>('source');
+  let activeView = $state<SolutionView>('testing');
 
   $effect(() => {
     if (files.length > 0 && !files.some((f: { file: string }) => f.file === activeFile)) {
@@ -250,6 +250,9 @@
     flex-direction: column;
     gap: 0.75rem;
     padding: 1rem 1.5rem 1.5rem;
+    width: 100%;
+    max-width: 80rem;
+    margin: 0 auto;
     flex: 1;
     min-height: 0;
   }
