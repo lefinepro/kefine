@@ -1,4 +1,22 @@
-import { chromium } from 'playwright';
+import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
+
+async function loadChromium() {
+  const candidates = ['playwright', '/home/box/.nvm/versions/node/v20.20.2/lib/node_modules/playwright/index.js'];
+  for (const id of candidates) {
+    try {
+      const mod = require(id);
+      const browser = await mod.chromium.launch();
+      await browser.close();
+      return mod.chromium;
+    } catch {
+      // try next candidate
+    }
+  }
+  throw new Error('No working playwright installation found. Run "npx playwright install chromium".');
+}
+
+const chromium = await loadChromium();
 import { fileURLToPath } from 'node:url';
 import { resolve, dirname } from 'node:path';
 

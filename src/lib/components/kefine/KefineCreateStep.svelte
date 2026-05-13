@@ -1217,7 +1217,6 @@ initialized = true;
            <lef-tasks-aside-head>Tasks</lef-tasks-aside-head>
            <lef-tasks-aside-list>
              <lef-tasks-aside-item data-active="true">
-               <lef-tasks-aside-index>1</lef-tasks-aside-index>
                <lefine-text>{taskSearchText}</lefine-text>
              </lef-tasks-aside-item>
            </lef-tasks-aside-list>
@@ -2452,33 +2451,19 @@ initialized = true;
   }
 
   lef-tasks-aside-item {
-    display: grid;
-    grid-template-columns: 1.4rem minmax(0, 1fr);
-    align-items: start;
+    display: flex;
+    align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 0.6rem;
     border-radius: 0.55rem;
-    border: 1px solid var(--kef-line-soft);
+    border: 0;
     background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 8%, var(--kef-bg-card));
     color: var(--lefine-text);
     font-size: 0.85rem;
   }
 
   lef-tasks-aside-item[data-active='true'] {
-    border-color: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 50%, var(--kef-line-soft));
-  }
-
-  lef-tasks-aside-index {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.4rem;
-    height: 1.4rem;
-    border-radius: 999px;
-    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 30%, var(--kef-bg-card));
-    color: var(--lefine-text);
-    font-weight: 700;
-    font-size: 0.78rem;
+    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 14%, var(--kef-bg-card));
   }
 
   lef-tasks-aside-item lefine-text {
@@ -2983,7 +2968,8 @@ initialized = true;
     color: color-mix(in oklab, var(--lefine-text) 92%, transparent);
     font-size: 0.92rem;
     font-weight: 650;
-    line-height: 1.15;
+    line-height: 1;
+    padding-block: 0.15rem 0;
     text-overflow: ellipsis;
     white-space: nowrap;
   }

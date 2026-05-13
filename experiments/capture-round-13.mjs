@@ -50,7 +50,7 @@ for (const { tag, width, height } of viewports) {
         document.documentElement.setAttribute('data-kefine-theme', t);
       }, theme);
       await page.waitForTimeout(150);
-      const out = resolve(outDir, `${name}-r12-${tag}-${theme}.png`);
+      const out = resolve(outDir, `${name}-r13-${tag}-${theme}.png`);
       await page.screenshot({ path: out, fullPage: true });
       console.log('saved', out);
     }
