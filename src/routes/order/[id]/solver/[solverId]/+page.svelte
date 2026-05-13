@@ -7,6 +7,10 @@
   import SolutionCodeEditor from '$lib/components/kefine/SolutionCodeEditor.svelte';
   import SolutionTopbar from '$lib/components/kefine/SolutionTopbar.svelte';
   import SolutionTaskPanel from '$lib/components/kefine/SolutionTaskPanel.svelte';
+  import SolutionViewTabs from '$lib/components/kefine/SolutionViewTabs.svelte';
+  type SolutionView = 'source' | 'testing';
+  import SolutionTestingPanel from '$lib/components/kefine/SolutionTestingPanel.svelte';
+  import SolutionFileOutline from '$lib/components/kefine/SolutionFileOutline.svelte';
 
   let {
     data
@@ -74,6 +78,7 @@
     showCorrected && solution?.correctedDiffs ? solution.correctedDiffs : (solution?.diffs ?? [])
   );
   let activeFile = $state('');
+  let activeView = $state<SolutionView>('source');
 
   $effect(() => {
     if (files.length > 0 && !files.some((f: { file: string }) => f.file === activeFile)) {
@@ -157,7 +162,8 @@
     />
 
     <lef-solver-grid>
-      <lef-solver-main>
+      <lef-solver-mode-row>
+        <SolutionViewTabs active={activeView} onSelect={(v) => (activeView = v)} />
         {#if hasCorrection}
           <lef-correction-status data-active={isCorrectingTask} data-show-corrected={showCorrected}>
             {#if isCorrectingTask}
@@ -178,22 +184,52 @@
             {/if}
           </lef-correction-status>
         {/if}
+      </lef-solver-mode-row>
 
-        <SolutionCodeEditor
-          activeFile={activeFile}
-          files={files}
-          lines={activeLines}
-          onSelect={selectFile}
-        />
+      {#if activeView === 'source'}
+        <lef-solver-source>
+          <lef-solver-outline-col>
+            <SolutionFileOutline
+              files={files}
+              activeFile={activeFile}
+              onSelect={selectFile}
+            />
+          </lef-solver-outline-col>
 
-        <SolutionTaskPanel
-          title={taskTitle}
-          description={taskDescription}
-          {comments}
-          {isCorrectingTask}
-          onSubmitCorrection={handleSubmitCorrection}
-        />
-      </lef-solver-main>
+          <lef-solver-main>
+            <SolutionCodeEditor
+              activeFile={activeFile}
+              files={files}
+              lines={activeLines}
+              onSelect={selectFile}
+            />
+
+            <SolutionTaskPanel
+              title={taskTitle}
+              description={taskDescription}
+              {comments}
+              {isCorrectingTask}
+              onSubmitCorrection={handleSubmitCorrection}
+            />
+          </lef-solver-main>
+        </lef-solver-source>
+      {:else}
+        <lef-solver-testing>
+          <SolutionTestingPanel
+            endpoint={'/'}
+            sampleBody={'{\n  "ping": "hello"\n}'}
+            sampleResponse={'{\n  "ok": true,\n  "message": "proxy ready"\n}'}
+          />
+
+          <SolutionTaskPanel
+            title={taskTitle}
+            description={taskDescription}
+            {comments}
+            {isCorrectingTask}
+            onSubmitCorrection={handleSubmitCorrection}
+          />
+        </lef-solver-testing>
+      {/if}
     </lef-solver-grid>
   {:else}
     <lef-empty-state>Solution not found</lef-empty-state>
@@ -210,10 +246,32 @@
   }
 
   lef-solver-grid {
-    display: block;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
     padding: 1rem 1.5rem 1.5rem;
     flex: 1;
     min-height: 0;
+  }
+
+  lef-solver-mode-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  lef-solver-source {
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr);
+    gap: 0.85rem;
+    min-height: 0;
+  }
+
+  lef-solver-outline-col {
+    display: block;
+    min-width: 0;
   }
 
   lef-solver-main {
@@ -221,6 +279,13 @@
     display: flex;
     flex-direction: column;
     gap: 0.6rem;
+  }
+
+  lef-solver-testing {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    min-width: 0;
   }
 
   lef-correction-status {
@@ -300,6 +365,9 @@
   @media (max-width: 900px) {
     lef-solver-grid {
       padding: 1rem;
+    }
+    lef-solver-source {
+      grid-template-columns: 1fr;
     }
   }
 </style>
