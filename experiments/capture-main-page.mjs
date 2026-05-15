@@ -21,7 +21,7 @@ for (const theme of ['light', 'dark']) {
   }, theme);
   await page.waitForTimeout(200);
   const canonical = resolve(outDir, `main-page-${theme}.png`);
-  const round = resolve(outDir, `main-page-r7-${theme}.png`);
+  const round = resolve(outDir, `main-page-r8-${theme}.png`);
   await page.screenshot({ path: canonical, fullPage: true });
   await page.screenshot({ path: round, fullPage: true });
   console.log('saved', canonical);
