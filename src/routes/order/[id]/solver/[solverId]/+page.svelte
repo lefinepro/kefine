@@ -263,6 +263,7 @@
     justify-content: space-between;
     gap: 0.75rem;
     flex-wrap: wrap;
+    line-height: 1.4;
   }
 
   lef-solver-source {
@@ -299,7 +300,9 @@
     background: var(--kef-bg-card);
     border: 1px solid var(--kef-line-soft);
     border-radius: 0.5rem;
-    font-size: 0.78rem;
+    font-size: 0.82rem;
+    line-height: 1.4;
+    min-height: 2.1rem;
   }
 
   lef-correction-status[data-active='true'] {

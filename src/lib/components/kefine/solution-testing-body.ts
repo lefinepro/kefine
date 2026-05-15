@@ -41,6 +41,24 @@ export function parseBodyFields(source: string): SolutionBodyField[] | null {
   }
 }
 
+export function parseResponseFields(source: string | null): SolutionBodyField[] | null {
+  if (source === null) return null;
+  try {
+    const parsed = JSON.parse(source);
+    if (!isRecord(parsed)) return null;
+
+    const fields = Object.entries(parsed).map(([key, value], index) => ({
+      id: `response-field-${index}-${key.replace(/[^a-z0-9_-]+/gi, '-').toLowerCase() || 'field'}`,
+      key,
+      value: fieldValueToText(value)
+    }));
+
+    return fields.length > 0 ? fields : null;
+  } catch {
+    return null;
+  }
+}
+
 export function createBodyFields(source: string): SolutionBodyField[] {
   return parseBodyFields(source) ?? [fallbackField(source)];
 }

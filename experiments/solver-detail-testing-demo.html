@@ -43,6 +43,7 @@
         padding: 0 18px;
         background: var(--kef-bg-card);
         border-bottom: 1px solid var(--kef-line-soft);
+        line-height: 1.4;
       }
       .back {
         display: inline-flex;
@@ -55,15 +56,15 @@
         background: var(--kef-bg-soft);
         border-radius: 7px;
       }
-      .topbar-meta { flex: 1; min-width: 0; display: inline-flex; gap: 8px; align-items: center; overflow: hidden; }
-      .project-crumb, .slug-crumb { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; }
+      .topbar-meta { flex: 1; min-width: 0; display: inline-flex; gap: 8px; align-items: center; overflow: hidden; line-height: 1.4; }
+      .project-crumb, .slug-crumb { display: inline-flex; align-items: center; gap: 4px; font-size: 13.5px; line-height: 1.4; }
       .project-crumb { color: var(--lefine-text-soft); }
       .slug-crumb { color: var(--kef-color-primary); font-weight: 600; }
-      .sep { color: color-mix(in oklab, var(--lefine-text-soft) 50%, transparent); }
-      .title-row { display: inline-flex; align-items: center; gap: 7px; min-width: 0; overflow: hidden; }
+      .sep { color: color-mix(in oklab, var(--lefine-text-soft) 50%, transparent); font-size: 13.5px; line-height: 1.4; }
+      .title-row { display: inline-flex; align-items: center; gap: 7px; min-width: 0; overflow: hidden; line-height: 1.4; }
       .check { display: inline-flex; align-items: center; color: var(--kef-success); }
-      .title-row strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 700; }
-      .title-row small { color: var(--kef-color-primary); font-weight: 600; font-size: 12px; }
+      .title-row strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14.5px; font-weight: 700; line-height: 1.4; }
+      .title-row small { color: var(--kef-color-primary); font-weight: 600; font-size: 13.5px; line-height: 1.4; }
       .merge {
         border: 1px solid color-mix(in oklab, var(--kef-success) 55%, var(--kef-line));
         color: var(--kef-success);
@@ -82,7 +83,7 @@
         padding: 16px 24px 26px;
       }
 
-      .mode-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+      .mode-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; line-height: 1.4; }
       .view-tabs {
         display: inline-flex;
         gap: 4px;
@@ -90,6 +91,8 @@
         background: var(--kef-bg-soft);
         border: 1px solid var(--kef-line-soft);
         border-radius: 9px;
+        min-height: 34px;
+        align-items: stretch;
       }
       .view-tab {
         appearance: none;
@@ -100,6 +103,7 @@
         color: var(--lefine-text-soft);
         font-size: 13px;
         font-weight: 600;
+        line-height: 1.4;
         cursor: pointer;
         display: inline-flex;
         align-items: center;
@@ -118,8 +122,10 @@
         border: 1px solid color-mix(in oklab, var(--kef-success) 45%, var(--kef-line-soft));
         color: var(--kef-success);
         border-radius: 8px;
-        font-size: 12.5px;
+        font-size: 13px;
         font-weight: 600;
+        line-height: 1.4;
+        min-height: 34px;
       }
 
       .testing-panel {
@@ -206,6 +212,7 @@
         border: 1px solid var(--kef-line-soft);
         border-radius: 7px;
         background: color-mix(in oklab, var(--kef-bg-soft) 70%, var(--kef-bg-card));
+        line-height: 1.4;
       }
       .testing-case .case-index {
         display: inline-flex;
@@ -216,8 +223,9 @@
         border-radius: 6px;
         background: color-mix(in oklab, var(--kef-color-primary) 12%, var(--kef-bg-card));
         color: var(--kef-color-primary);
-        font-size: 11.5px;
+        font-size: 12.5px;
         font-weight: 700;
+        line-height: 1.4;
       }
       .testing-case strong {
         min-width: 0;
@@ -225,6 +233,7 @@
         text-overflow: ellipsis;
         white-space: nowrap;
         font-size: 13px;
+        line-height: 1.4;
       }
       .testing-case .case-detail {
         min-width: 0;
@@ -232,19 +241,21 @@
         text-overflow: ellipsis;
         white-space: nowrap;
         color: var(--lefine-text-soft);
-        font: 12px "Fira Mono", ui-monospace, monospace;
+        font: 12.5px/1.4 "Fira Mono", ui-monospace, monospace;
       }
       .testing-split { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
       .testing-pane { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-      .pane-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+      .pane-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 27px; }
       .pane-head strong {
         font-size: 11.5px;
         text-transform: uppercase;
         letter-spacing: .08em;
         color: var(--lefine-text-soft);
         font-weight: 700;
+        line-height: 27px;
       }
-      .pane-head em { font-style: normal; font-size: 11.5px; color: var(--lefine-text-soft); }
+      .pane-head em { font-style: normal; font-size: 11.5px; color: var(--lefine-text-soft); line-height: 27px; }
+      .pane-head-right { display: inline-flex; align-items: center; gap: 7px; }
       .body-mode {
         display: inline-flex;
         align-items: center;
@@ -329,8 +340,12 @@
         font: 13px/1.35 "Fira Mono", ui-monospace, monospace;
         padding: 8px 9px;
       }
-      .body-input[hidden], .body-form[hidden] { display: none; }
+      .body-input[hidden], .body-form[hidden], .response-box[hidden] { display: none; }
       .response-box pre { margin: 0; }
+      .body-field input[readonly] {
+        background: color-mix(in oklab, var(--kef-bg-card) 65%, var(--kef-bg-soft));
+        cursor: default;
+      }
 
       .task {
         background: var(--kef-bg-card);
@@ -475,8 +490,39 @@
 }</pre>
           </div>
           <div class="testing-pane">
-            <div class="pane-head"><strong>Response</strong><span class="status-pill">200</span></div>
-            <pre class="response-box">{
+            <div class="pane-head">
+              <strong>Response</strong>
+              <span class="pane-head-right">
+                <span class="body-mode" role="tablist" aria-label="Response body mode">
+                  <button type="button" role="tab" aria-selected="true" data-active="true" data-response-mode="form">Form</button>
+                  <button type="button" role="tab" aria-selected="false" data-active="false" data-response-mode="json">{} JSON</button>
+                </span>
+                <span class="status-pill">200</span>
+              </span>
+            </div>
+            <div class="body-form" data-response-form aria-label="Response body form">
+              <div class="body-field">
+                <label>
+                  <span>Field</span>
+                  <input type="text" value="ok" aria-label="Response body field name" readonly />
+                </label>
+                <label>
+                  <span>Value</span>
+                  <input type="text" value="true" aria-label="Response body ok value" readonly />
+                </label>
+              </div>
+              <div class="body-field">
+                <label>
+                  <span>Field</span>
+                  <input type="text" value="message" aria-label="Response body field name" readonly />
+                </label>
+                <label>
+                  <span>Value</span>
+                  <input type="text" value="proxy ready" aria-label="Response body message value" readonly />
+                </label>
+              </div>
+            </div>
+            <pre class="response-box" data-response-json hidden>{
   "ok": true,
   "message": "proxy ready"
 }</pre>
@@ -494,7 +540,7 @@
     </main>
     <script>
       const bodyModeButtons = document.querySelectorAll('[data-body-mode]');
-      const bodyForm = document.querySelector('.body-form');
+      const bodyForm = document.querySelector('.body-form:not([data-response-form])');
       const bodyJson = document.querySelector('.body-input');
 
       bodyModeButtons.forEach((button) => {
@@ -509,6 +555,25 @@
 
           bodyForm.hidden = mode !== 'form';
           bodyJson.hidden = mode !== 'json';
+        });
+      });
+
+      const responseModeButtons = document.querySelectorAll('[data-response-mode]');
+      const responseForm = document.querySelector('[data-response-form]');
+      const responseJson = document.querySelector('[data-response-json]');
+
+      responseModeButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+          const mode = button.getAttribute('data-response-mode');
+
+          responseModeButtons.forEach((candidate) => {
+            const active = candidate === button;
+            candidate.setAttribute('data-active', String(active));
+            candidate.setAttribute('aria-selected', String(active));
+          });
+
+          responseForm.hidden = mode !== 'form';
+          responseJson.hidden = mode !== 'json';
         });
       });
     </script>

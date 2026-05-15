@@ -3,6 +3,7 @@
     bodyFromFields,
     createBodyFields,
     parseBodyFields,
+    parseResponseFields,
     type SolutionBodyField
   } from './solution-testing-body';
 
@@ -29,8 +30,11 @@
   let bodyMode = $state<BodyMode>('form');
   let bodyFields = $state<SolutionBodyField[]>([]);
   let response = $state<string | null>(null);
+  let responseMode = $state<BodyMode>('form');
   let isSending = $state(false);
   let status = $state<number | null>(null);
+
+  const responseFields = $derived(parseResponseFields(response));
 
   $effect(() => {
     url = `http://localhost:9090${endpoint}`;
@@ -38,6 +42,7 @@
     bodyMode = 'form';
     bodyFields = createBodyFields(sampleBody);
     response = sampleResponse;
+    responseMode = 'form';
     status = 200;
   });
 
@@ -171,21 +176,74 @@
       <lef-testing-pane>
         <lef-testing-pane-head>
           <strong>Response</strong>
-          {#if status !== null}
-            <lef-testing-status data-ok={status >= 200 && status < 300}>
-              <lefine-text>{status}</lefine-text>
-            </lef-testing-status>
-          {:else}
-            <lefine-text>not run</lefine-text>
-          {/if}
+          <lef-pane-head-right>
+            {#if responseFields !== null}
+              <lef-body-mode role="tablist" aria-label="Response body mode">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={responseMode === 'form'}
+                  class:lef-body-mode-active={responseMode === 'form'}
+                  onclick={() => (responseMode = 'form')}
+                >
+                  Form
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={responseMode === 'json'}
+                  class:lef-body-mode-active={responseMode === 'json'}
+                  onclick={() => (responseMode = 'json')}
+                >
+                  {'{} JSON'}
+                </button>
+              </lef-body-mode>
+            {/if}
+            {#if status !== null}
+              <lef-testing-status data-ok={status >= 200 && status < 300}>
+                <lefine-text>{status}</lefine-text>
+              </lef-testing-status>
+            {:else}
+              <lefine-text>not run</lefine-text>
+            {/if}
+          </lef-pane-head-right>
         </lef-testing-pane-head>
-        <lef-response-box class:lef-response-box--empty={response === null}>
-          {#if response === null}
+        {#if response === null}
+          <lef-response-box class="lef-response-box--empty">
             <lefine-text>Press Send to see a sample response.</lefine-text>
-          {:else}
+          </lef-response-box>
+        {:else if responseFields !== null && responseMode === 'form'}
+          <lef-body-form aria-label="Response body form">
+            {#each responseFields as field (field.id)}
+              <lef-body-field>
+                <label>
+                  <lefine-text>Field</lefine-text>
+                  <input
+                    type="text"
+                    value={field.key}
+                    spellcheck="false"
+                    aria-label="Response body field name"
+                    readonly
+                  />
+                </label>
+                <label>
+                  <lefine-text>Value</lefine-text>
+                  <input
+                    type="text"
+                    value={field.value}
+                    spellcheck="false"
+                    aria-label={`Response body ${field.key || 'field'} value`}
+                    readonly
+                  />
+                </label>
+              </lef-body-field>
+            {/each}
+          </lef-body-form>
+        {:else}
+          <lef-response-box>
             <pre>{response}</pre>
-          {/if}
-        </lef-response-box>
+          </lef-response-box>
+        {/if}
       </lef-testing-pane>
     </lef-testing-split>
   </form>
@@ -225,6 +283,7 @@
     border: 1px solid var(--kef-line-soft);
     border-radius: 0.45rem;
     background: color-mix(in oklab, var(--kef-bg-soft) 70%, var(--kef-bg-card));
+    line-height: 1.4;
   }
 
   lef-testing-case lefine-text:first-child {
@@ -236,8 +295,9 @@
     border-radius: 0.35rem;
     background: color-mix(in oklab, var(--kef-color-primary, #3a7afe) 12%, var(--kef-bg-card));
     color: var(--kef-color-primary, #3a7afe);
-    font-size: 0.72rem;
+    font-size: 0.78rem;
     font-weight: 700;
+    line-height: 1.4;
   }
 
   lef-testing-case strong {
@@ -247,6 +307,7 @@
     white-space: nowrap;
     font-size: 0.82rem;
     color: var(--lefine-text);
+    line-height: 1.4;
   }
 
   lef-testing-case lefine-text:last-child {
@@ -256,7 +317,8 @@
     white-space: nowrap;
     color: var(--lefine-text-soft);
     font-family: 'Fira Mono', 'Fira Code', ui-monospace, monospace;
-    font-size: 0.75rem;
+    font-size: 0.78rem;
+    line-height: 1.4;
   }
 
   lef-method-select {
@@ -365,9 +427,10 @@
 
   lef-testing-pane-head {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     justify-content: space-between;
     gap: 0.5rem;
+    min-height: 1.7rem;
   }
 
   lef-testing-pane-head strong {
@@ -376,11 +439,19 @@
     letter-spacing: 0.08em;
     color: var(--lefine-text-soft);
     font-weight: 700;
+    line-height: 1.7rem;
   }
 
   lef-testing-pane-head lefine-text {
     font-size: 0.72rem;
     color: var(--lefine-text-soft);
+    line-height: 1.7rem;
+  }
+
+  lef-pane-head-right {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
   }
 
   lef-body-mode {
@@ -522,6 +593,11 @@
   lef-response-box.lef-response-box--empty {
     color: var(--lefine-text-soft);
     font-style: italic;
+  }
+
+  lef-body-field input[readonly] {
+    background: color-mix(in oklab, var(--kef-bg-card) 65%, var(--kef-bg-soft));
+    cursor: default;
   }
 
   @media (max-width: 720px) {

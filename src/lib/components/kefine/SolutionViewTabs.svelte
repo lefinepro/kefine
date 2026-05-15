@@ -51,6 +51,8 @@
     border: 1px solid var(--kef-line-soft);
     border-radius: 0.55rem;
     width: max-content;
+    min-height: 2.1rem;
+    align-items: stretch;
   }
 
   .lef-view-tab {
@@ -65,6 +67,7 @@
     color: var(--lefine-text-soft);
     font-size: 0.82rem;
     font-weight: 600;
+    line-height: 1.4;
     cursor: pointer;
     transition:
       background-color var(--kef-motion-fast, 160ms) var(--kef-ease-soft, ease),
