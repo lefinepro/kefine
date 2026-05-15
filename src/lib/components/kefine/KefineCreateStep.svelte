@@ -1217,7 +1217,6 @@ initialized = true;
            <lef-tasks-aside-head>Tasks</lef-tasks-aside-head>
            <lef-tasks-aside-list>
              <lef-tasks-aside-item data-active="true">
-               <lef-tasks-aside-index>1</lef-tasks-aside-index>
                <lefine-text>{taskSearchText}</lefine-text>
              </lef-tasks-aside-item>
            </lef-tasks-aside-list>
@@ -1233,19 +1232,15 @@ initialized = true;
                  </lef-solution-meta>
                  <button
                    type="button"
-                   class="crown-button"
+                   class="pin-button"
                    class:is-active={solution.rated}
                    data-crown-btn={solution.id}
                    onclick={() => handleCrownClick(solution.id)}
-                   aria-label="Rate solution"
+                   aria-label={solution.rated ? 'Selected solution' : 'Pin solution'}
+                   title={solution.rated ? 'Selected solution' : 'Pin solution'}
                  >
-                   <svg class="crown-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                     <path d="M2 17L4 7L8 11L12 4L16 11L20 7L22 17H2Z"/>
-                     <path d="M4 7C4 7 5.5 8.5 6 9C6.5 9.5 7.5 9.5 8 9C8.5 8.5 8 7 8 7"/>
-                     <path d="M20 7C20 7 18.5 8.5 18 9C17.5 9.5 16.5 9.5 16 9C15.5 8.5 16 7 16 7"/>
-                     <path d="M12 4C12 4 11 6 11 6.5C11 7 12 7.5 12 7.5C12 7.5 13 7 13 6.5C13 6 12 4 12 4"/>
-                     <path d="M6 17V20H18V17" stroke-width="1.2"/>
-                     <path d="M8 14H16" stroke-width="1" opacity="0.5"/>
+                   <svg class="pin-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                     <path d="M12 2l2.39 6.95H21l-5.31 3.86L17.78 20 12 16.27 6.22 20l2.09-7.19L3 8.95h6.61L12 2z"/>
                    </svg>
                  </button>
                </header>
@@ -1264,8 +1259,33 @@ initialized = true;
                  {/each}
                </lef-file-list>
                <lef-card-actions>
-                 <button type="button" class="view-solution-btn" onclick={() => onOpenSolution?.(solution.id)}>
-                   View Code →
+                 <button
+                   type="button"
+                   class="view-solution-btn"
+                   onclick={() => onOpenSolution?.(solution.id)}
+                   aria-label="View code"
+                   title="View code"
+                 >
+                   <svg class="view-solution-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                     <polyline points="16 18 22 12 16 6"></polyline>
+                     <polyline points="8 6 2 12 8 18"></polyline>
+                   </svg>
+                 </button>
+                 <button
+                   type="button"
+                   class="solution-merge-btn"
+                   class:solution-merge-btn--merged={solution.rated}
+                   onclick={() => handleCrownClick(solution.id)}
+                   aria-label={solution.rated ? 'Merged' : 'Merge solution'}
+                   title={solution.rated ? 'Merged' : 'Merge solution'}
+                 >
+                   <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                     <circle cx="6" cy="18" r="2"></circle>
+                     <circle cx="6" cy="6" r="2"></circle>
+                     <circle cx="18" cy="14" r="2"></circle>
+                     <path d="M6 8v8M6 8c0 4 6 6 12 6"></path>
+                   </svg>
+                   <lefine-text>{solution.rated ? 'Merged' : 'Merge'}</lefine-text>
                  </button>
                </lef-card-actions>
              </article>
@@ -1292,6 +1312,8 @@ initialized = true;
            <SolutionMetricsMini
              metrics={defaultMetrics}
              activeSolverId={displayedSolutions[0]?.id ?? '5'}
+             project={displayedSolutions[0]?.project}
+             slug={displayedSolutions[0]?.slug}
            />
          </lef-task-rail>
        </lef-tasks-grid>
@@ -2395,7 +2417,7 @@ initialized = true;
 
   lef-tasks-grid {
     display: grid;
-    grid-template-columns: 220px minmax(0, 1fr) 320px;
+    grid-template-columns: minmax(220px, 1fr) 38rem 320px;
     gap: 1rem;
     align-items: start;
   }
@@ -2429,33 +2451,19 @@ initialized = true;
   }
 
   lef-tasks-aside-item {
-    display: grid;
-    grid-template-columns: 1.4rem minmax(0, 1fr);
-    align-items: start;
+    display: flex;
+    align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 0.6rem;
     border-radius: 0.55rem;
-    border: 1px solid var(--kef-line-soft);
+    border: 0;
     background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 8%, var(--kef-bg-card));
     color: var(--lefine-text);
     font-size: 0.85rem;
   }
 
   lef-tasks-aside-item[data-active='true'] {
-    border-color: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 50%, var(--kef-line-soft));
-  }
-
-  lef-tasks-aside-index {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.4rem;
-    height: 1.4rem;
-    border-radius: 999px;
-    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 30%, var(--kef-bg-card));
-    color: var(--lefine-text);
-    font-weight: 700;
-    font-size: 0.78rem;
+    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 14%, var(--kef-bg-card));
   }
 
   lef-tasks-aside-item lefine-text {
@@ -2544,13 +2552,19 @@ initialized = true;
     color: var(--lefine-text);
   }
 
-  @media (max-width: 1180px) {
+  @media (max-width: 1280px) {
     lef-tasks-grid {
-      grid-template-columns: 200px minmax(0, 1fr);
+      grid-template-columns: minmax(220px, 1fr) minmax(0, 38rem);
     }
     lef-task-rail {
       grid-column: 1 / -1;
       position: static;
+    }
+  }
+
+  @media (max-width: 1180px) {
+    lef-tasks-grid {
+      grid-template-columns: minmax(200px, 1fr) minmax(0, 38rem);
     }
   }
 
@@ -2566,15 +2580,15 @@ initialized = true;
 
   lef-solutions-list {
     display: grid;
-    gap: 0.85rem;
+    gap: 0.7rem;
     width: 100%;
   }
 
   .solution-card {
     --card-i: 0;
     display: grid;
-    gap: 0.65rem;
-    padding: 1rem 1.1rem;
+    gap: 0.5rem;
+    padding: 0.75rem 0.9rem;
     background: var(--kef-bg-card);
     border: 1px solid var(--kef-line);
     border-radius: var(--kef-radius-ui, 0.75rem);
@@ -2649,16 +2663,17 @@ initialized = true;
 
   lef-file-list {
     display: flex;
-    flex-wrap: wrap;
-    gap: 0.35rem 0.8rem;
+    flex-direction: column;
+    gap: 0.2rem;
     font-family: 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
     font-size: 0.78rem;
   }
 
   lef-file-row {
-    display: inline-flex;
+    display: flex;
     align-items: center;
-    gap: 0.35rem;
+    justify-content: space-between;
+    gap: 0.5rem;
     min-width: 0;
   }
 
@@ -2667,7 +2682,8 @@ initialized = true;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    max-width: 11rem;
+    min-width: 0;
+    flex: 1 1 auto;
   }
 
   lef-file-changes {
@@ -2675,6 +2691,7 @@ initialized = true;
     gap: 0.4rem;
     font-weight: 600;
     font-size: 0.78rem;
+    flex: 0 0 auto;
   }
 
   lef-file-added { color: var(--kef-success, #22c55e); }
@@ -2682,121 +2699,133 @@ initialized = true;
 
   lef-card-actions {
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
   }
 
-  .crown-button {
+  .pin-button {
     position: relative;
-    width: 38px;
-    height: 38px;
+    width: 28px;
+    height: 28px;
     background: transparent;
-    border: 1.5px solid var(--kef-line);
-    border-radius: 10px;
+    border: 1px solid var(--kef-line);
+    border-radius: 0.4rem;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    transition: border-color 200ms cubic-bezier(0.23, 0.09, 0.08, 1.13), box-shadow 200ms cubic-bezier(0.23, 0.09, 0.08, 1.13);
-    overflow: visible;
+    transition:
+      border-color 200ms ease,
+      background-color 200ms ease,
+      color 200ms ease;
     padding: 0;
     outline: none;
     flex-shrink: 0;
+    color: var(--lefine-text-soft);
     -webkit-tap-highlight-color: transparent;
   }
 
-  .crown-button:hover {
-    border-color: var(--kef-color-primary);
-    box-shadow: 0 0 20px rgba(200, 154, 90, 0.15);
+  .pin-button:hover {
+    border-color: color-mix(in oklab, var(--kef-color-primary) 40%, var(--kef-line));
+    color: var(--kef-color-primary);
   }
 
-  .crown-button:active {
+  .pin-button:active {
     transform: scale(0.96);
   }
 
-  .crown-svg {
-    width: 22px;
-    height: 22px;
-    transform-origin: center bottom;
-    will-change: transform, stroke, fill;
+  .pin-svg {
+    width: 16px;
+    height: 16px;
+    transition: fill 200ms ease, stroke 200ms ease;
   }
 
-  .crown-svg path {
-    fill: none;
-    stroke: var(--lefine-text-soft);
-    stroke-width: 1.6;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    transition: stroke 400ms cubic-bezier(0.23, 0.09, 0.08, 1.13), fill 400ms cubic-bezier(0.23, 0.09, 0.08, 1.13), filter 400ms cubic-bezier(0.23, 0.09, 0.08, 1.13);
+  .pin-button.is-active {
+    border-color: color-mix(in oklab, var(--kef-color-primary) 55%, var(--kef-line));
+    background: color-mix(in oklab, var(--kef-color-primary) 14%, var(--kef-bg-card));
+    color: var(--kef-color-primary);
   }
 
-  .crown-button.is-active .crown-svg {
-    animation: crown-wobble 0.8s cubic-bezier(0.77, 0.09, 0.23, 1.13) forwards;
+  .pin-button.is-active .pin-svg {
+    fill: currentColor;
+    animation: pin-pop 320ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
   }
 
-  .crown-button.is-active .crown-svg path {
-    stroke: #d3a45c;
-    fill: rgba(211, 164, 92, 0.12);
-    filter: drop-shadow(0 0 8px rgba(211, 164, 92, 0.4));
+  @keyframes pin-pop {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.18); }
+    100% { transform: scale(1); }
   }
 
-  @keyframes crown-wobble {
-    0% { transform: rotate(0deg); }
-    20% { transform: rotate(18deg); }
-    45% { transform: rotate(-6deg); }
-    70% { transform: rotate(-10deg); }
-    85% { transform: rotate(2deg); }
-    100% { transform: rotate(0deg); }
-  }
-
-  .crown-button.is-active::before,
-  .crown-button.is-active::after {
-    content: '';
-    position: absolute;
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    background: #d3a45c;
-    opacity: 0;
-    pointer-events: none;
-  }
-
-  .crown-button.is-active::before {
-    animation: crown-particle-1 0.6s ease-out forwards;
-  }
-
-  .crown-button.is-active::after {
-    animation: crown-particle-2 0.6s ease-out 0.1s forwards;
-  }
-
-  @keyframes crown-particle-1 {
-    0% { opacity: 1; transform: translate(0, 0) scale(1); }
-    100% { opacity: 0; transform: translate(-12px, -18px) scale(0); }
-  }
-
-  @keyframes crown-particle-2 {
-    0% { opacity: 1; transform: translate(0, 0) scale(1); }
-    100% { opacity: 0; transform: translate(12px, -15px) scale(0); }
+  @media (prefers-reduced-motion: reduce) {
+    .pin-button.is-active .pin-svg { animation: none; }
   }
 
   .view-solution-btn {
-    padding: 0.22rem 0.55rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 28px;
+    padding: 0;
     background: transparent;
-    color: var(--kef-color-primary);
-    border: 1px solid color-mix(in oklab, var(--kef-color-primary) 35%, var(--kef-line));
-    border-radius: 0.35rem;
-    font-size: 0.74rem;
-    font-weight: 500;
+    color: var(--lefine-text-soft);
+    border: 1px solid var(--kef-line);
+    border-radius: 0.4rem;
     cursor: pointer;
-    transition: background-color 160ms ease, color 160ms ease, transform 120ms ease;
+    transition:
+      background-color 160ms ease,
+      border-color 160ms ease,
+      color 160ms ease,
+      transform 120ms ease;
+  }
+
+  .view-solution-icon {
+    width: 14px;
+    height: 14px;
   }
 
   .view-solution-btn:hover {
     background: color-mix(in oklab, var(--kef-color-primary) 10%, transparent);
-    color: color-mix(in oklab, var(--kef-color-primary) 85%, black 15%);
+    border-color: color-mix(in oklab, var(--kef-color-primary) 40%, var(--kef-line));
+    color: var(--kef-color-primary);
   }
 
   .view-solution-btn:active {
     transform: scale(0.97);
+  }
+
+  .solution-merge-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.28rem 0.6rem;
+    border-radius: 0.4rem;
+    border: 1px solid color-mix(in oklab, var(--kef-success, #16a34a) 35%, var(--kef-line));
+    background: color-mix(in oklab, var(--kef-success, #16a34a) 10%, var(--kef-bg-card));
+    color: var(--kef-success, #16a34a);
+    font-size: 0.74rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+      background-color 160ms ease,
+      border-color 160ms ease,
+      transform 120ms ease;
+  }
+
+  .solution-merge-btn:hover {
+    background: color-mix(in oklab, var(--kef-success, #16a34a) 18%, var(--kef-bg-card));
+    border-color: var(--kef-success, #16a34a);
+  }
+
+  .solution-merge-btn:active {
+    transform: scale(0.97);
+  }
+
+  .solution-merge-btn--merged {
+    background: color-mix(in oklab, var(--kef-success, #16a34a) 22%, var(--kef-bg-card));
+    border-color: var(--kef-success, #16a34a);
   }
 
   button[data-part='composer-chip'][data-part-tag='true'] {
@@ -2939,7 +2968,8 @@ initialized = true;
     color: color-mix(in oklab, var(--lefine-text) 92%, transparent);
     font-size: 0.92rem;
     font-weight: 650;
-    line-height: 1.15;
+    line-height: 1;
+    padding-block: 0.15rem 0;
     text-overflow: ellipsis;
     white-space: nowrap;
   }

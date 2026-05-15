@@ -5,10 +5,14 @@
 
   let {
     metrics,
-    activeSolverId
+    activeSolverId,
+    project,
+    slug
   }: {
     metrics: SolutionMetric[];
     activeSolverId: string;
+    project?: string;
+    slug?: string;
   } = $props();
 
   const time = $derived(timeSeries(metrics, activeSolverId));
@@ -18,7 +22,32 @@
 <lef-metrics-mini aria-label="Solver metrics">
   <lef-metrics-mini-head>
     <strong>Metrics</strong>
-    <lefine-text>Time &amp; weight per solver</lefine-text>
+    {#if project || slug}
+      <lef-metrics-mini-project aria-label="Project and slug">
+        {#if project}
+          <lef-metrics-mini-project-name>
+            <svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor" aria-hidden="true">
+              <path d="M2 2.5A1.5 1.5 0 0 1 3.5 1h6.879a1.5 1.5 0 0 1 1.06.44l3.122 3.12c.281.282.439.664.439 1.061V13.5a1.5 1.5 0 0 1-1.5 1.5h-10A1.5 1.5 0 0 1 2 13.5v-11Z"></path>
+            </svg>
+            <lefine-text>{project}</lefine-text>
+          </lef-metrics-mini-project-name>
+        {/if}
+        {#if slug}
+          <lef-metrics-mini-slug>
+            <svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="5" cy="3.5" r="1.5"></circle>
+              <circle cx="5" cy="12.5" r="1.5"></circle>
+              <circle cx="11.5" cy="8" r="1.5"></circle>
+              <path d="M5 5v6"></path>
+              <path d="M5 8h3a3 3 0 0 0 3-3"></path>
+            </svg>
+            <lefine-text>{slug}</lefine-text>
+          </lef-metrics-mini-slug>
+        {/if}
+      </lef-metrics-mini-project>
+    {:else}
+      <lefine-text>Time &amp; weight per solver</lefine-text>
+    {/if}
   </lef-metrics-mini-head>
 
   <SolutionChartCard
@@ -74,5 +103,40 @@
     display: block;
     font-size: 0.72rem;
     color: var(--lefine-text-soft);
+  }
+
+  lef-metrics-mini-project {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    margin-top: 0.15rem;
+    font-size: 0.72rem;
+  }
+
+  lef-metrics-mini-project-name {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    color: var(--lefine-text-soft);
+  }
+
+  lef-metrics-mini-project-name lefine-text {
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: var(--lefine-text-soft);
+  }
+
+  lef-metrics-mini-slug {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    color: var(--kef-color-primary, var(--kef-primary));
+  }
+
+  lef-metrics-mini-slug lefine-text {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--kef-color-primary, var(--kef-primary));
   }
 </style>

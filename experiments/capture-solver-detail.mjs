@@ -19,7 +19,7 @@ for (const theme of ['light', 'dark']) {
     document.documentElement.setAttribute('data-kefine-theme', t);
   }, theme);
   await page.waitForTimeout(120);
-  const out = resolve(outDir, `solver-detail-r7-${theme}.png`);
+  const out = resolve(outDir, `solver-detail-r8-${theme}.png`);
   await page.screenshot({ path: out, fullPage: true });
   console.log('saved', out);
 }

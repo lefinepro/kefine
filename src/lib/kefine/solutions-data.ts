@@ -3,6 +3,8 @@ export interface Solution {
   solver: string;
   title: string;
   description: string;
+  project?: string;
+  slug?: string;
   codeLines: Array<{
     text: string;
     type: 'added' | 'removed' | 'unchanged';
@@ -132,6 +134,8 @@ export const defaultSolutions: Solution[] = [
     solver: 'Go Proxy Basic',
     title: 'Simple HTTP Proxy',
     description: 'Minimal HTTP proxy with forward functionality',
+    project: 'kefine/go-proxy',
+    slug: 'feat/basic-forward',
     diffs: [
       { file: 'main.go', added: 33, removed: 0 },
       { file: 'config.yaml', added: 7, removed: 0 },
@@ -328,6 +332,8 @@ export const defaultSolutions: Solution[] = [
     solver: 'Go Proxy Pro',
     title: 'Production-ready Proxy with Logging',
     description: 'Proxy with request/response logging and error handling',
+    project: 'kefine/go-proxy',
+    slug: 'feat/structured-logging',
     diffs: [
       { file: 'main.go', added: 43, removed: 0 },
       { file: 'config.go', added: 16, removed: 0 },
@@ -468,6 +474,8 @@ export const defaultSolutions: Solution[] = [
     solver: 'Go Proxy Enterprise',
     title: 'Advanced Proxy with Rate Limiting',
     description: 'Enterprise features: rate limiting, caching, metrics',
+    project: 'kefine/go-proxy',
+    slug: 'feat/auth-rate-metrics',
     diffs: [
       { file: 'main.go', added: 34, removed: 0 },
       { file: 'ratelimit.go', added: 16, removed: 0 },

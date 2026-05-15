@@ -47,7 +47,7 @@
       {/each}
     </g>
     <g class="lef-chart-bars">
-      {#each layout.points as point (point.label)}
+      {#each layout.points as point, i (point.label)}
         <rect
           x={point.barX}
           y={point.y}
@@ -57,6 +57,7 @@
           ry="3"
           class="lef-chart-bar"
           class:lef-chart-bar--active={point.isActive}
+          style="transform-origin: {point.x}px {layout.height - layout.padding.bottom}px; animation-delay: {i * 90}ms;"
         />
       {/each}
     </g>
@@ -150,10 +151,26 @@
   .lef-chart-bar {
     fill: color-mix(in oklab, var(--chart-accent) 28%, transparent);
     transition: fill 200ms ease;
+    transform-box: fill-box;
+    animation: lef-chart-bar-grow 720ms cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
   .lef-chart-bar--active {
     fill: color-mix(in oklab, var(--chart-accent) 70%, transparent);
+  }
+
+  @keyframes lef-chart-bar-grow {
+    0% {
+      transform: scaleY(0);
+      opacity: 0;
+    }
+    20% {
+      opacity: 1;
+    }
+    100% {
+      transform: scaleY(1);
+      opacity: 1;
+    }
   }
 
   .lef-chart-line {
@@ -162,12 +179,27 @@
     stroke-width: 1.6;
     stroke-linecap: round;
     stroke-linejoin: round;
+    animation: lef-chart-fade-in 600ms ease-out 480ms both;
   }
 
   .lef-chart-dot {
     fill: var(--chart-accent);
     stroke: var(--kef-bg-card);
     stroke-width: 1.5;
+    animation: lef-chart-fade-in 360ms ease-out 720ms both;
+  }
+
+  @keyframes lef-chart-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .lef-chart-bar,
+    .lef-chart-line,
+    .lef-chart-dot {
+      animation: none;
+    }
   }
 
   .lef-chart-dot--active {
