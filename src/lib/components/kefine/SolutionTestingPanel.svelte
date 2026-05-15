@@ -461,8 +461,8 @@
   }
 
   lef-body-field {
-    display: grid;
-    grid-template-columns: minmax(7rem, 0.45fr) minmax(0, 1fr);
+    display: flex;
+    flex-direction: column;
     gap: 0.55rem;
   }
 
@@ -528,8 +528,7 @@
     lef-testing-row {
       grid-template-columns: 1fr;
     }
-    lef-testing-case,
-    lef-body-field {
+    lef-testing-case {
       grid-template-columns: 1fr;
     }
     .lef-send-btn {

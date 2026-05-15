@@ -302,8 +302,8 @@
         min-height: 130px;
       }
       .body-field {
-        display: grid;
-        grid-template-columns: minmax(112px, .45fr) minmax(0, 1fr);
+        display: flex;
+        flex-direction: column;
         gap: 9px;
       }
       .body-field label {
@@ -359,7 +359,7 @@
         .sep { display: none; }
         main { padding: 14px 12px 22px; }
         .testing-row, .testing-split { grid-template-columns: 1fr; }
-        .testing-case, .body-field { grid-template-columns: 1fr; }
+        .testing-case { grid-template-columns: 1fr; }
         .send-btn { width: 100%; min-height: 44px; padding: 12px 18px; }
       }
     </style>
