@@ -1,0 +1,606 @@
+<!doctype html>
+<html data-kefine-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <title>Kefine main page — round 12 layout</title>
+    <style>
+      /* Tokens mirror src/routes/styles/+page.base.css so the demo matches the real app */
+      :root[data-kefine-theme='light'] {
+        --kef-bg: #f5f0e7;
+        --kef-bg-card: #fbf7f1;
+        --kef-bg-soft: #efe7dc;
+        --kef-border: #c8bbab;
+        --kef-border-soft: #ddd2c3;
+        --kef-line: color-mix(in oklab, var(--kef-border) 52%, transparent);
+        --kef-line-soft: color-mix(in oklab, var(--kef-border-soft) 38%, transparent);
+        --kef-color-primary: #6f5540;
+        --lefine-text: #30281f;
+        --lefine-text-soft: #4b4034;
+        --kef-success: #5f7962;
+      }
+      :root[data-kefine-theme='dark'] {
+        --kef-bg: #17110d;
+        --kef-bg-card: #1d1510;
+        --kef-bg-soft: #221912;
+        --kef-border: color-mix(in oklab, #e7d6b7 18%, transparent);
+        --kef-border-soft: color-mix(in oklab, #e7d6b7 10%, transparent);
+        --kef-line: color-mix(in oklab, var(--kef-border) 52%, transparent);
+        --kef-line-soft: color-mix(in oklab, var(--kef-border-soft) 38%, transparent);
+        --kef-color-primary: #c89a5a;
+        --lefine-text: #e7d6b7;
+        --lefine-text-soft: #c9b89a;
+        --kef-success: #6f9a72;
+      }
+      :root {
+        font-family: 'Inter', system-ui, sans-serif;
+      }
+      body {
+        margin: 0;
+        background: var(--kef-bg);
+        color: var(--lefine-text);
+        padding: 32px;
+      }
+      .search-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: var(--kef-bg-card);
+        border: 1px solid var(--kef-line);
+        border-radius: 12px;
+        padding: 14px 18px;
+        margin-bottom: 18px;
+      }
+      .search-row .text { flex: 1; font-size: 15px; line-height: 1; }
+      .search-row .indicator {
+        flex: 0 0 auto;
+        width: 12px;
+        height: 12px;
+        border-radius: 999px;
+        background: var(--kef-success);
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: minmax(220px, 1fr) 38rem 320px;
+        gap: 16px;
+        align-items: start;
+      }
+      .aside,
+      .rail-card,
+      .metrics-mini {
+        background: var(--kef-bg-card);
+        border: 1px solid var(--kef-line);
+        border-radius: 12px;
+      }
+      .aside { padding: 14px; }
+      .aside-head,
+      .rail-head,
+      .metrics-mini-head strong {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--lefine-text-soft);
+      }
+      .aside-list {
+        margin-top: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .aside-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        border-radius: 9px;
+        border: 0;
+        background: color-mix(in oklab, var(--kef-color-primary) 14%, var(--kef-bg-card));
+        font-size: 13.5px;
+        line-height: 1.3;
+        overflow-wrap: anywhere;
+        white-space: normal;
+      }
+
+      .solutions-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .card {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 12px 14px;
+        background: var(--kef-bg-card);
+        border: 1px solid var(--kef-line);
+        border-radius: 12px;
+        box-shadow: 0 1px 0 color-mix(in oklab, var(--kef-line) 60%, transparent);
+      }
+      .card-header {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 10px;
+      }
+      .meta strong {
+        display: block;
+        font-size: 15px;
+      }
+      .meta .sub {
+        display: block;
+        font-size: 12.5px;
+        color: var(--lefine-text-soft);
+      }
+      .pin-button {
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        border: 1px solid var(--kef-line);
+        background: var(--kef-bg-card);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--lefine-text-soft);
+        cursor: pointer;
+      }
+      .pin-button.is-active {
+        color: var(--kef-color-primary);
+        border-color: color-mix(in oklab, var(--kef-color-primary) 45%, var(--kef-line));
+        background: color-mix(in oklab, var(--kef-color-primary) 10%, var(--kef-bg-card));
+      }
+      .pin-svg { width: 16px; height: 16px; }
+      .desc {
+        margin: 0;
+        font-size: 13.5px;
+        color: var(--lefine-text);
+      }
+      .file-list {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+      }
+      .file-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        font-family: 'Fira Mono', ui-monospace, monospace;
+        font-size: 12.5px;
+        color: var(--lefine-text-soft);
+      }
+      .file-name {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .file-changes {
+        display: inline-flex;
+        gap: 8px;
+        flex: 0 0 auto;
+      }
+      .file-added { color: var(--kef-success); }
+      .file-removed { color: var(--kef-error, #c65353); }
+
+      .card-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+      }
+      .view-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 30px;
+        height: 28px;
+        border-radius: 6px;
+        background: transparent;
+        color: var(--kef-color-primary);
+        border: 1px solid color-mix(in oklab, var(--kef-color-primary) 35%, var(--kef-line));
+        cursor: pointer;
+      }
+      .view-btn svg { width: 14px; height: 14px; }
+      .merge-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: 6px;
+        border: 1px solid color-mix(in oklab, var(--kef-success) 45%, var(--kef-line));
+        background: color-mix(in oklab, var(--kef-success) 12%, var(--kef-bg-card));
+        color: var(--kef-success);
+        font-weight: 600;
+        font-size: 12.5px;
+        cursor: pointer;
+      }
+      .merge-btn svg { width: 13px; height: 13px; }
+
+      .rail { display: flex; flex-direction: column; gap: 10px; }
+      .rail-card { padding: 14px 16px; }
+      .rail-body { margin-top: 6px; font-size: 14.5px; line-height: 1.4; }
+      .rail-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+      .rail-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 9px 12px;
+        border-radius: 9px;
+        border: 1px solid var(--kef-line);
+        background: var(--kef-bg-card);
+        color: var(--lefine-text);
+        font-weight: 600;
+        font-size: 13.5px;
+        cursor: pointer;
+      }
+      .rail-btn--primary {
+        background: color-mix(in oklab, var(--kef-color-primary) 14%, var(--kef-bg-card));
+        border-color: color-mix(in oklab, var(--kef-color-primary) 35%, var(--kef-line));
+      }
+      .metrics-mini {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: 14px 16px;
+      }
+      .metrics-mini-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .metrics-mini-head .project-crumb {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 12px;
+        color: var(--lefine-text-soft);
+      }
+      .metrics-mini-head .slug-crumb {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 12px;
+        color: var(--kef-color-primary);
+        font-weight: 600;
+      }
+      .chart-card {
+        padding: 12px;
+        background: color-mix(in oklab, var(--kef-bg-soft) 50%, var(--kef-bg-card));
+        border: 1px solid var(--kef-line-soft);
+        border-radius: 9px;
+        --chart-accent: var(--kef-color-primary);
+      }
+      .chart-card.alt { --chart-accent: #14b8a6; }
+      .chart-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 6px;
+      }
+      .chart-head .unit {
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--lefine-text-soft);
+      }
+      .chart-svg {
+        display: block;
+        width: 100%;
+        max-height: 160px;
+      }
+      .chart-grid line {
+        stroke: var(--kef-line-soft);
+        stroke-width: 1;
+        stroke-dasharray: 2 3;
+      }
+      .chart-grid text,
+      .chart-axis text {
+        font-size: 9px;
+        fill: var(--lefine-text-soft);
+        font-family: 'Fira Mono', ui-monospace, monospace;
+      }
+      .bar { fill: color-mix(in oklab, var(--chart-accent) 28%, transparent); }
+      .bar.active { fill: color-mix(in oklab, var(--chart-accent) 70%, transparent); }
+      .line { fill: none; stroke: var(--chart-accent); stroke-width: 1.6; }
+      .dot {
+        fill: var(--chart-accent);
+        stroke: var(--kef-bg-card);
+        stroke-width: 1.5;
+      }
+      .dot.active { stroke-width: 2.5; }
+      .legend {
+        margin-top: 6px;
+        font-size: 11.5px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .legend-item {
+        display: grid;
+        grid-template-columns: 10px 1fr auto;
+        gap: 6px;
+        align-items: center;
+        color: var(--lefine-text-soft);
+        padding: 2px 4px;
+        border-radius: 6px;
+      }
+      .legend-item.active {
+        background: color-mix(in oklab, var(--chart-accent) 10%, transparent);
+        color: var(--lefine-text);
+        font-weight: 600;
+      }
+      .legend-dot {
+        display: inline-block;
+        width: 9px;
+        height: 9px;
+        border-radius: 999px;
+        background: var(--chart-accent);
+      }
+      .legend-value {
+        font-family: 'Fira Mono', ui-monospace, monospace;
+        font-size: 11px;
+      }
+      @media (max-width: 1280px) {
+        .grid {
+          grid-template-columns: minmax(220px, 1fr) minmax(0, 38rem);
+        }
+        .rail { grid-column: 1 / -1; }
+      }
+      @media (max-width: 720px) {
+        body { padding: 14px; }
+        .grid {
+          grid-template-columns: minmax(0, 1fr);
+          gap: 12px;
+        }
+        .solutions-list { max-width: 100%; }
+        .rail { gap: 12px; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="search-row">
+      <div class="text">Нужен мини прокси на go</div>
+      <div class="indicator" title="Completed"></div>
+    </div>
+
+    <div class="grid">
+      <aside class="aside">
+        <div class="aside-head">Tasks</div>
+        <div class="aside-list">
+          <div class="aside-item">
+            <span>Нужен мини прокси на go</span>
+          </div>
+        </div>
+      </aside>
+
+      <div class="solutions-list">
+        <article class="card">
+          <header class="card-header">
+            <span class="meta">
+              <strong>Go Proxy Basic</strong>
+              <span class="sub">Simple HTTP Proxy</span>
+            </span>
+            <button class="pin-button" aria-label="Pin solution">
+              <svg class="pin-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 2l2.39 6.95H21l-5.31 3.86L17.78 20 12 16.27 6.22 20l2.09-7.19L3 8.95h6.61L12 2z"/>
+              </svg>
+            </button>
+          </header>
+          <p class="desc">Minimal HTTP proxy with forward functionality</p>
+          <div class="file-list">
+            <div class="file-row"><span class="file-name">cmd/proxy/main.go</span><span class="file-changes"><span class="file-added">+28</span></span></div>
+            <div class="file-row"><span class="file-name">internal/forward/forward.go</span><span class="file-changes"><span class="file-added">+18</span></span></div>
+            <div class="file-row"><span class="file-name">configs/proxy.yaml</span><span class="file-changes"><span class="file-added">+5</span></span></div>
+            <div class="file-row"><span class="file-name">go.mod</span><span class="file-changes"><span class="file-added">+2</span></span></div>
+          </div>
+          <div class="card-actions">
+            <button class="view-btn" aria-label="View code" title="View code">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="16 18 22 12 16 6"></polyline>
+                <polyline points="8 6 2 12 8 18"></polyline>
+              </svg>
+            </button>
+            <button class="merge-btn" aria-label="Merge solution">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="6" cy="18" r="2"/>
+                <circle cx="6" cy="6" r="2"/>
+                <circle cx="18" cy="14" r="2"/>
+                <path d="M6 8v8M6 8c0 4 6 6 12 6"/>
+              </svg>
+              <span>Merge</span>
+            </button>
+          </div>
+        </article>
+
+        <article class="card">
+          <header class="card-header">
+            <span class="meta">
+              <strong>Go Proxy Pro</strong>
+              <span class="sub">HTTP Proxy with Logging</span>
+            </span>
+            <button class="pin-button is-active" aria-label="Selected solution">
+              <svg class="pin-svg" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 2l2.39 6.95H21l-5.31 3.86L17.78 20 12 16.27 6.22 20l2.09-7.19L3 8.95h6.61L12 2z"/>
+              </svg>
+            </button>
+          </header>
+          <p class="desc">Production-ready proxy with structured logging</p>
+          <div class="file-list">
+            <div class="file-row"><span class="file-name">cmd/proxy/main.go</span><span class="file-changes"><span class="file-added">+62</span></span></div>
+            <div class="file-row"><span class="file-name">internal/logging/logger.go</span><span class="file-changes"><span class="file-added">+24</span></span></div>
+            <div class="file-row"><span class="file-name">internal/forward/forward.go</span><span class="file-changes"><span class="file-added">+33</span><span class="file-removed">-9</span></span></div>
+            <div class="file-row"><span class="file-name">configs/proxy.yaml</span><span class="file-changes"><span class="file-added">+11</span></span></div>
+          </div>
+          <div class="card-actions">
+            <button class="view-btn" aria-label="View code" title="View code">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="16 18 22 12 16 6"></polyline>
+                <polyline points="8 6 2 12 8 18"></polyline>
+              </svg>
+            </button>
+            <button class="merge-btn" aria-label="Merged">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="6" cy="18" r="2"/>
+                <circle cx="6" cy="6" r="2"/>
+                <circle cx="18" cy="14" r="2"/>
+                <path d="M6 8v8M6 8c0 4 6 6 12 6"/>
+              </svg>
+              <span>Merged</span>
+            </button>
+          </div>
+        </article>
+
+        <article class="card">
+          <header class="card-header">
+            <span class="meta">
+              <strong>Go Proxy Enterprise</strong>
+              <span class="sub">Auth + retry + metrics proxy</span>
+            </span>
+            <button class="pin-button" aria-label="Pin solution">
+              <svg class="pin-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 2l2.39 6.95H21l-5.31 3.86L17.78 20 12 16.27 6.22 20l2.09-7.19L3 8.95h6.61L12 2z"/>
+              </svg>
+            </button>
+          </header>
+          <p class="desc">Robust forward proxy with auth, retry, and Prometheus metrics</p>
+          <div class="file-list">
+            <div class="file-row"><span class="file-name">cmd/proxy/main.go</span><span class="file-changes"><span class="file-added">+118</span><span class="file-removed">-12</span></span></div>
+            <div class="file-row"><span class="file-name">internal/auth/auth.go</span><span class="file-changes"><span class="file-added">+44</span></span></div>
+            <div class="file-row"><span class="file-name">internal/retry/retry.go</span><span class="file-changes"><span class="file-added">+33</span></span></div>
+            <div class="file-row"><span class="file-name">internal/metrics/prometheus.go</span><span class="file-changes"><span class="file-added">+22</span></span></div>
+          </div>
+          <div class="card-actions">
+            <button class="view-btn" aria-label="View code" title="View code">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="16 18 22 12 16 6"></polyline>
+                <polyline points="8 6 2 12 8 18"></polyline>
+              </svg>
+            </button>
+            <button class="merge-btn" aria-label="Merge solution">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="6" cy="18" r="2"/>
+                <circle cx="6" cy="6" r="2"/>
+                <circle cx="18" cy="14" r="2"/>
+                <path d="M6 8v8M6 8c0 4 6 6 12 6"/>
+              </svg>
+              <span>Merge</span>
+            </button>
+          </div>
+        </article>
+      </div>
+
+      <div class="rail">
+        <div class="rail-card">
+          <div class="rail-head">Task description</div>
+          <div class="rail-body">Нужен мини прокси на go</div>
+        </div>
+        <div class="rail-actions">
+          <button class="rail-btn"><span>⚙</span><span>Settings</span></button>
+          <button class="rail-btn rail-btn--primary"><span>⤓</span><span>Clone</span></button>
+        </div>
+
+        <div class="metrics-mini">
+          <div class="metrics-mini-head">
+            <span class="project-crumb">
+              <svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true">
+                <path d="M2 2.5A1.5 1.5 0 0 1 3.5 1h6.879a1.5 1.5 0 0 1 1.06.44l3.122 3.12c.281.282.439.664.439 1.061V13.5a1.5 1.5 0 0 1-1.5 1.5h-10A1.5 1.5 0 0 1 2 13.5v-11Z"></path>
+              </svg>
+              <span>kefine/go-proxy</span>
+            </span>
+            <span class="slug-crumb">
+              <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="5" cy="3.5" r="1.5"></circle>
+                <circle cx="5" cy="12.5" r="1.5"></circle>
+                <circle cx="11.5" cy="8" r="1.5"></circle>
+                <path d="M5 5v6"></path>
+                <path d="M5 8h3a3 3 0 0 0 3-3"></path>
+              </svg>
+              <span>feat/basic-forward</span>
+            </span>
+          </div>
+
+          <div class="chart-card">
+            <div class="chart-head"><span>Execution time</span><span class="unit">seconds</span></div>
+            <svg class="chart-svg" viewBox="0 0 280 130">
+              <g class="chart-grid">
+                <line x1="28" x2="270" y1="14" y2="14" />
+                <line x1="28" x2="270" y1="38.5" y2="38.5" />
+                <line x1="28" x2="270" y1="63" y2="63" />
+                <line x1="28" x2="270" y1="87.5" y2="87.5" />
+                <line x1="28" x2="270" y1="106" y2="106" />
+                <text x="22" y="17" text-anchor="end">4.4</text>
+                <text x="22" y="41.5" text-anchor="end">3.3</text>
+                <text x="22" y="66" text-anchor="end">2.2</text>
+                <text x="22" y="90.5" text-anchor="end">1.1</text>
+                <text x="22" y="109" text-anchor="end">0.0</text>
+              </g>
+              <g>
+                <rect class="bar active" x="60" y="79" width="32" height="27" rx="3"/>
+                <rect class="bar" x="125" y="53" width="32" height="53" rx="3"/>
+                <rect class="bar" x="190" y="22" width="32" height="84" rx="3"/>
+              </g>
+              <path class="line" d="M 76 79 L 141 53 L 206 22"/>
+              <circle class="dot active" cx="76" cy="79" r="4.5"/>
+              <circle class="dot" cx="141" cy="53" r="3"/>
+              <circle class="dot" cx="206" cy="22" r="3"/>
+              <g class="chart-axis">
+                <text x="76" y="120" text-anchor="middle">#5</text>
+                <text x="141" y="120" text-anchor="middle">#6</text>
+                <text x="206" y="120" text-anchor="middle">#7</text>
+              </g>
+            </svg>
+            <div class="legend">
+              <div class="legend-item active"><span class="legend-dot"></span><span>#5 Go Proxy Basic</span><span class="legend-value">1.2s</span></div>
+              <div class="legend-item"><span class="legend-dot"></span><span>#6 Go Proxy Pro</span><span class="legend-value">2.4s</span></div>
+              <div class="legend-item"><span class="legend-dot"></span><span>#7 Go Proxy Enterprise</span><span class="legend-value">3.8s</span></div>
+            </div>
+          </div>
+
+          <div class="chart-card alt">
+            <div class="chart-head"><span>Solution weight</span><span class="unit">kilobytes</span></div>
+            <svg class="chart-svg" viewBox="0 0 280 130">
+              <g class="chart-grid">
+                <line x1="28" x2="270" y1="14" y2="14" />
+                <line x1="28" x2="270" y1="38.5" y2="38.5" />
+                <line x1="28" x2="270" y1="63" y2="63" />
+                <line x1="28" x2="270" y1="87.5" y2="87.5" />
+                <line x1="28" x2="270" y1="106" y2="106" />
+                <text x="22" y="17" text-anchor="end">8.7</text>
+                <text x="22" y="41.5" text-anchor="end">6.5</text>
+                <text x="22" y="66" text-anchor="end">4.4</text>
+                <text x="22" y="90.5" text-anchor="end">2.2</text>
+                <text x="22" y="109" text-anchor="end">0.0</text>
+              </g>
+              <g>
+                <rect class="bar active" x="60" y="80" width="32" height="26" rx="3"/>
+                <rect class="bar" x="125" y="50" width="32" height="56" rx="3"/>
+                <rect class="bar" x="190" y="22" width="32" height="84" rx="3"/>
+              </g>
+              <path class="line" d="M 76 80 L 141 50 L 206 22"/>
+              <circle class="dot active" cx="76" cy="80" r="4.5"/>
+              <circle class="dot" cx="141" cy="50" r="3"/>
+              <circle class="dot" cx="206" cy="22" r="3"/>
+              <g class="chart-axis">
+                <text x="76" y="120" text-anchor="middle">#5</text>
+                <text x="141" y="120" text-anchor="middle">#6</text>
+                <text x="206" y="120" text-anchor="middle">#7</text>
+              </g>
+            </svg>
+            <div class="legend">
+              <div class="legend-item active"><span class="legend-dot"></span><span>#5 Go Proxy Basic</span><span class="legend-value">2.4kb</span></div>
+              <div class="legend-item"><span class="legend-dot"></span><span>#6 Go Proxy Pro</span><span class="legend-value">5.1kb</span></div>
+              <div class="legend-item"><span class="legend-dot"></span><span>#7 Go Proxy Enterprise</span><span class="legend-value">7.6kb</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

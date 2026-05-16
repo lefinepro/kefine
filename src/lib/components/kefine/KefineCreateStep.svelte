@@ -3,17 +3,8 @@
   import type { DraftOrder, OrderView, TemplatePresentation } from './kefine-workflow';
   import { scheduleAfter } from '$lib/utils/helpers';
   import KefineOrderListItem from '$lib/components/kefine/KefineOrderListItem.svelte';
-  import { createEditor, type NodeJSON } from 'prosekit/core';
-  import { ProseKit } from 'prosekit/svelte';
-  import { defineBasicExtension } from 'prosekit/basic';
-  import { onMount } from 'svelte';
-  import hljs from 'highlight.js/lib/core';
-  import rust from 'highlight.js/lib/languages/rust';
-  import 'highlight.js/styles/xcode.css';
-  // TODO: Add BlockHandle and DropIndicator if available
-
-  hljs.registerLanguage('rust', rust);
-
+  import SolutionMetricsMini from '$lib/components/kefine/SolutionMetricsMini.svelte';
+  import { defaultMetrics } from '$lib/kefine/solutions-data';
   const PLACEHOLDER_TYPE_DELAY_MS = 58;
   const PLACEHOLDER_DELETE_DELAY_MS = 34;
   const PLACEHOLDER_PAUSE_MS = 1150;
@@ -59,7 +50,8 @@
     onTemplateVariableChange,
     onTagsChange,
     executionEstimateLabel,
-    onExecutionEstimateChange
+    onExecutionEstimateChange,
+    onOpenSolution
   }: {
     draft: DraftOrder;
     template: TemplatePresentation | null;
@@ -124,6 +116,7 @@
     onTagsChange?: (tags: string[]) => void;
     executionEstimateLabel: string;
     onExecutionEstimateChange?: (value: string) => void;
+    onOpenSolution?: (solutionId: string) => void;
   } = $props();
 
   let animatedPlaceholder = $state('');
@@ -144,106 +137,402 @@
   let placeholderVariantIndex = $state(0);
   let placeholderCharIndex = $state(0);
   let placeholderDeleting = $state(false);
-  let taskEditorOpen = $state(false);
   let taskCompleted = $state(false);
+  let isFlying = $state(false);
+  let initialized = $state(false);
 
-  const sampleContent: NodeJSON = {
-    type: 'doc',
-    content: [
-      {
-        type: 'heading',
-        attrs: { level: 1 },
-        content: [{ type: 'text', text: 'Task Editor' }]
-      },
-      {
-        type: 'paragraph',
-        content: [{ type: 'text', text: 'Edit your task here...' }]
-      }
-    ]
-  };
+  import { solutionsStore } from '$lib/kefine/solutions-store';
+  import { get } from 'svelte/store';
 
-  let editor = $state(createEditor({ extension: defineBasicExtension(), defaultContent: sampleContent }));
+  interface Solution {
+    id: string;
+    solver: string;
+    title: string;
+    description: string;
+    diffs: Array<{ file: string; added: number; removed: number }>;
+    codeLines: Array<{ text: string; type: 'added' | 'removed' | 'unchanged' }>;
+    fileCodeLines?: Record<string, Array<{ text: string; type: 'added' | 'removed' | 'unchanged' }>>;
+  }
 
-  const mockSolutions = $state([
+  const defaultSolutions: Solution[] = [
     {
       id: '1',
       solver: 'Basic Rust Dev',
-      avatar: 'https://via.placeholder.com/40/4CAF50/FFFFFF?text=BR',
       title: 'Simple Hello World without comments',
       description: 'Minimal implementation with just the basics',
       diffs: [
         { file: 'src/main.rs', added: 3, removed: 0 }
       ],
-      finalCode: `fn main() {
-    println!("Hello, world!");
-}`
+      codeLines: [
+        { text: 'fn main() {', type: 'added' },
+        { text: '    println!("Hello, world!");', type: 'added' },
+        { text: '}', type: 'added' }
+      ]
     },
     {
       id: '2',
       solver: 'Commented Rust Expert',
-      avatar: 'https://via.placeholder.com/40/2196F3/FFFFFF?text=CE',
       title: 'Hello World with detailed comments',
       description: 'Educational version with explanations for each line',
       diffs: [
         { file: 'src/main.rs', added: 10, removed: 0 }
       ],
-      finalCode: `// This is the main function - entry point of every Rust program
-fn main() {
-    // Print a greeting message to the console
-    // println! is a macro that prints to stdout with a newline
-    println!("Hello, world!");
-
-    // The program will exit here
-    // Rust automatically returns () (unit type) from functions
-}`
+      codeLines: [
+        { text: '// This is the main function - entry point of every Rust program', type: 'added' },
+        { text: 'fn main() {', type: 'added' },
+        { text: '    // Print a greeting message to the console', type: 'added' },
+        { text: '    // println! is a macro that prints to stdout with a newline', type: 'added' },
+        { text: '    println!("Hello, world!");', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: '    // The program will exit here', type: 'added' },
+        { text: '    // Rust automatically returns () (unit type) from functions', type: 'added' },
+        { text: '}', type: 'added' }
+      ]
     },
     {
       id: '3',
       solver: 'Interactive Rust',
-      avatar: 'https://via.placeholder.com/40/FF9800/FFFFFF?text=IR',
       title: 'Interactive Hello World with user input',
       description: 'Reads user input and responds accordingly',
       diffs: [
         { file: 'src/main.rs', added: 12, removed: 0 }
       ],
-      finalCode: `use std::io;
-
-fn main() {
-    println!("Hello, world!");
-
-    println!("What's your name?");
-    let mut name = String::new();
-    io::stdin().read_line(&mut name).expect("Failed to read line");
-
-    println!("Hello, {}!", name.trim());
-}`
+      codeLines: [
+        { text: 'use std::io;', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: 'fn main() {', type: 'added' },
+        { text: '    println!("Hello, world!");', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: '    println!("What\'s your name?");', type: 'added' },
+        { text: '    let mut name = String::new();', type: 'added' },
+        { text: '    io::stdin().read_line(&mut name).expect("Failed to read line");', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: '    println!("Hello, {}!", name.trim());', type: 'added' },
+        { text: '}', type: 'added' }
+      ]
     },
     {
       id: '4',
       solver: 'Modern Rust Patterns',
-      avatar: 'https://via.placeholder.com/40/9C27B0/FFFFFF?text=MP',
       title: 'Hello World using modern Rust patterns',
       description: 'Uses Result handling and modern syntax',
       diffs: [
         { file: 'src/main.rs', added: 15, removed: 0 }
       ],
-      finalCode: `use std::io::{self, Write};
-
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("Hello, world!");
-
-    print!("Enter your name: ");
-    io::stdout().flush()?;
-
-    let mut name = String::new();
-    io::stdin().read_line(&mut name)?;
-
-    println!("Hello, {}!", name.trim());
-    Ok(())
-}`
+      codeLines: [
+        { text: 'use std::io::{self, Write};', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: 'fn main() -> Result<(), Box<dyn std::error::Error>> {', type: 'added' },
+        { text: '    println!("Hello, world!");', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: '    print!("Enter your name: ");', type: 'added' },
+        { text: '    io::stdout().flush()?;', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: '    let mut name = String::new();', type: 'added' },
+        { text: '    io::stdin().read_line(&mut name)?;', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: '    println!("Hello, {}!", name.trim());', type: 'added' },
+        { text: '    Ok(())', type: 'added' },
+        { text: '}', type: 'added' }
+      ]
+},
+    {
+      id: '5',
+      solver: 'Go Proxy Basic',
+      title: 'Simple HTTP Proxy',
+      description: 'Minimal HTTP proxy with forward functionality',
+      diffs: [
+        { file: 'main.go', added: 28, removed: 0 },
+        { file: 'config.yaml', added: 5, removed: 0 },
+        { file: 'go.mod', added: 2, removed: 0 }
+      ],
+      fileCodeLines: {
+        'main.go': [
+          { text: 'package main', type: 'added' },
+          { text: '', type: 'unchanged' },
+          { text: 'import (', type: 'added' },
+          { text: '    "fmt"', type: 'added' },
+          { text: '    "net/http"', type: 'added' },
+          { text: '    "log"', type: 'added' },
+          { text: ')', type: 'added' },
+          { text: '', type: 'unchanged' },
+          { text: 'func handleRequest(w http.ResponseWriter, r *http.Request) {', type: 'added' },
+          { text: '    fmt.Printf("Proxying: %s %s\\n", r.Method, r.URL)', type: 'added' },
+          { text: '    r.RequestURI = ""', type: 'added' },
+          { text: '    r.URL.Scheme = "http"', type: 'added' },
+          { text: '    r.URL.Host = "localhost:8080"', type: 'added' },
+          { text: '', type: 'unchanged' },
+          { text: '    client := &http.Client{}', type: 'added' },
+          { text: '    resp, err := client.Do(r)', type: 'added' },
+          { text: '    if err != nil {', type: 'added' },
+          { text: '        http.Error(w, err.Error(), 500)', type: 'added' },
+          { text: '        return', type: 'added' },
+          { text: '    }', type: 'added' },
+          { text: '    defer resp.Body.Close()', type: 'added' },
+          { text: '', type: 'unchanged' },
+          { text: '    for k, v := range resp.Header {', type: 'added' },
+          { text: '        w.Header()[k] = v', type: 'added' },
+          { text: '    }', type: 'added' },
+          { text: '    w.WriteHeader(resp.StatusCode)', type: 'added' },
+          { text: '}', type: 'added' },
+          { text: '', type: 'unchanged' },
+          { text: 'func main() {', type: 'added' },
+          { text: '    http.HandleFunc("/", handleRequest)', type: 'added' },
+          { text: '    log.Println("Proxy server on :9090")', type: 'added' },
+          { text: '    log.Fatal(http.ListenAndServe(":9090", nil))', type: 'added' },
+          { text: '}', type: 'added' }
+        ],
+        'config.yaml': [
+          { text: 'server:', type: 'added' },
+          { text: '  port: 9090', type: 'added' },
+          { text: '  host: "0.0.0.0"', type: 'added' },
+          { text: '', type: 'unchanged' },
+          { text: 'proxy:', type: 'added' },
+          { text: '  target: "http://localhost:8080"', type: 'added' },
+          { text: '  timeout: 30', type: 'added' }
+        ],
+        'go.mod': [
+          { text: 'module github.com/example/proxy', type: 'added' },
+          { text: '', type: 'unchanged' },
+          { text: 'go 1.21', type: 'added' }
+        ]
+      },
+      codeLines: [
+        { text: 'package main', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: 'import (', type: 'added' },
+        { text: '    "fmt"', type: 'added' },
+        { text: '    "net/http"', type: 'added' },
+        { text: '    "log"', type: 'added' },
+        { text: ')', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: 'func handleRequest(w http.ResponseWriter, r *http.Request) {', type: 'added' },
+        { text: '    fmt.Printf("Proxying: %s %s\\n", r.Method, r.URL)', type: 'added' },
+        { text: '    r.RequestURI = ""', type: 'added' },
+        { text: '    r.URL.Scheme = "http"', type: 'added' },
+        { text: '    r.URL.Host = "localhost:8080"', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: '    client := &http.Client{}', type: 'added' },
+        { text: '    resp, err := client.Do(r)', type: 'added' },
+        { text: '    if err != nil {', type: 'added' },
+        { text: '        http.Error(w, err.Error(), 500)', type: 'added' },
+        { text: '        return', type: 'added' },
+        { text: '    }', type: 'added' },
+        { text: '    defer resp.Body.Close()', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: '    for k, v := range resp.Header {', type: 'added' },
+        { text: '        w.Header()[k] = v', type: 'added' },
+        { text: '    }', type: 'added' },
+        { text: '    w.WriteHeader(resp.StatusCode)', type: 'added' },
+        { text: '    // w.CopyFrom(resp.Body)', type: 'added' },
+        { text: '}', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: 'func main() {', type: 'added' },
+        { text: '    http.HandleFunc("/", handleRequest)', type: 'added' },
+        { text: '    log.Println("Proxy server on :9090")', type: 'added' },
+        { text: '    log.Fatal(http.ListenAndServe(":9090", nil))', type: 'added' },
+        { text: '}', type: 'added' }
+      ]
+    },
+    {
+      id: '6',
+      solver: 'Go Proxy Pro',
+      title: 'Production-ready Proxy with Logging',
+      description: 'Proxy with request/response logging and error handling',
+      diffs: [
+        { file: 'main.go', added: 48, removed: 0 },
+        { file: 'config.go', added: 12, removed: 0 },
+        { file: 'logger.go', added: 8, removed: 0 },
+        { file: 'go.mod', added: 2, removed: 0 }
+      ],
+      codeLines: [
+        { text: 'package main', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: 'import (', type: 'added' },
+        { text: '    "bytes"', type: 'added' },
+        { text: '    "fmt"', type: 'added' },
+        { text: '    "io"', type: 'added' },
+        { text: '    "log"', type: 'added' },
+        { text: '    "net/http"', type: 'added' },
+        { text: '    "time"', type: 'added' },
+        { text: ')', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: 'type ProxyHandler struct {', type: 'added' },
+        { text: '    targetURL string', type: 'added' },
+        { text: '    timeout time.Duration', type: 'added' },
+        { text: '}', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: 'func (p *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {', type: 'added' },
+        { text: '    start := time.Now()', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: '    r.RequestURI = ""', type: 'added' },
+        { text: '    r.URL.Scheme = "http"', type: 'added' },
+        { text: '    r.URL.Host = p.targetURL', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: '    log.Printf("%s %s -> %s", r.Method, r.URL.Path, r.URL)', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: '    client := &http.Client{Timeout: p.timeout}', type: 'added' },
+        { text: '    resp, err := client.Do(r)', type: 'added' },
+        { text: '    if err != nil {', type: 'added' },
+        { text: '        log.Printf("Error: %v", err)', type: 'added' },
+        { text: '        http.Error(w, err.Error(), 502)', type: 'added' },
+        { text: '        return', type: 'added' },
+        { text: '    }', type: 'added' },
+        { text: '    defer resp.Body.Close()', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: '    body, err := io.ReadAll(resp.Body)', type: 'added' },
+        { text: '    if err != nil {', type: 'added' },
+        { text: '        http.Error(w, err.Error(), 500)', type: 'added' },
+        { text: '        return', type: 'added' },
+        { text: '    }', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: '    for k, v := range resp.Header {', type: 'added' },
+        { text: '        w.Header()[k] = v', type: 'added' },
+        { text: '    }', type: 'added' },
+        { text: '    w.WriteHeader(resp.StatusCode)', type: 'added' },
+        { text: '    w.Write(body)', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: '    log.Printf("Completed in %v", time.Since(start))', type: 'added' },
+        { text: '}', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: 'func main() {', type: 'added' },
+        { text: '    handler := &ProxyHandler{', type: 'added' },
+        { text: '        targetURL: "localhost:8080",', type: 'added' },
+        { text: '        timeout: 30 * time.Second,', type: 'added' },
+        { text: '    }', type: 'added' },
+        { text: '    log.Println("Starting proxy on :9090")', type: 'added' },
+        { text: '    log.Fatal(http.ListenAndServe(":9090", handler))', type: 'added' },
+        { text: '}', type: 'added' }
+      ]
+    },
+    {
+      id: '7',
+      solver: 'Go Reverse Proxy',
+      title: 'Reverse Proxy with Path Rewrite',
+      description: 'Reverse proxy that rewrites paths and handles routing',
+      diffs: [
+        { file: 'main.go', added: 55, removed: 0 },
+        { file: 'proxy.go', added: 15, removed: 0 },
+        { file: 'config.go', added: 10, removed: 0 },
+        { file: 'middleware.go', added: 8, removed: 0 },
+        { file: 'go.mod', added: 2, removed: 0 }
+      ],
+      codeLines: [
+        { text: 'package main', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: 'import (', type: 'added' },
+        { text: '    "fmt"', type: 'added' },
+        { text: '    "net/http"', type: 'added' },
+        { text: '    "net/http/httputil"', type: 'added' },
+        { text: '    "net/url"', type: 'added' },
+        { text: ')', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: 'type ReverseProxy struct {', type: 'added' },
+        { text: '    target *url.URL', type: 'added' },
+        { text: '    director func(*http.Request)', type: 'added' },
+        { text: '}', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: 'func NewReverseProxy(target string) *ReverseProxy {', type: 'added' },
+        { text: '    targetURL, _ := url.Parse(target)', type: 'added' },
+        { text: '    return &ReverseProxy{', type: 'added' },
+        { text: '        target: targetURL,', type: 'added' },
+        { text: '        director: func(req *http.Request) {', type: 'added' },
+        { text: '            req.URL.Scheme = targetURL.Scheme', type: 'added' },
+        { text: '            req.URL.Host = targetURL.Host', type: 'added' },
+        { text: '            req.Header.Set("X-Forwarded-Host", req.Host)', type: 'added' },
+        { text: '            req.Header.Set("X-Real-IP", req.RemoteAddr)', type: 'added' },
+        { text: '        },', type: 'added' },
+        { text: '    }', type: 'added' },
+        { text: '}', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: 'func (rp *ReverseProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {', type: 'added' },
+        { text: '    fmt.Printf("[%s] %s -> %s\\n", r.Method, r.URL.Path, rp.target)', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: '    proxy := &httputil.ReverseProxy{', type: 'added' },
+        { text: '        Director: rp.director,', type: 'added' },
+        { text: '    }', type: 'added' },
+        { text: '    proxy.ServeHTTP(w, r)', type: 'added' },
+        { text: '}', type: 'added' },
+        { text: '', type: 'unchanged' },
+        { text: 'func main() {', type: 'added' },
+        { text: '    proxy := NewReverseProxy("http://localhost:8080")', type: 'added' },
+        { text: '    http.Handle("/", proxy)', type: 'added' },
+        { text: '    fmt.Println("Reverse proxy listening on :9090")', type: 'added' },
+        { text: '    fmt.Println("Forwarding to http://localhost:8080")', type: 'added' },
+        { text: '    http.ListenAndServe(":9090", nil)', type: 'added' },
+        { text: '}', type: 'added' }
+      ]
     }
-  ]);
+  ];
+
+$effect(() => {
+    if (initialized) return;
+initialized = true;
+    const current = solutionsStore.getAll();
+    if (current.length === 0) {
+      solutionsStore.set([...defaultSolutions]);
+    }
+  });
+
+  const crownAnimating = $state<Record<string, boolean>>({});
+
+  function handleCrownClick(solutionId: string) {
+    if (crownAnimating[solutionId]) return;
+    const idx = $solutionsStore.findIndex(s => s.id === solutionId);
+    if (idx === -1) return;
+    const sol = $solutionsStore[idx];
+    if (sol.rated) {
+      crownAnimating[solutionId] = true;
+      const btn = document.querySelector<HTMLElement>(`[data-crown-btn="${solutionId}"]`);
+      if (btn) {
+        btn.classList.remove('is-active');
+        void btn.offsetWidth;
+        crownAnimating[solutionId] = false;
+      }
+      solutionsStore.update(list => {
+        const newList = [...list];
+        newList[idx] = { ...newList[idx], rated: false };
+        return newList;
+      });
+    } else {
+      crownAnimating[solutionId] = true;
+      solutionsStore.update(list => {
+        const newList = [...list];
+        newList[idx] = { ...newList[idx], rated: true };
+        return newList;
+      });
+      setTimeout(() => {
+        crownAnimating[solutionId] = false;
+      }, 800);
+    }
+  }
+
   const isMultilineDraft = $derived(draft.description.includes('\n'));
+  const displayedSolutions = $derived.by(() => {
+    const all = $solutionsStore;
+    const text = solverSearchText.trim().toLowerCase();
+    if (taskCompleted) {
+      const taskLower = taskSearchText.toLowerCase();
+      if (taskLower.includes('мини прокси') && taskLower.includes('go')) {
+        return all.filter(s => ['5', '6', '7'].includes(s.id));
+      }
+      if (taskLower.includes('hello world') && taskLower.includes('rust')) {
+        return all.filter(s => ['1', '2', '3', '4'].includes(s.id));
+      }
+      return all;
+    }
+    if (!text) return all;
+    if (text.includes('мини прокси') && text.includes('go')) {
+      return all.filter(s => ['5', '6', '7'].includes(s.id));
+    }
+    if (text.includes('hello world') && text.includes('rust')) {
+      return all.filter(s => ['1', '2', '3', '4'].includes(s.id));
+    }
+    return all;
+  });
+
+  let taskSearchText = $state('');
+
   const afeIntroCard = $derived(afe.cards[0] ?? null);
   const afeStepCards = $derived(afe.cards.slice(1));
 
@@ -374,12 +663,41 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
   });
 
   $effect(() => {
-    if (solverSearchActive && solverSearchText.trim() === "Нужен hello world на rust") {
+    const text = solverSearchText.trim().toLowerCase();
+    if (solverSearchActive && text.includes('hello world') && text.includes('rust')) {
+      taskSearchText = solverSearchText.trim();
+      isFlying = true;
       const timer = setTimeout(() => {
-        // Simulate task completion
         taskCompleted = true;
-        taskEditorOpen = false;
-      }, 5000);
+        isFlying = false;
+        const current = solutionsStore.getAll();
+        const rustSolutions = defaultSolutions.filter(s => ['1', '2', '3', '4'].includes(s.id));
+        const existingIds = current.map(s => s.id);
+        const newSolutions = rustSolutions.filter(s => !existingIds.includes(s.id));
+        if (newSolutions.length > 0) {
+          solutionsStore.set([...current, ...newSolutions]);
+        }
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  });
+
+  $effect(() => {
+    const text = solverSearchText.trim().toLowerCase();
+    if (solverSearchActive && text.includes('мини прокси') && text.includes('go')) {
+      taskSearchText = solverSearchText.trim();
+      isFlying = true;
+      const timer = setTimeout(() => {
+        taskCompleted = true;
+        isFlying = false;
+        const current = solutionsStore.getAll();
+        const goSolutions = defaultSolutions.filter(s => ['5', '6', '7'].includes(s.id));
+        const existingIds = current.map(s => s.id);
+        const newSolutions = goSolutions.filter(s => !existingIds.includes(s.id));
+        if (newSolutions.length > 0) {
+          solutionsStore.set([...current, ...newSolutions]);
+        }
+      }, 4000);
       return () => clearTimeout(timer);
     }
   });
@@ -392,12 +710,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
       cancelQueuePress = null;
     };
   });
-
-  onMount(() => {
-    hljs.highlightAll();
-  });
-
-
 
   function handleTaskInputKeydown(event: KeyboardEvent) {
     if (event.key !== 'Enter') {
@@ -880,65 +1192,129 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
  {#if solverSearchActive && solverSearchText.trim()}
    <section data-part="tasks-list">
-     <div data-part="task-item" onclick={() => { taskEditorOpen = !taskEditorOpen; }}>
-        {#if taskEditorOpen}
-          <div class="task-editor-expanded" onclick={(e) => { e.stopPropagation(); taskEditorOpen = false; }}>
-            <div class="task-editor-header">
-              <h2>{taskCompleted ? "Task Results" : "Edit Task"}</h2>
-            </div>
-            <div class="task-editor-content" onclick={(e) => e.stopPropagation()}>
-              <div style="height: 300px;" class="task-editor-editor">
-                <ProseKit {editor}>
-                  <div {@attach editor.mount} class="ProseMirror box-border min-h-full px-4 py-8 outline-hidden outline-0 text-left">
-                    {#if taskCompleted}
-                      <p>Task completed successfully!</p>
-                    {/if}
-                  </div>
-                </ProseKit>
-              </div>
-              {#if taskCompleted}
-                <section class="solutions-list">
-                  {#each mockSolutions as solution (solution.id)}
-                     <article class="solution-card">
-                       <aside class="solution-sidebar">
-                         <h4 class="sidebar-title">Files</h4>
-                         <ul class="file-list">
-                           {#each solution.diffs as diff}
-                             <li class="file-item">
-                               <span class="file-name">{diff.file}</span>
-                               <span class="file-changes">
-                                 <span class="added">+{diff.added}</span>
-                                 <span class="removed">-{diff.removed}</span>
-                               </span>
-                             </li>
-                           {/each}
-                         </ul>
-                       </aside>
-                       <div class="solution-content">
-                         <header class="solution-header">
-                           <img src={solution.avatar} alt={solution.solver} class="solver-avatar" />
-                           <div class="solution-meta">
-                             <strong>{solution.solver}</strong>
-                             <span>{solution.title}</span>
-                           </div>
-                         </header>
-                         <p class="solution-description">{solution.description}</p>
-                         <pre class="code-block"><code class="language-rust">{solution.finalCode}</code></pre>
-                       </div>
-                     </article>
-                  {/each}
-                </section>
-              {/if}
-            </div>
-          </div>
-        {:else}
-          <kefine-solver-search-row aria-live="polite">
-            <lefine-text>{solverSearchText}</lefine-text>
-            <kefine-solver-search-indicator aria-label={taskCompleted ? 'Completed' : solverSearchLabel} title={taskCompleted ? 'Completed' : solverSearchLabel} data-completed={taskCompleted}>
-              <kefine-solver-search-dot aria-hidden="true"></kefine-solver-search-dot>
-            </kefine-solver-search-indicator>
-          </kefine-solver-search-row>
-        {/if}
+     <kefine-solver-search-row aria-live="polite">
+       <lefine-text>{solverSearchText}</lefine-text>
+       {#if isFlying}
+         <lef-arrow-wrapper>
+           <lef-wind-flow>
+             <lef-wind-line></lef-wind-line>
+             <lef-wind-line></lef-wind-line>
+           </lef-wind-flow>
+           <lef-flying-arrow>➵</lef-flying-arrow>
+         </lef-arrow-wrapper>
+       {/if}
+       <kefine-solver-search-indicator aria-label={taskCompleted ? 'Completed' : solverSearchLabel} title={taskCompleted ? 'Completed' : solverSearchLabel} data-completed={taskCompleted}>
+         <kefine-solver-search-dot aria-hidden="true"></kefine-solver-search-dot>
+       </kefine-solver-search-indicator>
+     </kefine-solver-search-row>
+
+     {#if taskCompleted}
+       <lef-tasks-grid>
+         <lef-tasks-aside aria-label="Tasks">
+           <lef-tasks-aside-head>Tasks</lef-tasks-aside-head>
+           <lef-tasks-aside-list>
+             <lef-tasks-aside-item data-active="true">
+               <lefine-text>{taskSearchText}</lefine-text>
+             </lef-tasks-aside-item>
+           </lef-tasks-aside-list>
+         </lef-tasks-aside>
+
+         <lef-solutions-list>
+           {#each displayedSolutions as solution, solutionIndex (solution.id)}
+             <article class="solution-card" style="--card-i: {solutionIndex}">
+               <header class="solution-card-header">
+                 <lef-solution-meta>
+                   <strong>{solution.solver}</strong>
+                   <lefine-text>{solution.title}</lefine-text>
+                 </lef-solution-meta>
+                 <button
+                   type="button"
+                   class="pin-button"
+                   class:is-active={solution.rated}
+                   data-crown-btn={solution.id}
+                   onclick={() => handleCrownClick(solution.id)}
+                   aria-label={solution.rated ? 'Selected solution' : 'Pin solution'}
+                   title={solution.rated ? 'Selected solution' : 'Pin solution'}
+                 >
+                   <svg class="pin-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                     <path d="M12 2l2.39 6.95H21l-5.31 3.86L17.78 20 12 16.27 6.22 20l2.09-7.19L3 8.95h6.61L12 2z"/>
+                   </svg>
+                 </button>
+               </header>
+               <p class="solution-description">{solution.description}</p>
+               <lef-file-list aria-label="Files">
+                 {#each solution.diffs as diff}
+                   <lef-file-row>
+                     <lef-file-name>{diff.file}</lef-file-name>
+                     <lef-file-changes>
+                       <lef-file-added>+{diff.added}</lef-file-added>
+                       {#if diff.removed > 0}
+                         <lef-file-removed>-{diff.removed}</lef-file-removed>
+                       {/if}
+                     </lef-file-changes>
+                   </lef-file-row>
+                 {/each}
+               </lef-file-list>
+               <lef-card-actions>
+                 <button
+                   type="button"
+                   class="view-solution-btn"
+                   onclick={() => onOpenSolution?.(solution.id)}
+                   aria-label="View code"
+                   title="View code"
+                 >
+                   <svg class="view-solution-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                     <polyline points="16 18 22 12 16 6"></polyline>
+                     <polyline points="8 6 2 12 8 18"></polyline>
+                   </svg>
+                 </button>
+                 <button
+                   type="button"
+                   class="solution-merge-btn"
+                   class:solution-merge-btn--merged={solution.rated}
+                   onclick={() => handleCrownClick(solution.id)}
+                   aria-label={solution.rated ? 'Merged' : 'Merge solution'}
+                   title={solution.rated ? 'Merged' : 'Merge solution'}
+                 >
+                   <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                     <circle cx="6" cy="18" r="2"></circle>
+                     <circle cx="6" cy="6" r="2"></circle>
+                     <circle cx="18" cy="14" r="2"></circle>
+                     <path d="M6 8v8M6 8c0 4 6 6 12 6"></path>
+                   </svg>
+                   <lefine-text>{solution.rated ? 'Merged' : 'Merge'}</lefine-text>
+                 </button>
+               </lef-card-actions>
+             </article>
+           {/each}
+         </lef-solutions-list>
+
+         <lef-task-rail aria-label="Task description and actions">
+           <lef-task-rail-card>
+             <lef-task-rail-head>Task description</lef-task-rail-head>
+             <lef-task-rail-body>{taskSearchText}</lef-task-rail-body>
+           </lef-task-rail-card>
+
+           <lef-task-rail-actions>
+             <button type="button" class="task-rail-btn" aria-label="Settings">
+               <lef-task-rail-icon aria-hidden="true">⚙</lef-task-rail-icon>
+               <lefine-text>Settings</lefine-text>
+             </button>
+             <button type="button" class="task-rail-btn task-rail-btn--primary" aria-label="Clone">
+               <lef-task-rail-icon aria-hidden="true">⤓</lef-task-rail-icon>
+               <lefine-text>Clone</lefine-text>
+             </button>
+           </lef-task-rail-actions>
+
+           <SolutionMetricsMini
+             metrics={defaultMetrics}
+             activeSolverId={displayedSolutions[0]?.id ?? '5'}
+             project={displayedSolutions[0]?.project}
+             slug={displayedSolutions[0]?.slug}
+           />
+         </lef-task-rail>
+       </lef-tasks-grid>
+     {/if}
    </section>
  {/if}
 
@@ -2055,259 +2431,425 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     flex: 0 0 auto;
   }
 
-  [data-part='task-item'] {
-    cursor: pointer;
-  }
-
-  .task-editor-expanded {
-    margin-top: 1rem;
-    border: 2px solid var(--kef-line);
-    border-radius: var(--kef-radius-ui);
-    background: var(--kef-bg-card);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
-  }
-
-  .task-editor-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem;
-    background: var(--kef-bg);
-    border-bottom: 1px solid var(--kef-line);
-  }
-
-  .task-editor-header h2 {
-    margin: 0;
-    font-size: 1.2rem;
-    font-weight: 600;
-  }
-
-  .close-button {
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    cursor: pointer;
-    padding: 0.5rem;
-    color: var(--lefine-text);
-  }
-
-  .task-editor-content {
-    max-height: 600px;
-    overflow-y: auto;
-  }
-
-  .solutions-list {
-    margin-top: 1rem;
-    display: flex;
-    flex-direction: row;
-    overflow-x: auto;
-    overflow-y: hidden;
-    gap: 0.75rem;
-    padding-bottom: 0.5rem;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .solution-card {
-    flex-shrink: 0;
-    width: 350px;
-    min-width: 350px;
-  }
-
-  .solution-card {
-    border: 1px solid var(--kef-line);
-    border-radius: var(--kef-radius-ui);
-    padding: 1rem;
-    background: var(--kef-bg-card);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  }
-
-  .solution-header {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 0.5rem;
-  }
-
-  .solver-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-  }
-
-  .solution-meta {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-  }
-
-  .solution-meta strong {
-    font-size: 1rem;
-    color: var(--lefine-text);
-  }
-
-  .solution-meta span {
-    font-size: 0.9rem;
-    color: var(--lefine-text-soft);
-  }
-
-  .solution-description {
-    margin: 0.5rem 0;
-    color: var(--lefine-text);
-  }
-
-  .diff-summary {
-    display: flex;
-    gap: 0.5rem;
-    margin-bottom: 0.5rem;
-  }
-
-  .diff-file {
-    font-size: 0.8rem;
-    background: var(--kef-bg);
-    padding: 0.25rem 0.5rem;
-    border-radius: 0.25rem;
-    color: var(--lefine-text-soft);
-  }
-
-  .code-diff {
-    background: var(--kef-bg);
-    padding: 1rem;
-    border-radius: 0.5rem;
-    overflow-x: auto;
-    font-size: 0.85rem;
-    color: var(--lefine-text);
-  }
-
-  .code-diff code {
-    font-family: monospace;
-  }
-
-  .code-diff .added {
-    color: #22c55e;
-    background: rgba(34, 197, 94, 0.1);
-  }
-
-  .code-diff .removed {
-    color: #ef4444;
-    background: rgba(239, 68, 68, 0.1);
-  }
-
-  .code-diff .diff-header {
-    color: #6366f1;
-    font-weight: bold;
-  }
-
-  .solution-card {
-    display: flex;
-    background: var(--kef-bg-card, #ffffff);
-    border: 1px solid var(--kef-border, #e9ecef);
-    border-radius: 0.75rem;
-    overflow: hidden;
-    margin-bottom: 1rem;
-    height: fit-content;
-  }
-
-  .solution-sidebar {
-    width: 200px;
-    background: var(--kef-bg-soft, #f8f9fa);
-    padding: 1rem;
-    border-right: 1px solid var(--kef-border, #e9ecef);
-  }
-
-  .sidebar-title {
-    font-size: 0.9rem;
-    font-weight: 600;
-    margin: 0 0 0.5rem 0;
-    color: var(--lefine-text);
-  }
-
-  .file-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-  }
-
-  .file-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.25rem 0;
-    font-size: 0.8rem;
-  }
-
-  .file-name {
-    flex: 1;
-    color: var(--lefine-text);
-    font-family: monospace;
-  }
-
-  .file-changes {
-    font-size: 0.75rem;
-  }
-
-  .solution-content {
-    flex: 1;
-    padding: 1rem;
-  }
-
-  .solution-header {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 0.5rem;
-  }
-
-  .solver-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-  }
-
-  .solution-meta {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .solution-meta strong {
-    font-size: 1rem;
-    color: var(--lefine-text);
-  }
-
-  .solution-meta span {
-    font-size: 0.85rem;
-    color: var(--lefine-text-soft);
-  }
-
-  .solution-description {
-    margin: 0.5rem 0;
-    color: var(--lefine-text-soft);
-    line-height: 1.4;
-  }
-
-  .code-block {
-    padding: 1rem;
-    border-radius: 0.5rem;
-    overflow-x: auto;
-    font-family: monospace;
-    border: 1px solid #e9ecef;
-    margin-top: 0.5rem;
-  }
-
-  .code-block pre {
-    margin: 0;
-  }
-
-  .solutions-list {
-    display: flex;
-    flex-direction: column;
+  [data-part="tasks-list"] {
+    width: min(100%, calc(100vw - 7rem));
+    max-width: 92rem;
+    margin-inline: auto;
+    display: grid;
     gap: 1rem;
-    max-width: 100%;
   }
 
-  .code-block code {
-    background: none;
+  lef-tasks-grid {
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) 38rem 320px;
+    gap: 1rem;
+    align-items: start;
+  }
+
+  lef-tasks-aside {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding: 0.85rem 0.85rem 0.95rem;
+    background: var(--kef-bg-card);
+    border: 1px solid var(--kef-line);
+    border-radius: 0.75rem;
+    position: sticky;
+    top: 1rem;
+  }
+
+  lef-tasks-aside-head {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--lefine-text-soft);
+    padding: 0.1rem 0.25rem 0.4rem;
+  }
+
+  lef-tasks-aside-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  lef-tasks-aside-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.6rem;
+    border-radius: 0.55rem;
+    border: 0;
+    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 8%, var(--kef-bg-card));
+    color: var(--lefine-text);
+    font-size: 0.85rem;
+  }
+
+  lef-tasks-aside-item[data-active='true'] {
+    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 14%, var(--kef-bg-card));
+  }
+
+  lef-tasks-aside-item lefine-text {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    white-space: normal;
+    line-height: 1.3;
+    color: var(--lefine-text);
+  }
+
+  lef-task-rail {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    position: sticky;
+    top: 1rem;
+  }
+
+  lef-task-rail-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 0.85rem 0.95rem 1rem;
+    background: var(--kef-bg-card);
+    border: 1px solid var(--kef-line);
+    border-radius: 0.75rem;
+  }
+
+  lef-task-rail-head {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--lefine-text-soft);
+  }
+
+  lef-task-rail-body {
+    display: block;
+    font-size: 0.95rem;
+    color: var(--lefine-text);
+    line-height: 1.4;
+    word-break: break-word;
+  }
+
+  lef-task-rail-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+
+  .task-rail-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 0.55rem 0.75rem;
+    border-radius: 0.55rem;
+    border: 1px solid var(--kef-line);
+    background: var(--kef-bg-card);
+    color: var(--lefine-text);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 160ms ease, border-color 160ms ease;
+  }
+
+  .task-rail-btn:hover {
+    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 8%, var(--kef-bg-card));
+    border-color: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 30%, var(--kef-line));
+  }
+
+  .task-rail-btn--primary {
+    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 14%, var(--kef-bg-card));
+    border-color: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 35%, var(--kef-line));
+  }
+
+  lef-task-rail-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.05rem;
+    height: 1.05rem;
+    font-size: 0.95rem;
+    line-height: 1;
+    color: var(--lefine-text);
+  }
+
+  @media (max-width: 1280px) {
+    lef-tasks-grid {
+      grid-template-columns: minmax(220px, 1fr) minmax(0, 38rem);
+    }
+    lef-task-rail {
+      grid-column: 1 / -1;
+      position: static;
+    }
+  }
+
+  @media (max-width: 1180px) {
+    lef-tasks-grid {
+      grid-template-columns: minmax(200px, 1fr) minmax(0, 38rem);
+    }
+  }
+
+  @media (max-width: 760px) {
+    lef-tasks-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    lef-tasks-aside,
+    lef-task-rail {
+      position: static;
+    }
+  }
+
+  lef-solutions-list {
+    display: grid;
+    gap: 0.7rem;
+    width: 100%;
+  }
+
+  .solution-card {
+    --card-i: 0;
+    display: grid;
+    gap: 0.5rem;
+    padding: 0.75rem 0.9rem;
+    background: var(--kef-bg-card);
+    border: 1px solid var(--kef-line);
+    border-radius: var(--kef-radius-ui, 0.75rem);
+    box-shadow: 0 1px 0 color-mix(in oklab, var(--kef-line) 60%, transparent);
+    box-sizing: border-box;
+    animation: solution-card-appear 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: calc(var(--card-i) * 70ms);
+    transform-origin: top center;
+    will-change: opacity, transform;
+  }
+
+  @keyframes solution-card-appear {
+    0% {
+      opacity: 0;
+      transform: translateY(8px) scale(0.97);
+      filter: blur(2px);
+    }
+    60% {
+      filter: blur(0);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      filter: blur(0);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .solution-card {
+      animation: none;
+    }
+  }
+
+  .solution-card-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  lef-solution-meta {
+    display: grid;
+    gap: 0.1rem;
+    min-width: 0;
+  }
+
+  lef-solution-meta strong {
+    color: var(--lefine-text);
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.25;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  lef-solution-meta lefine-text {
+    color: var(--lefine-text-soft);
+    font-size: 0.875rem;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .solution-description {
+    margin: 0;
+    color: var(--lefine-text-soft);
+    font-size: 0.92rem;
+    line-height: 1.45;
+  }
+
+  lef-file-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    font-family: 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
+    font-size: 0.78rem;
+  }
+
+  lef-file-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+
+  lef-file-name {
+    color: var(--lefine-text-soft);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  lef-file-changes {
+    display: inline-flex;
+    gap: 0.4rem;
+    font-weight: 600;
+    font-size: 0.78rem;
+    flex: 0 0 auto;
+  }
+
+  lef-file-added { color: var(--kef-success, #22c55e); }
+  lef-file-removed { color: var(--kef-error, #ef4444); }
+
+  lef-card-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .pin-button {
+    position: relative;
+    width: 28px;
+    height: 28px;
+    background: transparent;
+    border: 1px solid var(--kef-line);
+    border-radius: 0.4rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition:
+      border-color 200ms ease,
+      background-color 200ms ease,
+      color 200ms ease;
     padding: 0;
+    outline: none;
+    flex-shrink: 0;
+    color: var(--lefine-text-soft);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .pin-button:hover {
+    border-color: color-mix(in oklab, var(--kef-color-primary) 40%, var(--kef-line));
+    color: var(--kef-color-primary);
+  }
+
+  .pin-button:active {
+    transform: scale(0.96);
+  }
+
+  .pin-svg {
+    width: 16px;
+    height: 16px;
+    transition: fill 200ms ease, stroke 200ms ease;
+  }
+
+  .pin-button.is-active {
+    border-color: color-mix(in oklab, var(--kef-color-primary) 55%, var(--kef-line));
+    background: color-mix(in oklab, var(--kef-color-primary) 14%, var(--kef-bg-card));
+    color: var(--kef-color-primary);
+  }
+
+  .pin-button.is-active .pin-svg {
+    fill: currentColor;
+    animation: pin-pop 320ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
+  @keyframes pin-pop {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.18); }
+    100% { transform: scale(1); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pin-button.is-active .pin-svg { animation: none; }
+  }
+
+  .view-solution-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 28px;
+    padding: 0;
+    background: transparent;
+    color: var(--lefine-text-soft);
+    border: 1px solid var(--kef-line);
+    border-radius: 0.4rem;
+    cursor: pointer;
+    transition:
+      background-color 160ms ease,
+      border-color 160ms ease,
+      color 160ms ease,
+      transform 120ms ease;
+  }
+
+  .view-solution-icon {
+    width: 14px;
+    height: 14px;
+  }
+
+  .view-solution-btn:hover {
+    background: color-mix(in oklab, var(--kef-color-primary) 10%, transparent);
+    border-color: color-mix(in oklab, var(--kef-color-primary) 40%, var(--kef-line));
+    color: var(--kef-color-primary);
+  }
+
+  .view-solution-btn:active {
+    transform: scale(0.97);
+  }
+
+  .solution-merge-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.28rem 0.6rem;
+    border-radius: 0.4rem;
+    border: 1px solid color-mix(in oklab, var(--kef-success, #16a34a) 35%, var(--kef-line));
+    background: color-mix(in oklab, var(--kef-success, #16a34a) 10%, var(--kef-bg-card));
+    color: var(--kef-success, #16a34a);
+    font-size: 0.74rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+      background-color 160ms ease,
+      border-color 160ms ease,
+      transform 120ms ease;
+  }
+
+  .solution-merge-btn:hover {
+    background: color-mix(in oklab, var(--kef-success, #16a34a) 18%, var(--kef-bg-card));
+    border-color: var(--kef-success, #16a34a);
+  }
+
+  .solution-merge-btn:active {
+    transform: scale(0.97);
+  }
+
+  .solution-merge-btn--merged {
+    background: color-mix(in oklab, var(--kef-success, #16a34a) 22%, var(--kef-bg-card));
+    border-color: var(--kef-success, #16a34a);
   }
 
   button[data-part='composer-chip'][data-part-tag='true'] {
@@ -2361,13 +2903,97 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     box-shadow: none;
   }
 
+  kefine-solver-search-row:has(lef-arrow-wrapper) {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+
+  lef-arrow-wrapper {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  lef-flying-arrow {
+    display: inline-block;
+    font-size: 1.2rem;
+    color: var(--kef-color-primary, #c89a5a);
+    animation: arrow-fly-into 3.5s ease-in-out forwards;
+  }
+
+  @keyframes arrow-fly-into {
+    0% {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    30% {
+      transform: translateX(-5px);
+    }
+    50% {
+      transform: translateX(-2px);
+    }
+    70% {
+      transform: translateX(-1px);
+    }
+    85% {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    95% {
+      opacity: 0.5;
+      transform: translateX(2px);
+    }
+    100% {
+      opacity: 0;
+      transform: translateX(5px);
+    }
+  }
+
+  lef-wind-flow {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  lef-wind-line {
+    display: block;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--kef-color-primary, #c89a5a));
+    animation: wind-dash 1s linear infinite;
+  }
+
+  lef-wind-line:nth-child(1) {
+    width: 15px;
+    opacity: 0.6;
+  }
+
+  lef-wind-line:nth-child(2) {
+    width: 10px;
+    opacity: 0.4;
+    animation-delay: 0.3s;
+  }
+
+  @keyframes wind-dash {
+    0% {
+      transform: translateX(-15px);
+      opacity: 0;
+    }
+    50% {
+      opacity: 0.6;
+    }
+    100% {
+      transform: translateX(5px);
+      opacity: 0;
+    }
+  }
+
   kefine-solver-search-row lefine-text {
     min-width: 0;
     overflow: hidden;
     color: color-mix(in oklab, var(--lefine-text) 92%, transparent);
     font-size: 0.92rem;
     font-weight: 650;
-    line-height: 1.15;
+    line-height: 1;
+    padding-block: 0.15rem 0;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -2390,7 +3016,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
   kefine-solver-search-indicator[data-completed='true'] {
     animation: none;
     color: color-mix(in oklab, #22c55e 88%, #166534);
-    background: color-mix(in oklab, #22c55e 9%, var(--kef-bg-card));
   }
 
   kefine-solver-search-indicator::before {

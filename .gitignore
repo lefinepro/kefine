@@ -23,3 +23,15 @@ Thumbs.db
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .codex
+
+# Claude
+.claude
+
+# Local experiment artifacts
+experiments/frames/
+experiments/tmp/
+experiments/*.log
+experiments/*.png
+
+# Playwright MCP scratch
+.playwright-mcp/
