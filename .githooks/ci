@@ -2,24 +2,24 @@
 set -euo pipefail
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-BUN_CONTAINER_IMAGE="oven/bun:1.3"
+NODE_CONTAINER_IMAGE="node:22-alpine"
 
 run_frontend_check() {
   local command="$1"
   docker run --rm \
     -v "${PROJECT_ROOT}:/workspace" \
     -w /workspace \
-    "${BUN_CONTAINER_IMAGE}" \
-    sh -lc "bun install --frozen-lockfile && ${command}"
+    "${NODE_CONTAINER_IMAGE}" \
+    sh -lc "corepack enable && yarn install && ${command}"
 }
 
 run_frontend_pipeline() {
-  run_frontend_check "bun run lint"
-  run_frontend_check "bun run check || (echo \"svelte-check had warnings, continuing\" && exit 0)"
-  run_frontend_check "bun run test"
-  run_frontend_check "bun run test:integration"
-  run_frontend_check "bunx playwright install --with-deps chromium && bun run test:e2e"
-  run_frontend_check "bun run build"
+  run_frontend_check "yarn lint"
+  run_frontend_check "yarn check || (echo \"svelte-check had warnings, continuing\" && exit 0)"
+  run_frontend_check "yarn test"
+  run_frontend_check "yarn test:integration"
+  run_frontend_check "yarn playwright install --with-deps chromium && yarn test:e2e"
+  run_frontend_check "yarn build"
 }
 
 run_crater_smoke() {
@@ -35,19 +35,19 @@ run_all() {
 TARGET="${1:-all}"
 case "${TARGET}" in
   lint)
-    run_frontend_check "bun run lint"
+    run_frontend_check "yarn lint"
     ;;
   check)
-    run_frontend_check "bun run check || (echo \"svelte-check had warnings, continuing\" && exit 0)"
+    run_frontend_check "yarn check || (echo \"svelte-check had warnings, continuing\" && exit 0)"
     ;;
   test)
-    run_frontend_check "bun run test"
+    run_frontend_check "yarn test"
     ;;
   integration)
-    run_frontend_check "bun run test:integration"
+    run_frontend_check "yarn test:integration"
     ;;
   e2e)
-    run_frontend_check "bunx playwright install --with-deps chromium && bun run test:e2e"
+    run_frontend_check "yarn playwright install --with-deps chromium && yarn test:e2e"
     ;;
   smoke)
     run_crater_smoke

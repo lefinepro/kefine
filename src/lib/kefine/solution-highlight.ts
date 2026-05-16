@@ -1,17 +1,13 @@
-import hljs from 'highlight.js/lib/core';
-import go from 'highlight.js/lib/languages/go';
-import rust from 'highlight.js/lib/languages/rust';
-import yaml from 'highlight.js/lib/languages/yaml';
+import { codeToHtml } from 'shiki';
 
-let registered = false;
-
-export function ensureLanguagesRegistered(): void {
-  if (registered) return;
-  hljs.registerLanguage('go', go);
-  hljs.registerLanguage('rust', rust);
-  hljs.registerLanguage('yaml', yaml);
-  registered = true;
-}
+const languageMap: Record<string, string> = {
+  go: 'go',
+  rs: 'rust',
+  rust: 'rust',
+  yaml: 'yaml',
+  yml: 'yaml',
+  mod: 'go'
+};
 
 export function detectLanguage(filename: string): string {
   const ext = filename.split('.').pop()?.toLowerCase() ?? '';
@@ -22,24 +18,19 @@ export function detectLanguage(filename: string): string {
   return 'plaintext';
 }
 
-export function highlightLines(lines: string[], filename: string): string[] {
-  ensureLanguagesRegistered();
+export async function highlightCode(source: string, filename: string): Promise<string> {
   const language = detectLanguage(filename);
-  if (language === 'plaintext') return lines.map(escapeHtml);
+  const lang = language === 'plaintext' ? 'text' : (languageMap[language] ?? 'text');
 
-  const source = lines.join('\n');
-  let highlighted: string;
   try {
-    highlighted = hljs.highlight(source, { language, ignoreIllegals: true }).value;
+    const html = await codeToHtml(source, {
+      lang,
+      theme: 'github-light'
+    });
+    return html;
   } catch {
-    return lines.map(escapeHtml);
+    return escapeHtml(source);
   }
-
-  return splitHighlightedByLine(highlighted, lines.length);
-}
-
-export function highlightLine(line: string, filename: string): string {
-  return highlightLines([line], filename)[0] ?? '';
 }
 
 function escapeHtml(value: string): string {
@@ -49,14 +40,33 @@ function escapeHtml(value: string): string {
     .replace(/>/g, '&gt;');
 }
 
-export function splitHighlightedByLine(html: string, expected: number): string[] {
+export async function highlightLines(lines: string[], filename: string): Promise<string[]> {
+  const language = detectLanguage(filename);
+  if (language === 'plaintext') return lines.map(escapeHtml);
+
+  const source = lines.join('\n');
+  const html = await highlightCode(source, filename);
+
+  return splitHtmlByLine(html, lines.length);
+}
+
+export async function highlightLine(line: string, filename: string): Promise<string> {
+  const result = await highlightLines([line], filename);
+  return result[0] ?? '';
+}
+
+export function splitHtmlByLine(html: string, expected: number): string[] {
+  const bodyMatch = html.match(/<pre[^>]*><code[^>]*>([\s\S]*?)<\/code><\/pre>/);
+  if (!bodyMatch) return Array(expected).fill('');
+
+  const content = bodyMatch[1];
   const result: string[] = [];
   const openTags: Array<{ tag: string; attrs: string }> = [];
   let current = '';
   let i = 0;
 
-  while (i < html.length) {
-    const ch = html[i];
+  while (i < content.length) {
+    const ch = content[i];
     if (ch === '\n') {
       const closing = openTags.map(() => '</span>').join('');
       const reopening = openTags
@@ -68,12 +78,12 @@ export function splitHighlightedByLine(html: string, expected: number): string[]
       continue;
     }
     if (ch === '<') {
-      const end = html.indexOf('>', i);
+      const end = content.indexOf('>', i);
       if (end === -1) {
-        current += html.slice(i);
+        current += content.slice(i);
         break;
       }
-      const tagContent = html.slice(i + 1, end);
+      const tagContent = content.slice(i + 1, end);
       if (tagContent.startsWith('/')) {
         openTags.pop();
       } else if (!tagContent.endsWith('/')) {
@@ -82,7 +92,7 @@ export function splitHighlightedByLine(html: string, expected: number): string[]
         const attrs = spaceIndex === -1 ? '' : tagContent.slice(spaceIndex);
         openTags.push({ tag, attrs });
       }
-      current += html.slice(i, end + 1);
+      current += content.slice(i, end + 1);
       i = end + 1;
       continue;
     }

@@ -1,5 +1,7 @@
 node_modules
-.bun
+.yarn
+.yarn/cache
+.pnp.*
 
 # Output
 .output

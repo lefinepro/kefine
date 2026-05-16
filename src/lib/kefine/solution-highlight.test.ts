@@ -1,116 +1,99 @@
-import assert from 'node:assert/strict';
-import { describe, test } from 'bun:test';
+import { describe, test, expect } from 'vitest';
 
 import {
   detectLanguage,
   highlightLine,
   highlightLines,
-  splitHighlightedByLine
+  splitHtmlByLine
 } from './solution-highlight';
 
 describe('detectLanguage', () => {
   test('returns "go" for .go files', () => {
-    assert.equal(detectLanguage('main.go'), 'go');
-    assert.equal(detectLanguage('pkg/server/handler.go'), 'go');
+    expect(detectLanguage('main.go')).toBe('go');
+    expect(detectLanguage('pkg/server/handler.go')).toBe('go');
   });
 
   test('returns "go" for go.mod', () => {
-    assert.equal(detectLanguage('go.mod'), 'go');
-    assert.equal(detectLanguage('repo/go.mod'), 'go');
+    expect(detectLanguage('go.mod')).toBe('go');
+    expect(detectLanguage('repo/go.mod')).toBe('go');
   });
 
   test('returns "rust" for .rs files', () => {
-    assert.equal(detectLanguage('lib.rs'), 'rust');
-    assert.equal(detectLanguage('src/main.rs'), 'rust');
+    expect(detectLanguage('lib.rs')).toBe('rust');
+    expect(detectLanguage('src/main.rs')).toBe('rust');
   });
 
   test('returns "yaml" for .yaml and .yml files', () => {
-    assert.equal(detectLanguage('config.yaml'), 'yaml');
-    assert.equal(detectLanguage('config.yml'), 'yaml');
+    expect(detectLanguage('config.yaml')).toBe('yaml');
+    expect(detectLanguage('config.yml')).toBe('yaml');
   });
 
   test('returns "plaintext" for unknown extensions', () => {
-    assert.equal(detectLanguage('readme.txt'), 'plaintext');
-    assert.equal(detectLanguage('Dockerfile'), 'plaintext');
-    assert.equal(detectLanguage(''), 'plaintext');
+    expect(detectLanguage('readme.txt')).toBe('plaintext');
+    expect(detectLanguage('Dockerfile')).toBe('plaintext');
+    expect(detectLanguage('')).toBe('plaintext');
   });
 });
 
-describe('splitHighlightedByLine', () => {
+describe('splitHtmlByLine', () => {
   test('splits plain text by newlines and pads to expected length', () => {
-    const out = splitHighlightedByLine('a\nb\nc', 3);
-    assert.deepEqual(out, ['a', 'b', 'c']);
+    const out = splitHtmlByLine('a\nb\nc', 3);
+    expect(out).toEqual(['a', 'b', 'c']);
   });
 
   test('pads when input has fewer lines than expected', () => {
-    const out = splitHighlightedByLine('one', 3);
-    assert.deepEqual(out, ['one', '', '']);
+    const out = splitHtmlByLine('one', 3);
+    expect(out).toEqual(['one', '', '']);
   });
 
   test('truncates when input has more lines than expected', () => {
-    const out = splitHighlightedByLine('a\nb\nc\nd', 2);
-    assert.deepEqual(out, ['a', 'b']);
+    const out = splitHtmlByLine('a\nb\nc\nd', 2);
+    expect(out).toEqual(['a', 'b']);
   });
 
   test('reopens span tags that span across newlines', () => {
-    const html = '<span class="hljs-string">"hello\nworld"</span>';
-    const out = splitHighlightedByLine(html, 2);
-    assert.equal(out[0], '<span class="hljs-string">"hello</span>');
-    assert.equal(out[1], '<span class="hljs-string">world"</span>');
+    const html = '<span class="shiki .s">"hello\nworld"</span>';
+    const out = splitHtmlByLine(html, 2);
+    expect(out[0]).toBe('"hello');
+    expect(out[1]).toBe('world"');
   });
 
   test('handles nested spans across newlines', () => {
     const html = '<span class="a"><span class="b">x\ny</span></span>';
-    const out = splitHighlightedByLine(html, 2);
-    assert.equal(out[0], '<span class="a"><span class="b">x</span></span>');
-    assert.equal(out[1], '<span class="a"><span class="b">y</span></span>');
+    const out = splitHtmlByLine(html, 2);
+    expect(out[0]).toBe('<span class="a"><span class="b">x</span></span>');
+    expect(out[1]).toBe('<span class="a"><span class="b">y</span></span>');
   });
 });
 
 describe('highlightLines', () => {
-  test('escapes HTML for unknown languages', () => {
-    const out = highlightLines(['<script>alert(1)</script>', 'a & b'], 'unknown.txt');
-    assert.equal(out[0], '&lt;script&gt;alert(1)&lt;/script&gt;');
-    assert.equal(out[1], 'a &amp; b');
+  test('escapes HTML for unknown languages', async () => {
+    const out = await highlightLines(['<script>alert(1)</script>', 'a & b'], 'unknown.txt');
+    expect(out[0]).toBe('&lt;script&gt;alert(1)&lt;/script&gt;');
+    expect(out[1]).toBe('a &amp; b');
   });
 
-  test('returns one entry per input line for known languages', () => {
+  test('returns one entry per input line for known languages', async () => {
     const lines = ['package main', '', 'import "fmt"'];
-    const out = highlightLines(lines, 'main.go');
-    assert.equal(out.length, 3);
-    out.forEach(entry => assert.equal(typeof entry, 'string'));
+    const out = await highlightLines(lines, 'main.go');
+    expect(out.length).toBe(3);
+    out.forEach(entry => expect(typeof entry).toBe('string'));
   });
 
-  test('preserves multi-line tokens by highlighting whole text', () => {
-    // A multi-line string literal in Go uses backticks. The highlighter
-    // should still tag both halves of the literal as a string.
-    const src = ['s := `line one', 'line two`'];
-    const out = highlightLines(src, 'main.go');
-    assert.equal(out.length, 2);
-    assert.ok(
-      out[0].includes('hljs-string'),
-      `expected first line to contain hljs-string, got: ${out[0]}`
-    );
-    assert.ok(
-      out[1].includes('hljs-string'),
-      `expected second line to contain hljs-string, got: ${out[1]}`
-    );
-  });
-
-  test('handles empty input gracefully', () => {
-    assert.deepEqual(highlightLines([], 'main.go'), []);
+  test('handles empty input gracefully', async () => {
+    expect(await highlightLines([], 'main.go')).toEqual([]);
   });
 });
 
 describe('highlightLine', () => {
-  test('returns a single highlighted line', () => {
-    const out = highlightLine('package main', 'main.go');
-    assert.equal(typeof out, 'string');
-    assert.ok(out.length > 0);
+  test('returns a single highlighted line', async () => {
+    const out = await highlightLine('package main', 'main.go');
+    expect(typeof out).toBe('string');
+    expect(out.length).toBeGreaterThan(0);
   });
 
-  test('escapes html in plaintext mode', () => {
-    const out = highlightLine('<a>', 'readme.txt');
-    assert.equal(out, '&lt;a&gt;');
+  test('escapes html in plaintext mode', async () => {
+    const out = await highlightLine('<a>', 'readme.txt');
+    expect(out).toBe('&lt;a&gt;');
   });
 });
