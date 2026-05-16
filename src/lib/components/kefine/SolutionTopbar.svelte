@@ -126,7 +126,12 @@
     overflow: hidden;
     margin-left: 0.25rem;
     font-size: 0.85rem;
-    line-height: 1.4;
+    line-height: 1.25rem;
+  }
+
+  lef-solver-meta svg {
+    flex: 0 0 auto;
+    display: block;
   }
 
   lef-solver-crumb {
@@ -135,17 +140,13 @@
     gap: 0.3rem;
     color: var(--lefine-text-soft);
     flex: 0 0 auto;
-    line-height: 1.4;
-  }
-
-  lef-solver-crumb svg {
-    flex: 0 0 auto;
+    line-height: 1.25rem;
   }
 
   lef-solver-crumb lefine-text {
     font-weight: 500;
     font-size: 0.85rem;
-    line-height: 1.4;
+    line-height: 1.25rem;
   }
 
   lef-solver-crumb.lef-solver-crumb--slug {
@@ -155,7 +156,7 @@
   lef-solver-separator {
     color: color-mix(in oklab, var(--lefine-text-soft) 60%, transparent);
     font-size: 0.85rem;
-    line-height: 1.4;
+    line-height: 1.25rem;
     flex: 0 0 auto;
   }
 
@@ -165,7 +166,7 @@
     gap: 0.45rem;
     min-width: 0;
     overflow: hidden;
-    line-height: 1.4;
+    line-height: 1.25rem;
   }
 
   lef-solver-status {
@@ -176,10 +177,10 @@
   }
 
   lef-solver-title {
-    font-size: 0.92rem;
+    font-size: 0.85rem;
     font-weight: 700;
     color: var(--lefine-text);
-    line-height: 1.4;
+    line-height: 1.25rem;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -190,7 +191,7 @@
     font-size: 0.85rem;
     color: var(--kef-color-primary, var(--kef-primary));
     font-weight: 600;
-    line-height: 1.4;
+    line-height: 1.25rem;
     flex: 0 0 auto;
   }
 
