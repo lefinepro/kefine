@@ -1,14 +1,14 @@
-FROM node:20-alpine AS build
+FROM node:20 AS build
 
 WORKDIR /app
 
-COPY package.json .yarnrc.yml ./
-RUN corepack enable && yarn install
+COPY package.json pnpm-lock.yaml ./
+RUN corepack enable && pnpm install --frozen-lockfile
 
 COPY . .
-RUN yarn build
+RUN pnpm build
 
-FROM node:20-alpine
+FROM node:20
 
 WORKDIR /app
 

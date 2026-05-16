@@ -1,0 +1,6 @@
+tree f3728d9d824f65998f013983b60ed19c788a9897
+parent b534db7a9b979b76da72b029be841c97de263585
+author kogeletey <kg@re128.org> 1776154253 +0400
+committer kogeletey <kg@re128.org> 1776154907 +0400
+
+Refactor workflow UI and align backend order responses

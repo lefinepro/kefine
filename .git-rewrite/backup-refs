@@ -1,0 +1,13 @@
+a310c1340306fe626ec1d4f21e20010d63ecacaf commit	refs/heads/feat/lefine-quote-description
+db165c5841b90c52ab68c99385016890b0943590 commit	refs/heads/release
+458695f9b4682d644114470a4d4074e968a38d8a commit	refs/original/refs/heads/feat/lefine-quote-description
+1402ad916f2fe5a6c07d4bceb85c91fa4b685c4c commit	refs/original/refs/heads/release
+458695f9b4682d644114470a4d4074e968a38d8a commit	refs/original/refs/remotes/origin/feat/lefine-quote-description
+ad7477be55053de1e83c5cc3243e83b742062143 commit	refs/original/refs/remotes/origin/issue-56-b16c6ee6a912
+b889c9c9e1cc8ec4ce32575bbdfb936e2c230fc0 commit	refs/original/refs/remotes/origin/issue-59-964da1fd4b11
+9bddcf1843ee5644c485a5e73f3ebeba4c67cb50 commit	refs/original/refs/remotes/origin/release
+11c672f6274068089bddf5c94c12c016d4cb505e commit	refs/remotes/origin/HEAD
+a310c1340306fe626ec1d4f21e20010d63ecacaf commit	refs/remotes/origin/feat/lefine-quote-description
+7c4bc6db75ebe0249dd994862e44f89a5e69eadd commit	refs/remotes/origin/issue-56-b16c6ee6a912
+1cac85f58720bec3b4ac4d5a1fb3c38d70677906 commit	refs/remotes/origin/issue-59-964da1fd4b11
+11c672f6274068089bddf5c94c12c016d4cb505e commit	refs/remotes/origin/release
