@@ -711,13 +711,6 @@ initialized = true;
     };
   });
 
-  onMount(() => {
-    hljs.highlightAll();
-  });
-
-
-
-
   function handleTaskInputKeydown(event: KeyboardEvent) {
     if (event.key !== 'Enter') {
       return;

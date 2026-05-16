@@ -27,9 +27,6 @@ export default defineConfig({
       ignored: ['**/crater/lib/**']
     }
   },
-  ssr: {
-    noExternal: ['@noble/curves', '@noble/hashes']
-  },
   build: {
     target: 'esnext',
     chunkSizeWarningLimit: 600,
