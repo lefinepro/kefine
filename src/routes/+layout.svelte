@@ -288,21 +288,21 @@
     onLocale={handleSharedLocaleChange}
   />
 
-  <lef-layout-main>
+  <main>
     {@render children()}
-  </lef-layout-main>
+  </main>
 {:else}
   {@render children()}
 {/if}
 
 <style>
-  lef-layout-main {
+  main {
     display: block;
     padding-top: 4.5rem;
   }
 
   @media (max-width: 760px) {
-    lef-layout-main {
+    main {
       padding-top: 4.25rem;
     }
   }
