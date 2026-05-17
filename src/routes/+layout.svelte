@@ -299,6 +299,7 @@
   main {
     display: block;
     padding-top: 4.5rem;
+    contain: layout style;
   }
 
   @media (max-width: 760px) {
