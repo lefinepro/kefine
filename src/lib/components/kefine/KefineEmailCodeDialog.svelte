@@ -163,11 +163,7 @@
     gap: 0.4rem;
   }
 
-<<<<<<< HEAD
-  lef-email-code-fields span {
-=======
   lef-email-code-label {
->>>>>>> 219cb79b77ef7afbfb8946a823e7508d11b35a34
     font-size: 0.92rem;
     color: color-mix(in oklab, var(--kef-color-text, #2e2317) 76%, transparent);
   }
