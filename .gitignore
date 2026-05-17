@@ -38,6 +38,12 @@ experiments/*.png
 # Playwright MCP scratch
 .playwright-mcp/
 
+# Playwright test artifacts
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
 # git filter-repo workspace
 .git-rewrite/
 
