@@ -37,3 +37,6 @@ experiments/*.png
 
 # Playwright MCP scratch
 .playwright-mcp/
+
+# git filter-repo workspace
+.git-rewrite/
