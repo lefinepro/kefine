@@ -29,7 +29,9 @@
     type KefineLocale
   } from '$lib/constants/kefine-locale';
   import KefineTopbar from '$lib/components/kefine/KefineTopbar.svelte';
-  import KefineCreateStep from '$lib/components/kefine/KefineCreateStep.svelte';
+  import type { ComponentType } from 'svelte';
+  let KefineCreateStep: ComponentType | null = null;
+  import('$lib/components/kefine/KefineCreateStep.svelte').then(m => KefineCreateStep = m.default);
   import KefineLoadingDocuments from '$lib/components/kefine/KefineLoadingDocuments.svelte';
   import KefineExecutingStep from '$lib/components/kefine/KefineExecutingStep.svelte';
   import {
@@ -2701,9 +2703,9 @@
           <p>{localeText.errors.backendUnavailableDetail}</p>
         </article>
       </kefine-screen>
-    {:else if step === 'create'}
+    {:else if step === 'create' && KefineCreateStep}
       <kefine-screen in:softScreenTransition out:softScreenTransition>
-        <KefineCreateStep
+        <svelte:component this={KefineCreateStep}
           draft={draft}
           template={null}
           serviceSetup={null}
