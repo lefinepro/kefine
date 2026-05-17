@@ -33,14 +33,6 @@ const config: UserConfig & { test?: Record<string, unknown> } = {
     chunkSizeWarningLimit: 600,
     rollupOptions: {
       // Use rollup instead of rolldown to avoid noble package issues
-      output: {
-        manualChunks(id) {
-          if (id.includes('@reown/appkit') || id.includes('appkit')) return 'appkit';
-          if (id.includes('@noble') || id.includes('noble')) return 'crypto';
-          if (id.includes('buffer')) return 'buffer';
-          if (id.includes('kefine') && id.includes('Workspace')) return 'kefine-core';
-        }
-      }
     }
   }
 };
