@@ -290,6 +290,7 @@
     flex-direction: column;
     gap: 0.6rem;
     min-width: 0;
+    min-height: 420px;
   }
 
   lef-correction-status {
