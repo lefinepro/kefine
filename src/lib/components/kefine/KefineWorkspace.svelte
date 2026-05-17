@@ -738,11 +738,11 @@
   onMount(() => {
     if (!browser) return;
     void checkCraterHealth();
-    hydrateAuthStateFromSession();
-    loadPasskeySession();
+    runWhenIdle(() => hydrateAuthStateFromSession());
+    runWhenIdle(() => loadPasskeySession());
     const loadedOrders = loadCreatedOrders();
     isSpecialRuntime = isSpecialRuntimeOrigin(window.location.origin);
-    void ensureTemporaryOrderProfile({ createIfMissing: false });
+    runWhenIdle(() => ensureTemporaryOrderProfile({ createIfMissing: false }));
 
     if (!authState.isConnected) {
       void (async () => {
