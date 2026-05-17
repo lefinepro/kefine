@@ -327,10 +327,12 @@
   }
 
   lef-line-text {
-    display: inline-block;
+    display: block;
     padding-left: 0.65rem;
     white-space: pre;
-    overflow-x: auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
   }
 
   lef-text-placeholder {

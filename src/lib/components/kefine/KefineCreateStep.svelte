@@ -142,7 +142,31 @@
   let initialized = $state(false);
 
   import { solutionsStore } from '$lib/kefine/solutions-store';
+  import { passkeySessionStore } from '$lib/auth/passkey-session';
   import { get } from 'svelte/store';
+
+  let sessionUsername = $state<string | null>(null);
+  $effect(() => {
+    const unsubscribe = passkeySessionStore.subscribe(s => {
+      sessionUsername = s?.username ?? null;
+    });
+    return unsubscribe;
+  });
+
+  function deriveRepoSlug(text: string): string {
+    const cleaned = text.trim().toLowerCase();
+    if (!cleaned) return 'task';
+    const ascii = cleaned
+      .replace(/[^\p{L}\p{N}\s-]/gu, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+    const slug = ascii.split('-').filter(Boolean).slice(0, 3).join('-');
+    return slug || 'task';
+  }
+
+  const taskAuthorLabel = $derived(sessionUsername?.trim() || 'you');
+  const taskRepoLabel = $derived(deriveRepoSlug(solverSearchText));
 
   interface Solution {
     id: string;
@@ -572,8 +596,9 @@ initialized = true;
       return;
     }
 
-    if (!isMultilineDraft) {
-      taskTextarea.style.height = '';
+    taskTextarea.style.height = '';
+    const overflows = taskTextarea.scrollHeight > taskTextarea.clientHeight + 1;
+    if (!isMultilineDraft && !overflows) {
       return;
     }
 
@@ -709,6 +734,17 @@ initialized = true;
       cancelQueuePress?.();
       cancelQueuePress = null;
     };
+  });
+
+  let lastTrackedSearchText = '';
+  $effect(() => {
+    const currentText = solverSearchActive ? solverSearchText.trim() : '';
+    if (currentText !== lastTrackedSearchText) {
+      lastTrackedSearchText = currentText;
+      taskCompleted = false;
+      isFlying = false;
+      taskSearchText = '';
+    }
   });
 
   function handleTaskInputKeydown(event: KeyboardEvent) {
@@ -934,12 +970,12 @@ initialized = true;
 
 </script>
 
-{#if afeIntroCard}
+{#if afeIntroCard && !taskCompleted}
   <h1 class="lefine-title">Lefine</h1>
   <p class="lefine-subtitle">{afeIntroCard.detail}</p>
 {/if}
 
-<article class="kefine-card kefine-card--wide" data-kefine-create onfocusout={handleCreateFocusOut}>
+<article class="kefine-card kefine-card--wide" data-kefine-create data-task-screen={taskCompleted ? 'true' : 'false'} onfocusout={handleCreateFocusOut}>
   {#if template}
     <section data-part="template-banner">
       <lefine-box>
@@ -1161,7 +1197,7 @@ initialized = true;
   {/if}
 </article>
 
-{#if pinnedServices.length > 0}
+{#if pinnedServices.length > 0 && !taskCompleted}
   <lef-services-showcase>
     <lef-services-head>
       <strong>{pinnedServicesTitle}</strong>
@@ -1194,7 +1230,7 @@ initialized = true;
    <section data-part="tasks-list">
      <kefine-solver-search-row aria-live="polite">
        <lefine-text>{solverSearchText}</lefine-text>
-       {#if isFlying}
+       {#if !taskCompleted}
          <lef-arrow-wrapper>
            <lef-wind-flow>
              <lef-wind-line></lef-wind-line>
@@ -1213,8 +1249,9 @@ initialized = true;
          <lef-tasks-aside aria-label="Tasks">
            <lef-tasks-aside-head>Tasks</lef-tasks-aside-head>
            <lef-tasks-aside-list>
-             <lef-tasks-aside-item data-active="true">
-               <lefine-text>{taskSearchText}</lefine-text>
+             <lef-tasks-aside-item data-active="true" title={taskSearchText}>
+               <lef-tasks-aside-default><lefine-text>{taskRepoLabel}: {taskAuthorLabel}</lefine-text></lef-tasks-aside-default>
+               <lef-tasks-aside-hover><lefine-text>Your task</lefine-text></lef-tasks-aside-hover>
              </lef-tasks-aside-item>
            </lef-tasks-aside-list>
          </lef-tasks-aside>
@@ -1273,26 +1310,23 @@ initialized = true;
                    class="solution-merge-btn"
                    class:solution-merge-btn--merged={solution.rated}
                    onclick={() => handleCrownClick(solution.id)}
-                   aria-label={solution.rated ? 'Merged' : 'Merge solution'}
-                   title={solution.rated ? 'Merged' : 'Merge solution'}
+                   aria-label={solution.rated ? 'Applied' : 'Apply solution'}
+                   title={solution.rated ? 'Applied' : 'Apply solution'}
                  >
                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                     <circle cx="6" cy="18" r="2"></circle>
-                     <circle cx="6" cy="6" r="2"></circle>
-                     <circle cx="18" cy="14" r="2"></circle>
-                     <path d="M6 8v8M6 8c0 4 6 6 12 6"></path>
+                     <path d="M20 6L9 17l-5-5"></path>
                    </svg>
-                   <lefine-text>{solution.rated ? 'Merged' : 'Merge'}</lefine-text>
+                   <lefine-text>{solution.rated ? 'Applied' : 'Apply'}</lefine-text>
                  </button>
                </lef-card-actions>
              </article>
            {/each}
          </lef-solutions-list>
 
-         <lef-task-rail aria-label="Task description and actions">
+         <lef-task-rail aria-label="Repository and actions">
            <lef-task-rail-card>
-             <lef-task-rail-head>Task description</lef-task-rail-head>
-             <lef-task-rail-body>{taskSearchText}</lef-task-rail-body>
+             <lef-task-rail-head>Repository</lef-task-rail-head>
+             <lef-task-rail-body>{taskRepoLabel}</lef-task-rail-body>
            </lef-task-rail-card>
 
            <lef-task-rail-actions>
@@ -1318,10 +1352,11 @@ initialized = true;
    </section>
  {/if}
 
- {#if afeIntroCard}
+ {#if afeIntroCard && !taskCompleted}
    <lef-afe-showcase-heading>{afeIntroCard.title}</lef-afe-showcase-heading>
  {/if}
 
+{#if !taskCompleted}
 <lef-afe-showcase>
   <lef-afe-layout>
     <lef-afe-steps>
@@ -1391,6 +1426,7 @@ initialized = true;
     </lef-afe-steps>
   </lef-afe-layout>
 </lef-afe-showcase>
+{/if}
 
 <style>
   [data-kefine-create] {
@@ -1404,6 +1440,20 @@ initialized = true;
     border: 0;
     box-shadow: none;
     background: none;
+  }
+
+  [data-kefine-create][data-task-screen='true'] [data-part='exec-row'],
+  [data-kefine-create][data-task-screen='true'] [data-part='input-meta'],
+  [data-kefine-create][data-task-screen='true'] [data-part='template-banner'],
+  [data-kefine-create][data-task-screen='true'] [data-part='service-setup-banner'],
+  [data-kefine-create][data-task-screen='true'] [data-part='template-variables'],
+  [data-kefine-create][data-task-screen='true'] [data-part='recent'] {
+    display: none;
+  }
+
+  [data-kefine-create][data-task-screen='true'] {
+    width: min(100%, calc(100vw - 4rem));
+    max-width: 96rem;
   }
 
   lef-afe-showcase {
@@ -2457,10 +2507,35 @@ initialized = true;
     background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 8%, var(--kef-bg-card));
     color: var(--lefine-text);
     font-size: 0.85rem;
+    cursor: default;
+    transition: background-color var(--kef-motion-fast, 160ms) var(--kef-ease-soft, ease);
   }
 
   lef-tasks-aside-item[data-active='true'] {
     background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 14%, var(--kef-bg-card));
+  }
+
+  lef-tasks-aside-item:hover {
+    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 22%, var(--kef-bg-card));
+  }
+
+  lef-tasks-aside-default,
+  lef-tasks-aside-hover {
+    display: block;
+    min-width: 0;
+    flex: 1;
+  }
+
+  lef-tasks-aside-hover {
+    display: none;
+  }
+
+  lef-tasks-aside-item:hover lef-tasks-aside-default {
+    display: none;
+  }
+
+  lef-tasks-aside-item:hover lef-tasks-aside-hover {
+    display: block;
   }
 
   lef-tasks-aside-item lefine-text {
@@ -3059,18 +3134,19 @@ initialized = true;
     line-height: 1.04;
     letter-spacing: -0.02em;
     text-align: left;
-    color: var(--kef-on-primary);
-    background: var(--kef-primary);
-    border: var(--kef-border-width-strong) solid transparent;
+    color: var(--lefine-text);
+    background: color-mix(in oklab, var(--kef-primary) 10%, var(--kef-bg-card));
+    border: var(--kef-border-width-strong) solid color-mix(in oklab, var(--kef-primary) 35%, var(--kef-line));
     border-radius: 0.3rem;
     resize: none;
-    overflow-x: auto;
-    overflow-y: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
     padding-inline: clamp(0.72rem, 2.5vw, 0.92rem);
     padding-top: max(0.48rem, calc((clamp(3.3rem, 7vw, 4rem) - 1.04em) / 2));
     padding-bottom: max(0.48rem, calc((clamp(3.3rem, 7vw, 4rem) - 1.04em) / 2));
-    overflow-wrap: normal;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    white-space: pre-wrap;
     transition:
       border-color var(--kef-motion-fast) var(--kef-ease-soft),
       box-shadow var(--kef-motion-fast) var(--kef-ease-soft),
@@ -3101,7 +3177,7 @@ initialized = true;
     padding-inline: clamp(0.72rem, 2.5vw, 0.92rem);
     padding-top: max(0.48rem, calc((clamp(3.3rem, 7vw, 4rem) - 1.04em) / 2));
     padding-bottom: max(0.48rem, calc((clamp(3.3rem, 7vw, 4rem) - 1.04em) / 2));
-    color: color-mix(in oklab, var(--kef-on-primary) 78%, transparent);
+    color: color-mix(in oklab, var(--lefine-text-soft) 78%, transparent);
     font-size: clamp(0.98rem, 2.15vw, 1.72rem);
     font-weight: 720;
     opacity: 0;

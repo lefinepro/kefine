@@ -33,8 +33,9 @@
         </svg>
       {:else}
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M5 12l5 5 9-9"></path>
-          <path d="M14 5l5 5"></path>
+          <path d="M9 3h6"></path>
+          <path d="M10 3v6.5L4.5 19a2 2 0 0 0 1.74 3h11.52A2 2 0 0 0 19.5 19L14 9.5V3"></path>
+          <path d="M7 14h10"></path>
         </svg>
       {/if}
       <lefine-text>{item.label}</lefine-text>
