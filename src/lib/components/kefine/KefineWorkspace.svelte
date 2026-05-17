@@ -3086,6 +3086,7 @@
     min-height: calc(100vh - clamp(1.5rem, 4vw, 2.8rem));
     height: auto;
     display: grid;
+    contain: layout style;
     gap: 1rem;
     align-items: start;
     align-content: start;
