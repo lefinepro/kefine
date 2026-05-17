@@ -74,11 +74,7 @@
     <form onsubmit={handleSubmit}>
       <lef-email-code-fields>
         <label>
-<<<<<<< HEAD
-          <span>{emailLabel}</span>
-=======
           <lef-email-code-label>{emailLabel}</lef-email-code-label>
->>>>>>> 219cb79b77ef7afbfb8946a823e7508d11b35a34
           <input
             data-testid="kefine-email-code-email-input"
             type="email"
