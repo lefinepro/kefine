@@ -13,9 +13,6 @@ const config: UserConfig & { test?: Record<string, unknown> } = {
       buffer: resolve(__dirname, 'node_modules/buffer')
     }
   },
-  optimizeDeps: {
-    exclude: ['@noble/curves', '@noble/hashes']
-  },
   ssr: {
     noExternal: ['@noble/curves', '@noble/hashes']
   },
