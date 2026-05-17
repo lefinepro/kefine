@@ -89,11 +89,7 @@
 
         {#if codeRequested}
           <label>
-<<<<<<< HEAD
-            <span>{codeLabel}</span>
-=======
             <lef-email-code-label>{codeLabel}</lef-email-code-label>
->>>>>>> 219cb79b77ef7afbfb8946a823e7508d11b35a34
             <input
               data-testid="kefine-email-code-otp-input"
               type="text"
