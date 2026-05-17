@@ -485,8 +485,8 @@ initialized = true;
       crownAnimating[solutionId] = true;
       const btn = document.querySelector<HTMLElement>(`[data-crown-btn="${solutionId}"]`);
       if (btn) {
-        btn.classList.remove('is-active');
         void btn.offsetWidth;
+        btn.classList.remove('is-active');
         crownAnimating[solutionId] = false;
       }
       solutionsStore.update(list => {
