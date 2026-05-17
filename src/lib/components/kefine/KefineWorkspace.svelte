@@ -3112,11 +3112,10 @@
   }
 
   .kefine-window-grid {
-    width: 100%;
     display: grid;
     gap: 1rem;
-    grid-template-columns: 1fr;
     align-items: start;
+    contain: layout style;
     justify-content: stretch;
   }
 
