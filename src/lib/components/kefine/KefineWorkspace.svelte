@@ -1589,6 +1589,11 @@
     showOrderFlow(order);
   }
 
+  function openSolution(solutionId: string) {
+    const orderId = currentOrder?.id || 'demo';
+    void goto(`/order/${orderId}/solver/${solutionId}`);
+  }
+
   function downloadCloneFile(order: OrderView, format: TaskCloneFormat) {
     if (!browser) {
       return;
@@ -2747,6 +2752,7 @@
           onTemplateVariableChange={updateTemplateVariableValue}
           onTagsChange={updateTags}
           onExecutionEstimateChange={updateExecutionEstimate}
+          onOpenSolution={openSolution}
         />
       </kefine-screen>
     {/if}

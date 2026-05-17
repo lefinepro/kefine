@@ -74,7 +74,11 @@
     <form onsubmit={handleSubmit}>
       <lef-email-code-fields>
         <label>
+<<<<<<< HEAD
           <span>{emailLabel}</span>
+=======
+          <lef-email-code-label>{emailLabel}</lef-email-code-label>
+>>>>>>> 219cb79b77ef7afbfb8946a823e7508d11b35a34
           <input
             data-testid="kefine-email-code-email-input"
             type="email"
@@ -89,7 +93,11 @@
 
         {#if codeRequested}
           <label>
+<<<<<<< HEAD
             <span>{codeLabel}</span>
+=======
+            <lef-email-code-label>{codeLabel}</lef-email-code-label>
+>>>>>>> 219cb79b77ef7afbfb8946a823e7508d11b35a34
             <input
               data-testid="kefine-email-code-otp-input"
               type="text"
@@ -163,7 +171,11 @@
     gap: 0.4rem;
   }
 
+<<<<<<< HEAD
   lef-email-code-fields span {
+=======
+  lef-email-code-label {
+>>>>>>> 219cb79b77ef7afbfb8946a823e7508d11b35a34
     font-size: 0.92rem;
     color: color-mix(in oklab, var(--kef-color-text, #2e2317) 76%, transparent);
   }

@@ -1,14 +1,14 @@
-FROM oven/bun:1.2.23 AS build
+FROM node:20 AS build
 
 WORKDIR /app
 
-COPY package.json bun.lock ./
-RUN bun install --frozen-lockfile
+COPY package.json pnpm-lock.yaml ./
+RUN corepack enable && pnpm install --frozen-lockfile
 
 COPY . .
-RUN bun run build
+RUN pnpm build
 
-FROM oven/bun:1.2.23
+FROM node:20
 
 WORKDIR /app
 
@@ -23,4 +23,4 @@ ENV HOST=0.0.0.0
 
 EXPOSE 5173
 
-CMD ["bun", "build/index.js"]
+CMD ["node", "build/index.js"]

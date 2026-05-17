@@ -3,6 +3,7 @@
 	"private": true,
 	"version": "0.0.1",
 	"type": "module",
+	"packageManager": "pnpm@10.30.3",
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build",
@@ -12,24 +13,26 @@
 		"lint:fix": "oxlint . --fix",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-		"test": "bun test --pass-with-no-tests --path-ignore-patterns e2e",
-		"test:integration": "bun test --pass-with-no-tests --path-ignore-patterns e2e --test-name-pattern integration",
-		"test:e2e": "bunx playwright test"
+		"test": "vitest run --pass-with-no-tests",
+		"test:integration": "vitest run --pass-with-no-tests --test-name-pattern integration",
+		"test:e2e": "playwright test"
 	},
 	"devDependencies": {
 		"@fontsource/fira-mono": "^5.2.7",
 		"@neoconfetti/svelte": "^2.2.2",
 		"@playwright/test": "^1.52.0",
 		"@simplewebauthn/types": "^12.0.0",
+		"@sveltejs/adapter-node": "^5.2.9",
 		"@sveltejs/kit": "^2.55.0",
 		"@sveltejs/vite-plugin-svelte": "^7.0.0",
 		"@types/node": "^25.5.2",
+		"buffer": "^6.0.3",
 		"oxlint": "latest",
 		"svelte": "^5.54.0",
-		"svelte-adapter-bun": "^1.0.1",
 		"svelte-check": "^4.4.2",
 		"typescript": "^5.9.3",
-		"vite": "8"
+		"vite": "8",
+		"vitest": "^3.0.0"
 	},
 	"dependencies": {
 		"@iconify/svelte": "^5.2.1",
@@ -39,8 +42,8 @@
 		"@simplewebauthn/browser": "^13.3.0",
 		"@tonconnect/sdk": "^3.4.1",
 		"@wagmi/core": "^3.4.1",
-		"highlight.js": "^11.11.1",
 		"prosekit": "^0.19.0",
+		"shiki": "^1.29.0",
 		"viem": "^2.47.6"
 	}
 }

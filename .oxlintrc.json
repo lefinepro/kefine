@@ -1,6 +1,5 @@
 {
   "ignorePatterns": [
-    ".bun/**",
     "build/**",
     ".svelte-kit/**",
     ".vite-cache/**",
