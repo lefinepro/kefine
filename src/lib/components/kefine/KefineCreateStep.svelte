@@ -711,9 +711,6 @@ initialized = true;
     };
   });
 
-
-
-
   function handleTaskInputKeydown(event: KeyboardEvent) {
     if (event.key !== 'Enter') {
       return;

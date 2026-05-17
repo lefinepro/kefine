@@ -15,8 +15,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: corepack enable && yarn install
-      - run: yarn lint
+      - run: corepack enable && pnpm install --frozen-lockfile
+      - run: pnpm lint
 
   check:
     name: Type Check
@@ -26,8 +26,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: corepack enable && yarn install
-      - run: yarn check || (echo "svelte-check had warnings, continuing" && exit 0)
+      - run: corepack enable && pnpm install --frozen-lockfile
+      - run: pnpm check || (echo "svelte-check had warnings, continuing" && exit 0)
 
   test:
     name: Unit Tests
@@ -37,8 +37,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: corepack enable && yarn install
-      - run: yarn test
+      - run: corepack enable && pnpm install --frozen-lockfile
+      - run: pnpm test
 
   integration:
     name: Integration Tests
@@ -48,8 +48,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: corepack enable && yarn install
-      - run: yarn test:integration
+      - run: corepack enable && pnpm install --frozen-lockfile
+      - run: pnpm test:integration
 
   e2e:
     name: E2E Tests
@@ -59,9 +59,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: corepack enable && yarn install
-      - run: yarn playwright install --with-deps chromium
-      - run: yarn test:e2e
+      - run: corepack enable && pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:e2e
 
   build:
     name: Build
@@ -71,8 +71,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: corepack enable && yarn install
-      - run: yarn build
+      - run: corepack enable && pnpm install --frozen-lockfile
+      - run: pnpm build
 
   crater:
     name: Crater Smoke

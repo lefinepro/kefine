@@ -10,16 +10,16 @@ run_frontend_check() {
     -v "${PROJECT_ROOT}:/workspace" \
     -w /workspace \
     "${NODE_CONTAINER_IMAGE}" \
-    sh -lc "corepack enable && yarn install && ${command}"
+    sh -lc "corepack enable && pnpm install --frozen-lockfile && ${command}"
 }
 
 run_frontend_pipeline() {
-  run_frontend_check "yarn lint"
-  run_frontend_check "yarn check || (echo \"svelte-check had warnings, continuing\" && exit 0)"
-  run_frontend_check "yarn test"
-  run_frontend_check "yarn test:integration"
-  run_frontend_check "yarn playwright install --with-deps chromium && yarn test:e2e"
-  run_frontend_check "yarn build"
+  run_frontend_check "pnpm lint"
+  run_frontend_check "pnpm check || (echo \"svelte-check had warnings, continuing\" && exit 0)"
+  run_frontend_check "pnpm test"
+  run_frontend_check "pnpm test:integration"
+  run_frontend_check "pnpm exec playwright install --with-deps chromium && pnpm test:e2e"
+  run_frontend_check "pnpm build"
 }
 
 run_crater_smoke() {
@@ -35,19 +35,19 @@ run_all() {
 TARGET="${1:-all}"
 case "${TARGET}" in
   lint)
-    run_frontend_check "yarn lint"
+    run_frontend_check "pnpm lint"
     ;;
   check)
-    run_frontend_check "yarn check || (echo \"svelte-check had warnings, continuing\" && exit 0)"
+    run_frontend_check "pnpm check || (echo \"svelte-check had warnings, continuing\" && exit 0)"
     ;;
   test)
-    run_frontend_check "yarn test"
+    run_frontend_check "pnpm test"
     ;;
   integration)
-    run_frontend_check "yarn test:integration"
+    run_frontend_check "pnpm test:integration"
     ;;
   e2e)
-    run_frontend_check "yarn playwright install --with-deps chromium && yarn test:e2e"
+    run_frontend_check "pnpm exec playwright install --with-deps chromium && pnpm test:e2e"
     ;;
   smoke)
     run_crater_smoke
