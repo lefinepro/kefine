@@ -40,3 +40,6 @@ experiments/*.png
 
 # git filter-repo workspace
 .git-rewrite/
+
+# Local CI investigation logs
+ci-logs/
