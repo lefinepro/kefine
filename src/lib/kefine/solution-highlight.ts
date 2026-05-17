@@ -57,9 +57,7 @@ export async function highlightLine(line: string, filename: string): Promise<str
 
 export function splitHtmlByLine(html: string, expected: number): string[] {
   const bodyMatch = html.match(/<pre[^>]*><code[^>]*>([\s\S]*?)<\/code><\/pre>/);
-  if (!bodyMatch) return Array(expected).fill('');
-
-  const content = bodyMatch[1];
+  const content = bodyMatch ? bodyMatch[1] : html;
   const result: string[] = [];
   const openTags: Array<{ tag: string; attrs: string }> = [];
   let current = '';

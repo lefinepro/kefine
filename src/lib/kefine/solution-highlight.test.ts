@@ -52,10 +52,10 @@ describe('splitHtmlByLine', () => {
   });
 
   test('reopens span tags that span across newlines', () => {
-    const html = '<span class="shiki .s">"hello\nworld"</span>';
+    const html = '<span class="shiki-string">"hello\nworld"</span>';
     const out = splitHtmlByLine(html, 2);
-    expect(out[0]).toBe('"hello');
-    expect(out[1]).toBe('world"');
+    expect(out[0]).toBe('<span class="shiki-string">"hello</span>');
+    expect(out[1]).toBe('<span class="shiki-string">world"</span>');
   });
 
   test('handles nested spans across newlines', () => {
