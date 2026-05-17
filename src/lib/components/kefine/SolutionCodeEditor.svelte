@@ -40,10 +40,15 @@
 
   const activeStats = $derived(files.find(f => f.file === activeFile));
 
-  function buildSideHtml(rawLines: CodeLine[]): { lefts: SideRow[]; rights: SideRow[] } {
+  let leftHtmlLines = $state<string[]>([]);
+  let rightHtmlLines = $state<string[]>([]);
+  let isLoading = $state(false);
+
+  async function updateHighlightedLines() {
+    isLoading = true;
     const oldTexts: string[] = [];
     const newTexts: string[] = [];
-    for (const line of rawLines) {
+    for (const line of lines) {
       if (line.type === 'added') {
         newTexts.push(line.text);
       } else if (line.type === 'removed') {
@@ -53,40 +58,48 @@
         newTexts.push(line.text);
       }
     }
-    const leftHtml = highlightLines(oldTexts, activeFile);
-    const rightHtml = highlightLines(newTexts, activeFile);
+    const [left, right] = await Promise.all([
+      highlightLines(oldTexts, activeFile),
+      highlightLines(newTexts, activeFile)
+    ]);
+    leftHtmlLines = left;
+    rightHtmlLines = right;
+    isLoading = false;
+  }
 
+  $effect(() => {
+    void activeFile;
+    void lines;
+    updateHighlightedLines();
+  });
+
+  function buildRows(): DiffRow[] {
     const lefts: SideRow[] = [];
     const rights: SideRow[] = [];
     let lIdx = 0;
     let rIdx = 0;
     let lNum = 0;
     let rNum = 0;
-    for (const line of rawLines) {
+    for (const line of lines) {
       if (line.type === 'added') {
         rNum += 1;
         lefts.push({ text: '', html: '', type: 'empty', number: null });
-        rights.push({ text: line.text, html: rightHtml[rIdx] ?? '', type: 'added', number: rNum });
+        rights.push({ text: line.text, html: rightHtmlLines[rIdx] ?? '', type: 'added', number: rNum });
         rIdx += 1;
       } else if (line.type === 'removed') {
         lNum += 1;
-        lefts.push({ text: line.text, html: leftHtml[lIdx] ?? '', type: 'removed', number: lNum });
+        lefts.push({ text: line.text, html: leftHtmlLines[lIdx] ?? '', type: 'removed', number: lNum });
         rights.push({ text: '', html: '', type: 'empty', number: null });
         lIdx += 1;
       } else {
         lNum += 1;
         rNum += 1;
-        lefts.push({ text: line.text, html: leftHtml[lIdx] ?? '', type: 'unchanged', number: lNum });
-        rights.push({ text: line.text, html: rightHtml[rIdx] ?? '', type: 'unchanged', number: rNum });
+        lefts.push({ text: line.text, html: leftHtmlLines[lIdx] ?? '', type: 'unchanged', number: lNum });
+        rights.push({ text: line.text, html: rightHtmlLines[rIdx] ?? '', type: 'unchanged', number: rNum });
         lIdx += 1;
         rIdx += 1;
       }
     }
-    return { lefts, rights };
-  }
-
-  const rows = $derived.by<DiffRow[]>(() => {
-    const { lefts, rights } = buildSideHtml(lines);
     const out: DiffRow[] = [];
     for (let i = 0; i < lefts.length; i += 1) {
       const left = lefts[i];
@@ -98,6 +111,10 @@
       out.push({ left, right, band });
     }
     return out;
+  }
+
+  const rows = $derived.by<DiffRow[]>(() => {
+    return buildRows();
   });
 
   function ariaLabelFor(type: SideRow['type']): string {
@@ -109,6 +126,9 @@
 </script>
 
 <lef-code-editor>
+  {#if isLoading}
+    <lef-loading>Highlighting code...</lef-loading>
+  {/if}
   <SolutionCodeTabs {files} {activeFile} {onSelect} />
 
   <lef-code-frame>
@@ -167,6 +187,13 @@
     flex-direction: column;
     min-width: 0;
     min-height: 0;
+  }
+
+  lef-loading {
+    padding: 1rem;
+    text-align: center;
+    color: var(--lefine-text-soft);
+    font-size: 0.85rem;
   }
 
   lef-code-frame {

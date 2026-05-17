@@ -1,6 +1,6 @@
 [tools]
-bun = "1.3"
 node = "22"
+pnpm = "10"
 crystal = "1.16.3"
 "ubi:fatedier/frp" = { version = "0.68.0", exe = "frpc" }
 
@@ -13,10 +13,10 @@ description = "Install all project dependencies"
 depends = ["frontend:deps"]
 
 [tasks."frontend:deps"]
-description = "Install frontend dependencies with Bun"
+description = "Install frontend dependencies with pnpm"
 run = '''
 if [ ! -d node_modules ]; then
-  bun install --frozen-lockfile
+  pnpm install --frozen-lockfile
 fi
 '''
 
@@ -57,17 +57,17 @@ run = "./scripts/nerdctl-compose.sh stop postgres"
 [tasks.frontend]
 description = "Run the SvelteKit frontend"
 depends = ["frontend:deps"]
-run = "bun run dev --host 0.0.0.0"
+run = "pnpm dev --host 0.0.0.0"
 
 [tasks."frontend:build"]
 description = "Build the SvelteKit frontend for production"
 depends = ["frontend:deps"]
-run = "bun run build"
+run = "pnpm build"
 
 [tasks.prod]
 description = "Build and run the SvelteKit frontend in production preview mode"
 depends = ["frontend:build"]
-run = "bun run preview --host 0.0.0.0"
+run = "pnpm preview --host 0.0.0.0"
 
 [tasks.backend]
 description = "Run the crater backend in a dev container without rebuilding"

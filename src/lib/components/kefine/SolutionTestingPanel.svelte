@@ -213,20 +213,32 @@
             <lefine-text>Press Send to see a sample response.</lefine-text>
           </lef-response-box>
         {:else if responseFields !== null && responseMode === 'form'}
-          <lef-response-list aria-label="Response body output">
+          <lef-body-form aria-label="Response body form">
             {#each responseFields as field (field.id)}
-              <lef-response-row>
-                <lef-response-key aria-label="Response body field name">
-                  {field.key}
-                </lef-response-key>
-                <lef-response-value
-                  aria-label={`Response body ${field.key || 'field'} value`}
-                >
-                  {field.value}
-                </lef-response-value>
-              </lef-response-row>
+              <lef-body-field>
+                <label>
+                  <lefine-text>Field</lefine-text>
+                  <input
+                    type="text"
+                    value={field.key}
+                    spellcheck="false"
+                    aria-label="Response body field name"
+                    readonly
+                  />
+                </label>
+                <label>
+                  <lefine-text>Value</lefine-text>
+                  <input
+                    type="text"
+                    value={field.value}
+                    spellcheck="false"
+                    aria-label={`Response body ${field.key || 'field'} value`}
+                    readonly
+                  />
+                </label>
+              </lef-body-field>
             {/each}
-          </lef-response-list>
+          </lef-body-form>
         {:else}
           <lef-response-box>
             <pre>{response}</pre>
@@ -583,44 +595,9 @@
     font-style: italic;
   }
 
-  lef-response-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-    border: 1px solid var(--kef-line);
-    border-radius: 0.45rem;
-    background: var(--kef-bg-soft);
-    padding: 0.65rem;
-    min-height: 8rem;
-  }
-
-  lef-response-row {
-    display: grid;
-    grid-template-columns: minmax(6.5rem, max-content) minmax(0, 1fr);
-    align-items: baseline;
-    gap: 0.75rem;
-    padding: 0.35rem 0.55rem;
-    border: 1px solid var(--kef-line-soft);
-    border-radius: 0.35rem;
-    background: var(--kef-bg-card);
-    font-family: 'Fira Mono', 'Fira Code', ui-monospace, monospace;
-    font-size: 0.8rem;
-    line-height: 1.4;
-  }
-
-  lef-response-key {
-    color: var(--lefine-text-soft);
-    font-weight: 700;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  lef-response-value {
-    color: var(--lefine-text);
-    min-width: 0;
-    overflow-wrap: anywhere;
-    white-space: pre-wrap;
+  lef-body-field input[readonly] {
+    background: color-mix(in oklab, var(--kef-bg-card) 65%, var(--kef-bg-soft));
+    cursor: default;
   }
 
   @media (max-width: 720px) {

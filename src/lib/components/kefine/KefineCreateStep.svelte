@@ -2165,33 +2165,6 @@ initialized = true;
     transform: rotate(2.6deg);
   }
 
-  .solution-card .diff-summary .added {
-    color: #4CAF50;
-    font-weight: bold;
-  }
-
-  .solution-card .diff-summary .removed {
-    color: #F44336;
-    font-weight: bold;
-  }
-
-  .solution-card .code-diff .added {
-    background-color: rgba(76, 175, 80, 0.1);
-    display: block;
-  }
-
-  .solution-card .code-diff .removed {
-    background-color: rgba(244, 67, 54, 0.1);
-    display: block;
-    text-decoration: line-through;
-  }
-
-  .solution-card .code-diff .diff-header {
-    color: #9E9E9E;
-    font-weight: bold;
-    display: block;
-  }
-
   :global(:root[data-kefine-theme='dark']) lef-afe-flow {
     --afe-ink: #1c120b;
     --afe-ink-soft: #1c120b;
@@ -3456,22 +3429,6 @@ initialized = true;
     lef-service-card {
       width: 100%;
       min-height: 0;
-    }
-
-    .solutions-list {
-      display: flex;
-      flex-direction: row;
-      overflow-x: auto;
-      overflow-y: hidden;
-      gap: 0.75rem;
-      padding-bottom: 0.5rem;
-      -webkit-overflow-scrolling: touch;
-    }
-
-    .solution-card {
-      flex-shrink: 0;
-      width: 280px;
-      min-width: 280px;
     }
   }
 </style>
