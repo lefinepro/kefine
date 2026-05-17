@@ -2,7 +2,14 @@
   import Icon from '@iconify/svelte';
   import KefineTaskCloneMenu from '$lib/components/kefine/KefineTaskCloneMenu.svelte';
   import KefineTaskSettingsMenu from '$lib/components/kefine/KefineTaskSettingsMenu.svelte';
-  import KefineRichTaskEditorDialog from '$lib/components/kefine/KefineRichTaskEditorDialog.svelte';
+  let KefineRichTaskEditorDialog: any;
+  import('$lib/components/kefine/KefineRichTaskEditorDialog.svelte').then(m => KefineRichTaskEditorDialog = m.default);
+
+  async function loadProsekitIfNeeded() {
+    // trigger load inside dialog module if needed
+    const mod = await import('$lib/components/kefine/KefineRichTaskEditorDialog.svelte');
+    if (mod.loadProsekit) await mod.loadProsekit();
+  }
   import {
     appendTaskNodeBranchInsert,
     appendTaskNodeComment,
@@ -22,7 +29,8 @@
   import { browser } from '$app/environment';
   import type { OrderView } from '$lib/components/kefine/kefine-workflow';
   import type { TaskCloneFormat } from '$lib/components/kefine/kefine-task-clone';
-  import type { EditorDraftState, EditorMentionCandidate } from '$lib/components/kefine/KefineRichTaskEditorDialog.svelte';
+  type EditorDraftState = any;
+  type EditorMentionCandidate = any;
 
   let {
     currentOrder,
@@ -357,6 +365,7 @@
 
   function openNodeCommentComposer(node: TaskThreadNode): void {
     ensureEditableDraft(node);
+    void loadProsekitIfNeeded();
     openCommentComposer(node.id);
   }
 
@@ -368,6 +377,7 @@
     }
 
     ensureEditableDraft(node, action);
+    void loadProsekitIfNeeded();
     openCommentComposerWithAction(node.id, action);
   }
 

@@ -485,9 +485,10 @@ initialized = true;
       crownAnimating[solutionId] = true;
       const btn = document.querySelector<HTMLElement>(`[data-crown-btn="${solutionId}"]`);
       if (btn) {
-        void btn.offsetWidth;
-        btn.classList.remove('is-active');
-        crownAnimating[solutionId] = false;
+        requestAnimationFrame(() => {
+          btn.classList.remove('is-active');
+          crownAnimating[solutionId] = false;
+        });
       }
       solutionsStore.update(list => {
         const newList = [...list];
@@ -577,8 +578,8 @@ initialized = true;
       return;
     }
 
-    taskTextarea.style.height = '0px';
-    taskTextarea.style.height = `${Math.min(Math.max(taskTextarea.scrollHeight, 104), 288)}px`;
+    const scrollH = taskTextarea.scrollHeight;
+    taskTextarea.style.height = `${Math.min(Math.max(scrollH, 104), 288)}px`;
   }
 
   function stopPlaceholderAnimation({ hide = false }: { hide?: boolean } = {}) {

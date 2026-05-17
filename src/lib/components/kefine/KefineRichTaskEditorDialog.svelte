@@ -2,18 +2,28 @@
   import Icon from '@iconify/svelte';
   import { browser } from '$app/environment';
   import type { Editor } from 'prosekit/core';
-  import { createEditor } from 'prosekit/core';
-  import { defineBasicExtension } from 'prosekit/basic';
-  import { defineMention } from 'prosekit/extensions/mention';
-  import { union } from 'prosekit/core';
-  import 'prosekit/basic/style.css';
-  import 'prosekit/basic/typography.css';
-  import {
-    AutocompleteEmpty,
-    AutocompleteItem,
-    AutocompleteList,
-    AutocompletePopover
-  } from 'prosekit/svelte/autocomplete';
+  let createEditor: any, defineBasicExtension: any, defineMention: any, union: any;
+  let AutocompleteEmpty: any, AutocompleteItem: any, AutocompleteList: any, AutocompletePopover: any;
+  let prosekitLoaded = false;
+  async function loadProsekit() {
+    if (prosekitLoaded) return;
+    const core = await import('prosekit/core');
+    const basic = await import('prosekit/basic');
+    const mention = await import('prosekit/extensions/mention');
+    const svelteAuto = await import('prosekit/svelte/autocomplete');
+    createEditor = core.createEditor;
+    defineBasicExtension = basic.defineBasicExtension;
+    defineMention = mention.defineMention;
+    union = core.union;
+    AutocompleteEmpty = svelteAuto.AutocompleteEmpty;
+    AutocompleteItem = svelteAuto.AutocompleteItem;
+    AutocompleteList = svelteAuto.AutocompleteList;
+    AutocompletePopover = svelteAuto.AutocompletePopover;
+    await import('prosekit/basic/style.css');
+    await import('prosekit/basic/typography.css');
+    prosekitLoaded = true;
+  }
+  export { loadProsekit };
 
   type EditorMode = 'visual' | 'source';
   type SlashCommand = {
