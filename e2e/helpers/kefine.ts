@@ -1,7 +1,20 @@
 import { expect, type Page, type Route } from '@playwright/test';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { ml_dsa65 } from '@noble/post-quantum/ml-dsa.js';
+
+let cachedActorPrivateKeyPem: string | null = null;
+
+function generateActorPrivateKeyPem() {
+  const { secretKey } = ml_dsa65.keygen();
+  // Mirror the DER prefix used elsewhere so that pemToDer + slice yields the secret key.
+  // We only need the trailing bytes to be the secret key for the helpers to work, since
+  // they extract `secretKey = der.subarray(der.length - ml_dsa65.lengths.secretKey)`.
+  const der = Buffer.from(secretKey);
+  const base64 = der.toString('base64');
+  const lines = base64.match(/.{1,64}/g) ?? [];
+  return ['-----BEGIN PRIVATE KEY-----', ...lines, '-----END PRIVATE KEY-----'].join('\n');
+}
 
 type MockOrder = {
   id: string;
@@ -245,7 +258,18 @@ export async function mockOrderApi(page: Page) {
   };
 }
 
+export async function mockCraterHealthy(page: Page) {
+  await page.route('**/api/health', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ ok: true, status: 'healthy' })
+    });
+  });
+}
+
 export async function gotoAndWaitForReady(page: Page) {
+  await mockCraterHealthy(page);
   await page.goto('/');
   await page.evaluate(() => {
     window.localStorage.clear();
@@ -312,7 +336,18 @@ export async function mockPrivateKeyAuth(page: Page) {
 }
 
 export function readActorPrivateKeyPem() {
-  return readFileSync(path.resolve(process.cwd(), 'actor-privatekey.pem'), 'utf8');
+  if (cachedActorPrivateKeyPem) {
+    return cachedActorPrivateKeyPem;
+  }
+
+  const filePath = path.resolve(process.cwd(), 'actor-privatekey.pem');
+  if (existsSync(filePath)) {
+    cachedActorPrivateKeyPem = readFileSync(filePath, 'utf8');
+  } else {
+    cachedActorPrivateKeyPem = generateActorPrivateKeyPem();
+  }
+
+  return cachedActorPrivateKeyPem;
 }
 
 function pemToDer(pem: string) {
@@ -340,11 +375,6 @@ export async function deriveActorPublicKeyString() {
     ]),
     publicKey
   ]);
-  const publicKeyPem = [
-    '-----BEGIN PUBLIC KEY-----',
-    ...(publicKeyDer.toString('base64').match(/.{1,64}/g) ?? []),
-    '-----END PUBLIC KEY-----'
-  ].join('\n');
 
-  return encodeKeyString(publicKeyPem, 'pqpk_');
+  return publicKeyDer.toString('base64url');
 }

@@ -967,7 +967,7 @@
   <kefine-thread-head>
     <kefine-thread-title>
       <lefine-text data-part="task-monogram" aria-hidden="true">{taskMonogram}</lefine-text>
-      <strong>{currentOrder?.title || labels.boardTitle}</strong>
+      <h2><strong>{currentOrder?.title || labels.boardTitle}</strong></h2>
     </kefine-thread-title>
     <kefine-thread-head-actions>
       {#if commentSubmittingStepId}
@@ -1059,6 +1059,13 @@
     gap: 0.7rem;
     flex-wrap: wrap;
     min-width: 0;
+  }
+
+  kefine-thread-title h2 {
+    margin: 0;
+    font-size: inherit;
+    font-weight: 700;
+    line-height: 1.3;
   }
 
   kefine-thread-head-actions {

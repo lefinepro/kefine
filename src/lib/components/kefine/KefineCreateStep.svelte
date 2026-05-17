@@ -753,6 +753,8 @@ initialized = true;
     }
 
     if (event.shiftKey) {
+      event.preventDefault();
+      void onQueueTask();
       return;
     }
 

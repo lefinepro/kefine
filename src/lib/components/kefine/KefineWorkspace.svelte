@@ -2101,7 +2101,7 @@
     solverSearchActive = true;
     draft = createEmptyDraft();
 
-    void submitDraft(normalized, { background: true }).then((created) => {
+    void submitDraft(normalized, { background: true, focusInQueue: true }).then((created) => {
       if (!created) {
         if (!draft.description.trim()) {
           draft = normalized;
