@@ -134,7 +134,7 @@
           onkeydown={onOpenKeydown}
         >
           <Icon icon="mdi:arrow-top-right" width="15" height="15" aria-hidden="true" />
-          <lefine-text onpointerup={handleOpenPointerUp} onclick={handleOpenClick}>{openTaskLabel}</lefine-text>
+          <lefine-text>{openTaskLabel}</lefine-text>
         </button>
 
         {#if showCreateService && canMakeTemplate}
@@ -380,6 +380,11 @@
 
   button[data-part='open-task'] {
     color: color-mix(in oklab, var(--lefine-text) 90%, #456c8e 10%);
+  }
+
+  button[data-part='open-task'] :global(svg),
+  button[data-part='open-task'] lefine-text {
+    pointer-events: none;
   }
 
   button[data-part='create-service'] {
