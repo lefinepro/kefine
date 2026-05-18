@@ -165,10 +165,23 @@ await page.waitForSelector('lef-flying-arrow', { timeout: 5000 }).catch(() => un
 await page.waitForTimeout(400);
 await shoot('10-arrow-animation.png');
 
-// ---------- 2: Order overview as a separate page after submit ----------
+// Let the delayed arrow task finish before starting the solver-results capture.
 createDelayMs = 0;
-await page.waitForURL(/\/order\//, { timeout: 15000 }).catch(() => undefined);
-await page.waitForTimeout(1500);
+await page.waitForURL(/\/order-\d+$/, { timeout: 15000 }).catch(() => undefined);
+
+// ---------- 2: Order overview as a separate page after submit ----------
+await page.goto(BASE_URL + '/');
+await page.waitForSelector('[data-testid="kefine-task-input"]');
+await page.waitForFunction(() => {
+  const el = document.querySelector('[data-testid="kefine-task-input"]');
+  return el && Object.getOwnPropertySymbols(el).length > 0;
+});
+const inputForResults = page.locator('[data-testid="kefine-task-input"]');
+await inputForResults.click();
+await inputForResults.fill('Нужен мини прокси на go');
+await page.locator('[data-testid="kefine-submit-task"]').click();
+await page.waitForSelector('kefine-solver-results', { timeout: 15000 });
+await page.waitForTimeout(900);
 await shoot('02-task-screen-separate-page.png');
 
 // ---------- 6 (default): Tasks aside shows <repo>: <author> ----------

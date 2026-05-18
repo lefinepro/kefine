@@ -32,6 +32,8 @@
   import KefineCreateStep from '$lib/components/kefine/KefineCreateStep.svelte';
   import KefineLoadingDocuments from '$lib/components/kefine/KefineLoadingDocuments.svelte';
   import KefineExecutingStep from '$lib/components/kefine/KefineExecutingStep.svelte';
+  import KefineSolverResults from '$lib/components/kefine/KefineSolverResults.svelte';
+  import { isSolutionTask } from '$lib/kefine/solution-task';
   import {
     buildTaskCloneFile,
     cloneOrderToDraft,
@@ -286,6 +288,7 @@
   let suppressProfileRedirect = $state(false);
   let suppressPostAuthProfileRedirect = $state(false);
   let resultDocumentRefreshKey = $state('');
+  let lastSolverResultsScrollKey = $state('');
   const activePollTokens = new Map<string, symbol>();
   let pollAbortController = $state<AbortController | null>(null);
   let SubmittingStepComponent = $state<LazyComponent | null>(null);
@@ -299,6 +302,15 @@
   const passkeySession = $derived($passkeySessionStore);
   const isPasskeyActive = $derived(passkeySession ? passkeySession.expiresAt.getTime() > Date.now() : false);
   const isAuthenticated = $derived(authState.isConnected || isPasskeyActive);
+  const currentOrderTaskText = $derived((currentOrder?.description || currentOrder?.title || '').trim());
+  const showSolverResultsPage = $derived(Boolean(currentOrderTaskText && isSolutionTask(currentOrderTaskText) && !stagePreviewOpen));
+  const currentOrderAuthorLabel = $derived(
+    currentOrder?.ownerUsername?.trim() ||
+    currentOrder?.actorHandle?.trim() ||
+    currentProfile?.primaryHandle ||
+    passkeySession?.username?.trim() ||
+    'you'
+  );
   const showPrivateKeyAuth = $derived(
     isSpecialRuntime || Boolean(runtimeConfig.defaultActor.handle?.trim())
   );
@@ -894,6 +906,22 @@
     if (authDialogOpen || passkeyDialogOpen || privateKeyDialogOpen || emailCodeDialogOpen) {
       void ensureDialogComponentsLoaded();
     }
+  });
+
+  $effect(() => {
+    if (!browser || !showSolverResultsPage || !currentOrder?.id) {
+      return;
+    }
+
+    const scrollKey = currentOrder.id;
+    if (scrollKey === lastSolverResultsScrollKey) {
+      return;
+    }
+
+    lastSolverResultsScrollKey = scrollKey;
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    });
   });
 
   $effect(() => {
@@ -2796,6 +2824,18 @@
 
     {#if step === 'executing'}
       <kefine-screen in:softScreenTransition out:softScreenTransition>
+        {#if showSolverResultsPage}
+          <KefineSolverResults
+            taskText={currentOrderTaskText}
+            authorLabel={currentOrderAuthorLabel}
+            onOpenSolution={openSolution}
+            onOpenTask={() => {
+              if (currentOrder) {
+                openOrder(currentOrder);
+              }
+            }}
+          />
+        {:else}
         <KefineExecutingStep
           currentOrder={currentOrder}
           queuedOrders={[]}
@@ -2879,6 +2919,7 @@
             walletAccount: localeText.auth.walletAccount
           }}
         />
+        {/if}
       </kefine-screen>
     {/if}
 

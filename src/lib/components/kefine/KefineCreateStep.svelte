@@ -5,6 +5,7 @@
   import KefineOrderListItem from '$lib/components/kefine/KefineOrderListItem.svelte';
   import SolutionMetricsMini from '$lib/components/kefine/SolutionMetricsMini.svelte';
   import { defaultMetrics } from '$lib/kefine/solutions-data';
+  import { deriveSolutionTaskRepositoryLabel } from '$lib/kefine/solution-task';
   const PLACEHOLDER_TYPE_DELAY_MS = 58;
   const PLACEHOLDER_DELETE_DELAY_MS = 34;
   const PLACEHOLDER_PAUSE_MS = 1150;
@@ -154,15 +155,7 @@
   });
 
   function deriveRepoSlug(text: string): string {
-    const cleaned = text.trim().toLowerCase();
-    if (!cleaned) return 'task';
-    const ascii = cleaned
-      .replace(/[^\p{L}\p{N}\s-]/gu, '')
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '');
-    const slug = ascii.split('-').filter(Boolean).slice(0, 3).join('-');
-    return slug || 'task';
+    return deriveSolutionTaskRepositoryLabel(text);
   }
 
   const taskAuthorLabel = $derived(sessionUsername?.trim() || 'you');

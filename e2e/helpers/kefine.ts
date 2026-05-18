@@ -154,6 +154,11 @@ export async function mockOrderApi(page: Page) {
   });
 
   async function handleOrderLookup(route: Route) {
+    if (route.request().resourceType() === 'document') {
+      await route.fallback();
+      return;
+    }
+
     const url = new URL(route.request().url());
     const segments = url.pathname.split('/').filter(Boolean);
     const orderId = decodeURIComponent(
