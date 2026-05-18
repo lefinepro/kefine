@@ -12,11 +12,13 @@ test.describe('New frontend task results', () => {
 
     const taskRow = page.getByTestId('kefine-solver-search-row');
     await expect(taskRow).toBeVisible();
-    await expect(taskRow).toContainText('kefine/go-proxy');
+    await expect(taskRow).toContainText('Нужен мини прокси на go');
+    await expect(taskRow).not.toContainText('kefine/go-proxy');
     await expect(page.getByTestId('kefine-inline-solver-list')).toHaveCount(0);
 
     const openSolvers = page.getByRole('button', { name: 'Open solver list' });
     await expect(openSolvers).toBeEnabled({ timeout: 6000 });
+    await expect(taskRow).toContainText('kefine/go-proxy');
     await openSolvers.click();
 
     await expect(page).toHaveURL(/\/order\/order-1\/solutions/);

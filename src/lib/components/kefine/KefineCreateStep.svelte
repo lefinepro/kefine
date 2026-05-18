@@ -571,7 +571,12 @@
     }
     return searchTaskLabel;
   });
+  const searchPrimaryLabel = $derived(effectiveTaskCompleted ? searchRepositoryLabel : searchTaskLabel);
   const searchSecondaryLabel = $derived.by(() => {
+    if (!effectiveTaskCompleted) {
+      return solverSearchLabel;
+    }
+
     const primary = displayedSolutions[0];
     if (primary?.project && primary?.solver) {
       return `${primary.solver} · ${searchTaskLabel}`;
@@ -1310,7 +1315,7 @@
        }}
      >
        <kefine-solver-search-copy>
-         <lefine-text data-part="repo-label">{searchRepositoryLabel}</lefine-text>
+         <lefine-text data-part="repo-label">{searchPrimaryLabel}</lefine-text>
          <lefine-text data-part="task-label">{searchSecondaryLabel}</lefine-text>
        </kefine-solver-search-copy>
        {#if isFlying}
@@ -2512,6 +2517,7 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
+    transform: translateY(0.13rem);
   }
 
   lef-flying-arrow {
