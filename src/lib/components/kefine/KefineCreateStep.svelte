@@ -29,8 +29,10 @@
     solverSearchLabel,
     solverLabel,
     matchedOrders,
+    recentOrders = [],
     isSearching,
     matchedTasksLabel,
+    recentTasksLabel,
     addFileLabel,
     addExecutionEstimateLabel,
     fileCountLabel,
@@ -38,12 +40,14 @@
     openTaskLabel,
     relatedItemsLabel,
     createServiceLabel = 'Transform to service',
+    stopTaskLabel,
     deleteTaskLabel,
     onSubmit,
     onQueueTask,
     onAttachFiles,
     onRemoveFile,
     onDeleteOrder,
+    onStopOrder,
     onOpenOrder,
     onCreateServiceFromOrder,
     onDescriptionChange,
@@ -96,8 +100,10 @@
     solverSearchLabel: string;
     solverLabel: string;
     matchedOrders: OrderView[];
+    recentOrders?: OrderView[];
     isSearching: boolean;
     matchedTasksLabel: string;
+    recentTasksLabel: string;
     addFileLabel: string;
     addExecutionEstimateLabel: string;
     fileCountLabel: (count: number) => string;
@@ -105,12 +111,14 @@
     openTaskLabel: string;
     relatedItemsLabel: string;
     createServiceLabel?: string;
+    stopTaskLabel: string;
     deleteTaskLabel: string;
     onSubmit: () => void;
     onQueueTask: () => Promise<void> | void;
     onAttachFiles: (files: File[]) => void;
     onRemoveFile: (index: number) => void;
     onDeleteOrder: (order: OrderView, event: Event) => void;
+    onStopOrder: (order: OrderView, event: Event) => void;
     onOpenOrder: (order: OrderView) => void;
     onCreateServiceFromOrder?: (order: OrderView, event: Event) => void;
     onDescriptionChange?: (value: string) => void;
@@ -134,6 +142,7 @@
   let filePreviews = $state<Map<number, string>>(new Map());
   let queuePopoverOpen = $state(false);
   let queuePressTriggered = $state(false);
+  let cancelStopPress: (() => void) | null = null;
   let cancelPlaceholderTick: (() => void) | null = null;
   let cancelQueuePress: (() => void) | null = null;
   let placeholderVariantIndex = $state(0);
@@ -736,6 +745,8 @@
       cancelPlaceholderTick = null;
       cancelQueuePress?.();
       cancelQueuePress = null;
+      cancelStopPress?.();
+      cancelStopPress = null;
     };
   });
 
@@ -744,11 +755,7 @@
       return;
     }
 
-    if (event.shiftKey) {
-      return;
-    }
-
-    if (event.altKey) {
+    if (event.shiftKey || event.altKey) {
       event.preventDefault();
       void onQueueTask();
       return;
@@ -869,6 +876,32 @@
     event.preventDefault();
     event.stopPropagation();
     onDeleteOrder(order, event);
+  }
+
+  function handleStopClick(order: OrderView, event: MouseEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+    cancelStopPress?.();
+    cancelStopPress = null;
+    onStopOrder(order, event);
+  }
+
+  function handleStopPointerDown(order: OrderView, event: PointerEvent) {
+    if (event.button !== 0) {
+      return;
+    }
+
+    event.stopPropagation();
+    cancelStopPress?.();
+    cancelStopPress = scheduleAfter(600, () => {
+      cancelStopPress = null;
+      onStopOrder(order, event);
+    });
+  }
+
+  function clearStopPointerTimer() {
+    cancelStopPress?.();
+    cancelStopPress = null;
   }
 
   function handleOpenOrderKeydown(order: OrderView, event: KeyboardEvent) {
@@ -1178,10 +1211,43 @@
             itemTestId={`kefine-search-order-${order.id}`}
             openTestId={`kefine-open-search-order-${order.id}`}
             deleteTestId={`kefine-delete-search-order-${order.id}`}
-            onOpen={() => onOpenOrder(order)}
+            openOrder={() => onOpenOrder(order)}
             onCreateService={(event) => onCreateServiceFromOrder?.(order, event)}
             onOpenKeydown={(event) => handleOpenOrderKeydown(order, event)}
             onDelete={(event) => handleDeleteClick(order, event)}
+          />
+        {/each}
+      </ul>
+    </section>
+  {:else if !solverSearchActive && recentOrders.length > 0}
+    <section data-part="recent" aria-label={recentTasksLabel}>
+      <kefine-recent-title>{recentTasksLabel}</kefine-recent-title>
+      <ul data-part="recent-list" data-compact="true" data-testid="kefine-recent-orders">
+        {#each recentOrders as order (order.id)}
+          <KefineOrderListItem
+            {order}
+            {openTaskLabel}
+            {relatedItemsLabel}
+            {createServiceLabel}
+            {stopTaskLabel}
+            {deleteTaskLabel}
+            showCreateService={false}
+            showStop={order.status !== 'completed' && order.status !== 'done'}
+            showDelete={true}
+            openByDefault={true}
+            itemTestId={`kefine-recent-order-${order.id}`}
+            openTestId={`kefine-open-order-${order.id}`}
+            stopTestId={`kefine-stop-order-${order.id}`}
+            deleteTestId={`kefine-delete-order-${order.id}`}
+            openOrder={() => onOpenOrder(order)}
+            onCreateService={(event) => onCreateServiceFromOrder?.(order, event)}
+            onOpenKeydown={(event) => handleOpenOrderKeydown(order, event)}
+            onStop={(event) => handleStopClick(order, event)}
+            onDelete={(event) => handleDeleteClick(order, event)}
+            onStopPointerDown={(event) => handleStopPointerDown(order, event)}
+            onStopPointerUp={clearStopPointerTimer}
+            onStopPointerLeave={clearStopPointerTimer}
+            onStopPointerCancel={clearStopPointerTimer}
           />
         {/each}
       </ul>

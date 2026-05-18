@@ -535,6 +535,15 @@
           .slice(0, 5)
       : []
   );
+  const recentCreatedOrders = $derived(
+    [...createdOrders]
+      .sort(
+        (left, right) =>
+          new Date(right.createdAt).getTime() -
+          new Date(left.createdAt).getTime()
+      )
+      .slice(0, 5)
+  );
   const TITLE_FONT_MAX = 2.0;
   const TITLE_FONT_MIN = 1.0;
   const TITLE_FONT_SHRINK_AT = 24;
@@ -1107,8 +1116,13 @@
       currentOrder?.actorHandle?.trim() ||
       getRouteActorHandleFallback();
 
-    if (orderRouteId && actorHandle) {
-      nextUrl.pathname = localizeAppPath(buildActorOrderPath(actorHandle, orderRouteId), activeLocale);
+    if (orderRouteId) {
+      nextUrl.pathname = localizeAppPath(
+        actorHandle
+          ? buildActorOrderPath(actorHandle, orderRouteId)
+          : `/order/${encodeURIComponent(orderRouteId)}`,
+        activeLocale
+      );
       nextUrl.search = '';
       nextUrl.hash =
         step === 'payment' && paymentStage === 'result-ready'
@@ -1650,6 +1664,26 @@
 
   function openOrder(order: OrderView) {
     showOrderFlow(order);
+
+    if (!browser) {
+      return;
+    }
+
+    const orderRouteId = order.shareId?.trim() || order.id;
+    const actorHandle = order.actorHandle?.trim() || getRouteActorHandleFallback();
+    const nextUrl = new URL(window.location.href);
+    nextUrl.pathname = localizeAppPath(
+      actorHandle
+        ? buildActorOrderPath(actorHandle, orderRouteId)
+        : `/order/${encodeURIComponent(orderRouteId)}`,
+      activeLocale
+    );
+    nextUrl.search = '';
+    nextUrl.hash = '';
+
+    if (window.location.href !== nextUrl.toString()) {
+      replaceState(nextUrl, page.state);
+    }
   }
 
   function getSolverListHref() {
@@ -2440,9 +2474,14 @@
       const nextShareId = patch.shareId?.trim() || currentOrder.id;
       const actorHandle = currentOrder.actorHandle?.trim() || getRouteActorHandleFallback();
 
-      if (actorHandle && nextShareId) {
+      if (nextShareId) {
         const nextUrl = new URL(window.location.href);
-        nextUrl.pathname = localizeAppPath(buildActorOrderPath(actorHandle, nextShareId), activeLocale);
+        nextUrl.pathname = localizeAppPath(
+          actorHandle
+            ? buildActorOrderPath(actorHandle, nextShareId)
+            : `/order/${encodeURIComponent(nextShareId)}`,
+          activeLocale
+        );
         nextUrl.search = '';
 
         if (window.location.href !== nextUrl.toString()) {
@@ -2469,10 +2508,13 @@
       return;
     }
 
+    const localOrderPatch = { ...patch };
+    delete localOrderPatch.gitSettings;
     const nextOrderWithActor = applyActorIdentityFallback(
       {
         ...currentOrder,
         ...updated,
+        ...localOrderPatch,
         id: currentOrder.id
       },
       currentOrder
@@ -2840,8 +2882,10 @@
           solverSearchLabel={localeText.create.solverSearchLabel}
           solverLabel={localeText.labels.solver}
           matchedOrders={matchedOrders}
+          recentOrders={recentCreatedOrders}
           isSearching={draft.description.trim().length > 0}
           matchedTasksLabel={localeText.create.matchedTasks}
+          recentTasksLabel={localeText.labels.taskQueue}
           addFileLabel={localeText.create.addFile}
           addExecutionEstimateLabel={localeText.create.addExecutionEstimate}
           fileCountLabel={localeText.create.fileCount}
@@ -2849,12 +2893,14 @@
           openTaskLabel={localeText.labels.openOrderLink}
           relatedItemsLabel={localeText.labels.relatedItems}
           executionEstimateLabel={localeText.labels.executionEstimate}
+          stopTaskLabel={localeText.buttons.stopTask}
           deleteTaskLabel={localeText.buttons.delete}
           onSubmit={handleSubmit}
           onQueueTask={queueTaskBelow}
           onAttachFiles={attachFiles}
           onRemoveFile={removeAttachedFile}
           onDeleteOrder={handleDeleteOrder}
+          onStopOrder={handleStopOrder}
           onOpenOrder={openOrder}
           onCreateServiceFromOrder={() => {}}
           onDescriptionChange={updateDescription}

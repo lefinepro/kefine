@@ -14,10 +14,11 @@
     openTestId,
     stopTestId,
     deleteTestId,
+    openByDefault = false,
     showStop = false,
     showDelete = false,
     showCreateService = false,
-    onOpen,
+    openOrder,
     onCreateService,
     onOpenKeydown,
     onStop,
@@ -38,10 +39,11 @@
     openTestId: string;
     stopTestId?: string;
     deleteTestId?: string;
+    openByDefault?: boolean;
     showStop?: boolean;
     showDelete?: boolean;
     showCreateService?: boolean;
-    onOpen: () => void;
+    openOrder: () => void;
     onCreateService?: (event: MouseEvent) => void;
     onOpenKeydown: (event: KeyboardEvent) => void;
     onStop?: (event: MouseEvent) => void;
@@ -65,16 +67,44 @@
   const hasServiceVariables = $derived((order.templateVariables?.length ?? 0) > 0);
   const hasExpandedSections = $derived(hasLabels || hasServiceVariables);
   const canMakeTemplate = $derived(order.status === 'completed' || order.status === 'done');
+  let openHandledOnPointerUp = false;
+
+  function triggerOpen(event: Event) {
+    event.preventDefault();
+    event.stopPropagation();
+    openOrder();
+  }
+
+  function handleOpenClick(event: MouseEvent) {
+    if (openHandledOnPointerUp) {
+      openHandledOnPointerUp = false;
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
+    triggerOpen(event);
+  }
+
+  function handleOpenPointerUp(event: PointerEvent) {
+    if (event.button !== 0) {
+      return;
+    }
+
+    openHandledOnPointerUp = true;
+    triggerOpen(event);
+  }
 </script>
 
 <li>
   <details
+    open={openByDefault}
     data-testid={itemTestId}
     data-order-id={order.id}
     data-status={order.status}
     data-has-sections={hasExpandedSections}
   >
-    <summary ondblclick={onOpen}>
+    <summary ondblclick={openOrder}>
       <kefine-order-row>
         <kefine-order-disclosure aria-hidden="true">
           <Icon icon="mdi:chevron-down" width="16" height="16" />
@@ -86,6 +116,9 @@
 
         <kefine-order-copy>
           <kefine-order-title>{order.title}</kefine-order-title>
+          {#if order.executionEstimate}
+            <kefine-order-eta data-testid={`kefine-order-eta-${order.id}`}>{order.executionEstimate}</kefine-order-eta>
+          {/if}
         </kefine-order-copy>
       </kefine-order-row>
     </summary>
@@ -96,11 +129,12 @@
           type="button"
           data-part="open-task"
           data-testid={openTestId}
-          onclick={onOpen}
+          onpointerup={handleOpenPointerUp}
+          onclick={handleOpenClick}
           onkeydown={onOpenKeydown}
         >
           <Icon icon="mdi:arrow-top-right" width="15" height="15" aria-hidden="true" />
-          <lefine-text>{openTaskLabel}</lefine-text>
+          <lefine-text onpointerup={handleOpenPointerUp} onclick={handleOpenClick}>{openTaskLabel}</lefine-text>
         </button>
 
         {#if showCreateService && canMakeTemplate}
@@ -267,6 +301,15 @@
     font-size: 1.02rem;
     line-height: 1.25;
     color: var(--lefine-text);
+    overflow-wrap: anywhere;
+  }
+
+  kefine-order-eta {
+    display: block;
+    min-width: 0;
+    color: color-mix(in oklab, var(--lefine-text-soft) 86%, transparent);
+    font-size: 0.78rem;
+    line-height: 1.25;
     overflow-wrap: anywhere;
   }
 
