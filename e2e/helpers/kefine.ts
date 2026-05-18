@@ -116,6 +116,14 @@ export async function mockOrderApi(page: Page) {
   const orders = new Map<string, MockOrder>();
   let createDelayMs = 0;
 
+  await page.route('**/api/health', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ ok: true })
+    });
+  });
+
   await page.route('**/create', async (route) => {
     createCounter += 1;
     const postData = route.request().postDataJSON() as { title?: string; name?: string };
@@ -200,7 +208,6 @@ export async function mockOrderApi(page: Page) {
     });
   }
 
-  await page.route('**/order/**', handleOrderLookup);
   await page.route('**/status/**', handleOrderLookup);
 
   return {
@@ -291,7 +298,7 @@ export async function mockPrivateKeyAuth(page: Page) {
         handle: 'api',
         email: 'api@actor.local',
         publickey: {
-          key: 'pqpk_testpublickey_for_api',
+          key: expectedPublicKey,
           pem: ''
         },
         keyId: 'pq1_testactoraddress',
@@ -311,8 +318,25 @@ export async function mockPrivateKeyAuth(page: Page) {
   });
 }
 
+let fallbackPrivateKeyPem: string | null = null;
+
+function encodePem(label: string, bytes: Uint8Array) {
+  const base64 = Buffer.from(bytes).toString('base64');
+  const body = base64.match(/.{1,64}/g)?.join('\n') ?? '';
+  return [`-----BEGIN ${label}-----`, body, `-----END ${label}-----`].join('\n');
+}
+
 export function readActorPrivateKeyPem() {
-  return readFileSync(path.resolve(process.cwd(), 'actor-privatekey.pem'), 'utf8');
+  try {
+    return readFileSync(path.resolve(process.cwd(), 'actor-privatekey.pem'), 'utf8');
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      throw error;
+    }
+  }
+
+  fallbackPrivateKeyPem ??= encodePem('PRIVATE KEY', ml_dsa65.keygen().secretKey);
+  return fallbackPrivateKeyPem;
 }
 
 function pemToDer(pem: string) {
@@ -340,11 +364,5 @@ export async function deriveActorPublicKeyString() {
     ]),
     publicKey
   ]);
-  const publicKeyPem = [
-    '-----BEGIN PUBLIC KEY-----',
-    ...(publicKeyDer.toString('base64').match(/.{1,64}/g) ?? []),
-    '-----END PUBLIC KEY-----'
-  ].join('\n');
-
-  return encodeKeyString(publicKeyPem, 'pqpk_');
+  return publicKeyDer.toString('base64url');
 }

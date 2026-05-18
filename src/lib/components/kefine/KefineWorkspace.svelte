@@ -94,6 +94,7 @@
   const THEME_STORAGE_KEY = 'kefine-theme';
   const BRAND_HOME_NAVIGATION_STORAGE_KEY = 'kefine-brand-home-navigation';
   const CLONE_DRAFT_STORAGE_KEY = 'kefine-clone-draft-v1';
+  const SOLVER_SEARCH_STATE_STORAGE_KEY = 'kefine-solver-search-state-v1';
 
   let {
     initialActorHandle,
@@ -199,6 +200,11 @@
     order: OrderView;
     runLocally: boolean;
   };
+  type SolverSearchState = {
+    text: string;
+    orderId: string | null;
+    completed: boolean;
+  };
 
   async function ensureFlowStepComponentsLoaded() {
     if (SubmittingStepComponent && ErrorStepComponent && PaymentStepComponent) {
@@ -238,6 +244,8 @@
   let draft = $state<DraftOrder>(createEmptyDraft());
   let solverSearchActive = $state(false);
   let solverSearchText = $state('');
+  let solverSearchOrderId = $state<string | null>(null);
+  let solverSearchCompleted = $state(false);
   let draftQueued = $state<DraftOrder | null>(null);
   let pendingCloneAction = $state<PendingCloneAction | null>(null);
   let currentOrder = $state<OrderView | null>(
@@ -735,12 +743,67 @@
     return normalizedProfile;
   }
 
+  function readSolverSearchState(): SolverSearchState | null {
+    if (!browser) return null;
+    try {
+      const raw = sessionStorage.getItem(SOLVER_SEARCH_STATE_STORAGE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as Partial<SolverSearchState>;
+      const text = typeof parsed.text === 'string' ? parsed.text.trim() : '';
+      if (!text) return null;
+      return {
+        text,
+        orderId: typeof parsed.orderId === 'string' && parsed.orderId.trim() ? parsed.orderId.trim() : null,
+        completed: parsed.completed === true
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  function writeSolverSearchState(patch: Partial<SolverSearchState>) {
+    if (!browser) return;
+    const previous = readSolverSearchState();
+    const next: SolverSearchState = {
+      text: patch.text ?? previous?.text ?? '',
+      orderId: patch.orderId !== undefined ? patch.orderId : previous?.orderId ?? null,
+      completed: patch.completed ?? previous?.completed ?? false
+    };
+
+    if (!next.text.trim()) {
+      sessionStorage.removeItem(SOLVER_SEARCH_STATE_STORAGE_KEY);
+      return;
+    }
+
+    sessionStorage.setItem(SOLVER_SEARCH_STATE_STORAGE_KEY, JSON.stringify(next));
+  }
+
+  function restoreSolverSearchState() {
+    const restored = readSolverSearchState();
+    if (!restored) return;
+    solverSearchText = restored.text;
+    solverSearchOrderId = restored.orderId;
+    solverSearchCompleted = restored.completed;
+    solverSearchActive = true;
+  }
+
+  function clearSolverSearchState() {
+    solverSearchActive = false;
+    solverSearchText = '';
+    solverSearchOrderId = null;
+    solverSearchCompleted = false;
+    if (browser) {
+      sessionStorage.removeItem(SOLVER_SEARCH_STATE_STORAGE_KEY);
+    }
+  }
+
   onMount(() => {
     if (!browser) return;
     void checkCraterHealth();
     hydrateAuthStateFromSession();
     loadPasskeySession();
     const loadedOrders = loadCreatedOrders();
+    restoreSolverSearchState();
     isSpecialRuntime = isSpecialRuntimeOrigin(window.location.origin);
     void ensureTemporaryOrderProfile({ createIfMissing: false });
 
@@ -1589,9 +1652,38 @@
     showOrderFlow(order);
   }
 
-  function openSolution(solutionId: string) {
-    const orderId = currentOrder?.id || 'demo';
-    void goto(`/order/${orderId}/solver/${solutionId}`);
+  function getSolverListHref() {
+    const orderId = solverSearchOrderId || currentOrder?.id || 'demo';
+    const params = new URLSearchParams();
+    const task = solverSearchText.trim();
+    if (task) {
+      params.set('task', task);
+    }
+
+    const suffix = params.toString();
+    return `/order/${encodeURIComponent(orderId)}/solutions${suffix ? `?${suffix}` : ''}`;
+  }
+
+  function markSolverSearchComplete() {
+    if (!solverSearchText.trim()) {
+      return;
+    }
+
+    solverSearchCompleted = true;
+    writeSolverSearchState({
+      text: solverSearchText,
+      orderId: solverSearchOrderId,
+      completed: true
+    });
+  }
+
+  function shouldUseSolverSearchFlow(value: string) {
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) {
+      return false;
+    }
+
+    return /\b(go|golang|rust)\b/.test(normalized) || normalized.includes('proxy') || normalized.includes('прокси');
   }
 
   function downloadCloneFile(order: OrderView, format: TaskCloneFormat) {
@@ -2058,7 +2150,7 @@
       step = 'executing';
     }
 
-    return true;
+    return ownerOrderWithActor;
   }
 
   async function submitDraft(form: DraftOrder, options?: { background?: boolean; focusInQueue?: boolean }) {
@@ -2097,8 +2189,19 @@
     }
 
     const submittedSearchText = normalized.description.trim() || normalized.title.trim() || localeText.defaults.taskTitle;
+    const useSolverSearchFlow = shouldUseSolverSearchFlow(submittedSearchText);
+
+    if (!useSolverSearchFlow) {
+      clearSolverSearchState();
+      void submitDraft(normalized);
+      return;
+    }
+
     solverSearchText = submittedSearchText;
     solverSearchActive = true;
+    solverSearchOrderId = null;
+    solverSearchCompleted = false;
+    writeSolverSearchState({ text: submittedSearchText, orderId: null, completed: false });
     draft = createEmptyDraft();
 
     void submitDraft(normalized, { background: true }).then((created) => {
@@ -2108,9 +2211,14 @@
         }
 
         if (solverSearchText === submittedSearchText) {
-          solverSearchActive = false;
-          solverSearchText = '';
+          clearSolverSearchState();
         }
+        return;
+      }
+
+      if (solverSearchText === submittedSearchText) {
+        solverSearchOrderId = created.id;
+        writeSolverSearchState({ text: submittedSearchText, orderId: created.id });
       }
     });
   }
@@ -2130,8 +2238,7 @@
 
   function updateDescription(value: string) {
     if (value.trim()) {
-      solverSearchActive = false;
-      solverSearchText = '';
+      clearSolverSearchState();
     }
 
     draft.description = value;
@@ -2728,6 +2835,8 @@
           backgroundExecuteAria={localeText.create.backgroundExecuteAria}
           solverSearchActive={solverSearchActive}
           solverSearchText={solverSearchText}
+          solverSearchCompleted={solverSearchCompleted}
+          solverListHref={getSolverListHref()}
           solverSearchLabel={localeText.create.solverSearchLabel}
           solverLabel={localeText.labels.solver}
           matchedOrders={matchedOrders}
@@ -2752,7 +2861,7 @@
           onTemplateVariableChange={updateTemplateVariableValue}
           onTagsChange={updateTags}
           onExecutionEstimateChange={updateExecutionEstimate}
-          onOpenSolution={openSolution}
+          onSolverSearchComplete={markSolverSearchComplete}
         />
       </kefine-screen>
     {/if}

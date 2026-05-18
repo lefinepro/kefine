@@ -3,8 +3,6 @@
   import type { DraftOrder, OrderView, TemplatePresentation } from './kefine-workflow';
   import { scheduleAfter } from '$lib/utils/helpers';
   import KefineOrderListItem from '$lib/components/kefine/KefineOrderListItem.svelte';
-  import SolutionMetricsMini from '$lib/components/kefine/SolutionMetricsMini.svelte';
-  import { defaultMetrics } from '$lib/kefine/solutions-data';
   const PLACEHOLDER_TYPE_DELAY_MS = 58;
   const PLACEHOLDER_DELETE_DELAY_MS = 34;
   const PLACEHOLDER_PAUSE_MS = 1150;
@@ -26,6 +24,8 @@
     backgroundExecuteAria,
     solverSearchActive = false,
     solverSearchText = '',
+    solverSearchCompleted = false,
+    solverListHref = '#',
     solverSearchLabel,
     solverLabel,
     matchedOrders,
@@ -51,7 +51,7 @@
     onTagsChange,
     executionEstimateLabel,
     onExecutionEstimateChange,
-    onOpenSolution
+    onSolverSearchComplete
   }: {
     draft: DraftOrder;
     template: TemplatePresentation | null;
@@ -91,6 +91,8 @@
     backgroundExecuteAria: string;
     solverSearchActive?: boolean;
     solverSearchText?: string;
+    solverSearchCompleted?: boolean;
+    solverListHref?: string;
     solverSearchLabel: string;
     solverLabel: string;
     matchedOrders: OrderView[];
@@ -116,7 +118,7 @@
     onTagsChange?: (tags: string[]) => void;
     executionEstimateLabel: string;
     onExecutionEstimateChange?: (value: string) => void;
-    onOpenSolution?: (solutionId: string) => void;
+    onSolverSearchComplete?: () => void;
   } = $props();
 
   let animatedPlaceholder = $state('');
@@ -142,13 +144,14 @@
   let initialized = $state(false);
 
   import { solutionsStore } from '$lib/kefine/solutions-store';
-  import { get } from 'svelte/store';
 
   interface Solution {
     id: string;
     solver: string;
     title: string;
     description: string;
+    project?: string;
+    slug?: string;
     diffs: Array<{ file: string; added: number; removed: number }>;
     codeLines: Array<{ text: string; type: 'added' | 'removed' | 'unchanged' }>;
     fileCodeLines?: Record<string, Array<{ text: string; type: 'added' | 'removed' | 'unchanged' }>>;
@@ -241,6 +244,8 @@
       solver: 'Go Proxy Basic',
       title: 'Simple HTTP Proxy',
       description: 'Minimal HTTP proxy with forward functionality',
+      project: 'kefine/go-proxy',
+      slug: 'feat/basic-forward',
       diffs: [
         { file: 'main.go', added: 28, removed: 0 },
         { file: 'config.yaml', added: 5, removed: 0 },
@@ -339,6 +344,8 @@
       solver: 'Go Proxy Pro',
       title: 'Production-ready Proxy with Logging',
       description: 'Proxy with request/response logging and error handling',
+      project: 'kefine/go-proxy',
+      slug: 'feat/logged-proxy',
       diffs: [
         { file: 'main.go', added: 48, removed: 0 },
         { file: 'config.go', added: 12, removed: 0 },
@@ -410,6 +417,8 @@
       solver: 'Go Reverse Proxy',
       title: 'Reverse Proxy with Path Rewrite',
       description: 'Reverse proxy that rewrites paths and handles routing',
+      project: 'kefine/go-proxy',
+      slug: 'feat/reverse-rewrite',
       diffs: [
         { file: 'main.go', added: 55, removed: 0 },
         { file: 'proxy.go', added: 15, removed: 0 },
@@ -465,73 +474,102 @@
     }
   ];
 
-$effect(() => {
+  $effect(() => {
     if (initialized) return;
-initialized = true;
+    initialized = true;
     const current = solutionsStore.getAll();
     if (current.length === 0) {
       solutionsStore.set([...defaultSolutions]);
     }
   });
 
-  const crownAnimating = $state<Record<string, boolean>>({});
+  let taskSearchText = $state('');
+  const isMultilineDraft = $derived(draft.description.includes('\n'));
+  const effectiveTaskCompleted = $derived(taskCompleted || solverSearchCompleted);
 
-  function handleCrownClick(solutionId: string) {
-    if (crownAnimating[solutionId]) return;
-    const idx = $solutionsStore.findIndex(s => s.id === solutionId);
-    if (idx === -1) return;
-    const sol = $solutionsStore[idx];
-    if (sol.rated) {
-      crownAnimating[solutionId] = true;
-      const btn = document.querySelector<HTMLElement>(`[data-crown-btn="${solutionId}"]`);
-      if (btn) {
-        btn.classList.remove('is-active');
-        void btn.offsetWidth;
-        crownAnimating[solutionId] = false;
+  function solutionIdsForTaskText(value: string): string[] | null {
+    const text = value.trim().toLowerCase();
+    if (text.includes('мини прокси') && text.includes('go')) {
+      return ['5', '6', '7'];
+    }
+    if (text.includes('hello world') && text.includes('rust')) {
+      return ['1', '2', '3', '4'];
+    }
+    return null;
+  }
+
+  function filterSolutionsForTask(all: Solution[], value: string): Solution[] {
+    const ids = solutionIdsForTaskText(value);
+    if (!ids) {
+      return all;
+    }
+
+    return all.filter((solution) => ids.includes(solution.id));
+  }
+
+  function ensureSolutionsForTask(value: string) {
+    const ids = solutionIdsForTaskText(value);
+    if (!ids) {
+      return;
+    }
+
+    const current = solutionsStore.getAll();
+    const currentById = new Map(current.map((solution) => [solution.id, solution]));
+    const requiredSolutions = defaultSolutions.filter((solution) => ids.includes(solution.id));
+    let changed = false;
+
+    const merged = current.map((solution) => {
+      const fallback = requiredSolutions.find((candidate) => candidate.id === solution.id);
+      if (!fallback) {
+        return solution;
       }
-      solutionsStore.update(list => {
-        const newList = [...list];
-        newList[idx] = { ...newList[idx], rated: false };
-        return newList;
-      });
-    } else {
-      crownAnimating[solutionId] = true;
-      solutionsStore.update(list => {
-        const newList = [...list];
-        newList[idx] = { ...newList[idx], rated: true };
-        return newList;
-      });
-      setTimeout(() => {
-        crownAnimating[solutionId] = false;
-      }, 800);
+
+      const next = {
+        ...fallback,
+        ...solution,
+        project: solution.project ?? fallback.project,
+        slug: solution.slug ?? fallback.slug
+      };
+      changed ||= next.project !== solution.project || next.slug !== solution.slug;
+      return next;
+    });
+
+    const additions = requiredSolutions.filter((solution) => !currentById.has(solution.id));
+    if (additions.length > 0) {
+      changed = true;
+    }
+
+    if (changed) {
+      solutionsStore.set([...merged, ...additions]);
     }
   }
 
-  const isMultilineDraft = $derived(draft.description.includes('\n'));
   const displayedSolutions = $derived.by(() => {
     const all = $solutionsStore;
-    const text = solverSearchText.trim().toLowerCase();
-    if (taskCompleted) {
-      const taskLower = taskSearchText.toLowerCase();
-      if (taskLower.includes('мини прокси') && taskLower.includes('go')) {
-        return all.filter(s => ['5', '6', '7'].includes(s.id));
-      }
-      if (taskLower.includes('hello world') && taskLower.includes('rust')) {
-        return all.filter(s => ['1', '2', '3', '4'].includes(s.id));
-      }
-      return all;
-    }
+    const text = (taskSearchText || solverSearchText).trim();
     if (!text) return all;
-    if (text.includes('мини прокси') && text.includes('go')) {
-      return all.filter(s => ['5', '6', '7'].includes(s.id));
-    }
-    if (text.includes('hello world') && text.includes('rust')) {
-      return all.filter(s => ['1', '2', '3', '4'].includes(s.id));
-    }
-    return all;
+    return filterSolutionsForTask(all, text);
   });
 
-  let taskSearchText = $state('');
+  const searchTaskLabel = $derived((taskSearchText || solverSearchText).trim());
+  const searchRepositoryLabel = $derived.by(() => {
+    const primary = displayedSolutions[0];
+    if (primary?.project) {
+      return primary.project;
+    }
+    if (primary?.solver) {
+      return primary.solver;
+    }
+    return searchTaskLabel;
+  });
+  const searchSecondaryLabel = $derived.by(() => {
+    const primary = displayedSolutions[0];
+    if (primary?.project && primary?.solver) {
+      return `${primary.solver} · ${searchTaskLabel}`;
+    }
+    return searchTaskLabel;
+  });
+  const searchActionLabel = $derived(effectiveTaskCompleted ? 'Open solver list' : solverSearchLabel);
 
   const afeIntroCard = $derived(afe.cards[0] ?? null);
   const afeStepCards = $derived(afe.cards.slice(1));
@@ -663,43 +701,33 @@ initialized = true;
   });
 
   $effect(() => {
-    const text = solverSearchText.trim().toLowerCase();
-    if (solverSearchActive && text.includes('hello world') && text.includes('rust')) {
-      taskSearchText = solverSearchText.trim();
-      isFlying = true;
-      const timer = setTimeout(() => {
-        taskCompleted = true;
-        isFlying = false;
-        const current = solutionsStore.getAll();
-        const rustSolutions = defaultSolutions.filter(s => ['1', '2', '3', '4'].includes(s.id));
-        const existingIds = current.map(s => s.id);
-        const newSolutions = rustSolutions.filter(s => !existingIds.includes(s.id));
-        if (newSolutions.length > 0) {
-          solutionsStore.set([...current, ...newSolutions]);
-        }
-      }, 4000);
-      return () => clearTimeout(timer);
-    }
-  });
+    const text = solverSearchText.trim();
 
-  $effect(() => {
-    const text = solverSearchText.trim().toLowerCase();
-    if (solverSearchActive && text.includes('мини прокси') && text.includes('go')) {
-      taskSearchText = solverSearchText.trim();
-      isFlying = true;
-      const timer = setTimeout(() => {
-        taskCompleted = true;
-        isFlying = false;
-        const current = solutionsStore.getAll();
-        const goSolutions = defaultSolutions.filter(s => ['5', '6', '7'].includes(s.id));
-        const existingIds = current.map(s => s.id);
-        const newSolutions = goSolutions.filter(s => !existingIds.includes(s.id));
-        if (newSolutions.length > 0) {
-          solutionsStore.set([...current, ...newSolutions]);
-        }
-      }, 4000);
-      return () => clearTimeout(timer);
+    if (!solverSearchActive || !text) {
+      taskSearchText = '';
+      taskCompleted = false;
+      isFlying = false;
+      return;
     }
+
+    taskSearchText = text;
+    ensureSolutionsForTask(text);
+
+    if (solverSearchCompleted || taskCompleted) {
+      taskCompleted = true;
+      isFlying = false;
+      return;
+    }
+
+    isFlying = true;
+    const timer = setTimeout(() => {
+      taskCompleted = true;
+      isFlying = false;
+      ensureSolutionsForTask(text);
+      onSolverSearchComplete?.();
+    }, 4000);
+
+    return () => clearTimeout(timer);
   });
 
   $effect(() => {
@@ -994,7 +1022,7 @@ initialized = true;
         aria-describedby="kefine-composer-hints"
         placeholder=""
         rows="1"
-        wrap={isMultilineDraft ? 'soft' : 'off'}
+        wrap="soft"
         onkeydown={handleTaskInputKeydown}
         oninput={(e) => {
           const target = e.currentTarget as HTMLTextAreaElement;
@@ -1192,10 +1220,35 @@ initialized = true;
 
  {#if solverSearchActive && solverSearchText.trim()}
    <section data-part="tasks-list">
-     <kefine-solver-search-row aria-live="polite">
-       <lefine-text>{solverSearchText}</lefine-text>
+     <a
+       role="button"
+       href={effectiveTaskCompleted ? solverListHref : '#'}
+       class="kefine-solver-search-row"
+       data-testid="kefine-solver-search-row"
+       aria-label={searchActionLabel}
+       aria-disabled={!effectiveTaskCompleted}
+       tabindex={effectiveTaskCompleted ? 0 : -1}
+       title={searchTaskLabel}
+       aria-live="polite"
+       onpointerdown={(event) => {
+         if (effectiveTaskCompleted) {
+           event.preventDefault();
+         }
+       }}
+       onclick={(event) => {
+         event.preventDefault();
+         if (!browser) {
+           return;
+         }
+         globalThis.location.assign(solverListHref);
+       }}
+     >
+       <kefine-solver-search-copy>
+         <lefine-text data-part="repo-label">{searchRepositoryLabel}</lefine-text>
+         <lefine-text data-part="task-label">{searchSecondaryLabel}</lefine-text>
+       </kefine-solver-search-copy>
        {#if isFlying}
-         <lef-arrow-wrapper>
+         <lef-arrow-wrapper aria-hidden="true">
            <lef-wind-flow>
              <lef-wind-line></lef-wind-line>
              <lef-wind-line></lef-wind-line>
@@ -1203,118 +1256,10 @@ initialized = true;
            <lef-flying-arrow>➵</lef-flying-arrow>
          </lef-arrow-wrapper>
        {/if}
-       <kefine-solver-search-indicator aria-label={taskCompleted ? 'Completed' : solverSearchLabel} title={taskCompleted ? 'Completed' : solverSearchLabel} data-completed={taskCompleted}>
+       <kefine-solver-search-indicator aria-label={effectiveTaskCompleted ? 'Completed' : solverSearchLabel} title={effectiveTaskCompleted ? 'Completed' : solverSearchLabel} data-completed={effectiveTaskCompleted}>
          <kefine-solver-search-dot aria-hidden="true"></kefine-solver-search-dot>
        </kefine-solver-search-indicator>
-     </kefine-solver-search-row>
-
-     {#if taskCompleted}
-       <lef-tasks-grid>
-         <lef-tasks-aside aria-label="Tasks">
-           <lef-tasks-aside-head>Tasks</lef-tasks-aside-head>
-           <lef-tasks-aside-list>
-             <lef-tasks-aside-item data-active="true">
-               <lefine-text>{taskSearchText}</lefine-text>
-             </lef-tasks-aside-item>
-           </lef-tasks-aside-list>
-         </lef-tasks-aside>
-
-         <lef-solutions-list>
-           {#each displayedSolutions as solution, solutionIndex (solution.id)}
-             <article class="solution-card" style="--card-i: {solutionIndex}">
-               <header class="solution-card-header">
-                 <lef-solution-meta>
-                   <strong>{solution.solver}</strong>
-                   <lefine-text>{solution.title}</lefine-text>
-                 </lef-solution-meta>
-                 <button
-                   type="button"
-                   class="pin-button"
-                   class:is-active={solution.rated}
-                   data-crown-btn={solution.id}
-                   onclick={() => handleCrownClick(solution.id)}
-                   aria-label={solution.rated ? 'Selected solution' : 'Pin solution'}
-                   title={solution.rated ? 'Selected solution' : 'Pin solution'}
-                 >
-                   <svg class="pin-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                     <path d="M12 2l2.39 6.95H21l-5.31 3.86L17.78 20 12 16.27 6.22 20l2.09-7.19L3 8.95h6.61L12 2z"/>
-                   </svg>
-                 </button>
-               </header>
-               <p class="solution-description">{solution.description}</p>
-               <lef-file-list aria-label="Files">
-                 {#each solution.diffs as diff}
-                   <lef-file-row>
-                     <lef-file-name>{diff.file}</lef-file-name>
-                     <lef-file-changes>
-                       <lef-file-added>+{diff.added}</lef-file-added>
-                       {#if diff.removed > 0}
-                         <lef-file-removed>-{diff.removed}</lef-file-removed>
-                       {/if}
-                     </lef-file-changes>
-                   </lef-file-row>
-                 {/each}
-               </lef-file-list>
-               <lef-card-actions>
-                 <button
-                   type="button"
-                   class="view-solution-btn"
-                   onclick={() => onOpenSolution?.(solution.id)}
-                   aria-label="View code"
-                   title="View code"
-                 >
-                   <svg class="view-solution-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                     <polyline points="16 18 22 12 16 6"></polyline>
-                     <polyline points="8 6 2 12 8 18"></polyline>
-                   </svg>
-                 </button>
-                 <button
-                   type="button"
-                   class="solution-merge-btn"
-                   class:solution-merge-btn--merged={solution.rated}
-                   onclick={() => handleCrownClick(solution.id)}
-                   aria-label={solution.rated ? 'Merged' : 'Merge solution'}
-                   title={solution.rated ? 'Merged' : 'Merge solution'}
-                 >
-                   <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                     <circle cx="6" cy="18" r="2"></circle>
-                     <circle cx="6" cy="6" r="2"></circle>
-                     <circle cx="18" cy="14" r="2"></circle>
-                     <path d="M6 8v8M6 8c0 4 6 6 12 6"></path>
-                   </svg>
-                   <lefine-text>{solution.rated ? 'Merged' : 'Merge'}</lefine-text>
-                 </button>
-               </lef-card-actions>
-             </article>
-           {/each}
-         </lef-solutions-list>
-
-         <lef-task-rail aria-label="Task description and actions">
-           <lef-task-rail-card>
-             <lef-task-rail-head>Task description</lef-task-rail-head>
-             <lef-task-rail-body>{taskSearchText}</lef-task-rail-body>
-           </lef-task-rail-card>
-
-           <lef-task-rail-actions>
-             <button type="button" class="task-rail-btn" aria-label="Settings">
-               <lef-task-rail-icon aria-hidden="true">⚙</lef-task-rail-icon>
-               <lefine-text>Settings</lefine-text>
-             </button>
-             <button type="button" class="task-rail-btn task-rail-btn--primary" aria-label="Clone">
-               <lef-task-rail-icon aria-hidden="true">⤓</lef-task-rail-icon>
-               <lefine-text>Clone</lefine-text>
-             </button>
-           </lef-task-rail-actions>
-
-           <SolutionMetricsMini
-             metrics={defaultMetrics}
-             activeSolverId={displayedSolutions[0]?.id ?? '5'}
-             project={displayedSolutions[0]?.project}
-             slug={displayedSolutions[0]?.slug}
-           />
-         </lef-task-rail>
-       </lef-tasks-grid>
-     {/if}
+     </a>
    </section>
  {/if}
 
@@ -2412,419 +2357,6 @@ initialized = true;
     gap: 1rem;
   }
 
-  lef-tasks-grid {
-    display: grid;
-    grid-template-columns: minmax(220px, 1fr) 38rem 320px;
-    gap: 1rem;
-    align-items: start;
-  }
-
-  lef-tasks-aside {
-    display: flex;
-    flex-direction: column;
-    gap: 0.6rem;
-    padding: 0.85rem 0.85rem 0.95rem;
-    background: var(--kef-bg-card);
-    border: 1px solid var(--kef-line);
-    border-radius: 0.75rem;
-    position: sticky;
-    top: 1rem;
-  }
-
-  lef-tasks-aside-head {
-    display: block;
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--lefine-text-soft);
-    padding: 0.1rem 0.25rem 0.4rem;
-  }
-
-  lef-tasks-aside-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-  }
-
-  lef-tasks-aside-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 0.6rem;
-    border-radius: 0.55rem;
-    border: 0;
-    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 8%, var(--kef-bg-card));
-    color: var(--lefine-text);
-    font-size: 0.85rem;
-  }
-
-  lef-tasks-aside-item[data-active='true'] {
-    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 14%, var(--kef-bg-card));
-  }
-
-  lef-tasks-aside-item lefine-text {
-    min-width: 0;
-    overflow-wrap: anywhere;
-    white-space: normal;
-    line-height: 1.3;
-    color: var(--lefine-text);
-  }
-
-  lef-task-rail {
-    display: flex;
-    flex-direction: column;
-    gap: 0.6rem;
-    position: sticky;
-    top: 1rem;
-  }
-
-  lef-task-rail-card {
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-    padding: 0.85rem 0.95rem 1rem;
-    background: var(--kef-bg-card);
-    border: 1px solid var(--kef-line);
-    border-radius: 0.75rem;
-  }
-
-  lef-task-rail-head {
-    display: block;
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--lefine-text-soft);
-  }
-
-  lef-task-rail-body {
-    display: block;
-    font-size: 0.95rem;
-    color: var(--lefine-text);
-    line-height: 1.4;
-    word-break: break-word;
-  }
-
-  lef-task-rail-actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.5rem;
-  }
-
-  .task-rail-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.4rem;
-    padding: 0.55rem 0.75rem;
-    border-radius: 0.55rem;
-    border: 1px solid var(--kef-line);
-    background: var(--kef-bg-card);
-    color: var(--lefine-text);
-    font-size: 0.85rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 160ms ease, border-color 160ms ease;
-  }
-
-  .task-rail-btn:hover {
-    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 8%, var(--kef-bg-card));
-    border-color: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 30%, var(--kef-line));
-  }
-
-  .task-rail-btn--primary {
-    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 14%, var(--kef-bg-card));
-    border-color: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 35%, var(--kef-line));
-  }
-
-  lef-task-rail-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.05rem;
-    height: 1.05rem;
-    font-size: 0.95rem;
-    line-height: 1;
-    color: var(--lefine-text);
-  }
-
-  @media (max-width: 1280px) {
-    lef-tasks-grid {
-      grid-template-columns: minmax(220px, 1fr) minmax(0, 38rem);
-    }
-    lef-task-rail {
-      grid-column: 1 / -1;
-      position: static;
-    }
-  }
-
-  @media (max-width: 1180px) {
-    lef-tasks-grid {
-      grid-template-columns: minmax(200px, 1fr) minmax(0, 38rem);
-    }
-  }
-
-  @media (max-width: 760px) {
-    lef-tasks-grid {
-      grid-template-columns: minmax(0, 1fr);
-    }
-    lef-tasks-aside,
-    lef-task-rail {
-      position: static;
-    }
-  }
-
-  lef-solutions-list {
-    display: grid;
-    gap: 0.7rem;
-    width: 100%;
-  }
-
-  .solution-card {
-    --card-i: 0;
-    display: grid;
-    gap: 0.5rem;
-    padding: 0.75rem 0.9rem;
-    background: var(--kef-bg-card);
-    border: 1px solid var(--kef-line);
-    border-radius: var(--kef-radius-ui, 0.75rem);
-    box-shadow: 0 1px 0 color-mix(in oklab, var(--kef-line) 60%, transparent);
-    box-sizing: border-box;
-    animation: solution-card-appear 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
-    animation-delay: calc(var(--card-i) * 70ms);
-    transform-origin: top center;
-    will-change: opacity, transform;
-  }
-
-  @keyframes solution-card-appear {
-    0% {
-      opacity: 0;
-      transform: translateY(8px) scale(0.97);
-      filter: blur(2px);
-    }
-    60% {
-      filter: blur(0);
-    }
-    100% {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-      filter: blur(0);
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .solution-card {
-      animation: none;
-    }
-  }
-
-  .solution-card-header {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 0.75rem;
-  }
-
-  lef-solution-meta {
-    display: grid;
-    gap: 0.1rem;
-    min-width: 0;
-  }
-
-  lef-solution-meta strong {
-    color: var(--lefine-text);
-    font-size: 1rem;
-    font-weight: 600;
-    line-height: 1.25;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  lef-solution-meta lefine-text {
-    color: var(--lefine-text-soft);
-    font-size: 0.875rem;
-    line-height: 1.3;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .solution-description {
-    margin: 0;
-    color: var(--lefine-text-soft);
-    font-size: 0.92rem;
-    line-height: 1.45;
-  }
-
-  lef-file-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.2rem;
-    font-family: 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
-    font-size: 0.78rem;
-  }
-
-  lef-file-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-    min-width: 0;
-  }
-
-  lef-file-name {
-    color: var(--lefine-text-soft);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    min-width: 0;
-    flex: 1 1 auto;
-  }
-
-  lef-file-changes {
-    display: inline-flex;
-    gap: 0.4rem;
-    font-weight: 600;
-    font-size: 0.78rem;
-    flex: 0 0 auto;
-  }
-
-  lef-file-added { color: var(--kef-success, #22c55e); }
-  lef-file-removed { color: var(--kef-error, #ef4444); }
-
-  lef-card-actions {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  .pin-button {
-    position: relative;
-    width: 28px;
-    height: 28px;
-    background: transparent;
-    border: 1px solid var(--kef-line);
-    border-radius: 0.4rem;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    transition:
-      border-color 200ms ease,
-      background-color 200ms ease,
-      color 200ms ease;
-    padding: 0;
-    outline: none;
-    flex-shrink: 0;
-    color: var(--lefine-text-soft);
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  .pin-button:hover {
-    border-color: color-mix(in oklab, var(--kef-color-primary) 40%, var(--kef-line));
-    color: var(--kef-color-primary);
-  }
-
-  .pin-button:active {
-    transform: scale(0.96);
-  }
-
-  .pin-svg {
-    width: 16px;
-    height: 16px;
-    transition: fill 200ms ease, stroke 200ms ease;
-  }
-
-  .pin-button.is-active {
-    border-color: color-mix(in oklab, var(--kef-color-primary) 55%, var(--kef-line));
-    background: color-mix(in oklab, var(--kef-color-primary) 14%, var(--kef-bg-card));
-    color: var(--kef-color-primary);
-  }
-
-  .pin-button.is-active .pin-svg {
-    fill: currentColor;
-    animation: pin-pop 320ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
-  }
-
-  @keyframes pin-pop {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.18); }
-    100% { transform: scale(1); }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .pin-button.is-active .pin-svg { animation: none; }
-  }
-
-  .view-solution-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 30px;
-    height: 28px;
-    padding: 0;
-    background: transparent;
-    color: var(--lefine-text-soft);
-    border: 1px solid var(--kef-line);
-    border-radius: 0.4rem;
-    cursor: pointer;
-    transition:
-      background-color 160ms ease,
-      border-color 160ms ease,
-      color 160ms ease,
-      transform 120ms ease;
-  }
-
-  .view-solution-icon {
-    width: 14px;
-    height: 14px;
-  }
-
-  .view-solution-btn:hover {
-    background: color-mix(in oklab, var(--kef-color-primary) 10%, transparent);
-    border-color: color-mix(in oklab, var(--kef-color-primary) 40%, var(--kef-line));
-    color: var(--kef-color-primary);
-  }
-
-  .view-solution-btn:active {
-    transform: scale(0.97);
-  }
-
-  .solution-merge-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3rem;
-    padding: 0.28rem 0.6rem;
-    border-radius: 0.4rem;
-    border: 1px solid color-mix(in oklab, var(--kef-success, #16a34a) 35%, var(--kef-line));
-    background: color-mix(in oklab, var(--kef-success, #16a34a) 10%, var(--kef-bg-card));
-    color: var(--kef-success, #16a34a);
-    font-size: 0.74rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition:
-      background-color 160ms ease,
-      border-color 160ms ease,
-      transform 120ms ease;
-  }
-
-  .solution-merge-btn:hover {
-    background: color-mix(in oklab, var(--kef-success, #16a34a) 18%, var(--kef-bg-card));
-    border-color: var(--kef-success, #16a34a);
-  }
-
-  .solution-merge-btn:active {
-    transform: scale(0.97);
-  }
-
-  .solution-merge-btn--merged {
-    background: color-mix(in oklab, var(--kef-success, #16a34a) 22%, var(--kef-bg-card));
-    border-color: var(--kef-success, #16a34a);
-  }
-
   button[data-part='composer-chip'][data-part-tag='true'] {
     border-style: dashed;
     color: var(--lefine-text-soft);
@@ -2864,20 +2396,50 @@ initialized = true;
     text-align: right;
   }
 
-  kefine-solver-search-row {
+  .kefine-solver-search-row {
+    appearance: none;
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     gap: 0.72rem;
-    min-height: 2.85rem;
+    min-height: 3.35rem;
     padding: 0.42rem 0.5rem 0.42rem 0.78rem;
     border-radius: 0.38rem;
+    border: 1px solid var(--kef-line-soft);
     background: color-mix(in oklab, var(--kef-bg-card) 96%, var(--kef-bg));
     box-shadow: none;
+    color: var(--lefine-text);
+    cursor: pointer;
+    text-decoration: none;
+    text-align: left;
+    transition:
+      background-color var(--kef-motion-fast) var(--kef-ease-soft),
+      border-color var(--kef-motion-fast) var(--kef-ease-soft);
   }
 
-  kefine-solver-search-row:has(lef-arrow-wrapper) {
+  .kefine-solver-search-row[aria-disabled='true'] {
+    cursor: progress;
+    pointer-events: none;
+  }
+
+  .kefine-solver-search-row:hover:not([aria-disabled='true']) {
+    background: color-mix(in oklab, var(--kef-bg-card) 88%, var(--kef-color-primary, #c89a5a) 12%);
+    border-color: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 32%, var(--kef-line-soft));
+  }
+
+  .kefine-solver-search-row > * {
+    pointer-events: none;
+  }
+
+  .kefine-solver-search-row:has(lef-arrow-wrapper) {
     grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+
+  kefine-solver-search-copy {
+    display: grid;
+    gap: 0.2rem;
+    min-width: 0;
+    align-items: center;
   }
 
   lef-arrow-wrapper {
@@ -2959,7 +2521,7 @@ initialized = true;
     }
   }
 
-  kefine-solver-search-row lefine-text {
+  .kefine-solver-search-row lefine-text {
     min-width: 0;
     overflow: hidden;
     color: color-mix(in oklab, var(--lefine-text) 92%, transparent);
@@ -2969,6 +2531,20 @@ initialized = true;
     padding-block: 0.15rem 0;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .kefine-solver-search-row lefine-text[data-part='task-label'] {
+    max-height: 0.9rem;
+    opacity: 0;
+    color: var(--lefine-text-soft);
+    font-size: 0.76rem;
+    font-weight: 560;
+    transition: opacity var(--kef-motion-fast) var(--kef-ease-soft);
+  }
+
+  .kefine-solver-search-row:hover lefine-text[data-part='task-label'],
+  .kefine-solver-search-row:focus-visible lefine-text[data-part='task-label'] {
+    opacity: 1;
   }
 
   kefine-solver-search-indicator {
@@ -3064,13 +2640,13 @@ initialized = true;
     border: var(--kef-border-width-strong) solid transparent;
     border-radius: 0.3rem;
     resize: none;
-    overflow-x: auto;
+    overflow-x: hidden;
     overflow-y: hidden;
     padding-inline: clamp(0.72rem, 2.5vw, 0.92rem);
     padding-top: max(0.48rem, calc((clamp(3.3rem, 7vw, 4rem) - 1.04em) / 2));
     padding-bottom: max(0.48rem, calc((clamp(3.3rem, 7vw, 4rem) - 1.04em) / 2));
-    overflow-wrap: normal;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
     transition:
       border-color var(--kef-motion-fast) var(--kef-ease-soft),
       box-shadow var(--kef-motion-fast) var(--kef-ease-soft),
