@@ -1191,23 +1191,25 @@ initialized = true;
   </lef-services-showcase>
 {/if}
 
- {#if solverSearchActive && solverSearchText.trim()}
-   <section data-part="tasks-list">
-     <kefine-solver-search-row aria-live="polite">
-       <lefine-text>{solverSearchText}</lefine-text>
-       {#if isFlying}
-         <lef-arrow-wrapper>
-           <lef-wind-flow>
-             <lef-wind-line></lef-wind-line>
-             <lef-wind-line></lef-wind-line>
-           </lef-wind-flow>
-           <lef-flying-arrow>➵</lef-flying-arrow>
-         </lef-arrow-wrapper>
-       {/if}
-       <kefine-solver-search-indicator aria-label={taskCompleted ? 'Completed' : solverSearchLabel} title={taskCompleted ? 'Completed' : solverSearchLabel} data-completed={taskCompleted}>
-         <kefine-solver-search-dot aria-hidden="true"></kefine-solver-search-dot>
-       </kefine-solver-search-indicator>
-     </kefine-solver-search-row>
+  {#if solverSearchActive && solverSearchText.trim()}
+    <section data-part="tasks-list">
+      <a href={`/order/demo?task=${encodeURIComponent(solverSearchText)}`} style="text-decoration:none; color:inherit; display:block;">
+        <kefine-solver-search-row aria-live="polite">
+          <lefine-text>{solverSearchText}</lefine-text>
+          {#if isFlying}
+            <lef-arrow-wrapper>
+              <lef-wind-flow>
+                <lef-wind-line></lef-wind-line>
+                <lef-wind-line></lef-wind-line>
+              </lef-wind-flow>
+              <lef-flying-arrow>➵</lef-flying-arrow>
+            </lef-arrow-wrapper>
+          {/if}
+          <kefine-solver-search-indicator aria-label={taskCompleted ? 'Completed' : solverSearchLabel} title={taskCompleted ? 'Completed' : solverSearchLabel} data-completed={taskCompleted}>
+            <kefine-solver-search-dot aria-hidden="true"></kefine-solver-search-dot>
+          </kefine-solver-search-indicator>
+        </kefine-solver-search-row>
+      </a>
 
      {#if taskCompleted}
        <lef-tasks-grid>
