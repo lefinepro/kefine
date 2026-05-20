@@ -432,6 +432,10 @@
     );
   }
 
+  function editableInsertSourceKey(node: TaskThreadNode): string {
+    return (node.stepId || node.id).replace(/-insert-\d+$/, '');
+  }
+
   async function submitComment(node: TaskThreadNode): Promise<void> {
     const content = commentDrafts[node.id]?.trim();
     if (!content || !node.commentable) {
@@ -470,7 +474,7 @@
       },
         shouldPreserveBranchMarker
       );
-      const nextContent = replaceTaskNodeInsert(currentOrder, node.stepId, editedContent);
+      const nextContent = replaceTaskNodeInsert(currentOrder, editableInsertSourceKey(node), editedContent);
       await onSaveDocument(nextContent);
     } else if (action === 'comment' && currentOrder && isExchangeSearchNode(node) && systemInstructionEnabledByNodeId[node.id] === true && onSaveDocument) {
       const nextContent = replaceTaskNodeComment(currentOrder, exchangeInstructionNodeKey(currentOrder), content);
@@ -967,7 +971,7 @@
   <kefine-thread-head>
     <kefine-thread-title>
       <lefine-text data-part="task-monogram" aria-hidden="true">{taskMonogram}</lefine-text>
-      <strong>{currentOrder?.title || labels.boardTitle}</strong>
+      <h2>{currentOrder?.title || labels.boardTitle}</h2>
     </kefine-thread-title>
     <kefine-thread-head-actions>
       {#if commentSubmittingStepId}
@@ -1133,11 +1137,12 @@
     color: #fffaf0;
   }
 
-  kefine-thread-head strong {
+  kefine-thread-head h2 {
     display: block;
+    margin: 0;
     font-size: clamp(1.35rem, 2vw, 2.1rem);
     line-height: 1.08;
-    letter-spacing: -0.02em;
+    letter-spacing: 0;
   }
 
   kefine-thread-head [data-part='task-monogram'] {

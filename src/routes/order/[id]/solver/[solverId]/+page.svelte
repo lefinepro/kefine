@@ -106,11 +106,7 @@
 
   function goBack(event: MouseEvent) {
     event.preventDefault();
-    if (typeof window !== 'undefined' && window.history.length > 1) {
-      window.history.back();
-    } else {
-      goto(`/order/${data.orderId}`);
-    }
+    goto(`/order/${encodeURIComponent(data.orderId)}/solutions`);
   }
 
   function handleSubmitCorrection(text: string) {
@@ -154,7 +150,7 @@
       author={solution.solver}
       project={solution.project}
       slug={solution.slug}
-      backHref={`/order/${data.orderId}`}
+      backHref={`/order/${encodeURIComponent(data.orderId)}/solutions`}
       onBack={goBack}
       onMerge={handleMerge}
       isMerged={isMerged}

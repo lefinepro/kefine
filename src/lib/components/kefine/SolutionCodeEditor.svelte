@@ -260,6 +260,7 @@
 
   lef-code-body {
     display: block;
+    min-width: 100%;
     padding: 0;
     font-family: 'Fira Mono', 'Fira Code', ui-monospace, monospace;
     font-size: 0.82rem;
@@ -286,23 +287,23 @@
   }
 
   .lef-side--added {
-    background: color-mix(in oklab, var(--kef-success) 22%, transparent);
+    background: color-mix(in oklab, var(--kef-success) 12%, transparent);
   }
   .lef-side--removed {
-    background: color-mix(in oklab, var(--kef-error) 22%, transparent);
+    background: color-mix(in oklab, var(--kef-error) 12%, transparent);
   }
   .lef-side--empty {
-    background: color-mix(in oklab, var(--lefine-text-soft) 8%, transparent);
+    background: color-mix(in oklab, var(--lefine-text-soft) 4%, transparent);
   }
 
   :global(:root[data-kefine-theme='dark']) .lef-side--added {
-    background: color-mix(in oklab, var(--kef-success) 28%, transparent);
+    background: color-mix(in oklab, var(--kef-success) 16%, transparent);
   }
   :global(:root[data-kefine-theme='dark']) .lef-side--removed {
-    background: color-mix(in oklab, var(--kef-error) 28%, transparent);
+    background: color-mix(in oklab, var(--kef-error) 16%, transparent);
   }
   :global(:root[data-kefine-theme='dark']) .lef-side--empty {
-    background: color-mix(in oklab, #ffffff 4%, transparent);
+    background: color-mix(in oklab, #ffffff 2%, transparent);
   }
 
   lef-line-number {
@@ -319,18 +320,19 @@
 
   .lef-side--added lef-line-number {
     color: var(--kef-success);
-    background: color-mix(in oklab, var(--kef-success) 10%, var(--kef-bg-card));
+    background: color-mix(in oklab, var(--kef-success) 5%, var(--kef-bg-card));
   }
   .lef-side--removed lef-line-number {
     color: var(--kef-error);
-    background: color-mix(in oklab, var(--kef-error) 10%, var(--kef-bg-card));
+    background: color-mix(in oklab, var(--kef-error) 5%, var(--kef-bg-card));
   }
 
   lef-line-text {
-    display: inline-block;
+    display: block;
+    min-width: 0;
     padding-left: 0.65rem;
     white-space: pre;
-    overflow-x: auto;
+    overflow: visible;
   }
 
   lef-text-placeholder {
