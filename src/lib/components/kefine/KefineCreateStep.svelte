@@ -1193,7 +1193,7 @@ initialized = true;
 
   {#if solverSearchActive && solverSearchText.trim()}
     <section data-part="tasks-list">
-      <a href={`/order/demo?task=${encodeURIComponent(solverSearchText)}`} style="text-decoration:none; color:inherit; display:block;">
+      <a href={`/order/kefine/go-proxy?task=${encodeURIComponent(solverSearchText)}`} style="text-decoration:none; color:inherit; display:block;">
         <kefine-solver-search-row aria-live="polite">
           <lefine-text>{solverSearchText}</lefine-text>
           {#if isFlying}
