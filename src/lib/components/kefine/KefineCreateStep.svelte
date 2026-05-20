@@ -1211,7 +1211,7 @@ initialized = true;
         </kefine-solver-search-row>
       </a>
 
-     {#if taskCompleted}
+      {#if false} <!-- grid moved to separate solvers page per task spec; see tasks-grid.html ref -->
        <lef-tasks-grid>
          <lef-tasks-aside aria-label="Tasks">
            <lef-tasks-aside-head>Tasks</lef-tasks-aside-head>
