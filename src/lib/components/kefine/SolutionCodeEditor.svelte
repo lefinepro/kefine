@@ -207,7 +207,6 @@
     background: var(--kef-bg-card);
     border: 1px solid var(--kef-line);
     border-radius: 0 0.6rem 0.6rem 0.6rem;
-    border-top: 0;
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -221,6 +220,7 @@
     padding: 0.5rem 0.85rem;
     border-bottom: 1px solid var(--kef-line-soft);
     background: color-mix(in oklab, var(--kef-bg-soft) 70%, var(--kef-bg-card));
+    margin-top: -1px;
   }
 
   lef-code-path {
@@ -245,6 +245,7 @@
     grid-template-columns: 1fr 1fr;
     border-bottom: 1px solid var(--kef-line-soft);
     background: color-mix(in oklab, var(--kef-bg-soft) 50%, var(--kef-bg-card));
+    margin-top: -1px;
   }
 
   lef-code-header-cell {

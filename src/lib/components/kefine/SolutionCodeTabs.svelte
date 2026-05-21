@@ -36,15 +36,19 @@
     display: flex;
     flex-wrap: wrap;
     gap: 0.25rem;
-    padding: 0 0 0.15rem;
+    padding: 0;
     overflow-x: auto;
+    position: relative;
+    z-index: 1;
   }
 
   .lef-tab {
     background: transparent;
     border: 1px solid transparent;
+    border-bottom: 2px solid transparent;
     border-radius: 0.5rem 0.5rem 0 0;
     padding: 0.45rem 0.85rem;
+    margin-bottom: -2px;
     color: var(--lefine-text-soft);
     font-family: 'Fira Mono', 'Fira Code', ui-monospace, monospace;
     font-size: 0.78rem;
@@ -63,10 +67,13 @@
   .lef-tab--active {
     color: var(--kef-primary);
     background: var(--kef-bg-card);
-    border-color: var(--kef-line);
-    border-bottom-color: var(--kef-bg-card);
-    margin-bottom: -1px;
+    border: 1px solid var(--kef-line);
+    border-bottom: 2px solid var(--kef-bg-card);
+    margin-bottom: -2px;
+    padding-bottom: 0.46rem;
     font-weight: 600;
+    position: relative;
+    z-index: 2;
   }
 
   lef-tab-name {
