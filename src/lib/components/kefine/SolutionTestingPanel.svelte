@@ -25,6 +25,40 @@
   } = $props();
 
   let method = $state<Method>('POST');
+  let methodOpen = $state(false);
+  let methodRef = $state<HTMLElement | null>(null);
+
+  function selectMethod(m: Method) {
+    method = m;
+    methodOpen = false;
+  }
+
+  $effect(() => {
+    if (!methodOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (methodRef && !methodRef.contains(e.target as Node)) {
+        methodOpen = false;
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  });
+
+  const methodColors: Record<Method, string> = {
+    GET: '#22c55e',
+    POST: '#eab308',
+    PUT: '#3b82f6',
+    PATCH: '#a855f7',
+    DELETE: '#ef4444'
+  };
+
+  const methodBgColors: Record<Method, string> = {
+    GET: 'color-mix(in oklab, #22c55e 14%, var(--kef-bg-card))',
+    POST: 'color-mix(in oklab, #eab308 14%, var(--kef-bg-card))',
+    PUT: 'color-mix(in oklab, #3b82f6 14%, var(--kef-bg-card))',
+    PATCH: 'color-mix(in oklab, #a855f7 14%, var(--kef-bg-card))',
+    DELETE: 'color-mix(in oklab, #ef4444 14%, var(--kef-bg-card))'
+  };
   let url = $state('');
   let body = $state('');
   let bodyMode = $state<BodyMode>('form');
@@ -85,12 +119,34 @@
 <lef-testing-panel>
   <form class="lef-testing-form" onsubmit={handleSend}>
     <lef-testing-row>
-      <lef-method-select>
-        <select bind:value={method} aria-label="HTTP method">
-          {#each methods as m (m)}
-            <option value={m}>{m}</option>
-          {/each}
-        </select>
+      <lef-method-select bind:this={methodRef}>
+        <button
+          type="button"
+          class="method-trigger"
+          style="color: {methodColors[method]}; background: {methodBgColors[method]};"
+          onclick={() => (methodOpen = !methodOpen)}
+          aria-label="HTTP method"
+          aria-expanded={methodOpen}
+        >
+          <span class="method-label">{method}</span>
+          <span class="method-chevron" class:open={methodOpen}>▾</span>
+        </button>
+        {#if methodOpen}
+          <ul class="method-dropdown" role="listbox">
+            {#each methods as m (m)}
+              <li
+                role="option"
+                aria-selected={m === method}
+                class:active={m === method}
+                style="color: {methodColors[m]}"
+                onclick={() => selectMethod(m)}
+              >
+                <span class="method-dot" style="background: {methodColors[m]}"></span>
+                {m}
+              </li>
+            {/each}
+          </ul>
+        {/if}
       </lef-method-select>
       <input
         class="lef-url-input"
@@ -325,51 +381,79 @@
     position: relative;
     display: flex;
     min-width: 5.7rem;
-    color: var(--kef-color-primary, var(--kef-primary));
   }
 
-  lef-method-select::before {
-    content: '';
-    position: absolute;
-    top: 0.45rem;
-    right: 1.85rem;
-    bottom: 0.45rem;
-    width: 1px;
-    background: color-mix(in oklab, var(--kef-color-primary, #3a7afe) 34%, var(--kef-line));
-    pointer-events: none;
-  }
-
-  lef-method-select::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    right: 0.75rem;
-    width: 0.42rem;
-    height: 0.42rem;
-    border-right: 2px solid currentColor;
-    border-bottom: 2px solid currentColor;
-    transform: translateY(-68%) rotate(45deg);
-    pointer-events: none;
-  }
-
-  lef-method-select select {
-    appearance: none;
+  .method-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     width: 100%;
-    height: 100%;
-    padding: 0.45rem 2.35rem 0.45rem 0.7rem;
+    padding: 0.45rem 0.55rem 0.45rem 0.7rem;
     border-radius: 0.45rem;
     border: 1px solid var(--kef-line);
-    background: var(--kef-bg-soft);
-    color: currentColor;
     font-family: 'Fira Mono', 'Fira Code', ui-monospace, monospace;
     font-size: 0.82rem;
     font-weight: 700;
     cursor: pointer;
+    gap: 0.35rem;
   }
 
-  lef-method-select select:focus {
-    outline: none;
-    border-color: color-mix(in oklab, var(--kef-color-primary, #3a7afe) 60%, var(--kef-line));
+  .method-label {
+    flex: 1;
+    text-align: left;
+  }
+
+  .method-chevron {
+    font-size: 0.65rem;
+    transition: transform 150ms ease;
+    opacity: 0.6;
+  }
+
+  .method-chevron.open {
+    transform: rotate(180deg);
+  }
+
+  .method-dropdown {
+    position: absolute;
+    top: calc(100% + 0.35rem);
+    left: 0;
+    right: 0;
+    z-index: 10;
+    list-style: none;
+    margin: 0;
+    padding: 0.35rem;
+    border-radius: 0.45rem;
+    border: 1px solid var(--kef-line);
+    background: var(--kef-bg-card);
+    box-shadow: 0 8px 20px color-mix(in oklab, var(--lefine-text) 12%, transparent);
+  }
+
+  .method-dropdown li {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem 0.65rem;
+    border-radius: 0.3rem;
+    font-family: 'Fira Mono', 'Fira Code', ui-monospace, monospace;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 120ms ease;
+  }
+
+  .method-dropdown li:hover {
+    background: color-mix(in oklab, var(--kef-bg-soft) 80%, var(--kef-bg-card));
+  }
+
+  .method-dropdown li.active {
+    background: color-mix(in oklab, currentColor 10%, var(--kef-bg-card));
+  }
+
+  .method-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 999px;
+    flex-shrink: 0;
   }
 
   .lef-url-input {

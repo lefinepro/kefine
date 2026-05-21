@@ -2409,8 +2409,9 @@ initialized = true;
 
   [data-part="tasks-list"] {
     width: min(100%, calc(100vw - 7rem));
-    max-width: 92rem;
+    max-width: 64rem;
     margin-inline: auto;
+    padding: 0.28rem;
     display: grid;
     gap: 1rem;
   }
@@ -2873,7 +2874,7 @@ initialized = true;
     align-items: center;
     gap: 0.72rem;
     min-height: 2.85rem;
-    padding: 0.42rem 0.5rem 0.42rem 0.78rem;
+    padding: 0.42rem 0.28rem 0.42rem 0.78rem;
     border-radius: 0.38rem;
     background: color-mix(in oklab, var(--kef-bg-card) 96%, var(--kef-bg));
     box-shadow: none;
