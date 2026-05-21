@@ -330,7 +330,6 @@
     display: inline-block;
     padding-left: 0.65rem;
     white-space: pre;
-    overflow-x: auto;
   }
 
   lef-text-placeholder {
