@@ -10,6 +10,17 @@
   type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   type BodyMode = 'form' | 'json';
 
+  type TestCase = {
+    id: string;
+    label: string;
+    title: string;
+    detail: string;
+    method: Method;
+    endpoint: string;
+    body: string;
+    response: string;
+  };
+
   let {
     endpoint = '/',
     sampleBody = '{\n  "ping": "hello"\n}',
@@ -23,6 +34,71 @@
     sampleTestTitle?: string;
     sampleTestDetail?: string;
   } = $props();
+
+  const testCases: TestCase[] = [
+    {
+      id: '1',
+      label: 'Test 1',
+      title: 'POST / returns proxy ready',
+      detail: 'ping=hello expects 200 with proxy ready',
+      method: 'POST',
+      endpoint: '/',
+      body: '{\n  "ping": "hello"\n}',
+      response: '{\n  "ok": true,\n  "message": "proxy ready"\n}'
+    },
+    {
+      id: '2',
+      label: 'Test 2',
+      title: 'GET /health returns status ok',
+      detail: 'expects 200 with status=ok',
+      method: 'GET',
+      endpoint: '/health',
+      body: '',
+      response: '{\n  "status": "ok",\n  "uptime": 142\n}'
+    },
+    {
+      id: '3',
+      label: 'Test 3',
+      title: 'PUT /config updates timeout',
+      detail: 'timeout=30 expects 200 with applied=true',
+      method: 'PUT',
+      endpoint: '/config',
+      body: '{\n  "timeout": 30,\n  "retries": 3\n}',
+      response: '{\n  "applied": true,\n  "timeout": 30\n}'
+    },
+    {
+      id: '4',
+      label: 'Test 4',
+      title: 'DELETE /cache clears all entries',
+      detail: 'expects 204 no content',
+      method: 'DELETE',
+      endpoint: '/cache',
+      body: '',
+      response: ''
+    },
+    {
+      id: '5',
+      label: 'Test 5',
+      title: 'PATCH /users/1 updates name',
+      detail: 'name=alice expects 200 with updated fields',
+      method: 'PATCH',
+      endpoint: '/users/1',
+      body: '{\n  "name": "alice"\n}',
+      response: '{\n  "id": 1,\n  "name": "alice",\n  "updated_at": "2025-01-15T10:30:00Z"\n}'
+    },
+    {
+      id: '6',
+      label: 'Test 6',
+      title: 'POST /proxy forwards request',
+      detail: 'target=http://example.com expects 200 with body',
+      method: 'POST',
+      endpoint: '/proxy',
+      body: '{\n  "target": "http://example.com",\n  "method": "GET"\n}',
+      response: '{\n  "status": 200,\n  "body": "<html>Hello</html>",\n  "headers": {"content-type": "text/html"}\n}'
+    }
+  ];
+
+  let activeTest = $state<TestCase>(testCases[0]);
 
   let method = $state<Method>('POST');
   let methodOpen = $state(false);
@@ -71,13 +147,14 @@
   const responseFields = $derived(parseResponseFields(response));
 
   $effect(() => {
-    url = `http://localhost:9090${endpoint}`;
-    body = sampleBody;
+    url = `http://localhost:9090${activeTest.endpoint}`;
+    body = activeTest.body;
+    method = activeTest.method;
     bodyMode = 'form';
-    bodyFields = createBodyFields(sampleBody);
-    response = sampleResponse;
+    bodyFields = createBodyFields(activeTest.body);
+    response = activeTest.response;
     responseMode = 'form';
-    status = 200;
+    status = activeTest.response ? 200 : 204;
   });
 
   function readInput(event: Event) {
@@ -107,8 +184,8 @@
     response = null;
     status = null;
     setTimeout(() => {
-      status = 200;
-      response = sampleResponse;
+      status = activeTest.response ? 200 : 204;
+      response = activeTest.response;
       isSending = false;
     }, 650);
   }
@@ -168,11 +245,20 @@
       </button>
     </lef-testing-row>
 
-    <lef-testing-case>
-      <lefine-text>Test 1</lefine-text>
-      <strong>{sampleTestTitle}</strong>
-      <lefine-text>{sampleTestDetail}</lefine-text>
-    </lef-testing-case>
+    <lef-testing-cases>
+      {#each testCases as tc (tc.id)}
+        <button
+          type="button"
+          class="lef-testing-case"
+          class:lef-testing-case--active={tc.id === activeTest.id}
+          onclick={() => (activeTest = tc)}
+        >
+          <lefine-text>{tc.label}</lefine-text>
+          <strong>{tc.title}</strong>
+          <lefine-text>{tc.detail}</lefine-text>
+        </button>
+      {/each}
+    </lef-testing-cases>
 
     <lef-testing-split>
       <lef-testing-pane>
@@ -337,7 +423,13 @@
     align-items: stretch;
   }
 
-  lef-testing-case {
+  lef-testing-cases {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+
+  .lef-testing-case {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
@@ -348,9 +440,27 @@
     border-radius: 0.45rem;
     background: color-mix(in oklab, var(--kef-bg-soft) 70%, var(--kef-bg-card));
     line-height: 1.4;
+    cursor: pointer;
+    appearance: none;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+    transition:
+      border-color 160ms ease,
+      background-color 160ms ease;
   }
 
-  lef-testing-case lefine-text:first-child {
+  .lef-testing-case:hover {
+    border-color: var(--kef-line);
+    background: color-mix(in oklab, var(--kef-bg-card) 90%, var(--kef-bg-soft));
+  }
+
+  .lef-testing-case--active {
+    border-color: color-mix(in oklab, var(--kef-color-primary, #3a7afe) 50%, var(--kef-line));
+    background: color-mix(in oklab, var(--kef-color-primary, #3a7afe) 8%, var(--kef-bg-card));
+  }
+
+  .lef-testing-case lefine-text:first-child {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -364,7 +474,7 @@
     line-height: 1.4;
   }
 
-  lef-testing-case strong {
+  .lef-testing-case strong {
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -374,7 +484,7 @@
     line-height: 1.4;
   }
 
-  lef-testing-case lefine-text:last-child {
+  .lef-testing-case lefine-text:last-child {
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -707,7 +817,7 @@
     lef-testing-row {
       grid-template-columns: 1fr;
     }
-    lef-testing-case {
+    .lef-testing-case {
       grid-template-columns: 1fr;
     }
     .lef-send-btn {
