@@ -245,21 +245,6 @@
       </button>
     </lef-testing-row>
 
-    <lef-testing-cases>
-      {#each testCases as tc (tc.id)}
-        <button
-          type="button"
-          class="lef-testing-case"
-          class:lef-testing-case--active={tc.id === activeTest.id}
-          onclick={() => (activeTest = tc)}
-        >
-          <lefine-text>{tc.label}</lefine-text>
-          <strong>{tc.title}</strong>
-          <lefine-text>{tc.detail}</lefine-text>
-        </button>
-      {/each}
-    </lef-testing-cases>
-
     <lef-testing-split>
       <lef-testing-pane>
         <lef-testing-pane-head>
@@ -290,12 +275,12 @@
             {#each bodyFields as field (field.id)}
               <lef-body-field>
                 <label>
-                  <lefine-text>Field</lefine-text>
+                  <lefine-text>Key</lefine-text>
                   <input
                     type="text"
                     value={field.key}
                     spellcheck="false"
-                    aria-label="Request body field name"
+                    aria-label="Request body field key"
                     oninput={(event) => updateBodyField(field.id, { key: readInput(event) })}
                   />
                 </label>
@@ -367,12 +352,12 @@
             {#each responseFields as field (field.id)}
               <lef-body-field>
                 <label>
-                  <lefine-text>Field</lefine-text>
+                  <lefine-text>Key</lefine-text>
                   <input
                     type="text"
                     value={field.key}
                     spellcheck="false"
-                    aria-label="Response body field name"
+                    aria-label="Response body field key"
                     readonly
                   />
                 </label>
@@ -396,6 +381,21 @@
         {/if}
       </lef-testing-pane>
     </lef-testing-split>
+
+    <lef-testing-cases>
+      {#each testCases as tc (tc.id)}
+        <button
+          type="button"
+          class="lef-testing-case"
+          class:lef-testing-case--active={tc.id === activeTest.id}
+          onclick={() => (activeTest = tc)}
+        >
+          <lefine-text>{tc.label}</lefine-text>
+          <strong>{tc.title}</strong>
+          <lefine-text>{tc.detail}</lefine-text>
+        </button>
+      {/each}
+    </lef-testing-cases>
   </form>
 </lef-testing-panel>
 
@@ -447,12 +447,16 @@
     color: inherit;
     transition:
       border-color 160ms ease,
-      background-color 160ms ease;
+      background-color 160ms ease,
+      box-shadow 160ms ease,
+      transform 160ms ease;
   }
 
   .lef-testing-case:hover {
     border-color: var(--kef-line);
     background: color-mix(in oklab, var(--kef-bg-card) 90%, var(--kef-bg-soft));
+    box-shadow: 0 2px 8px color-mix(in oklab, var(--lefine-text) 6%, transparent);
+    transform: translateY(-1px);
   }
 
   .lef-testing-case--active {
