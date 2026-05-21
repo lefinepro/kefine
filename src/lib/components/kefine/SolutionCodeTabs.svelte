@@ -36,8 +36,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 0.25rem;
-    padding: 0 0 0.5rem;
-    border-bottom: 1px solid var(--kef-line-soft);
+    padding: 0 0 0.15rem;
     overflow-x: auto;
   }
 

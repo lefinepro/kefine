@@ -207,6 +207,7 @@
     background: var(--kef-bg-card);
     border: 1px solid var(--kef-line);
     border-radius: 0 0.6rem 0.6rem 0.6rem;
+    border-top: 0;
     overflow: hidden;
     display: flex;
     flex-direction: column;
