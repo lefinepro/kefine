@@ -152,31 +152,38 @@
     </lef-code-headers>
 
     <lef-code-scroll>
-      <lef-code-body>
-        {#each rows as row, index (index)}
-          <lef-diff-row class:lef-diff-row--changed={row.band !== null}>
-            <lef-side
-              class="lef-side lef-side--left"
-              class:lef-side--removed={row.left.type === 'removed'}
-              class:lef-side--empty={row.left.type === 'empty'}
-              aria-label={ariaLabelFor(row.left.type)}
-            >
-              <lef-line-number aria-hidden="true">{row.left.number ?? ''}</lef-line-number>
-              <lef-line-text>{#if row.left.type === 'empty'}<lef-text-placeholder aria-hidden="true">&nbsp;</lef-text-placeholder>{:else}{@html row.left.html || '&nbsp;'}{/if}</lef-line-text>
-            </lef-side>
-
-            <lef-side
-              class="lef-side lef-side--right"
-              class:lef-side--added={row.right.type === 'added'}
-              class:lef-side--empty={row.right.type === 'empty'}
-              aria-label={ariaLabelFor(row.right.type)}
-            >
-              <lef-line-number aria-hidden="true">{row.right.number ?? ''}</lef-line-number>
-              <lef-line-text>{#if row.right.type === 'empty'}<lef-text-placeholder aria-hidden="true">&nbsp;</lef-text-placeholder>{:else}{@html row.right.html || '&nbsp;'}{/if}</lef-line-text>
-            </lef-side>
-          </lef-diff-row>
-        {/each}
-      </lef-code-body>
+      <lef-code-split>
+        <lef-code-pane>
+          {#each rows as row, index (index)}
+            <lef-diff-row class:lef-diff-row--changed={row.band !== null}>
+              <lef-side
+                class="lef-side lef-side--left"
+                class:lef-side--removed={row.left.type === 'removed'}
+                class:lef-side--empty={row.left.type === 'empty'}
+                aria-label={ariaLabelFor(row.left.type)}
+              >
+                <lef-line-number aria-hidden="true">{row.left.number ?? ''}</lef-line-number>
+                <lef-line-text>{#if row.left.type === 'empty'}<lef-text-placeholder aria-hidden="true">&nbsp;</lef-text-placeholder>{:else}{@html row.left.html || '&nbsp;'}{/if}</lef-line-text>
+              </lef-side>
+            </lef-diff-row>
+          {/each}
+        </lef-code-pane>
+        <lef-code-pane>
+          {#each rows as row, index (index)}
+            <lef-diff-row>
+              <lef-side
+                class="lef-side lef-side--right"
+                class:lef-side--added={row.right.type === 'added'}
+                class:lef-side--empty={row.right.type === 'empty'}
+                aria-label={ariaLabelFor(row.right.type)}
+              >
+                <lef-line-number aria-hidden="true">{row.right.number ?? ''}</lef-line-number>
+                <lef-line-text>{#if row.right.type === 'empty'}<lef-text-placeholder aria-hidden="true">&nbsp;</lef-text-placeholder>{:else}{@html row.right.html || '&nbsp;'}{/if}</lef-line-text>
+              </lef-side>
+            </lef-diff-row>
+          {/each}
+        </lef-code-pane>
+      </lef-code-split>
     </lef-code-scroll>
   </lef-code-frame>
 </lef-code-editor>
@@ -254,23 +261,23 @@
   }
 
   lef-code-scroll {
-    overflow: auto;
+    overflow-y: auto;
+    overflow-x: hidden;
     background: var(--kef-bg-card);
   }
 
-  lef-code-body {
-    display: block;
-    padding: 0;
-    font-family: 'Fira Mono', 'Fira Code', ui-monospace, monospace;
-    font-size: 0.82rem;
-    line-height: 1.55;
-    color: var(--lefine-text);
+  lef-code-split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  lef-code-pane {
+    overflow-x: auto;
+    min-width: 0;
   }
 
   lef-diff-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    align-items: stretch;
+    display: block;
   }
 
   .lef-side {
@@ -278,8 +285,10 @@
     grid-template-columns: 3rem 1fr;
     align-items: stretch;
     padding-right: 0.75rem;
-    border-right: 1px solid var(--kef-line-soft);
     min-width: 0;
+  }
+  .lef-side--left {
+    border-right: 1px solid var(--kef-line-soft);
   }
   .lef-side--right {
     border-right: none;
@@ -306,10 +315,14 @@
   }
 
   lef-line-number {
+    position: sticky;
+    left: 0;
+    z-index: 1;
     display: inline-flex;
     align-items: center;
     justify-content: flex-end;
     padding-right: 0.65rem;
+    width: 3rem;
     color: color-mix(in oklab, var(--lefine-text-soft) 70%, transparent);
     font-variant-numeric: tabular-nums;
     user-select: none;
@@ -339,10 +352,10 @@
   }
 
   @media (max-width: 900px) {
-    lef-diff-row {
+    lef-code-split {
       grid-template-columns: 1fr;
     }
-    .lef-side {
+    .lef-side--left {
       border-right: none;
       border-bottom: 1px solid var(--kef-line-soft);
     }
