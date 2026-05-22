@@ -289,9 +289,8 @@
   }
 
   .lef-side {
-    display: block;
+    display: inline-block;
     min-width: 100%;
-    width: max-content;
     white-space: nowrap;
   }
   .lef-side--left {
