@@ -289,11 +289,10 @@
   }
 
   .lef-side {
-    display: grid;
-    grid-template-columns: 3rem 1fr;
+    display: flex;
     align-items: stretch;
-    padding-right: 0.75rem;
-    min-width: 0;
+    min-width: 100%;
+    width: max-content;
   }
   .lef-side--left {
     border-right: 1px solid var(--kef-line-soft);
@@ -326,29 +325,33 @@
     position: sticky;
     left: 0;
     z-index: 1;
+    flex: 0 0 3rem;
     display: inline-flex;
     align-items: center;
     justify-content: flex-end;
     padding-right: 0.65rem;
-    width: 3rem;
     color: color-mix(in oklab, var(--lefine-text-soft) 70%, transparent);
     font-variant-numeric: tabular-nums;
     user-select: none;
     border-right: 1px solid var(--kef-line-soft);
-    background: color-mix(in oklab, var(--kef-bg-soft) 35%, transparent);
+    background: var(--kef-bg-card);
   }
 
   .lef-side--added lef-line-number {
     color: var(--kef-success);
-    background: color-mix(in oklab, var(--kef-success) 10%, var(--kef-bg-card));
+    background: color-mix(in oklab, var(--kef-success) 22%, var(--kef-bg-card));
   }
   .lef-side--removed lef-line-number {
     color: var(--kef-error);
-    background: color-mix(in oklab, var(--kef-error) 10%, var(--kef-bg-card));
+    background: color-mix(in oklab, var(--kef-error) 22%, var(--kef-bg-card));
+  }
+  .lef-side--empty lef-line-number {
+    background: color-mix(in oklab, var(--lefine-text-soft) 8%, var(--kef-bg-card));
   }
 
   lef-line-text {
-    display: inline-block;
+    flex: 1 1 auto;
+    min-width: 0;
     padding-left: 0.65rem;
     white-space: pre;
     font-family: 'Synt', monospace;
