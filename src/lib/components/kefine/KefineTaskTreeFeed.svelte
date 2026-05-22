@@ -32,6 +32,7 @@
   import type { OrderView } from '$lib/components/kefine/kefine-workflow';
   import type { TaskCloneFormat } from '$lib/components/kefine/kefine-task-clone';
   import type { Solution } from '$lib/kefine/solutions-data';
+  import KefineSolversView from '$lib/components/kefine/KefineSolversView.svelte';
   type EditorDraftState = any;
   type EditorMentionCandidate = any;
 
@@ -965,6 +966,14 @@
 {/snippet}
 
 <kefine-thread-stage>
+  {#if solutions.length > 0}
+    <KefineSolversView
+      {solutions}
+      taskTitle={currentOrder?.title || labels.boardTitle}
+      onApplySolution={onApplySolution}
+      onViewSolution={onViewSolution}
+    />
+  {:else}
   <kefine-thread-head>
     <kefine-thread-title>
       <lefine-text data-part="task-monogram" aria-hidden="true">{taskMonogram}</lefine-text>
@@ -1032,6 +1041,7 @@
       </kefine-plan-editor-panel>
     </kefine-plan-editor>
   {/if}
+  {/if}
 </kefine-thread-stage>
 
 <style>
@@ -1040,6 +1050,10 @@
     gap: 1rem;
     width: min(100%, 52rem);
     margin: 0 auto;
+  }
+
+  kefine-thread-stage:has(> .solutions-page-container) {
+    width: min(100%, 72rem);
   }
 
   kefine-thread-head {
