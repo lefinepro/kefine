@@ -2843,7 +2843,7 @@
 <main data-sidebar-expanded={leftNavExpanded}>
   <kefine-layout data-mode={layoutMode} data-step={step}>
     <section class="kefine-window-grid">
-    {#if craterHealthState === 'failed'}
+    {#if craterHealthState === 'failed' && step === 'create'}
       <kefine-screen in:softScreenTransition out:softScreenTransition>
         <article class="kefine-card kefine-card--wide kefine-template-unavailable">
           <h2>{localeText.errors.backendUnavailableTitle}</h2>

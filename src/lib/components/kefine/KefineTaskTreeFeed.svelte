@@ -23,6 +23,8 @@
   import type { OrderView } from '$lib/components/kefine/kefine-workflow';
   import type { TaskCloneFormat } from '$lib/components/kefine/kefine-task-clone';
   import type { EditorDraftState, EditorMentionCandidate } from '$lib/components/kefine/KefineRichTaskEditorDialog.svelte';
+  import type { Solution } from '$lib/kefine/solutions-data';
+  import KefineSolversView from '$lib/components/kefine/KefineSolversView.svelte';
 
   let {
     currentOrder,
@@ -31,13 +33,16 @@
     canSaveCloneLocally = false,
     canManageTask = false,
     commentSubmittingStepId = null,
+    solutions = [],
     onSubmitStepComment,
     onSaveDocument,
     onExportClone,
     onSaveCloneLocally,
     onUpdateTaskSettings,
     onPauseSearch,
-    onResumeSearch
+    onResumeSearch,
+    onApplySolution,
+    onViewSolution
   }: {
     currentOrder: OrderView | null;
     queuedOrders?: OrderView[];
@@ -73,6 +78,9 @@
     }) => void | Promise<void>) | null;
     onPauseSearch?: (() => void | Promise<void>) | null;
     onResumeSearch?: (() => void | Promise<void>) | null;
+    solutions?: Solution[];
+    onApplySolution?: ((solutionId: string) => void) | null;
+    onViewSolution?: ((solutionId: string) => void) | null;
   } = $props();
 
   let commentDrafts = $state<Record<string, string>>({});
@@ -967,7 +975,15 @@
   </kefine-thread-node>
 {/snippet}
 
-<kefine-thread-stage>
+<kefine-thread-stage class:solutions-mode={solutions.length > 0}>
+  {#if solutions.length > 0}
+    <KefineSolversView
+      {solutions}
+      taskTitle={currentOrder?.title || labels.boardTitle}
+      onApplySolution={onApplySolution}
+      onViewSolution={onViewSolution}
+    />
+  {:else}
   <kefine-thread-head>
     <kefine-thread-title>
       <lefine-text data-part="task-monogram" aria-hidden="true">{taskMonogram}</lefine-text>
@@ -1040,6 +1056,7 @@
       </kefine-plan-editor-panel>
     </kefine-plan-editor>
   {/if}
+  {/if}
 </kefine-thread-stage>
 
 <style>
@@ -1047,6 +1064,11 @@
     display: grid;
     gap: 1rem;
     width: min(100%, 52rem);
+    margin: 0 auto;
+  }
+
+  kefine-thread-stage.solutions-mode {
+    width: min(100%, 92rem);
     margin: 0 auto;
   }
 
