@@ -1085,7 +1085,7 @@
     border: 0;
     background: transparent;
     color: var(--lefine-text, #2e2317);
-    font: 0.95rem/1.6 'Synt', monospace;
+    font: 0.95rem/1.6 'JetBrains Mono', monospace;
     resize: vertical;
     box-sizing: border-box;
   }

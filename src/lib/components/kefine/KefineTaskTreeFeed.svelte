@@ -1460,7 +1460,7 @@
   kefine-thread-block pre {
     margin: 0;
     overflow-x: auto;
-    font: 0.82rem/1.55 'Synt', monospace;
+    font: 0.82rem/1.55 'JetBrains Mono', monospace;
     white-space: pre-wrap;
   }
 

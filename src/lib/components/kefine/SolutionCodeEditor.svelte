@@ -351,6 +351,7 @@
     display: inline-block;
     padding-left: 0.65rem;
     white-space: pre;
+    font-family: 'Synt', monospace;
   }
 
   lef-text-placeholder {
