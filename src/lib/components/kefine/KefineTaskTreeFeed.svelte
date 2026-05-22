@@ -965,7 +965,7 @@
   </kefine-thread-node>
 {/snippet}
 
-<kefine-thread-stage>
+<kefine-thread-stage class:solutions-mode={solutions.length > 0}>
   {#if solutions.length > 0}
     <KefineSolversView
       {solutions}
@@ -1052,7 +1052,7 @@
     margin: 0 auto;
   }
 
-  kefine-thread-stage:has(> .solutions-page-container) {
+  kefine-thread-stage.solutions-mode {
     width: min(100%, 72rem);
   }
 

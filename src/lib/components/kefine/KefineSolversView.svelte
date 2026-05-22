@@ -13,10 +13,10 @@
   }: {
     solutions?: Solution[];
     taskTitle?: string;
-    onApplySolution?: (id: string) => void;
-    onViewSolution?: (id: string) => void;
-    onSettings?: () => void;
-    onClone?: () => void;
+    onApplySolution?: ((id: string) => void) | null | undefined;
+    onViewSolution?: ((id: string) => void) | null | undefined;
+    onSettings?: (() => void) | null | undefined;
+    onClone?: (() => void) | null | undefined;
   } = $props();
 </script>
 
@@ -42,6 +42,7 @@
             <button
               type="button"
               class="pin-button"
+              class:is-active={solution.rated ?? false}
               data-crown-btn={solution.id}
               aria-label="Pin solution"
               title="Pin solution"
@@ -109,11 +110,11 @@
       </lef-task-rail-card>
 
       <lef-task-rail-actions>
-        <button type="button" class="task-rail-btn" aria-label="Settings" onclick={onSettings}>
+        <button type="button" class="task-rail-btn" aria-label="Settings" onclick={() => onSettings?.()}>
           <lef-task-rail-icon aria-hidden="true">⚙</lef-task-rail-icon>
           <lefine-text>Settings</lefine-text>
         </button>
-        <button type="button" class="task-rail-btn task-rail-btn--primary" aria-label="Clone" onclick={onClone}>
+        <button type="button" class="task-rail-btn task-rail-btn--primary" aria-label="Clone" onclick={() => onClone?.()}>
           <lef-task-rail-icon aria-hidden="true">⤓</lef-task-rail-icon>
           <lefine-text>Clone</lefine-text>
         </button>
