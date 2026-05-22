@@ -563,8 +563,8 @@
   kefine-account-stat {
     flex: 1 1 0;
     display: grid;
-    gap: 0.1rem;
-    padding: 0.4rem 0.7rem;
+    gap: 0.05rem;
+    padding: 0.2rem 0.55rem;
     border-radius: var(--kef-radius-ui);
   }
 
