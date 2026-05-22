@@ -505,7 +505,7 @@
     border-radius: 1rem;
     background: color-mix(in oklab, var(--kef-color-bg-card) 88%, transparent);
     color: var(--kef-color-text);
-    font: 0.9rem/1.5 'SFMono-Regular', 'Cascadia Code', 'Fira Code', monospace;
+    font: 0.9rem/1.5 'JetBrains Mono', 'SFMono-Regular', monospace;
     white-space: pre-wrap;
     word-break: break-word;
   }

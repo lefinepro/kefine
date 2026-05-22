@@ -50,7 +50,7 @@
     padding: 0.45rem 0.85rem;
     margin-bottom: -2px;
     color: var(--lefine-text-soft);
-    font-family: 'Fira Mono', 'Fira Code', ui-monospace, monospace;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
     font-size: 0.78rem;
     cursor: pointer;
     transition:

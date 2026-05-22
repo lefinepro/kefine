@@ -224,7 +224,7 @@
   }
 
   lef-code-path {
-    font-family: 'Fira Mono', 'Fira Code', ui-monospace, monospace;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
     font-size: 0.78rem;
     color: var(--lefine-text-soft);
   }
@@ -232,7 +232,7 @@
   lef-code-stats {
     display: inline-flex;
     gap: 0.5rem;
-    font-family: 'Fira Mono', 'Fira Code', ui-monospace, monospace;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
     font-size: 0.74rem;
     font-weight: 600;
   }
@@ -251,7 +251,7 @@
   lef-code-header-cell {
     display: block;
     padding: 0.4rem 0.85rem;
-    font-family: 'Fira Mono', 'Fira Code', ui-monospace, monospace;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
     font-size: 0.72rem;
     text-transform: uppercase;
     letter-spacing: 0.06em;

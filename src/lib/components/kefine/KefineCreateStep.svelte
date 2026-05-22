@@ -2666,7 +2666,7 @@ initialized = true;
     display: flex;
     flex-direction: column;
     gap: 0.2rem;
-    font-family: 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
     font-size: 0.78rem;
   }
 
