@@ -1,6 +1,7 @@
 <script lang="ts">
   import { highlightLines } from '$lib/kefine/solution-highlight';
   import SolutionCodeTabs from './SolutionCodeTabs.svelte';
+  import { fade } from 'svelte/transition';
 
   type CodeLine = {
     text: string;
@@ -152,38 +153,42 @@
     </lef-code-headers>
 
     <lef-code-scroll>
-      <lef-code-split>
-        <lef-code-pane>
-          {#each rows as row, index (index)}
-            <lef-diff-row class:lef-diff-row--changed={row.band !== null}>
-              <lef-side
-                class="lef-side lef-side--left"
-                class:lef-side--removed={row.left.type === 'removed'}
-                class:lef-side--empty={row.left.type === 'empty'}
-                aria-label={ariaLabelFor(row.left.type)}
-              >
-                <lef-line-number aria-hidden="true">{row.left.number ?? ''}</lef-line-number>
-                <lef-line-text>{#if row.left.type === 'empty'}<lef-text-placeholder aria-hidden="true">&nbsp;</lef-text-placeholder>{:else}{@html row.left.html || '&nbsp;'}{/if}</lef-line-text>
-              </lef-side>
-            </lef-diff-row>
-          {/each}
-        </lef-code-pane>
-        <lef-code-pane>
-          {#each rows as row, index (index)}
-            <lef-diff-row>
-              <lef-side
-                class="lef-side lef-side--right"
-                class:lef-side--added={row.right.type === 'added'}
-                class:lef-side--empty={row.right.type === 'empty'}
-                aria-label={ariaLabelFor(row.right.type)}
-              >
-                <lef-line-number aria-hidden="true">{row.right.number ?? ''}</lef-line-number>
-                <lef-line-text>{#if row.right.type === 'empty'}<lef-text-placeholder aria-hidden="true">&nbsp;</lef-text-placeholder>{:else}{@html row.right.html || '&nbsp;'}{/if}</lef-line-text>
-              </lef-side>
-            </lef-diff-row>
-          {/each}
-        </lef-code-pane>
-      </lef-code-split>
+      {#key activeFile}
+        <div transition:fade={{ duration: 160 }}>
+          <lef-code-split>
+            <lef-code-pane>
+              {#each rows as row, index (index)}
+                <lef-diff-row class:lef-diff-row--changed={row.band !== null}>
+                  <lef-side
+                    class="lef-side lef-side--left"
+                    class:lef-side--removed={row.left.type === 'removed'}
+                    class:lef-side--empty={row.left.type === 'empty'}
+                    aria-label={ariaLabelFor(row.left.type)}
+                  >
+                    <lef-line-number aria-hidden="true">{row.left.number ?? ''}</lef-line-number>
+                    <lef-line-text>{#if row.left.type === 'empty'}<lef-text-placeholder aria-hidden="true">&nbsp;</lef-text-placeholder>{:else}{@html row.left.html || '&nbsp;'}{/if}</lef-line-text>
+                  </lef-side>
+                </lef-diff-row>
+              {/each}
+            </lef-code-pane>
+            <lef-code-pane>
+              {#each rows as row, index (index)}
+                <lef-diff-row>
+                  <lef-side
+                    class="lef-side lef-side--right"
+                    class:lef-side--added={row.right.type === 'added'}
+                    class:lef-side--empty={row.right.type === 'empty'}
+                    aria-label={ariaLabelFor(row.right.type)}
+                  >
+                    <lef-line-number aria-hidden="true">{row.right.number ?? ''}</lef-line-number>
+                    <lef-line-text>{#if row.right.type === 'empty'}<lef-text-placeholder aria-hidden="true">&nbsp;</lef-text-placeholder>{:else}{@html row.right.html || '&nbsp;'}{/if}</lef-line-text>
+                  </lef-side>
+                </lef-diff-row>
+              {/each}
+            </lef-code-pane>
+          </lef-code-split>
+        </div>
+      {/key}
     </lef-code-scroll>
   </lef-code-frame>
 </lef-code-editor>
