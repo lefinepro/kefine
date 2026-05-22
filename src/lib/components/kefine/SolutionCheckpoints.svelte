@@ -11,40 +11,35 @@
   };
 
   function buildCommitsFor(slug: string, title: string): CommitInfo[] {
-    const shared = [
-      { hash: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0', shortHash: 'a1b2c3d', message: 'chore: create project', author: 'Pavel Pasaz', refs: '', isHead: false },
+    const head: CommitInfo =
+      { hash: 'c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b012c', shortHash: 'c3d4e5f', message: `feat: add ${title.toLowerCase()}`, author: 'Pavel Pasaz', refs: `HEAD -> ${slug}`, isHead: true };
+
+    const older: CommitInfo[] = [
+      { hash: 'e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b012cde4', shortHash: 'e5f6a7b', message: 'feat: print "Proxying: %s %s\\n", r.Method, r.URL', author: 'Pavel Pasaz', refs: '', isHead: false },
+      { hash: 'd4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b012cd', shortHash: 'd4e5f6a', message: 'feat: add HTTP proxy handler with forwarding', author: 'Pavel Pasaz', refs: '', isHead: false },
       { hash: 'b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b01', shortHash: 'b2c3d4e', message: 'chore: add project config and deps', author: 'Pavel Pasaz', refs: '', isHead: false },
+      { hash: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0', shortHash: 'a1b2c3d', message: 'chore: create project', author: 'Pavel Pasaz', refs: '', isHead: false },
     ];
 
-    const tail: CommitInfo[] = [
-      { hash: 'c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b012c', shortHash: 'c3d4e5f', message: `feat: add ${title.toLowerCase()}`, author: 'Pavel Pasaz', refs: `HEAD -> ${slug}`, isHead: true },
-    ];
-
-    if (title.includes('Proxy')) {
-      tail.unshift(
-        { hash: 'd4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b012cd', shortHash: 'd4e5f6a', message: 'feat: add HTTP proxy handler with forwarding', author: 'Pavel Pasaz', refs: '', isHead: false },
-        { hash: 'e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b012cde4', shortHash: 'e5f6a7b', message: 'feat: print "Proxying: %s %s\\n", r.Method, r.URL', author: 'Pavel Pasaz', refs: '', isHead: false },
-      );
-    }
     if (title.includes('Rate Limiting')) {
-      tail.unshift(
-        { hash: 'f6a7b8c9d0e1f2a3b4c5d6e7f8a9b012cde5f', shortHash: 'f6a7b8c', message: 'feat: add rate limiter middleware', author: 'Pavel Pasaz', refs: '', isHead: false },
-        { hash: 'a7b8c9d0e1f2a3b4c5d6e7f8a9b012cde5f6a', shortHash: 'a7b8c9d', message: 'feat: add response caching layer', author: 'Pavel Pasaz', refs: '', isHead: false },
+      older.unshift(
         { hash: 'b8c9d0e1f2a3b4c5d6e7f8a9b012cde5f6a7b', shortHash: 'b8c9d0e', message: 'feat: add Prometheus metrics endpoint', author: 'Pavel Pasaz', refs: '', isHead: false },
+        { hash: 'a7b8c9d0e1f2a3b4c5d6e7f8a9b012cde5f6a', shortHash: 'a7b8c9d', message: 'feat: add response caching layer', author: 'Pavel Pasaz', refs: '', isHead: false },
+        { hash: 'f6a7b8c9d0e1f2a3b4c5d6e7f8a9b012cde5f', shortHash: 'f6a7b8c', message: 'feat: add rate limiter middleware', author: 'Pavel Pasaz', refs: '', isHead: false },
       );
     } else if (title.includes('Production-ready')) {
-      tail.unshift(
-        { hash: 'c9d0e1f2a3b4c5d6e7f8a9b012cde5f6a7b8c', shortHash: 'c9d0e1f', message: 'feat: add request/response structured logging', author: 'Pavel Pasaz', refs: '', isHead: false },
+      older.unshift(
         { hash: 'd0e1f2a3b4c5d6e7f8a9b012cde5f6a7b8c9d', shortHash: 'd0e1f2a', message: 'feat: add config file support', author: 'Pavel Pasaz', refs: '', isHead: false },
+        { hash: 'c9d0e1f2a3b4c5d6e7f8a9b012cde5f6a7b8c', shortHash: 'c9d0e1f', message: 'feat: add request/response structured logging', author: 'Pavel Pasaz', refs: '', isHead: false },
       );
     }
     if (title.toLowerCase().includes('hello world')) {
-      tail.unshift(
+      older.unshift(
         { hash: 'e1f2a3b4c5d6e7f8a9b012cde5f6a7b8c9d0e', shortHash: 'e1f2a3b', message: 'feat: implement hello world logic', author: 'Pavel Pasaz', refs: '', isHead: false },
       );
     }
 
-    return [...shared, ...tail];
+    return [head, ...older];
   }
 
   let {
@@ -90,9 +85,7 @@
   {#each hintCommits as commit, i (commit.hash)}
     <lef-cp-commit>
       <lef-cp-graph>
-        {#if i < hintCommits.length - 1}
-          <lef-cp-line aria-hidden="true"></lef-cp-line>
-        {/if}
+        <lef-cp-line aria-hidden="true"></lef-cp-line>
         <lef-cp-dot class:lef-cp-dot--head={commit.isHead}></lef-cp-dot>
       </lef-cp-graph>
       <lef-cp-content>
@@ -164,6 +157,10 @@
 
   lef-cp-commit:hover {
     background: color-mix(in oklab, var(--lefine-text-soft) 6%, transparent);
+  }
+
+  lef-cp-commit:last-child lef-cp-line {
+    display: none;
   }
 
   lef-cp-graph {
