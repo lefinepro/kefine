@@ -289,10 +289,10 @@
   }
 
   .lef-side {
-    display: flex;
-    align-items: stretch;
+    display: block;
     min-width: 100%;
     width: max-content;
+    white-space: nowrap;
   }
   .lef-side--left {
     border-right: 1px solid var(--kef-line-soft);
@@ -325,16 +325,17 @@
     position: sticky;
     left: 0;
     z-index: 1;
-    flex: 0 0 3rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: flex-end;
+    display: inline-block;
+    width: 3rem;
+    vertical-align: top;
     padding-right: 0.65rem;
     color: color-mix(in oklab, var(--lefine-text-soft) 70%, transparent);
     font-variant-numeric: tabular-nums;
     user-select: none;
     border-right: 1px solid var(--kef-line-soft);
     background: var(--kef-bg-card);
+    text-align: right;
+    line-height: inherit;
   }
 
   .lef-side--added lef-line-number {
@@ -350,8 +351,8 @@
   }
 
   lef-line-text {
-    flex: 1 1 auto;
-    min-width: 0;
+    display: inline-block;
+    vertical-align: top;
     padding-left: 0.65rem;
     white-space: pre;
     font-family: 'Synt', monospace;
