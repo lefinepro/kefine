@@ -980,7 +980,6 @@
     <KefineSolversView
       {solutions}
       taskTitle={currentOrder?.title || labels.boardTitle}
-      repoLabel={currentOrder?.id ? `kefine/${currentOrder.id}` : ''}
       onApplySolution={onApplySolution}
       onViewSolution={onViewSolution}
     />
