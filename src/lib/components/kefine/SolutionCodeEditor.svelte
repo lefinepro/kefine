@@ -351,6 +351,7 @@
   }
 
   lef-line-text {
+    flex: 1;
     padding-left: 0.65rem;
     white-space: pre;
     font-family: 'Synt', monospace;
