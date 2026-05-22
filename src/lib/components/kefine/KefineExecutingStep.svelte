@@ -1,5 +1,6 @@
 <script lang="ts">
   import { browser } from '$app/environment';
+  import { goto } from '$app/navigation';
   import Icon from '@iconify/svelte';
   import { cubicOut } from 'svelte/easing';
   import type { TransitionConfig } from 'svelte/transition';
@@ -11,6 +12,7 @@
   import KefineWalletProviderGrid from '$lib/components/kefine/KefineWalletProviderGrid.svelte';
   import KefineTaskTreeFeed from '$lib/components/kefine/KefineTaskTreeFeed.svelte';
   import { KEFINE_AUTH_ICONS } from '$lib/components/kefine/kefine-auth-constants';
+  import { defaultSolutions, type Solution } from '$lib/kefine/solutions-data';
 
   let {
     currentOrder,
@@ -122,6 +124,49 @@
   let vpnResultMode = $state<'entry' | 'guest-offer'>('entry');
   let commentDrafts = $state<Record<string, string>>({});
   let cancelCopyFeedback: (() => void) | null = null;
+  let solutions = $state<Solution[]>([]);
+
+  const HARDCODED_TASK_KEYWORDS = ['hello world', 'rust', 'нужен мини прокси', 'go'];
+  function isHardcodedTask(title: string): boolean {
+    const t = title.toLowerCase();
+    return HARDCODED_TASK_KEYWORDS.some(k => t.includes(k));
+  }
+
+  let cancelHardcodedSolutions: (() => void) | null = null;
+  $effect(() => {
+    const title = currentOrder?.title ?? '';
+    cancelHardcodedSolutions?.();
+
+    if (title && isHardcodedTask(title)) {
+      cancelHardcodedSolutions = scheduleAfter(5000, () => {
+        const isRustTask = title.toLowerCase().includes('rust');
+        solutions = defaultSolutions.filter(s =>
+          isRustTask
+            ? s.solver.toLowerCase().includes('rust')
+            : s.solver.toLowerCase().includes('proxy')
+        );
+      });
+    } else {
+      solutions = [];
+    }
+
+    return () => {
+      cancelHardcodedSolutions?.();
+      cancelHardcodedSolutions = null;
+    };
+  });
+
+  function handleViewSolution(solutionId: string): void {
+    if (!currentOrder?.id) return;
+    goto(`/order/${currentOrder.id}/solver/${solutionId}`);
+  }
+
+  function handleApplySolution(solutionId: string): void {
+    solutions = solutions.map(s => ({
+      ...s,
+      rated: s.id === solutionId ? true : s.rated
+    }));
+  }
 
   const isVpnScenario = $derived(execution.scenario === 'vpn-service');
   const genericSteps = $derived(
@@ -650,6 +695,9 @@
         onUpdateTaskSettings={onUpdateTaskSettings}
         onPauseSearch={onPauseSearch}
         onResumeSearch={onResumeSearch}
+        {solutions}
+        onViewSolution={handleViewSolution}
+        onApplySolution={handleApplySolution}
         labels={{
           boardTitle: currentOrder?.title || labels.boardTitle,
           saving: labels.saving,
