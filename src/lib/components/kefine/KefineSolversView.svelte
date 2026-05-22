@@ -20,6 +20,8 @@
     onSettings?: (() => void) | null | undefined;
     onClone?: (() => void) | null | undefined;
   } = $props();
+
+  const resolvedRepoLabel = $derived(repoLabel || solutions[0]?.project || '');
 </script>
 
 <lef-solutions-page data-testid="solution-list-page">
@@ -28,8 +30,8 @@
       <lef-tasks-aside-head>Tasks</lef-tasks-aside-head>
       <lef-tasks-aside-list>
         <lef-tasks-aside-item data-active="true" data-testid="solution-list-task-label">
-          {#if repoLabel}
-            <strong>{repoLabel}</strong>
+          {#if resolvedRepoLabel}
+            <strong>{resolvedRepoLabel}</strong>
           {/if}
           <lefine-text>{taskTitle || 'Solvers'}</lefine-text>
         </lef-tasks-aside-item>
