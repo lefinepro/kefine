@@ -259,7 +259,7 @@
                   <small>{task.status}</small>
                 </lefine-box>
                 <kefine-account-task-action>
-                  <span class="kefine-account-task-action__book">
+                  <span class="kefine-account-task-action__book" title={openTaskLabel}>
                     <span class="kefine-icon-wrap kefine-icon-wrap--closed">
                       <Icon icon="mdi:book-outline" width="16" height="16" aria-hidden="true" />
                     </span>
@@ -267,7 +267,6 @@
                       <Icon icon="mdi:book-open-outline" width="16" height="16" aria-hidden="true" />
                     </span>
                   </span>
-                  <span class="kefine-account-task-action__label">{openTaskLabel}</span>
                 </kefine-account-task-action>
               </button>
             {/each}
@@ -544,23 +543,6 @@
     background: color-mix(in oklab, var(--kef-primary) 8%, var(--kef-bg-card));
     box-shadow: 0 4px 12px color-mix(in oklab, var(--lefine-text) 8%, transparent);
     transform: translateY(-1px);
-  }
-
-  .kefine-account-task-action__label {
-    display: inline-block;
-    overflow: hidden;
-    white-space: nowrap;
-    max-width: 0;
-    opacity: 0;
-    transition:
-      opacity 160ms ease,
-      max-width 200ms ease;
-    vertical-align: middle;
-  }
-
-  .kefine-account-task-action__book:hover ~ .kefine-account-task-action__label {
-    opacity: 1;
-    max-width: 5rem;
   }
 
   .kefine-icon-wrap {
