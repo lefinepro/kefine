@@ -258,7 +258,10 @@
                   <strong>{task.title}</strong>
                   <small>{task.status}</small>
                 </lefine-box>
-                <kefine-account-task-action>{openTaskLabel}</kefine-account-task-action>
+                <kefine-account-task-action>
+                  <Icon icon="mdi:book-open-outline" width="14" height="14" aria-hidden="true" />
+                  {openTaskLabel}
+                </kefine-account-task-action>
               </button>
             {/each}
           </kefine-account-task-list>
@@ -502,6 +505,12 @@
 
   button[data-variant='ghost']:hover {
     border-color: var(--kef-line-primary);
+  }
+
+  kefine-account-task-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
   }
 
   :global(:root[data-kefine-theme='dark']) .kefine-account-surface,
