@@ -313,7 +313,6 @@
   lef-solver-checkpoints {
     display: block;
     min-width: 0;
-    max-width: 42rem;
   }
 
   lef-correction-status {
