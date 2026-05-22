@@ -5,6 +5,7 @@
   import KefineOrderListItem from '$lib/components/kefine/KefineOrderListItem.svelte';
   import SolutionMetricsMini from '$lib/components/kefine/SolutionMetricsMini.svelte';
   import { defaultMetrics } from '$lib/kefine/solutions-data';
+  import { buildActorOrderPath } from '$lib/components/kefine/kefine-workspace-helpers';
   const PLACEHOLDER_TYPE_DELAY_MS = 58;
   const PLACEHOLDER_DELETE_DELAY_MS = 34;
   const PLACEHOLDER_PAUSE_MS = 1150;
@@ -536,6 +537,14 @@ initialized = true;
 
   const afeIntroCard = $derived(afe.cards[0] ?? null);
   const afeStepCards = $derived(afe.cards.slice(1));
+
+  const searchResultHref = $derived.by(() => {
+    const first = matchedOrders[0];
+    if (first?.actorHandle && (first.shareId ?? first.id)) {
+      return buildActorOrderPath(first.actorHandle, first.shareId ?? first.id);
+    }
+    return `/order/go-proxy/solutions?task=${encodeURIComponent(solverSearchText)}`;
+  });
 
   function formatTemplateVariableLabel(key: string): string {
     const normalized = key.trim().replace(/[_-]+/g, ' ');
@@ -1193,7 +1202,7 @@ initialized = true;
 
   {#if solverSearchActive && solverSearchText.trim()}
     <section data-part="tasks-list">
-      <a href={`/order/go-proxy/solutions?task=${encodeURIComponent(solverSearchText)}`} style="text-decoration:none; color:inherit; display:block;">
+      <a href={searchResultHref} style="text-decoration:none; color:inherit; display:block;">
         <kefine-solver-search-row aria-live="polite">
           <lefine-text>{solverSearchText}</lefine-text>
           {#if isFlying}
