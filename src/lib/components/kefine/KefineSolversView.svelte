@@ -6,6 +6,7 @@
   let {
     solutions = [],
     taskTitle = '',
+    repoLabel = '',
     onApplySolution,
     onViewSolution,
     onSettings,
@@ -13,6 +14,7 @@
   }: {
     solutions?: Solution[];
     taskTitle?: string;
+    repoLabel?: string;
     onApplySolution?: ((id: string) => void) | null | undefined;
     onViewSolution?: ((id: string) => void) | null | undefined;
     onSettings?: (() => void) | null | undefined;
@@ -20,12 +22,15 @@
   } = $props();
 </script>
 
-<lef-solutions-page>
+<lef-solutions-page data-testid="solution-list-page">
   <lef-tasks-grid>
     <lef-tasks-aside aria-label="Tasks">
       <lef-tasks-aside-head>Tasks</lef-tasks-aside-head>
       <lef-tasks-aside-list>
-        <lef-tasks-aside-item data-active="true">
+        <lef-tasks-aside-item data-active="true" data-testid="solution-list-task-label">
+          {#if repoLabel}
+            <strong>{repoLabel}</strong>
+          {/if}
           <lefine-text>{taskTitle || 'Solvers'}</lefine-text>
         </lef-tasks-aside-item>
       </lef-tasks-aside-list>
@@ -176,8 +181,9 @@
 
   lef-tasks-aside-item {
     display: flex;
-    align-items: center;
-    gap: 0.5rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.2rem;
     padding: 0.5rem 0.6rem;
     border-radius: 0.55rem;
     border: 0;
@@ -188,6 +194,17 @@
 
   lef-tasks-aside-item[data-active='true'] {
     background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 14%, var(--kef-bg-card));
+  }
+
+  lef-tasks-aside-item strong {
+    color: var(--lefine-text);
+    font-size: 0.9rem;
+    font-weight: 700;
+    line-height: 1.25;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
   }
 
   lef-tasks-aside-item lefine-text {
