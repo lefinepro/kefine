@@ -8,6 +8,19 @@
     isHead: boolean;
   };
 
+  const defaultCommits: CommitInfo[] = [
+    { hash: 'fa964bbf0b745ad46206ed99eb33d56ce4b9be5e', shortHash: 'fa964bb', message: 'feat: add Checkpoints tab with commit history (VS Code SCM style)', author: 'Pavel Pasaz', refs: 'HEAD -> fix/tests-lighthouse-pnpm', isHead: true },
+    { hash: '62655218d906ebffb336324b121755fb56e4ceac', shortHash: '6265521', message: 'fix: wrap rows in lef-row-group (inline-block, min-width:100%)', author: 'Pavel Pasaz', refs: 'origin/fix/tests-lighthouse-pnpm', isHead: false },
+    { hash: 'cc6d0080695d71d2d1cc9a684e6218571717701c', shortHash: 'cc6d008', message: 'fix: add flex:1 to lef-line-text so background fills pane width', author: 'Pavel Pasaz', refs: '', isHead: false },
+    { hash: 'c15439361ea174e8ef7d670874a0c91ab2ec4913', shortHash: 'c154393', message: 'fix: flex layout with min-width auto, border-right on pane not side', author: 'Pavel Pasaz', refs: '', isHead: false },
+    { hash: 'b46cd8f11972f7b6efc34b0ced7d0a8843bb6dab', shortHash: 'b46cd8f', message: 'fix: inline-block instead of block so background fills pane width', author: 'Pavel Pasaz', refs: '', isHead: false },
+    { hash: '858ff7b5af9ea8ae163531b7eb4529468f4e4af0', shortHash: '858ff7b', message: 'fix: change lef-side from flex to inline-block for diff background', author: 'Pavel Pasaz', refs: '', isHead: false },
+    { hash: '2fc771c333b4bf4d6c320b7e4d5666cd6b0e3b89', shortHash: '2fc771c', message: 'fix: extend diff background to full code width, opaque line numbers', author: 'Pavel Pasaz', refs: '', isHead: false },
+    { hash: '7fc5262b5d1709c36cb61fd8c31453c2796de381', shortHash: '7fc5262', message: 'fix: apply Synt font to code only, revert file names to JetBrains', author: 'Pavel Pasaz', refs: '', isHead: false },
+    { hash: 'ad6d17a9215d737d6bdab0bc577b95194d1c6daa', shortHash: 'ad6d17a', message: 'feat: replace JetBrains Mono with Synt font for code', author: 'Pavel Pasaz', refs: '', isHead: false },
+    { hash: 'f95b81ac2ad4b80b03e8e8d14589d9de388967a1', shortHash: 'f95b81a', message: 'fix: remove scrollbar from file tabs area', author: 'Pavel Pasaz', refs: '', isHead: false }
+  ];
+
   let {
     commits,
     currentBranch,
@@ -17,24 +30,25 @@
     currentBranch: string;
     branches: string[];
   } = $props();
+
+  const displayCommits = $derived(commits.length > 0 ? commits : defaultCommits);
+  const displayBranch = $derived(currentBranch || 'fix/tests-lighthouse-pnpm');
 </script>
 
-{#if currentBranch}
-  <lef-cp-header>
-    <lef-cp-branch-icon>
-      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <line x1="6" y1="3" x2="6" y2="15" />
-        <circle cx="6" cy="18" r="3" />
-        <circle cx="18" cy="6" r="3" />
-        <path d="M18 9a9 9 0 0 1-9 9" />
-      </svg>
-    </lef-cp-branch-icon>
-    <lef-cp-branch-name>{currentBranch}</lef-cp-branch-name>
-  </lef-cp-header>
-{/if}
+<lef-cp-header>
+  <lef-cp-branch-icon>
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <line x1="6" y1="3" x2="6" y2="15" />
+      <circle cx="6" cy="18" r="3" />
+      <circle cx="18" cy="6" r="3" />
+      <path d="M18 9a9 9 0 0 1-9 9" />
+    </svg>
+  </lef-cp-branch-icon>
+  <lef-cp-branch-name>{displayBranch}</lef-cp-branch-name>
+</lef-cp-header>
 
 <lef-cp-list>
-  {#each commits as commit, i (commit.hash)}
+  {#each displayCommits as commit, i (commit.hash)}
     <lef-cp-commit>
       <lef-cp-graph>
         {#if i < commits.length - 1}
