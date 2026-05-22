@@ -14,6 +14,28 @@
   import { KEFINE_AUTH_ICONS } from '$lib/components/kefine/kefine-auth-constants';
   import { defaultSolutions, type Solution } from '$lib/kefine/solutions-data';
 
+  function getOrderSolutionsKey(orderId: string) {
+    return `kefine-order-${orderId}-solutions`;
+  }
+
+  function loadOrderSolutions(orderId: string): Solution[] {
+    if (!browser) return [];
+    try {
+      const raw = localStorage.getItem(getOrderSolutionsKey(orderId));
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function saveOrderSolutions(orderId: string, sols: Solution[]) {
+    if (browser) {
+      try {
+        localStorage.setItem(getOrderSolutionsKey(orderId), JSON.stringify(sols));
+      } catch {}
+    }
+  }
+
   let {
     currentOrder,
     queuedOrders = [],
@@ -135,17 +157,25 @@
   let cancelHardcodedSolutions: (() => void) | null = null;
   $effect(() => {
     const title = currentOrder?.title ?? '';
+    const orderId = currentOrder?.id;
     cancelHardcodedSolutions?.();
 
-    if (title && isHardcodedTask(title)) {
-      cancelHardcodedSolutions = scheduleAfter(5000, () => {
-        const isRustTask = title.toLowerCase().includes('rust');
-        solutions = defaultSolutions.filter(s =>
-          isRustTask
-            ? s.solver.toLowerCase().includes('rust')
-            : s.solver.toLowerCase().includes('proxy')
-        );
-      });
+    if (title && isHardcodedTask(title) && orderId) {
+      const saved = loadOrderSolutions(orderId);
+      if (saved.length > 0) {
+        solutions = saved;
+      } else {
+        cancelHardcodedSolutions = scheduleAfter(5000, () => {
+          const isRustTask = title.toLowerCase().includes('rust');
+          const found = defaultSolutions.filter(s =>
+            isRustTask
+              ? s.solver.toLowerCase().includes('rust')
+              : s.solver.toLowerCase().includes('proxy')
+          );
+          solutions = found;
+          saveOrderSolutions(orderId, found);
+        });
+      }
     } else {
       solutions = [];
     }
@@ -166,6 +196,9 @@
       ...s,
       rated: s.id === solutionId ? true : s.rated
     }));
+    if (currentOrder?.id) {
+      saveOrderSolutions(currentOrder.id, solutions);
+    }
   }
 
   const isVpnScenario = $derived(execution.scenario === 'vpn-service');
