@@ -152,6 +152,22 @@
     min-height: 2.2rem;
     align-items: flex-start;
     transition: background-color 120ms ease;
+    position: relative;
+  }
+
+  lef-cp-commit::before {
+    content: '';
+    position: absolute;
+    left: calc(0.85rem + 0.625rem);
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: color-mix(in oklab, var(--lefine-text-soft) 25%, transparent);
+    pointer-events: none;
+  }
+
+  lef-cp-commit:last-child::before {
+    display: none;
   }
 
   lef-cp-commit:hover {
@@ -166,20 +182,6 @@
     flex-shrink: 0;
     position: relative;
     padding-top: 0.5rem;
-  }
-
-  lef-cp-graph::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: calc(50% - 0.5px);
-    width: 1px;
-    background: color-mix(in oklab, var(--lefine-text-soft) 30%, transparent);
-  }
-
-  lef-cp-commit:last-child lef-cp-graph::before {
-    display: none;
   }
 
   lef-cp-dot {
