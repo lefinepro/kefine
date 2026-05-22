@@ -166,8 +166,13 @@
     pointer-events: none;
   }
 
+  lef-cp-commit:first-child::before {
+    bottom: 1.3rem;
+  }
+
   lef-cp-commit:last-child::before {
-    display: none;
+    top: 1.3rem;
+    bottom: 0;
   }
 
   lef-cp-commit:hover {
