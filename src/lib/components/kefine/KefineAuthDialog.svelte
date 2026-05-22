@@ -96,6 +96,13 @@
     return address.length > 14 ? `${address.slice(0, 6)}...${address.slice(-4)}` : address;
   }
 
+  function truncate(text: string | null | undefined, maxLength = 25): string {
+    if (!text) return '';
+    const clean = text.trim();
+    if (clean.length <= maxLength) return clean;
+    return clean.slice(0, maxLength) + '...';
+  }
+
 </script>
 
 <kefine-account-drawer
@@ -221,14 +228,28 @@
               <kefine-account-avatar-initial>{(profileName ?? connectedTitle).slice(0, 1).toUpperCase()}</kefine-account-avatar-initial>
             {/if}
           </kefine-account-avatar>
-          <lefine-box class="kefine-account-profile-copy">
-            <small>{connectedTitle}</small>
-            <strong>{profileName ?? connectedTitle}</strong>
-            {#if profileHandle}
-              <kefine-account-profile-handle>{profileHandle}</kefine-account-profile-handle>
-            {/if}
-          </lefine-box>
-        </kefine-account-profile-head>
+           <lefine-box class="kefine-account-profile-copy">
+             <small>{connectedTitle}</small>
+             <strong title={profileName ?? connectedTitle}>{truncate(profileName ?? connectedTitle)}</strong>
+             {#if profileHandle}
+               <kefine-account-profile-handle title={profileHandle}>{truncate(profileHandle, 20)}</kefine-account-profile-handle>
+             {/if}
+            </lefine-box>
+
+             <button
+               type="button"
+               class="kefine-sign-out"
+               onclick={onSignOut}
+               aria-label={signOutLabel}
+               title={signOutLabel}
+             >
+               <div class="door-scene">
+                 <div class="door-frame">
+                   <div class="door"></div>
+                 </div>
+               </div>
+             </button>
+         </kefine-account-profile-head>
 
         <p>{connectedDescription}</p>
 
@@ -247,17 +268,16 @@
       <section class="kefine-account-surface">
         <kefine-account-section-head>
           <strong>{latestTasksTitle}</strong>
-          <button type="button" data-variant="ghost" onclick={onSignOut}>{signOutLabel}</button>
         </kefine-account-section-head>
 
         {#if recentTasks.length > 0}
           <kefine-account-task-list>
             {#each recentTasks as task (task.id)}
               <button type="button" class="kefine-account-task" onclick={() => onOpenTask(task.id)}>
-                <lefine-box class="kefine-account-task__copy">
-                  <strong>{task.title}</strong>
-                  <small>{task.status}</small>
-                </lefine-box>
+                 <lefine-box class="kefine-account-task__copy">
+                   <strong title={task.title}>{truncate(task.title)}</strong>
+                   <small>{task.status}</small>
+                 </lefine-box>
                 <kefine-account-task-action>
                   <span class="kefine-account-task-action__book" title={openTaskLabel}>
                     <span class="kefine-icon-wrap kefine-icon-wrap--closed">
@@ -324,8 +344,8 @@
 
   .kefine-account-surface {
     display: grid;
-    gap: 0.7rem;
-    padding: 1.1rem;
+    gap: 0.5rem;
+    padding: 0.95rem;
     border-radius: var(--kef-radius-lg);
   }
 
@@ -419,6 +439,9 @@
   .kefine-account-task__copy strong {
     font-size: 1rem;
     line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .kefine-account-auth-card strong {
@@ -438,6 +461,101 @@
     font-size: 0.92rem;
   }
 
+  .kefine-sign-out {
+    position: relative;
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 5px;
+    border: 1px solid var(--kef-line);
+    background: transparent;
+    cursor: pointer;
+    transition: border-color 160ms ease, background 160ms ease;
+    flex-shrink: 0;
+    padding: 0;
+  }
+
+  .kefine-sign-out:hover {
+    border-color: color-mix(in oklab, var(--kef-error, #ef4444) 45%, var(--kef-line));
+    background: color-mix(in oklab, var(--kef-error, #ef4444) 12%, var(--kef-bg-card));
+  }
+
+  /* === 3D Door (scaled down from reference, lefine style) === */
+  .kefine-sign-out .door-scene {
+    width: 15px;
+    height: 20px;
+    perspective: 110px;
+    perspective-origin: 50% 50%;
+  }
+
+  .kefine-sign-out .door-frame {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background: var(--kef-line);
+    border-radius: 3px;
+    box-shadow: inset 0 0 0 1px var(--kef-bg-card);
+    overflow: visible;
+  }
+
+  .kefine-sign-out .door {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--kef-primary);
+    border-radius: 2px;
+    transform-origin: left center;
+    transition: transform 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1), background 0.25s ease;
+    box-shadow: 1px 0 4px rgba(0, 0, 0, 0.12);
+  }
+
+  /* subtle door panel line */
+  .kefine-sign-out .door::before {
+    content: "";
+    position: absolute;
+    top: 14%;
+    left: 24%;
+    width: 1px;
+    height: 72%;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 1px;
+  }
+
+  /* door knob */
+  .kefine-sign-out .door::after {
+    content: "";
+    position: absolute;
+    right: 2px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 3px;
+    background: var(--kef-on-primary);
+    border-radius: 50%;
+    box-shadow: 0 0.5px 1px rgba(0,0,0,0.2);
+  }
+
+  /* Hover: swing open + turn red (lefine error tone) */
+  .kefine-sign-out:hover .door {
+    transform: rotateY(-112deg);
+    background: var(--kef-error, #e63946);
+  }
+
+  .kefine-sign-out:hover .door::after {
+    background: #1a1b1e;
+    box-shadow: 0 0 0 1px rgba(255, 245, 200, 0.35);
+  }
+
+  .kefine-sign-out .door-frame,
+  .kefine-sign-out .door {
+    backface-visibility: visible;
+  }
+
   kefine-account-stats {
     align-items: stretch;
   }
@@ -445,8 +563,8 @@
   kefine-account-stat {
     flex: 1 1 0;
     display: grid;
-    gap: 0.2rem;
-    padding: 0.85rem 0.9rem;
+    gap: 0.1rem;
+    padding: 0.4rem 0.7rem;
     border-radius: var(--kef-radius-ui);
   }
 
