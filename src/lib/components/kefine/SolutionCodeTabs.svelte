@@ -37,7 +37,7 @@
     flex-wrap: wrap;
     gap: 0.25rem;
     padding: 0;
-    overflow-x: hidden;
+    overflow: hidden;
     position: relative;
     z-index: 1;
   }
