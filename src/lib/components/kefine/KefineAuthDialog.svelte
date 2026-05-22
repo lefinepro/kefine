@@ -259,7 +259,10 @@
                   <small>{task.status}</small>
                 </lefine-box>
                 <kefine-account-task-action>
-                  <Icon icon="mdi:book-open-outline" width="14" height="14" aria-hidden="true" />
+                  <span class="kefine-account-task-action__book">
+                    <Icon icon="mdi:book-outline" class="kefine-icon-book kefine-icon-book--closed" width="16" height="16" aria-hidden="true" />
+                    <Icon icon="mdi:book-open-outline" class="kefine-icon-book kefine-icon-book--open" width="16" height="16" aria-hidden="true" />
+                  </span>
                   {openTaskLabel}
                 </kefine-account-task-action>
               </button>
@@ -511,6 +514,62 @@
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
+  }
+
+  .kefine-account-task-action__book {
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+    width: 1.85rem;
+    height: 1.85rem;
+    border-radius: 0.35rem;
+    border: 1px solid var(--kef-line);
+    background: transparent;
+    overflow: hidden;
+    perspective: 300px;
+    flex-shrink: 0;
+    transition:
+      border-color 160ms ease,
+      box-shadow 160ms ease,
+      background-color 160ms ease,
+      transform 160ms ease;
+  }
+
+  .kefine-account-task:hover .kefine-account-task-action__book {
+    border-color: var(--kef-line-primary);
+    background: color-mix(in oklab, var(--kef-primary) 8%, var(--kef-bg-card));
+    box-shadow: 0 4px 12px color-mix(in oklab, var(--lefine-text) 8%, transparent);
+    transform: translateY(-1px);
+  }
+
+  .kefine-icon-book {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    transition:
+      opacity 260ms ease,
+      transform 360ms var(--kef-ease-soft);
+  }
+
+  .kefine-icon-book--closed {
+    opacity: 1;
+    transform: rotateY(0deg) scale(1);
+  }
+
+  .kefine-icon-book--open {
+    opacity: 0;
+    transform: rotateY(-60deg) scale(0.6);
+  }
+
+  .kefine-account-task:hover .kefine-icon-book--closed {
+    opacity: 0;
+    transform: rotateY(60deg) scale(0.6);
+  }
+
+  .kefine-account-task:hover .kefine-icon-book--open {
+    opacity: 1;
+    transform: rotateY(0deg) scale(1);
   }
 
   :global(:root[data-kefine-theme='dark']) .kefine-account-surface,
