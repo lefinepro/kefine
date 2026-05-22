@@ -45,6 +45,7 @@
 <KefineSolversView
   {solutions}
   taskTitle={taskTitle}
+  repoLabel={repoName}
   onViewSolution={handleViewSolution}
   onApplySolution={handleApplySolution}
 />
