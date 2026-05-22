@@ -260,8 +260,12 @@
                 </lefine-box>
                 <kefine-account-task-action>
                   <span class="kefine-account-task-action__book">
-                    <Icon icon="mdi:book-outline" class="kefine-icon-book kefine-icon-book--closed" width="16" height="16" aria-hidden="true" />
-                    <Icon icon="mdi:book-open-outline" class="kefine-icon-book kefine-icon-book--open" width="16" height="16" aria-hidden="true" />
+                    <span class="kefine-icon-wrap kefine-icon-wrap--closed">
+                      <Icon icon="mdi:book-outline" width="16" height="16" aria-hidden="true" />
+                    </span>
+                    <span class="kefine-icon-wrap kefine-icon-wrap--open">
+                      <Icon icon="mdi:book-open-outline" width="16" height="16" aria-hidden="true" />
+                    </span>
                   </span>
                   {openTaskLabel}
                 </kefine-account-task-action>
@@ -542,7 +546,7 @@
     transform: translateY(-1px);
   }
 
-  .kefine-icon-book {
+  .kefine-icon-wrap {
     position: absolute;
     inset: 0;
     display: grid;
@@ -552,22 +556,22 @@
       transform 360ms var(--kef-ease-soft);
   }
 
-  .kefine-icon-book--closed {
+  .kefine-icon-wrap--closed {
     opacity: 1;
     transform: rotateY(0deg) scale(1);
   }
 
-  .kefine-icon-book--open {
+  .kefine-icon-wrap--open {
     opacity: 0;
     transform: rotateY(-60deg) scale(0.6);
   }
 
-  .kefine-account-task:hover .kefine-icon-book--closed {
+  .kefine-account-task:hover .kefine-icon-wrap--closed {
     opacity: 0;
     transform: rotateY(60deg) scale(0.6);
   }
 
-  .kefine-account-task:hover .kefine-icon-book--open {
+  .kefine-account-task:hover .kefine-icon-wrap--open {
     opacity: 1;
     transform: rotateY(0deg) scale(1);
   }
