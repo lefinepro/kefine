@@ -85,7 +85,6 @@
   {#each hintCommits as commit, i (commit.hash)}
     <lef-cp-commit>
       <lef-cp-graph>
-        <lef-cp-line aria-hidden="true"></lef-cp-line>
         <lef-cp-dot class:lef-cp-dot--head={commit.isHead}></lef-cp-dot>
       </lef-cp-graph>
       <lef-cp-content>
@@ -159,10 +158,6 @@
     background: color-mix(in oklab, var(--lefine-text-soft) 6%, transparent);
   }
 
-  lef-cp-commit:last-child lef-cp-line {
-    display: none;
-  }
-
   lef-cp-graph {
     display: flex;
     flex-direction: column;
@@ -173,14 +168,18 @@
     padding-top: 0.5rem;
   }
 
-  lef-cp-line {
+  lef-cp-graph::before {
+    content: '';
     position: absolute;
     top: 0;
     bottom: 0;
-    left: 50%;
+    left: calc(50% - 0.5px);
     width: 1px;
-    background: var(--kef-line);
-    opacity: 0.4;
+    background: color-mix(in oklab, var(--lefine-text-soft) 30%, transparent);
+  }
+
+  lef-cp-commit:last-child lef-cp-graph::before {
+    display: none;
   }
 
   lef-cp-dot {
