@@ -52,9 +52,11 @@
     onTagsChange,
     executionEstimateLabel,
     onExecutionEstimateChange,
-    onOpenSolution
+    onOpenSolution,
+    recentOrders = []
   }: {
     draft: DraftOrder;
+    recentOrders?: OrderView[];
     template: TemplatePresentation | null;
     serviceSetup?: {
       title: string;
@@ -144,6 +146,29 @@
 
   import { solutionsStore } from '$lib/kefine/solutions-store';
   import { get } from 'svelte/store';
+
+  const COMPLETED_SEARCHES_KEY = 'kefine-completed-solver-searches';
+
+  function getCompletedSearches(): Set<string> {
+    if (!browser) return new Set();
+    try {
+      const raw = localStorage.getItem(COMPLETED_SEARCHES_KEY);
+      return raw ? new Set(JSON.parse(raw)) : new Set();
+    } catch {
+      return new Set();
+    }
+  }
+
+  function markSearchCompleted(text: string) {
+    if (!browser) return;
+    const set = getCompletedSearches();
+    set.add(text.trim().toLowerCase());
+    localStorage.setItem(COMPLETED_SEARCHES_KEY, JSON.stringify([...set]));
+  }
+
+  function isSearchCompleted(text: string): boolean {
+    return getCompletedSearches().has(text.trim().toLowerCase());
+  }
 
   interface Solution {
     id: string;
@@ -700,6 +725,8 @@ initialized = true;
       const timer = setTimeout(() => {
         taskCompleted = true;
         isFlying = false;
+        markSearchCompleted(solverSearchText);
+        addRecentSearch(solverSearchText);
         const current = solutionsStore.getAll();
         const goSolutions = defaultSolutions.filter(s => ['5', '6', '7'].includes(s.id));
         const existingIds = current.map(s => s.id);
@@ -1143,6 +1170,22 @@ initialized = true;
 
   <input bind:this={fileInput} data-part="file-input" type="file" multiple onchange={handleFileChange} />
   <p id="kefine-composer-hints" data-part="composer-hints" hidden>{composerHints}</p>
+
+  <!-- Persistent task history on main page (same data as in profile) -->
+  {#if recentOrders.length > 0}
+    <section data-part="tasks-list">
+      {#each recentOrders as order}
+        <a href={`/order/${order.id}`} style="text-decoration:none; color:inherit; display:block;">
+          <kefine-solver-search-row aria-live="polite">
+            <lefine-text>{order.title}</lefine-text>
+            <kefine-solver-search-indicator aria-label="Completed" title="Completed" data-completed="true">
+              <kefine-solver-search-dot aria-hidden="true"></kefine-solver-search-dot>
+            </kefine-solver-search-indicator>
+          </kefine-solver-search-row>
+        </a>
+      {/each}
+    </section>
+  {/if}
 
   {#if isSearching && matchedOrders.length > 0}
     <section data-part="recent" aria-label={isSearching ? matchedTasksLabel : solverLabel}>

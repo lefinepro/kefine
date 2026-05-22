@@ -2708,6 +2708,7 @@
           template={null}
           serviceSetup={null}
           title={localeText.create.title}
+          recentOrders={recentProfileOrders}
           pinnedServices={pinnedCreateServices}
           pinnedServicesTitle={localeText.profile.templates}
           pinnedServicesSubtitle={localeText.create.pinnedServicesSubtitle}
