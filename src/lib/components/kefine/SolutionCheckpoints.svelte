@@ -167,12 +167,13 @@
   }
 
   lef-cp-commit:first-child::before {
-    bottom: 1.3rem;
+    top: 1.3rem;
+    bottom: 0;
   }
 
   lef-cp-commit:last-child::before {
-    top: 1.3rem;
-    bottom: 0;
+    top: 0;
+    bottom: 1.3rem;
   }
 
   lef-cp-commit:hover {
