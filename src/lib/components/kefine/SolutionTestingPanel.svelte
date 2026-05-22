@@ -494,7 +494,7 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     color: var(--lefine-text-soft);
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: 'Synt', monospace;
     font-size: 0.78rem;
     line-height: 1.4;
   }
@@ -513,7 +513,7 @@
     padding: 0.45rem 0.55rem 0.45rem 0.7rem;
     border-radius: 0.45rem;
     border: 1px solid var(--kef-line);
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: 'Synt', monospace;
     font-size: 0.82rem;
     font-weight: 700;
     cursor: pointer;
@@ -556,7 +556,7 @@
     gap: 0.5rem;
     padding: 0.45rem 0.65rem;
     border-radius: 0.3rem;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: 'Synt', monospace;
     font-size: 0.82rem;
     font-weight: 700;
     cursor: pointer;
@@ -584,7 +584,7 @@
     border-radius: 0.45rem;
     background: var(--kef-bg-soft);
     color: var(--lefine-text);
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: 'Synt', monospace;
     font-size: 0.82rem;
     padding: 0.45rem 0.7rem;
     min-width: 0;
@@ -708,7 +708,7 @@
     border-radius: 0.35rem;
     background: color-mix(in oklab, var(--kef-success, #16a34a) 18%, var(--kef-bg-card));
     color: var(--kef-success, #16a34a);
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: 'Synt', monospace;
     font-size: 0.72rem;
     font-weight: 700;
   }
@@ -724,7 +724,7 @@
     border-radius: 0.45rem;
     background: var(--kef-bg-soft);
     color: var(--lefine-text);
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: 'Synt', monospace;
     font-size: 0.8rem;
     line-height: 1.55;
     padding: 0.55rem 0.7rem;
@@ -776,7 +776,7 @@
     border-radius: 0.35rem;
     background: var(--kef-bg-card);
     color: var(--lefine-text);
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: 'Synt', monospace;
     font-size: 0.8rem;
     line-height: 1.35;
     padding: 0.5rem 0.55rem;
@@ -794,7 +794,7 @@
     background: var(--kef-bg-soft);
     padding: 0.55rem 0.7rem;
     min-height: 8rem;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: 'Synt', monospace;
     font-size: 0.8rem;
     line-height: 1.55;
     color: var(--lefine-text);
