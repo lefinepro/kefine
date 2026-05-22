@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { defaultSolutions } from '$lib/kefine/solutions-data';
+
   export type CommitInfo = {
     hash: string;
     shortHash: string;
@@ -8,31 +10,65 @@
     isHead: boolean;
   };
 
-  const defaultCommits: CommitInfo[] = [
-    { hash: 'fa964bbf0b745ad46206ed99eb33d56ce4b9be5e', shortHash: 'fa964bb', message: 'feat: add Checkpoints tab with commit history (VS Code SCM style)', author: 'Pavel Pasaz', refs: 'HEAD -> fix/tests-lighthouse-pnpm', isHead: true },
-    { hash: '62655218d906ebffb336324b121755fb56e4ceac', shortHash: '6265521', message: 'fix: wrap rows in lef-row-group (inline-block, min-width:100%)', author: 'Pavel Pasaz', refs: 'origin/fix/tests-lighthouse-pnpm', isHead: false },
-    { hash: 'cc6d0080695d71d2d1cc9a684e6218571717701c', shortHash: 'cc6d008', message: 'fix: add flex:1 to lef-line-text so background fills pane width', author: 'Pavel Pasaz', refs: '', isHead: false },
-    { hash: 'c15439361ea174e8ef7d670874a0c91ab2ec4913', shortHash: 'c154393', message: 'fix: flex layout with min-width auto, border-right on pane not side', author: 'Pavel Pasaz', refs: '', isHead: false },
-    { hash: 'b46cd8f11972f7b6efc34b0ced7d0a8843bb6dab', shortHash: 'b46cd8f', message: 'fix: inline-block instead of block so background fills pane width', author: 'Pavel Pasaz', refs: '', isHead: false },
-    { hash: '858ff7b5af9ea8ae163531b7eb4529468f4e4af0', shortHash: '858ff7b', message: 'fix: change lef-side from flex to inline-block for diff background', author: 'Pavel Pasaz', refs: '', isHead: false },
-    { hash: '2fc771c333b4bf4d6c320b7e4d5666cd6b0e3b89', shortHash: '2fc771c', message: 'fix: extend diff background to full code width, opaque line numbers', author: 'Pavel Pasaz', refs: '', isHead: false },
-    { hash: '7fc5262b5d1709c36cb61fd8c31453c2796de381', shortHash: '7fc5262', message: 'fix: apply Synt font to code only, revert file names to JetBrains', author: 'Pavel Pasaz', refs: '', isHead: false },
-    { hash: 'ad6d17a9215d737d6bdab0bc577b95194d1c6daa', shortHash: 'ad6d17a', message: 'feat: replace JetBrains Mono with Synt font for code', author: 'Pavel Pasaz', refs: '', isHead: false },
-    { hash: 'f95b81ac2ad4b80b03e8e8d14589d9de388967a1', shortHash: 'f95b81a', message: 'fix: remove scrollbar from file tabs area', author: 'Pavel Pasaz', refs: '', isHead: false }
-  ];
+  function buildCommitsFor(slug: string, title: string): CommitInfo[] {
+    const shared = [
+      { hash: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0', shortHash: 'a1b2c3d', message: 'chore: create project', author: 'Pavel Pasaz', refs: '', isHead: false },
+      { hash: 'b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b01', shortHash: 'b2c3d4e', message: 'chore: add project config and deps', author: 'Pavel Pasaz', refs: '', isHead: false },
+    ];
+
+    const tail: CommitInfo[] = [
+      { hash: 'c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b012c', shortHash: 'c3d4e5f', message: `feat: add ${title.toLowerCase()}`, author: 'Pavel Pasaz', refs: `HEAD -> ${slug}`, isHead: true },
+    ];
+
+    if (title.includes('Proxy')) {
+      tail.unshift(
+        { hash: 'd4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b012cd', shortHash: 'd4e5f6a', message: 'feat: add HTTP proxy handler with forwarding', author: 'Pavel Pasaz', refs: '', isHead: false },
+        { hash: 'e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b012cde4', shortHash: 'e5f6a7b', message: 'feat: print "Proxying: %s %s\\n", r.Method, r.URL', author: 'Pavel Pasaz', refs: '', isHead: false },
+      );
+    }
+    if (title.includes('Rate Limiting')) {
+      tail.unshift(
+        { hash: 'f6a7b8c9d0e1f2a3b4c5d6e7f8a9b012cde5f', shortHash: 'f6a7b8c', message: 'feat: add rate limiter middleware', author: 'Pavel Pasaz', refs: '', isHead: false },
+        { hash: 'a7b8c9d0e1f2a3b4c5d6e7f8a9b012cde5f6a', shortHash: 'a7b8c9d', message: 'feat: add response caching layer', author: 'Pavel Pasaz', refs: '', isHead: false },
+        { hash: 'b8c9d0e1f2a3b4c5d6e7f8a9b012cde5f6a7b', shortHash: 'b8c9d0e', message: 'feat: add Prometheus metrics endpoint', author: 'Pavel Pasaz', refs: '', isHead: false },
+      );
+    } else if (title.includes('Production-ready')) {
+      tail.unshift(
+        { hash: 'c9d0e1f2a3b4c5d6e7f8a9b012cde5f6a7b8c', shortHash: 'c9d0e1f', message: 'feat: add request/response structured logging', author: 'Pavel Pasaz', refs: '', isHead: false },
+        { hash: 'd0e1f2a3b4c5d6e7f8a9b012cde5f6a7b8c9d', shortHash: 'd0e1f2a', message: 'feat: add config file support', author: 'Pavel Pasaz', refs: '', isHead: false },
+      );
+    }
+    if (title.toLowerCase().includes('hello world')) {
+      tail.unshift(
+        { hash: 'e1f2a3b4c5d6e7f8a9b012cde5f6a7b8c9d0e', shortHash: 'e1f2a3b', message: 'feat: implement hello world logic', author: 'Pavel Pasaz', refs: '', isHead: false },
+      );
+    }
+
+    return [...shared, ...tail];
+  }
 
   let {
     commits,
     currentBranch,
-    branches
+    branches,
+    solutionTitle,
+    solutionProject,
+    solutionSlug,
+    solverName
   }: {
     commits: CommitInfo[];
     currentBranch: string;
     branches: string[];
+    solutionTitle?: string;
+    solutionProject?: string;
+    solutionSlug?: string;
+    solverName?: string;
   } = $props();
 
-  const displayCommits = $derived(commits.length > 0 ? commits : defaultCommits);
-  const displayBranch = $derived(currentBranch || 'fix/tests-lighthouse-pnpm');
+  const slug = $derived(solutionSlug || currentBranch || 'main');
+  const project = $derived(solutionProject || '');
+  const hintCommits = $derived(commits.length > 0 ? commits : buildCommitsFor(slug, solutionTitle || 'project'));
+  const hintBranch = $derived(currentBranch || slug);
 </script>
 
 <lef-cp-header>
@@ -44,14 +80,17 @@
       <path d="M18 9a9 9 0 0 1-9 9" />
     </svg>
   </lef-cp-branch-icon>
-  <lef-cp-branch-name>{displayBranch}</lef-cp-branch-name>
+  <lef-cp-branch-name>{hintBranch}</lef-cp-branch-name>
+  {#if project}
+    <lef-cp-project-name>{project}</lef-cp-project-name>
+  {/if}
 </lef-cp-header>
 
 <lef-cp-list>
-  {#each displayCommits as commit, i (commit.hash)}
+  {#each hintCommits as commit, i (commit.hash)}
     <lef-cp-commit>
       <lef-cp-graph>
-        {#if i < commits.length - 1}
+        {#if i < hintCommits.length - 1}
           <lef-cp-line aria-hidden="true"></lef-cp-line>
         {/if}
         <lef-cp-dot class:lef-cp-dot--head={commit.isHead}></lef-cp-dot>
@@ -96,6 +135,13 @@
     font-size: 0.82rem;
     font-weight: 600;
     color: var(--lefine-text);
+  }
+
+  lef-cp-project-name {
+    font-family: 'Synt', monospace;
+    font-size: 0.72rem;
+    color: var(--lefine-text-soft);
+    margin-left: auto;
   }
 
   lef-cp-list {

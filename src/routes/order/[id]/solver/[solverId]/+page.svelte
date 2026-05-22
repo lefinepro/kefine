@@ -224,6 +224,10 @@
             commits={data.commits ?? []}
             currentBranch={data.currentBranch ?? ''}
             branches={data.branches ?? []}
+            solutionTitle={solution?.title}
+            solutionProject={solution?.project}
+            solutionSlug={solution?.slug}
+            solverName={solution?.solver}
           />
         </lef-solver-checkpoints>
       {:else}
