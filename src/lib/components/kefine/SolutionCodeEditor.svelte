@@ -157,6 +157,7 @@
         <div transition:fade={{ duration: 160 }}>
           <lef-code-split>
             <lef-code-pane>
+              <div class="lef-row-group">
               {#each rows as row, index (index)}
                 <lef-diff-row class:lef-diff-row--changed={row.band !== null}>
                   <lef-side
@@ -170,8 +171,10 @@
                   </lef-side>
                 </lef-diff-row>
               {/each}
+              </div>
             </lef-code-pane>
             <lef-code-pane>
+              <div class="lef-row-group">
               {#each rows as row, index (index)}
                 <lef-diff-row>
                   <lef-side
@@ -185,6 +188,7 @@
                   </lef-side>
                 </lef-diff-row>
               {/each}
+              </div>
             </lef-code-pane>
           </lef-code-split>
         </div>
@@ -291,10 +295,13 @@
     display: block;
   }
 
+  .lef-row-group {
+    display: inline-block;
+    min-width: 100%;
+  }
+
   .lef-side {
     display: flex;
-    min-width: 100%;
-    width: max-content;
   }
   .lef-side--left {
     border-right: none;
