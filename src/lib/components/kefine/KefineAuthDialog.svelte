@@ -267,7 +267,7 @@
                       <Icon icon="mdi:book-open-outline" width="16" height="16" aria-hidden="true" />
                     </span>
                   </span>
-                  {openTaskLabel}
+                  <span class="kefine-account-task-action__label">{openTaskLabel}</span>
                 </kefine-account-task-action>
               </button>
             {/each}
@@ -539,11 +539,28 @@
       transform 160ms ease;
   }
 
-  .kefine-account-task:hover .kefine-account-task-action__book {
+  .kefine-account-task-action__book:hover {
     border-color: var(--kef-line-primary);
     background: color-mix(in oklab, var(--kef-primary) 8%, var(--kef-bg-card));
     box-shadow: 0 4px 12px color-mix(in oklab, var(--lefine-text) 8%, transparent);
     transform: translateY(-1px);
+  }
+
+  .kefine-account-task-action__label {
+    display: inline-block;
+    overflow: hidden;
+    white-space: nowrap;
+    max-width: 0;
+    opacity: 0;
+    transition:
+      opacity 160ms ease,
+      max-width 200ms ease;
+    vertical-align: middle;
+  }
+
+  .kefine-account-task-action__book:hover ~ .kefine-account-task-action__label {
+    opacity: 1;
+    max-width: 5rem;
   }
 
   .kefine-icon-wrap {
@@ -566,12 +583,12 @@
     transform: rotateY(-60deg) scale(0.6);
   }
 
-  .kefine-account-task:hover .kefine-icon-wrap--closed {
+  .kefine-account-task-action__book:hover .kefine-icon-wrap--closed {
     opacity: 0;
     transform: rotateY(60deg) scale(0.6);
   }
 
-  .kefine-account-task:hover .kefine-icon-wrap--open {
+  .kefine-account-task-action__book:hover .kefine-icon-wrap--open {
     opacity: 1;
     transform: rotateY(0deg) scale(1);
   }
