@@ -8,9 +8,11 @@
   import SolutionTopbar from '$lib/components/kefine/SolutionTopbar.svelte';
   import SolutionTaskPanel from '$lib/components/kefine/SolutionTaskPanel.svelte';
   import SolutionViewTabs from '$lib/components/kefine/SolutionViewTabs.svelte';
-  type SolutionView = 'source' | 'testing';
+  type SolutionView = 'source' | 'testing' | 'checkpoints';
   import SolutionTestingPanel from '$lib/components/kefine/SolutionTestingPanel.svelte';
   import SolutionFileOutline from '$lib/components/kefine/SolutionFileOutline.svelte';
+  import SolutionCheckpoints from '$lib/components/kefine/SolutionCheckpoints.svelte';
+  import type { CommitInfo } from './+page.server';
 
   let {
     data
@@ -18,6 +20,9 @@
     data: {
       orderId: string;
       solverId: string;
+      commits?: CommitInfo[];
+      currentBranch?: string;
+      branches?: string[];
     };
   } = $props();
 
@@ -213,6 +218,14 @@
             />
           </lef-solver-main>
         </lef-solver-source>
+      {:else if activeView === 'checkpoints'}
+        <lef-solver-checkpoints>
+          <SolutionCheckpoints
+            commits={data.commits ?? []}
+            currentBranch={data.currentBranch ?? ''}
+            branches={data.branches ?? []}
+          />
+        </lef-solver-checkpoints>
       {:else}
         <lef-solver-testing>
           <SolutionTestingPanel
@@ -291,6 +304,12 @@
     gap: 0.6rem;
     min-width: 0;
     min-height: 420px;
+  }
+
+  lef-solver-checkpoints {
+    display: block;
+    min-width: 0;
+    max-width: 42rem;
   }
 
   lef-correction-status {
