@@ -833,14 +833,32 @@
         return;
       }
 
+      let finalUserId = authState.userId;
+      let finalHandle = authState.handle;
+      let finalDisplayName = authState.displayName;
+      let finalEmail = snapshot.email ?? authState.email;
+
+      if (snapshot.isConnected && snapshot.authType === 'wallet' && snapshot.address) {
+        try {
+          const { loginWithBrowserWallet } = await loadAuthRoutes();
+          const walletSession = await loginWithBrowserWallet(snapshot.address, Number.isFinite(snapshot.chainId) ? snapshot.chainId : null);
+          finalUserId = walletSession.userId;
+          finalHandle = normalizeActorHandle(walletSession.handle);
+          finalDisplayName = walletSession.displayName;
+          finalEmail = walletSession.email ?? finalEmail;
+        } catch (e) {
+          console.error('[reown] loginWithBrowserWallet failed', e);
+        }
+      }
+
       replaceAuthState({
         isConnected: snapshot.isConnected,
         address: snapshot.address,
         chainId: snapshot.chainId,
-        email: snapshot.email,
-        userId: authState.userId,
-        handle: authState.handle,
-        displayName: authState.displayName,
+        email: finalEmail,
+        userId: finalUserId,
+        handle: finalHandle,
+        displayName: finalDisplayName,
         authType: snapshot.authType,
         status: snapshot.status
       });

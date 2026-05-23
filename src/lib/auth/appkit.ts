@@ -103,8 +103,6 @@ export async function ensureAppKit(): Promise<AppKitLike | undefined> {
 			defaultNetwork,
 			projectId,
 			metadata,
-			basic: true,
-			manualWCControl: true,
 			features: {
 				analytics: true,
 				email: false,
@@ -122,7 +120,7 @@ export async function ensureAppKit(): Promise<AppKitLike | undefined> {
 
 export async function openAppKit(): Promise<void> {
 	const instance = await ensureAppKit();
-	instance?.open({ view: 'ConnectingWalletConnectBasic' });
+	instance?.open({ view: 'ConnectingWalletConnect' });
 }
 
 export async function disconnectAppKit(): Promise<void> {
