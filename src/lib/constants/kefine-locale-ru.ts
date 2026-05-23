@@ -566,5 +566,45 @@ export const KEFINE_TEXT_RU = {
     templateLinkCopied: 'Ссылка сервиса скопирована',
     templateSlug: 'Адрес сервиса',
     templateSlugHint: 'Необязательно. Оставьте пустым, чтобы сохранить UUID-ссылку.'
+  },
+  solversView: {
+    tasksAside: 'Задачи',
+    solvers: 'Солверы',
+    taskDescription: 'Описание задачи',
+    settings: 'Настройки',
+    clone: 'Клонировать',
+    pinSolution: 'Закрепить решение',
+    view: 'Просмотр',
+    apply: 'Применить',
+    applied: 'Применено',
+    metricsAria: 'Метрики солвера — кликните для фокуса на графиках',
+    metricsTitle: 'Метрики солвера',
+    metricsSubtitle: 'Время выполнения и вес',
+    compactSolversAria: 'Компактный список солверов',
+    filesAria: 'Файлы',
+    chartMetrics: 'Метрики',
+    chartExecutionTime: 'Время выполнения',
+    chartSolutionWeight: 'Вес решения',
+    chartSeconds: 'секунд',
+    chartKilobytes: 'килобайт',
+    chartProjectAria: 'Проект и slug',
+    chartFallback: 'Время и вес по солверам'
+  },
+  solutionView: {
+    ariaLabel: 'Вид решения',
+    tabs: {
+      testing: {
+        label: 'Тестирование',
+        hint: 'Отправить тестовый запрос солверу'
+      },
+      checkpoints: {
+        label: 'Чекпоинты',
+        hint: 'История коммитов и ветки'
+      },
+      source: {
+        label: 'Исходный код',
+        hint: 'Просмотр изменённых файлов'
+      }
+    }
   }
 } as const;

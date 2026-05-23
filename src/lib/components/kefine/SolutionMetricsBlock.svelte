@@ -2,6 +2,7 @@
   import type { SolutionMetric } from '$lib/kefine/solutions-data';
   import { defaultChartSize, timeSeries, weightSeries } from '$lib/kefine/solver-charts';
   import SolutionChartCard from './SolutionChartCard.svelte';
+  import { kefineLocaleText } from '$lib/constants/kefine-locale';
 
   let {
     metrics,
@@ -17,9 +18,11 @@
 
   const time = $derived(timeSeries(metrics, activeSolverId));
   const weight = $derived(weightSeries(metrics, activeSolverId));
+
+  const localeText = $derived($kefineLocaleText);
 </script>
 
-<lef-metrics-block aria-label="Solver metrics">
+<lef-metrics-block aria-label={localeText.solversView.metricsAria}>
   <lef-metrics-head>
     <strong>{title}</strong>
     <lefine-text>{subtitle}</lefine-text>
@@ -27,8 +30,8 @@
 
   <lef-metrics-grid>
     <SolutionChartCard
-      title="Execution time"
-      unit="seconds"
+      title={localeText.solversView.chartExecutionTime}
+      unit={localeText.solversView.chartSeconds}
       series={time}
       metrics={metrics}
       size={defaultChartSize}
@@ -38,8 +41,8 @@
     />
 
     <SolutionChartCard
-      title="Solution weight"
-      unit="kilobytes"
+      title={localeText.solversView.chartSolutionWeight}
+      unit={localeText.solversView.chartKilobytes}
       series={weight}
       metrics={metrics}
       size={defaultChartSize}

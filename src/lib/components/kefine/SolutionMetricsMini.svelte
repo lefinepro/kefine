@@ -2,6 +2,7 @@
   import type { SolutionMetric } from '$lib/kefine/solutions-data';
   import { compactChartSize, timeSeries, weightSeries } from '$lib/kefine/solver-charts';
   import SolutionChartCard from './SolutionChartCard.svelte';
+  import { kefineLocaleText } from '$lib/constants/kefine-locale';
 
   let {
     metrics,
@@ -17,13 +18,15 @@
 
   const time = $derived(timeSeries(metrics, activeSolverId));
   const weight = $derived(weightSeries(metrics, activeSolverId));
+
+  const localeText = $derived($kefineLocaleText);
 </script>
 
-<lef-metrics-mini aria-label="Solver metrics">
+<lef-metrics-mini aria-label={localeText.solversView.metricsAria}>
   <lef-metrics-mini-head>
-    <strong>Metrics</strong>
+    <strong>{localeText.solversView.chartMetrics}</strong>
     {#if project || slug}
-      <lef-metrics-mini-project aria-label="Project and slug">
+      <lef-metrics-mini-project aria-label={localeText.solversView.chartProjectAria}>
         {#if project}
           <lef-metrics-mini-project-name>
             <svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor" aria-hidden="true">
@@ -46,13 +49,13 @@
         {/if}
       </lef-metrics-mini-project>
     {:else}
-      <lefine-text>Time &amp; weight per solver</lefine-text>
+      <lefine-text>{localeText.solversView.chartFallback}</lefine-text>
     {/if}
   </lef-metrics-mini-head>
 
   <SolutionChartCard
-    title="Execution time"
-    unit="seconds"
+    title={localeText.solversView.chartExecutionTime}
+    unit={localeText.solversView.chartSeconds}
     series={time}
     metrics={metrics}
     size={compactChartSize}
@@ -62,8 +65,8 @@
   />
 
   <SolutionChartCard
-    title="Solution weight"
-    unit="kilobytes"
+    title={localeText.solversView.chartSolutionWeight}
+    unit={localeText.solversView.chartKilobytes}
     series={weight}
     metrics={metrics}
     size={compactChartSize}

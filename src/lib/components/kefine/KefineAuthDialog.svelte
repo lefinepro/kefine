@@ -2,6 +2,7 @@
   import Icon from '@iconify/svelte';
   import type { OrderView } from '$lib/components/kefine/kefine-workflow';
   import type { Profile } from '$lib/types/user';
+  import { kefineLocaleText } from '$lib/constants/kefine-locale';
 
   let {
     open,
@@ -77,6 +78,8 @@
     onSignOut: () => void;
   } = $props();
 
+  const localeText = $derived($kefineLocaleText);
+
   const profileHandle = $derived.by(() => {
     const handle = profile?.primaryHandle?.trim();
     return handle ? `@${handle.replace(/^@+/, '')}` : null;
@@ -94,7 +97,7 @@
   function walletAliasFallback() {
     const address = profile?.walletAddress?.trim();
     if (!address) {
-      return 'Workspace';
+      return localeText.profile.title;
     }
 
     return address.length > 14 ? `${address.slice(0, 6)}...${address.slice(-4)}` : address;

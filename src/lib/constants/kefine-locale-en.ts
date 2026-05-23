@@ -564,5 +564,45 @@ export const KEFINE_TEXT_EN = {
     templateLinkCopied: 'Service link copied',
     templateSlug: 'Service URL',
     templateSlugHint: 'Optional. Leave empty to keep a UUID-style link.'
+  },
+  solversView: {
+    tasksAside: 'Tasks',
+    solvers: 'Solvers',
+    taskDescription: 'Task description',
+    settings: 'Settings',
+    clone: 'Clone',
+    pinSolution: 'Pin solution',
+    view: 'View',
+    apply: 'Apply',
+    applied: 'Applied',
+    metricsAria: 'Solver metrics - click to focus charts',
+    metricsTitle: 'Solver metrics',
+    metricsSubtitle: 'Execution time & weight',
+    compactSolversAria: 'Compact solvers',
+    filesAria: 'Files',
+    chartMetrics: 'Metrics',
+    chartExecutionTime: 'Execution time',
+    chartSolutionWeight: 'Solution weight',
+    chartSeconds: 'seconds',
+    chartKilobytes: 'kilobytes',
+    chartProjectAria: 'Project and slug',
+    chartFallback: 'Time & weight per solver'
+  },
+  solutionView: {
+    ariaLabel: 'Solver view',
+    tabs: {
+      testing: {
+        label: 'Testing',
+        hint: 'Send a sample request to the solver'
+      },
+      checkpoints: {
+        label: 'Checkpoints',
+        hint: 'View commit history and branches'
+      },
+      source: {
+        label: 'Source',
+        hint: 'View the modified files'
+      }
+    }
   }
 } as const;

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { kefineLocaleText } from '$lib/constants/kefine-locale';
+
   type SolutionView = 'source' | 'testing' | 'checkpoints';
 
   let {
@@ -9,14 +11,28 @@
     onSelect: (next: SolutionView) => void;
   } = $props();
 
-  const items: Array<{ id: SolutionView; label: string; hint: string }> = [
-    { id: 'testing', label: 'Testing', hint: 'Send a sample request to the solver' },
-    { id: 'checkpoints', label: 'Checkpoints', hint: 'View commit history and branches' },
-    { id: 'source', label: 'Source', hint: 'View the modified files' }
-  ];
+  const localeText = $derived($kefineLocaleText);
+
+  const items = $derived.by(() => [
+    {
+      id: 'testing' as const,
+      label: localeText.solutionView.tabs.testing.label,
+      hint: localeText.solutionView.tabs.testing.hint
+    },
+    {
+      id: 'checkpoints' as const,
+      label: localeText.solutionView.tabs.checkpoints.label,
+      hint: localeText.solutionView.tabs.checkpoints.hint
+    },
+    {
+      id: 'source' as const,
+      label: localeText.solutionView.tabs.source.label,
+      hint: localeText.solutionView.tabs.source.hint
+    }
+  ]);
 </script>
 
-<lef-view-tabs role="tablist" aria-label="Solver view">
+<lef-view-tabs role="tablist" aria-label={localeText.solutionView.ariaLabel}>
   {#each items as item (item.id)}
     <button
       type="button"

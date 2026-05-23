@@ -970,7 +970,7 @@
     <KefineSolversView
       {solutions}
       taskTitle={currentOrder?.title || labels.boardTitle}
-      onApplySolution={onApplySolution}
+      repoName={solutions[0]?.project || ''}
       onViewSolution={onViewSolution}
     />
   {:else}

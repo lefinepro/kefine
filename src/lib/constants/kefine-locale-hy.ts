@@ -291,5 +291,13 @@ export const KEFINE_TEXT_HY = {
     nameLabel: 'Անուն',
     emailLabel: 'Email',
     messageLabel: 'Հաղորդագրություն'
+  },
+  profile: {
+    ...KEFINE_TEXT_EN.profile,
+    title: 'Աշխատատարածք',
+    authDrawerSubtitle: 'Արագ մուտք դեպի ձեր աշխատատարածք և վերջին ռեպոներ։',
+    latestTasks: 'Վերջին ռեպոներ',
+    openPublicProfile: 'Բացել հանրային աշխատատարածք',
+    signOut: 'Դուրս գալ'
   }
 } as const;
