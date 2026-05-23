@@ -3010,6 +3010,7 @@
     githubTitle={localeText.auth.githubTitle}
     passkeyTitle={localeText.auth.passkeyTitle}
     privateKeyTitle={localeText.auth.privateKeyTitle}
+    emailTitle={localeText.auth.emailCodeTitle}
     connectedTitle={localeText.profile.title}
     connectedDescription={localeText.profile.authDrawerSubtitle}
     latestTasksTitle={localeText.profile.latestTasks}
@@ -3030,6 +3031,7 @@
     onGithub={() => { beginOAuthLogin('github'); }}
     onPasskey={choosePasskeyMethod}
     onPrivateKey={openPrivateKeyDialog}
+    onEmailCode={openEmailCodeDialog}
     onOpenProfile={() => { void openTopbarProfile(); }}
     onOpenTask={(orderId: string) => { void openOrderById(orderId); }}
     onSignOut={() => { void signOutProfileSession(); }}

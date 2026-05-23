@@ -34,6 +34,8 @@
     onGithub,
     onPasskey,
     onPrivateKey,
+    onEmailCode,
+    emailTitle,
     onOpenProfile,
     onOpenTask,
     onSignOut
@@ -48,6 +50,7 @@
     githubTitle: string;
     passkeyTitle: string;
     privateKeyTitle: string;
+    emailTitle: string;
     connectedTitle: string;
     connectedDescription: string;
     latestTasksTitle: string;
@@ -68,6 +71,7 @@
     onGithub: () => void;
     onPasskey: () => void;
     onPrivateKey: () => void;
+    onEmailCode: () => void;
     onOpenProfile: () => void;
     onOpenTask: (orderId: string) => void;
     onSignOut: () => void;
@@ -118,7 +122,6 @@
 
     {#if !isAuthenticated}
       <kefine-account-auth-grid>
-        {#if false}
         <button
           type="button"
           class="kefine-account-auth-card"
@@ -132,7 +135,6 @@
           <strong>{browserWalletTitle}</strong>
           <small>Connect the injected wallet from this browser.</small>
         </button>
-        {/if}
 
         <button
           type="button"
@@ -145,10 +147,24 @@
             <Icon icon="simple-icons:walletconnect" width="20" height="20" aria-hidden="true" />
           </kefine-account-auth-card-icon>
           <strong>{walletConnectTitle}</strong>
-          <small>Scan a WalletConnect QR code with your wallet app.</small>
-        </button>
+           <small>Scan a WalletConnect QR code with your wallet app.</small>
+         </button>
 
-        {#if false}
+         <button
+           type="button"
+           class="kefine-account-auth-card"
+           data-kind="email"
+           data-testid="kefine-email-auth-tile"
+           onclick={onEmailCode}
+         >
+           <kefine-account-auth-card-icon class="kefine-account-auth-card__icon">
+             <Icon icon="mdi:email" width="20" height="20" aria-hidden="true" />
+           </kefine-account-auth-card-icon>
+           <strong>{emailTitle}</strong>
+           <small>Receive a one-time code by email.</small>
+         </button>
+
+         {#if false}
         <button
           type="button"
           class="kefine-account-auth-card"
