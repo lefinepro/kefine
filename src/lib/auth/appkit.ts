@@ -7,7 +7,11 @@ const metadata = {
 	name: 'Lefine | From task to best-fit solution.',
 	description: 'Lefine helps you describe a technical task and get the best-fitting solution path.',
 	url: typeof window !== 'undefined' ? window.location.origin : 'https://lefine.pro',
-	icons: ['https://lefine.pro/photo_2026-05-23_19-35-02.jpg']
+	icons: [
+		typeof window !== 'undefined'
+			? `${window.location.origin}/photo_2026-05-23_19-35-02.jpg`
+			: 'https://lefine.pro/photo_2026-05-23_19-35-02.jpg'
+	]
 };
 
 const KEFINE_THEME_LIGHT = {
