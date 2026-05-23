@@ -524,7 +524,6 @@
               new Date(right.createdAt).getTime() -
               new Date(left.createdAt).getTime()
           )
-          .slice(0, 5)
       : []
   );
   const TITLE_FONT_MAX = 2.0;

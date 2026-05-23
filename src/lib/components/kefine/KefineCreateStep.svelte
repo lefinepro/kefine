@@ -6,10 +6,41 @@
   import SolutionMetricsMini from '$lib/components/kefine/SolutionMetricsMini.svelte';
   import { defaultMetrics } from '$lib/kefine/solutions-data';
   import { buildActorOrderPath } from '$lib/components/kefine/kefine-workspace-helpers';
+  import { cubicOut } from 'svelte/easing';
+  import { onMount } from 'svelte';
   const PLACEHOLDER_TYPE_DELAY_MS = 58;
   const PLACEHOLDER_DELETE_DELAY_MS = 34;
   const PLACEHOLDER_PAUSE_MS = 1150;
   const PLACEHOLDER_NEXT_DELAY_MS = 250;
+
+  /** Curtain-drop / oversized → shrink entrance for task rows */
+  function taskDropIn(
+    node: HTMLElement,
+    { delay = 0, duration = 420 }: { delay?: number; duration?: number } = {}
+  ) {
+    return {
+      delay,
+      duration,
+      easing: cubicOut,
+      css: (t: number) => {
+        // Starts slightly larger + above, then settles to normal size
+        const scale = 1.085 - 0.085 * t; // ~1.085 → 1.0
+        const y = -14 * (1 - t);         // drops from -14px
+        const opacity = Math.min(1, t * 1.15);
+        return `opacity:${opacity}; transform:translateY(${y}px) scale(${scale.toFixed(4)});`;
+      }
+    };
+  }
+
+  let listEntranceDone = $state(false);
+
+  onMount(() => {
+    // Give enough time for the full staggered curtain animation even on long lists
+    const maxDelay = 78 * 25 + 600;
+    setTimeout(() => {
+      listEntranceDone = true;
+    }, maxDelay);
+  });
 
   let {
     draft,
@@ -1172,10 +1203,37 @@ initialized = true;
   <p id="kefine-composer-hints" data-part="composer-hints" hidden>{composerHints}</p>
 
   <!-- Persistent task history on main page (same data as in profile) -->
-  {#if recentOrders.length > 0}
-    <section data-part="tasks-list">
-      {#each recentOrders as order}
-        <a href={`/order/${order.id}`} style="text-decoration:none; color:inherit; display:block;">
+  {#if recentOrders.length > 0 || (solverSearchActive && solverSearchText?.trim())}
+    <section data-part="tasks-list" data-entrance={!listEntranceDone}>
+      {#if solverSearchActive && solverSearchText?.trim()}
+        <a
+          href={searchResultHref}
+          style="text-decoration:none; color:inherit; display:block; animation-delay: 0ms;"
+          transition:taskDropIn={{ delay: 0 }}
+        >
+          <kefine-solver-search-row aria-live="polite">
+            <lefine-text>{solverSearchText}</lefine-text>
+            {#if isFlying}
+              <lef-arrow-wrapper>
+                <lef-wind-flow>
+                  <lef-wind-line></lef-wind-line>
+                  <lef-wind-line></lef-wind-line>
+                </lef-wind-flow>
+                <lef-flying-arrow>➵</lef-flying-arrow>
+              </lef-arrow-wrapper>
+            {/if}
+            <kefine-solver-search-indicator aria-label={taskCompleted ? 'Completed' : solverSearchLabel} title={taskCompleted ? 'Completed' : solverSearchLabel} data-completed={taskCompleted}>
+              <kefine-solver-search-dot aria-hidden="true"></kefine-solver-search-dot>
+            </kefine-solver-search-indicator>
+          </kefine-solver-search-row>
+        </a>
+      {/if}
+      {#each recentOrders as order, i (order.id)}
+        <a
+          href={`/order/${order.id}`}
+          style="text-decoration:none; color:inherit; display:block; animation-delay: {(i + 1) * 78}ms;"
+          transition:taskDropIn={{ delay: (i + 1) * 78 }}
+        >
           <kefine-solver-search-row aria-live="polite">
             <lefine-text>{order.title}</lefine-text>
             <kefine-solver-search-indicator aria-label="Completed" title="Completed" data-completed="true">
@@ -1243,137 +1301,7 @@ initialized = true;
   </lef-services-showcase>
 {/if}
 
-  {#if solverSearchActive && solverSearchText.trim()}
-    <section data-part="tasks-list">
-      <a href={searchResultHref} style="text-decoration:none; color:inherit; display:block;">
-        <kefine-solver-search-row aria-live="polite">
-          <lefine-text>{solverSearchText}</lefine-text>
-          {#if isFlying}
-            <lef-arrow-wrapper>
-              <lef-wind-flow>
-                <lef-wind-line></lef-wind-line>
-                <lef-wind-line></lef-wind-line>
-              </lef-wind-flow>
-              <lef-flying-arrow>➵</lef-flying-arrow>
-            </lef-arrow-wrapper>
-          {/if}
-          <kefine-solver-search-indicator aria-label={taskCompleted ? 'Completed' : solverSearchLabel} title={taskCompleted ? 'Completed' : solverSearchLabel} data-completed={taskCompleted}>
-            <kefine-solver-search-dot aria-hidden="true"></kefine-solver-search-dot>
-          </kefine-solver-search-indicator>
-        </kefine-solver-search-row>
-      </a>
-
-      {#if false} <!-- grid moved to separate solvers page per task spec; see tasks-grid.html ref -->
-       <lef-tasks-grid>
-         <lef-tasks-aside aria-label="Tasks">
-           <lef-tasks-aside-head>Tasks</lef-tasks-aside-head>
-           <lef-tasks-aside-list>
-             <lef-tasks-aside-item data-active="true">
-               <lefine-text>{taskSearchText}</lefine-text>
-             </lef-tasks-aside-item>
-           </lef-tasks-aside-list>
-         </lef-tasks-aside>
-
-         <lef-solutions-list>
-           {#each displayedSolutions as solution, solutionIndex (solution.id)}
-             <article class="solution-card" style="--card-i: {solutionIndex}">
-               <header class="solution-card-header">
-                 <lef-solution-meta>
-                   <strong>{solution.solver}</strong>
-                   <lefine-text>{solution.title}</lefine-text>
-                 </lef-solution-meta>
-                 <button
-                   type="button"
-                   class="pin-button"
-                   class:is-active={solution.rated}
-                   data-crown-btn={solution.id}
-                   onclick={() => handleCrownClick(solution.id)}
-                   aria-label={solution.rated ? 'Selected solution' : 'Pin solution'}
-                   title={solution.rated ? 'Selected solution' : 'Pin solution'}
-                 >
-                   <svg class="pin-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                     <path d="M12 2l2.39 6.95H21l-5.31 3.86L17.78 20 12 16.27 6.22 20l2.09-7.19L3 8.95h6.61L12 2z"/>
-                   </svg>
-                 </button>
-               </header>
-               <p class="solution-description">{solution.description}</p>
-               <lef-file-list aria-label="Files">
-                 {#each solution.diffs as diff}
-                   <lef-file-row>
-                     <lef-file-name>{diff.file}</lef-file-name>
-                     <lef-file-changes>
-                       <lef-file-added>+{diff.added}</lef-file-added>
-                       {#if diff.removed > 0}
-                         <lef-file-removed>-{diff.removed}</lef-file-removed>
-                       {/if}
-                     </lef-file-changes>
-                   </lef-file-row>
-                 {/each}
-               </lef-file-list>
-               <lef-card-actions>
-                 <button
-                   type="button"
-                   class="view-solution-btn"
-                   onclick={() => onOpenSolution?.(solution.id)}
-                   aria-label="View code"
-                   title="View code"
-                 >
-                   <svg class="view-solution-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                     <polyline points="16 18 22 12 16 6"></polyline>
-                     <polyline points="8 6 2 12 8 18"></polyline>
-                   </svg>
-                 </button>
-                 <button
-                   type="button"
-                   class="solution-merge-btn"
-                   class:solution-merge-btn--merged={solution.rated}
-                   onclick={() => handleCrownClick(solution.id)}
-                   aria-label={solution.rated ? 'Merged' : 'Merge solution'}
-                   title={solution.rated ? 'Merged' : 'Merge solution'}
-                 >
-                   <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                     <circle cx="6" cy="18" r="2"></circle>
-                     <circle cx="6" cy="6" r="2"></circle>
-                     <circle cx="18" cy="14" r="2"></circle>
-                     <path d="M6 8v8M6 8c0 4 6 6 12 6"></path>
-                   </svg>
-                   <lefine-text>{solution.rated ? 'Merged' : 'Merge'}</lefine-text>
-                 </button>
-               </lef-card-actions>
-             </article>
-           {/each}
-         </lef-solutions-list>
-
-         <lef-task-rail aria-label="Task description and actions">
-           <lef-task-rail-card>
-             <lef-task-rail-head>Task description</lef-task-rail-head>
-             <lef-task-rail-body>{taskSearchText}</lef-task-rail-body>
-           </lef-task-rail-card>
-
-           <lef-task-rail-actions>
-             <button type="button" class="task-rail-btn" aria-label="Settings">
-               <lef-task-rail-icon aria-hidden="true">⚙</lef-task-rail-icon>
-               <lefine-text>Settings</lefine-text>
-             </button>
-             <button type="button" class="task-rail-btn task-rail-btn--primary" aria-label="Clone">
-               <lef-task-rail-icon aria-hidden="true">⤓</lef-task-rail-icon>
-               <lefine-text>Clone</lefine-text>
-             </button>
-           </lef-task-rail-actions>
-
-           <SolutionMetricsMini
-             metrics={defaultMetrics}
-             activeSolverId={displayedSolutions[0]?.id ?? '5'}
-             project={displayedSolutions[0]?.project}
-             slug={displayedSolutions[0]?.slug}
-           />
-         </lef-task-rail>
-       </lef-tasks-grid>
-     {/if}
-   </section>
- {/if}
-
- {#if afeIntroCard}
+  {#if afeIntroCard}
    <lef-afe-showcase-heading>{afeIntroCard.title}</lef-afe-showcase-heading>
  {/if}
 
@@ -1448,6 +1376,17 @@ initialized = true;
 </lef-afe-showcase>
 
 <style>
+  @keyframes kefine-task-drop-in {
+    0% {
+      opacity: 0;
+      transform: translateY(-14px) scale(1.085);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
   [data-kefine-create] {
     grid-template-rows: auto auto auto minmax(0, auto);
     align-content: start;
@@ -2466,6 +2405,12 @@ initialized = true;
     padding: 0.28rem;
     display: grid;
     gap: 1rem;
+  }
+
+  [data-part="tasks-list"][data-entrance] > a {
+    animation: kefine-task-drop-in 420ms cubic-bezier(0.23, 1, 0.32, 1) backwards;
+    transform-origin: 50% 0;
+    will-change: transform, opacity;
   }
 
   lef-tasks-grid {
