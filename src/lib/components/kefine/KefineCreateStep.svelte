@@ -1222,6 +1222,19 @@ initialized = true;
                 <lef-flying-arrow>➵</lef-flying-arrow>
               </lef-arrow-wrapper>
             {/if}
+
+            <kefine-task-branch>
+              <kefine-task-branch-name>feat/basic-forward</kefine-task-branch-name>
+              <lef-cp-branch-icon>
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <line x1="6" y1="3" x2="6" y2="15"></line>
+                  <circle cx="6" cy="18" r="3"></circle>
+                  <circle cx="18" cy="6" r="3"></circle>
+                  <path d="M18 9a9 9 0 0 1-9 9"></path>
+                </svg>
+              </lef-cp-branch-icon>
+            </kefine-task-branch>
+
             <kefine-solver-search-indicator aria-label={taskCompleted ? 'Completed' : solverSearchLabel} title={taskCompleted ? 'Completed' : solverSearchLabel} data-completed={taskCompleted}>
               <kefine-solver-search-dot aria-hidden="true"></kefine-solver-search-dot>
             </kefine-solver-search-indicator>
@@ -1236,6 +1249,19 @@ initialized = true;
         >
           <kefine-solver-search-row aria-live="polite">
             <lefine-text>{order.title}</lefine-text>
+
+            <kefine-task-branch>
+              <kefine-task-branch-name>feat/basic-forward</kefine-task-branch-name>
+              <lef-cp-branch-icon>
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <line x1="6" y1="3" x2="6" y2="15"></line>
+                  <circle cx="6" cy="18" r="3"></circle>
+                  <circle cx="18" cy="6" r="3"></circle>
+                  <path d="M18 9a9 9 0 0 1-9 9"></path>
+                </svg>
+              </lef-cp-branch-icon>
+            </kefine-task-branch>
+
             <kefine-solver-search-indicator aria-label="Completed" title="Completed" data-completed="true">
               <kefine-solver-search-dot aria-hidden="true"></kefine-solver-search-dot>
             </kefine-solver-search-indicator>
@@ -2867,7 +2893,7 @@ initialized = true;
 
   kefine-solver-search-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto auto;
     align-items: center;
     gap: 0.72rem;
     min-height: 2.85rem;
@@ -2970,6 +2996,50 @@ initialized = true;
     padding-block: 0.15rem 0;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  kefine-task-branch {
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    padding: 0.05rem 0.2rem;
+    border-radius: 999px;
+    background: transparent;
+    transition: background 120ms ease, padding 120ms ease;
+  }
+
+  kefine-task-branch:hover {
+    background: color-mix(in oklab, var(--kef-bg-card) 78%, transparent);
+    gap: 4px;
+    padding: 0.05rem 0.45rem 0.05rem 0.32rem;
+  }
+
+  lef-cp-branch-icon {
+    display: inline-flex;
+    color: var(--lefine-text-soft);
+    opacity: 0.85;
+    flex: 0 0 auto;
+  }
+
+  kefine-task-branch-name {
+    font-family: 'Synt', monospace;
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: var(--lefine-text);
+    line-height: 1;
+    letter-spacing: -0.01em;
+    opacity: 0;
+    max-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    transition: opacity 160ms ease, max-width 200ms cubic-bezier(0.23, 1, 0.32, 1);
+    margin-right: 0;
+  }
+
+  kefine-task-branch:hover kefine-task-branch-name {
+    opacity: 1;
+    max-width: 160px;
+    margin-right: 3px;
   }
 
   kefine-solver-search-indicator {
