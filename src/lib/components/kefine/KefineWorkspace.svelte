@@ -3017,7 +3017,7 @@
     openWorkspaceLabel={localeText.profile.openPublicProfile}
     signOutLabel={localeText.profile.signOut}
     openTaskLabel={localeText.profile.openTask}
-    showPrivateKey={showPrivateKeyAuth}
+    showPrivateKey={true}
     isAuthenticated={isAuthenticated}
     profile={currentProfile}
     recentTasks={recentProfileOrders}

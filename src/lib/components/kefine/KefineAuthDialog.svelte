@@ -118,6 +118,7 @@
 
     {#if !isAuthenticated}
       <kefine-account-auth-grid>
+        {#if false}
         <button
           type="button"
           class="kefine-account-auth-card"
@@ -131,6 +132,7 @@
           <strong>{browserWalletTitle}</strong>
           <small>Connect the injected wallet from this browser.</small>
         </button>
+        {/if}
 
         <button
           type="button"
@@ -146,6 +148,7 @@
           <small>Scan a WalletConnect QR code with your wallet app.</small>
         </button>
 
+        {#if false}
         <button
           type="button"
           class="kefine-account-auth-card"
@@ -159,7 +162,9 @@
           <strong>{tonConnectTitle}</strong>
           <small>Connect a TON wallet through TonConnect.</small>
         </button>
+        {/if}
 
+        {#if false}
         <button
           type="button"
           class="kefine-account-auth-card"
@@ -173,7 +178,9 @@
           <strong>{googleTitle}</strong>
           <small>Continue through the Crystal OAuth callback.</small>
         </button>
+        {/if}
 
+        {#if false}
         <button
           type="button"
           class="kefine-account-auth-card"
@@ -187,6 +194,7 @@
           <strong>{githubTitle}</strong>
           <small>Sign in with the GitHub identity handled by Crystal.</small>
         </button>
+        {/if}
 
         <button
           type="button"
