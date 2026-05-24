@@ -1213,6 +1213,19 @@ initialized = true;
         >
           <kefine-solver-search-row aria-live="polite">
             <lefine-text>{solverSearchText}</lefine-text>
+            {#if taskCompleted}
+              <kefine-task-branch>
+                <kefine-task-branch-name>feat/basic-forward</kefine-task-branch-name>
+                <lef-cp-branch-icon>
+                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <line x1="6" y1="3" x2="6" y2="15"></line>
+                    <circle cx="6" cy="18" r="3"></circle>
+                    <circle cx="18" cy="6" r="3"></circle>
+                    <path d="M18 9a9 9 0 0 1-9 9"></path>
+                  </svg>
+                </lef-cp-branch-icon>
+              </kefine-task-branch>
+            {/if}
             {#if isFlying}
               <lef-arrow-wrapper>
                 <lef-wind-flow>
@@ -1222,18 +1235,6 @@ initialized = true;
                 <lef-flying-arrow>➵</lef-flying-arrow>
               </lef-arrow-wrapper>
             {/if}
-
-            <kefine-task-branch>
-              <kefine-task-branch-name>feat/basic-forward</kefine-task-branch-name>
-              <lef-cp-branch-icon>
-                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <line x1="6" y1="3" x2="6" y2="15"></line>
-                  <circle cx="6" cy="18" r="3"></circle>
-                  <circle cx="18" cy="6" r="3"></circle>
-                  <path d="M18 9a9 9 0 0 1-9 9"></path>
-                </svg>
-              </lef-cp-branch-icon>
-            </kefine-task-branch>
 
             <kefine-solver-search-indicator aria-label={taskCompleted ? 'Completed' : solverSearchLabel} title={taskCompleted ? 'Completed' : solverSearchLabel} data-completed={taskCompleted}>
               <kefine-solver-search-dot aria-hidden="true"></kefine-solver-search-dot>
@@ -1251,16 +1252,16 @@ initialized = true;
             <lefine-text>{order.title}</lefine-text>
 
             <kefine-task-branch>
-              <kefine-task-branch-name>feat/basic-forward</kefine-task-branch-name>
-              <lef-cp-branch-icon>
-                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <line x1="6" y1="3" x2="6" y2="15"></line>
-                  <circle cx="6" cy="18" r="3"></circle>
-                  <circle cx="18" cy="6" r="3"></circle>
-                  <path d="M18 9a9 9 0 0 1-9 9"></path>
-                </svg>
-              </lef-cp-branch-icon>
-            </kefine-task-branch>
+                <kefine-task-branch-name>feat/basic-forward</kefine-task-branch-name>
+                <lef-cp-branch-icon>
+                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <line x1="6" y1="3" x2="6" y2="15"></line>
+                    <circle cx="6" cy="18" r="3"></circle>
+                    <circle cx="18" cy="6" r="3"></circle>
+                    <path d="M18 9a9 9 0 0 1-9 9"></path>
+                  </svg>
+                </lef-cp-branch-icon>
+              </kefine-task-branch>
 
             <kefine-solver-search-indicator aria-label="Completed" title="Completed" data-completed="true">
               <kefine-solver-search-dot aria-hidden="true"></kefine-solver-search-dot>
