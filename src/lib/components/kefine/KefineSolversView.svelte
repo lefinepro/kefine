@@ -97,8 +97,7 @@
                   <polyline points="8 6 2 12 8 18" />
                 </svg>
               </button>
-              {#if onApplySolution}
-                <button
+              <button
                   type="button"
                   class="solution-merge-btn"
                   class:solution-merge-btn--merged={solution.rated ?? false}
@@ -114,7 +113,6 @@
                   </svg>
                   <lefine-text>{(solution.rated ?? false) ? localeText.solversView.applied : localeText.solversView.apply}</lefine-text>
                 </button>
-              {/if}
             </lef-card-actions>
           </article>
         {/each}
