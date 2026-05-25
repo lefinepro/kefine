@@ -25,7 +25,9 @@
     '/[actor=actor_handle]/order/[id]',
     '/[actor=actor_handle]/orders/[id]',
     '/[handle=at_handle]',
-    '/[handle=at_handle]/[shareId]'
+    '/[handle=at_handle]/[shareId]',
+    // OAuth consent / integration pages render their own full-screen clean UI (no shared topbar)
+    '/oauth/authorize'
   ]);
 
 	interface Props {

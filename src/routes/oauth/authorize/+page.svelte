@@ -2,6 +2,9 @@
 	import { onMount } from 'svelte';
 	import { loadSession, type SessionData } from '$lib/auth/session';
 
+	import octraMascot from '$lib/images/octra-mascot.png';
+	import lefineLogo from '$lib/images/lefine.pro.png';
+
 	let session: SessionData | null = null;
 	let loading = true;
 	let error = '';
@@ -102,7 +105,9 @@
 	<lef-oauth-shell>
 		<!-- Connection visual (like GitHub OAuth) -->
 		<lef-oauth-connection>
-			<lef-oauth-badge data-app="octra">O</lef-oauth-badge>
+			<lef-oauth-badge data-app="octra">
+				<img src={octraMascot} alt="Octra" />
+			</lef-oauth-badge>
 
 			<lef-oauth-link>
 				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -111,7 +116,9 @@
 				</svg>
 			</lef-oauth-link>
 
-			<lef-oauth-badge data-app="lefine">K</lef-oauth-badge>
+			<lef-oauth-badge data-app="lefine">
+				<img src={lefineLogo} alt="LeFine" />
+			</lef-oauth-badge>
 		</lef-oauth-connection>
 
 		<!-- Title -->
@@ -285,6 +292,23 @@
 		letter-spacing: -1.5px;
 		box-shadow: var(--kef-shadow-md, 0 4px 10px -2px rgb(36 24 13 / 0.2)),
 			0 0 0 1px var(--kef-color-border, rgb(46 35 23 / 0.18));
+	}
+
+	/* Real logo images instead of letter placeholders */
+	lef-oauth-badge img {
+		width: 100%;
+		height: 100%;
+		object-fit: contain;
+		padding: 4px;
+		border-radius: 1rem;
+		display: block;
+	}
+
+	/* Remove old colored backgrounds when we have actual images */
+	lef-oauth-badge[data-app='octra'],
+	lef-oauth-badge[data-app='lefine'] {
+		background: transparent;
+		box-shadow: 0 0 0 1px var(--kef-color-border, rgb(46 35 23 / 0.18));
 	}
 
 	lef-oauth-link {
