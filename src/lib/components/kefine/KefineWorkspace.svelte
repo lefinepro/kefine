@@ -1314,8 +1314,14 @@
   }
 
   async function selectTopbarAuth() {
+    if (authDialogOpen) {
+      authDialogOpen = false;
+      return;
+    }
     authButtonLoading = true;
     await ensureDialogComponentsLoaded();
+    await tick();
+    await new Promise(r => requestAnimationFrame(r));
     authDialogOpen = true;
     await tick();
     authButtonLoading = false;
@@ -3023,7 +3029,6 @@
     isAuthenticated={isAuthenticated}
     profile={currentProfile}
     recentTasks={recentProfileOrders}
-    closeLabel={localeText.buttons.closeDialog}
     onClose={() => { authDialogOpen = false; }}
     onBrowserWallet={chooseBrowserWalletMethod}
     onWalletConnect={chooseWalletConnectMethod}

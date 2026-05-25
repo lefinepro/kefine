@@ -26,7 +26,6 @@
     isAuthenticated,
     profile,
     recentTasks,
-    closeLabel,
     onClose,
     onBrowserWallet,
     onWalletConnect,
@@ -63,7 +62,6 @@
     isAuthenticated: boolean;
     profile: Profile | null;
     recentTasks: OrderView[];
-    closeLabel: string;
     onClose: () => void;
     onBrowserWallet: () => void;
     onWalletConnect: () => void;
@@ -79,6 +77,8 @@
   } = $props();
 
   const localeText = $derived($kefineLocaleText);
+
+  let drawerEl: HTMLElement | undefined = $state();
 
   const profileHandle = $derived.by(() => {
     const handle = profile?.primaryHandle?.trim();
@@ -110,220 +110,230 @@
     return clean.slice(0, maxLength) + '...';
   }
 
+  function handleWindowClick(e: MouseEvent) {
+    if (!open || !drawerEl) return;
+    if (e.target instanceof Node && !drawerEl.contains(e.target)) {
+      onClose();
+    }
+  }
+
+  $effect(() => {
+    if (open) {
+      window.addEventListener('click', handleWindowClick, true);
+      return () => window.removeEventListener('click', handleWindowClick, true);
+    }
+  });
+
 </script>
 
 <kefine-account-drawer
+  bind:this={drawerEl}
   data-open={open}
   data-authenticated={isAuthenticated}
   data-state={open ? 'open' : 'closed'}
   aria-hidden={!open}
+  onclick={(e) => { if (e.target === e.currentTarget) onClose(); }}
 >
-  {#if open}
-    <button type="button" data-variant="close" aria-label={closeLabel} onclick={onClose}>
-      ✕
-    </button>
+  {#if !isAuthenticated}
+    <kefine-account-auth-grid>
+      <button
+        type="button"
+        class="kefine-account-auth-card"
+        data-kind="browser-wallet"
+        data-testid="kefine-browser-wallet-auth-tile"
+        onclick={onBrowserWallet}
+      >
+        <kefine-account-auth-card-icon class="kefine-account-auth-card__icon">
+          <Icon icon="mdi:wallet-outline" width="20" height="20" aria-hidden="true" />
+        </kefine-account-auth-card-icon>
+        <strong>{browserWalletTitle}</strong>
+        <small>Connect the injected wallet from this browser.</small>
+      </button>
 
-    {#if !isAuthenticated}
-      <kefine-account-auth-grid>
+      <button
+        type="button"
+        class="kefine-account-auth-card"
+        data-kind="walletconnect"
+        data-testid="kefine-walletconnect-auth-tile"
+        onclick={onWalletConnect}
+      >
+        <kefine-account-auth-card-icon class="kefine-account-auth-card__icon">
+          <Icon icon="simple-icons:walletconnect" width="20" height="20" aria-hidden="true" />
+        </kefine-account-auth-card-icon>
+        <strong>{walletConnectTitle}</strong>
+         <small>Scan a WalletConnect QR code with your wallet app.</small>
+       </button>
+
+       <button
+         type="button"
+         class="kefine-account-auth-card"
+         data-kind="email"
+         data-testid="kefine-email-auth-tile"
+         onclick={onEmailCode}
+       >
+         <kefine-account-auth-card-icon class="kefine-account-auth-card__icon">
+           <Icon icon="mdi:email" width="20" height="20" aria-hidden="true" />
+         </kefine-account-auth-card-icon>
+         <strong>{emailTitle}</strong>
+         <small>Receive a one-time code by email.</small>
+       </button>
+
+       {#if false}
+      <button
+        type="button"
+        class="kefine-account-auth-card"
+        data-kind="tonconnect"
+        data-testid="kefine-tonconnect-auth-tile"
+        onclick={onTonConnect}
+      >
+        <kefine-account-auth-card-icon class="kefine-account-auth-card__icon">
+          <Icon icon="simple-icons:ton" width="20" height="20" aria-hidden="true" />
+        </kefine-account-auth-card-icon>
+        <strong>{tonConnectTitle}</strong>
+        <small>Connect a TON wallet through TonConnect.</small>
+      </button>
+      {/if}
+
+      {#if false}
+      <button
+        type="button"
+        class="kefine-account-auth-card"
+        data-kind="google"
+        data-testid="kefine-google-auth-tile"
+        onclick={onGoogle}
+      >
+        <kefine-account-auth-card-icon class="kefine-account-auth-card__icon">
+          <Icon icon="mdi:google" width="20" height="20" aria-hidden="true" />
+        </kefine-account-auth-card-icon>
+        <strong>{googleTitle}</strong>
+        <small>Continue through the Crystal OAuth callback.</small>
+      </button>
+      {/if}
+
+      {#if false}
+      <button
+        type="button"
+        class="kefine-account-auth-card"
+        data-kind="github"
+        data-testid="kefine-github-auth-tile"
+        onclick={onGithub}
+      >
+        <kefine-account-auth-card-icon class="kefine-account-auth-card__icon">
+          <Icon icon="mdi:github" width="20" height="20" aria-hidden="true" />
+        </kefine-account-auth-card-icon>
+        <strong>{githubTitle}</strong>
+        <small>Sign in with the GitHub identity handled by Crystal.</small>
+      </button>
+      {/if}
+
+      <button
+        type="button"
+        class="kefine-account-auth-card"
+        data-kind="passkey"
+        data-testid="kefine-passkey-auth-tile"
+        onclick={onPasskey}
+      >
+        <kefine-account-auth-card-icon class="kefine-account-auth-card__icon">
+          <Icon icon="mdi:fingerprint" width="20" height="20" aria-hidden="true" />
+        </kefine-account-auth-card-icon>
+        <strong>{passkeyTitle}</strong>
+        <small>Use a device-bound secure login.</small>
+      </button>
+
+      {#if showPrivateKey}
         <button
           type="button"
           class="kefine-account-auth-card"
-          data-kind="browser-wallet"
-          data-testid="kefine-browser-wallet-auth-tile"
-          onclick={onBrowserWallet}
+          data-kind="privatekey"
+          data-testid="kefine-privatekey-auth-tile"
+          onclick={onPrivateKey}
         >
           <kefine-account-auth-card-icon class="kefine-account-auth-card__icon">
-            <Icon icon="mdi:wallet-outline" width="20" height="20" aria-hidden="true" />
+            <Icon icon="mdi:key-variant" width="20" height="20" aria-hidden="true" />
           </kefine-account-auth-card-icon>
-          <strong>{browserWalletTitle}</strong>
-          <small>Connect the injected wallet from this browser.</small>
+          <strong>{privateKeyTitle}</strong>
+          <small>Use the generated actor key directly.</small>
         </button>
+      {/if}
+    </kefine-account-auth-grid>
+  {:else}
+    <kefine-account-profile-card class="kefine-account-surface">
+      <kefine-account-profile-head>
+        <kefine-account-avatar data-has-avatar={Boolean(profile?.avatarUrl)}>
+          {#if profile?.avatarUrl}
+            <img src={profile.avatarUrl} alt={profileName ?? connectedTitle} />
+          {:else}
+            <kefine-account-avatar-initial>{(profileName ?? connectedTitle).slice(0, 1).toUpperCase()}</kefine-account-avatar-initial>
+          {/if}
+        </kefine-account-avatar>
+         <lefine-box class="kefine-account-profile-copy">
+           <small>{connectedTitle}</small>
+           <strong title={profileName ?? connectedTitle}>{truncate(profileName ?? connectedTitle)}</strong>
+           {#if profileHandle}
+             <kefine-account-profile-handle title={profileHandle}>{truncate(profileHandle, 20)}</kefine-account-profile-handle>
+           {/if}
+          </lefine-box>
 
-        <button
-          type="button"
-          class="kefine-account-auth-card"
-          data-kind="walletconnect"
-          data-testid="kefine-walletconnect-auth-tile"
-          onclick={onWalletConnect}
-        >
-          <kefine-account-auth-card-icon class="kefine-account-auth-card__icon">
-            <Icon icon="simple-icons:walletconnect" width="20" height="20" aria-hidden="true" />
-          </kefine-account-auth-card-icon>
-          <strong>{walletConnectTitle}</strong>
-           <small>Scan a WalletConnect QR code with your wallet app.</small>
-         </button>
+            <button
+              type="button"
+              class="kefine-sign-out"
+              onclick={onSignOut}
+              aria-label={signOutLabel}
+              title={signOutLabel}
+            >
+              <div class="door-scene">
+                <div class="door-frame">
+                  <div class="door"></div>
+                </div>
+              </div>
+            </button>
+        </kefine-account-profile-head>
 
-         <button
-           type="button"
-           class="kefine-account-auth-card"
-           data-kind="email"
-           data-testid="kefine-email-auth-tile"
-           onclick={onEmailCode}
-         >
-           <kefine-account-auth-card-icon class="kefine-account-auth-card__icon">
-             <Icon icon="mdi:email" width="20" height="20" aria-hidden="true" />
-           </kefine-account-auth-card-icon>
-           <strong>{emailTitle}</strong>
-           <small>Receive a one-time code by email.</small>
-         </button>
+       <p>{connectedDescription}</p>
 
-         {#if false}
-        <button
-          type="button"
-          class="kefine-account-auth-card"
-          data-kind="tonconnect"
-          data-testid="kefine-tonconnect-auth-tile"
-          onclick={onTonConnect}
-        >
-          <kefine-account-auth-card-icon class="kefine-account-auth-card__icon">
-            <Icon icon="simple-icons:ton" width="20" height="20" aria-hidden="true" />
-          </kefine-account-auth-card-icon>
-          <strong>{tonConnectTitle}</strong>
-          <small>Connect a TON wallet through TonConnect.</small>
-        </button>
-        {/if}
+       <kefine-account-stats>
+         <kefine-account-stat>
+           <small>{latestTasksTitle}</small>
+           <strong>{recentTasks.length}</strong>
+         </kefine-account-stat>
+       </kefine-account-stats>
 
-        {#if false}
-        <button
-          type="button"
-          class="kefine-account-auth-card"
-          data-kind="google"
-          data-testid="kefine-google-auth-tile"
-          onclick={onGoogle}
-        >
-          <kefine-account-auth-card-icon class="kefine-account-auth-card__icon">
-            <Icon icon="mdi:google" width="20" height="20" aria-hidden="true" />
-          </kefine-account-auth-card-icon>
-          <strong>{googleTitle}</strong>
-          <small>Continue through the Crystal OAuth callback.</small>
-        </button>
-        {/if}
+       <kefine-account-profile-actions>
+         <button type="button" data-variant="primary" onclick={onOpenProfile}>{openWorkspaceLabel}</button>
+       </kefine-account-profile-actions>
+     </kefine-account-profile-card>
 
-        {#if false}
-        <button
-          type="button"
-          class="kefine-account-auth-card"
-          data-kind="github"
-          data-testid="kefine-github-auth-tile"
-          onclick={onGithub}
-        >
-          <kefine-account-auth-card-icon class="kefine-account-auth-card__icon">
-            <Icon icon="mdi:github" width="20" height="20" aria-hidden="true" />
-          </kefine-account-auth-card-icon>
-          <strong>{githubTitle}</strong>
-          <small>Sign in with the GitHub identity handled by Crystal.</small>
-        </button>
-        {/if}
+     <section class="kefine-account-surface">
+       <kefine-account-section-head>
+         <strong>{latestTasksTitle}</strong>
+       </kefine-account-section-head>
 
-        <button
-          type="button"
-          class="kefine-account-auth-card"
-          data-kind="passkey"
-          data-testid="kefine-passkey-auth-tile"
-          onclick={onPasskey}
-        >
-          <kefine-account-auth-card-icon class="kefine-account-auth-card__icon">
-            <Icon icon="mdi:fingerprint" width="20" height="20" aria-hidden="true" />
-          </kefine-account-auth-card-icon>
-          <strong>{passkeyTitle}</strong>
-          <small>Use a device-bound secure login.</small>
-        </button>
-
-        {#if showPrivateKey}
-          <button
-            type="button"
-            class="kefine-account-auth-card"
-            data-kind="privatekey"
-            data-testid="kefine-privatekey-auth-tile"
-            onclick={onPrivateKey}
-          >
-            <kefine-account-auth-card-icon class="kefine-account-auth-card__icon">
-              <Icon icon="mdi:key-variant" width="20" height="20" aria-hidden="true" />
-            </kefine-account-auth-card-icon>
-            <strong>{privateKeyTitle}</strong>
-            <small>Use the generated actor key directly.</small>
-          </button>
-        {/if}
-      </kefine-account-auth-grid>
-    {:else}
-      <kefine-account-profile-card class="kefine-account-surface">
-        <kefine-account-profile-head>
-          <kefine-account-avatar data-has-avatar={Boolean(profile?.avatarUrl)}>
-            {#if profile?.avatarUrl}
-              <img src={profile.avatarUrl} alt={profileName ?? connectedTitle} />
-            {:else}
-              <kefine-account-avatar-initial>{(profileName ?? connectedTitle).slice(0, 1).toUpperCase()}</kefine-account-avatar-initial>
-            {/if}
-          </kefine-account-avatar>
-           <lefine-box class="kefine-account-profile-copy">
-             <small>{connectedTitle}</small>
-             <strong title={profileName ?? connectedTitle}>{truncate(profileName ?? connectedTitle)}</strong>
-             {#if profileHandle}
-               <kefine-account-profile-handle title={profileHandle}>{truncate(profileHandle, 20)}</kefine-account-profile-handle>
-             {/if}
-            </lefine-box>
-
-             <button
-               type="button"
-               class="kefine-sign-out"
-               onclick={onSignOut}
-               aria-label={signOutLabel}
-               title={signOutLabel}
-             >
-               <div class="door-scene">
-                 <div class="door-frame">
-                   <div class="door"></div>
-                 </div>
-               </div>
+       {#if recentTasks.length > 0}
+         <kefine-account-task-list>
+           {#each recentTasks as task (task.id)}
+             <button type="button" class="kefine-account-task" onclick={() => onOpenTask(task.id)}>
+                <lefine-box class="kefine-account-task__copy">
+                  <strong title={task.title}>{truncate(task.title)}</strong>
+                  <small>{task.status}</small>
+                </lefine-box>
+               <kefine-account-task-action>
+                 <span class="kefine-account-task-action__book" title={openTaskLabel}>
+                   <span class="kefine-icon-wrap kefine-icon-wrap--closed">
+                     <Icon icon="mdi:book-outline" width="16" height="16" aria-hidden="true" />
+                   </span>
+                   <span class="kefine-icon-wrap kefine-icon-wrap--open">
+                     <Icon icon="mdi:book-open-outline" width="16" height="16" aria-hidden="true" />
+                   </span>
+                 </span>
+               </kefine-account-task-action>
              </button>
-         </kefine-account-profile-head>
-
-        <p>{connectedDescription}</p>
-
-        <kefine-account-stats>
-          <kefine-account-stat>
-            <small>{latestTasksTitle}</small>
-            <strong>{recentTasks.length}</strong>
-          </kefine-account-stat>
-        </kefine-account-stats>
-
-        <kefine-account-profile-actions>
-          <button type="button" data-variant="primary" onclick={onOpenProfile}>{openWorkspaceLabel}</button>
-        </kefine-account-profile-actions>
-      </kefine-account-profile-card>
-
-      <section class="kefine-account-surface">
-        <kefine-account-section-head>
-          <strong>{latestTasksTitle}</strong>
-        </kefine-account-section-head>
-
-        {#if recentTasks.length > 0}
-          <kefine-account-task-list>
-            {#each recentTasks as task (task.id)}
-              <button type="button" class="kefine-account-task" onclick={() => onOpenTask(task.id)}>
-                 <lefine-box class="kefine-account-task__copy">
-                   <strong title={task.title}>{truncate(task.title)}</strong>
-                   <small>{task.status}</small>
-                 </lefine-box>
-                <kefine-account-task-action>
-                  <span class="kefine-account-task-action__book" title={openTaskLabel}>
-                    <span class="kefine-icon-wrap kefine-icon-wrap--closed">
-                      <Icon icon="mdi:book-outline" width="16" height="16" aria-hidden="true" />
-                    </span>
-                    <span class="kefine-icon-wrap kefine-icon-wrap--open">
-                      <Icon icon="mdi:book-open-outline" width="16" height="16" aria-hidden="true" />
-                    </span>
-                  </span>
-                </kefine-account-task-action>
-              </button>
-            {/each}
-          </kefine-account-task-list>
-        {:else}
-          <p class="kefine-account-empty">{latestTasksEmptyLabel}</p>
-        {/if}
-      </section>
-    {/if}
-  {/if}
+           {/each}
+         </kefine-account-task-list>
+       {:else}
+         <p class="kefine-account-empty">{latestTasksEmptyLabel}</p>
+       {/if}
+     </section>
+   {/if}
 </kefine-account-drawer>
 
 <style>
@@ -343,21 +353,76 @@
     color: var(--lefine-text);
     overflow: auto;
     padding: 0.9rem 1rem;
-    border-radius: var(--kef-radius-lg) 0 0 var(--kef-radius-lg);
+    border-radius: var(--kef-radius-lg);
     border: var(--kef-border-width-soft) solid var(--kef-line);
     background: var(--kef-bg-soft);
-    transform: translateX(120%);
+    transform: scale(0.92) translateY(-10px);
     opacity: 0;
+    transform-origin: top right;
     pointer-events: none;
     transition:
-      transform 220ms var(--kef-ease-soft),
-      opacity 180ms ease;
+      transform 380ms cubic-bezier(0.2, 0.85, 0.3, 1.05),
+      opacity 250ms ease;
   }
 
   kefine-account-drawer[data-state='open'] {
-    transform: translateX(0);
+    transform: scale(1) translateY(0);
     opacity: 1;
     pointer-events: auto;
+  }
+
+  .kefine-account-surface,
+  .kefine-account-auth-card,
+  .kefine-account-task,
+  kefine-account-stat,
+  kefine-account-profile-head,
+  kefine-account-profile-actions {
+    opacity: 0;
+    transform: translateY(14px) scale(0.97);
+    transition:
+      opacity 340ms ease,
+      transform 340ms ease;
+  }
+
+  kefine-account-drawer[data-state='open'] .kefine-account-surface,
+  kefine-account-drawer[data-state='open'] .kefine-account-auth-card,
+  kefine-account-drawer[data-state='open'] .kefine-account-task,
+  kefine-account-drawer[data-state='open'] kefine-account-stat,
+  kefine-account-drawer[data-state='open'] kefine-account-profile-head,
+  kefine-account-drawer[data-state='open'] kefine-account-profile-actions {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  kefine-account-drawer[data-state='open'] .kefine-account-surface:nth-of-type(2) {
+    transition-delay: 0.04s;
+  }
+
+  kefine-account-drawer[data-state='open'] kefine-account-stat {
+    transition-delay: 0.08s;
+  }
+
+  kefine-account-drawer[data-state='open'] kefine-account-profile-actions {
+    transition-delay: 0.1s;
+  }
+
+  kefine-account-drawer[data-state='open'] .kefine-account-auth-card {
+    transition-delay: 0.02s;
+  }
+  kefine-account-drawer[data-state='open'] .kefine-account-auth-card:nth-child(2) {
+    transition-delay: 0.05s;
+  }
+  kefine-account-drawer[data-state='open'] .kefine-account-auth-card:nth-child(3) {
+    transition-delay: 0.08s;
+  }
+  kefine-account-drawer[data-state='open'] .kefine-account-auth-card:nth-child(4) {
+    transition-delay: 0.11s;
+  }
+  kefine-account-drawer[data-state='open'] .kefine-account-auth-card:nth-child(5) {
+    transition-delay: 0.14s;
+  }
+  kefine-account-drawer[data-state='open'] .kefine-account-auth-card:nth-child(6) {
+    transition-delay: 0.17s;
   }
 
   .kefine-account-surface,
@@ -624,11 +689,6 @@
     white-space: nowrap;
   }
 
-  button[data-variant='close'] {
-    justify-self: end;
-    margin: 0;
-  }
-
   button[data-variant='primary'],
   button[data-variant='ghost'] {
     cursor: pointer;
@@ -742,12 +802,13 @@
       left: 0.5rem;
       width: var(--account-drawer-width);
       border-radius: var(--kef-radius-lg);
-      transform: translateX(120%);
+      transform: scale(0.92) translateY(-10px);
+      transform-origin: top center;
       max-width: none;
     }
 
     kefine-account-drawer[data-state='open'] {
-      transform: translateX(0);
+      transform: scale(1) translateY(0);
     }
 
     kefine-account-auth-grid {
