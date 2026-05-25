@@ -98,119 +98,98 @@
 	<title>Authorize Octra • LeFine</title>
 </svelte:head>
 
-<div class="min-h-screen bg-[var(--kef-color-bg)] text-[var(--kef-color-text)] flex flex-col items-center justify-center p-6"
-     style="font-family: var(--kef-font-family)">
-	<div class="w-full max-w-[540px]">
+<lef-oauth-screen>
+	<lef-oauth-shell>
 		<!-- Connection visual (like GitHub OAuth) -->
-		<div class="DashedConnection mb-6 mx-auto hidden md:block" style="width: 280px;">
-			<div class="flex justify-between items-center py-4">
-				<!-- Octra -->
-				<div class="w-14 h-14 rounded-2xl bg-[#1f1812] flex items-center justify-center ring-1 ring-[var(--kef-color-border)] shadow-inner">
-					<span class="text-3xl font-bold text-[#c89a5a]">O</span>
-				</div>
+		<lef-oauth-connection>
+			<lef-oauth-badge data-app="octra">O</lef-oauth-badge>
 
-				<div class="relative w-8 h-8 rounded-full bg-[var(--kef-color-bg-card)] border border-[var(--kef-color-border)] flex items-center justify-center">
-					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" class="text-[var(--kef-color-primary)]">
-						<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="1.75"/>
-						<path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/>
-					</svg>
-				</div>
+			<lef-oauth-link>
+				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+					<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="1.75"/>
+					<path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/>
+				</svg>
+			</lef-oauth-link>
 
-				<!-- LeFine -->
-				<div class="w-14 h-14 rounded-2xl bg-[var(--kef-color-primary)] flex items-center justify-center ring-1 ring-[var(--kef-color-border)] shadow-md">
-					<span class="text-3xl font-bold text-[var(--kef-color-bg)] tracking-[-1.5px]">K</span>
-				</div>
-			</div>
-		</div>
+			<lef-oauth-badge data-app="lefine">K</lef-oauth-badge>
+		</lef-oauth-connection>
 
 		<!-- Title -->
-		<div class="text-center mb-6">
-			<h1 class="text-[22px] font-semibold tracking-[-0.3px] leading-tight">
-				<span class="text-[var(--kef-color-primary)]">Octra</span>
-				<span class="text-[var(--kef-color-text-tertiary)]"> by Octra</span><br>
-				<span class="text-[var(--kef-color-text-tertiary)]">wants access to your</span><br>
-				<span class="text-[var(--kef-color-primary)]">LeFine</span> account
+		<lef-oauth-title>
+			<h1>
+				<lefine-text data-accent>Octra</lefine-text> <lefine-text data-muted>by Octra</lefine-text><br />
+				<lefine-text data-muted>wants access to your</lefine-text><br />
+				<lefine-text data-accent>LeFine</lefine-text> account
 			</h1>
-		</div>
+		</lef-oauth-title>
 
 		<!-- Main Card -->
-		<div class="bg-[var(--kef-color-bg-card)] border border-[var(--kef-color-border)] rounded-3xl shadow-2xl overflow-hidden">
-			<div class="p-7 pt-6">
-				<div class="mb-5">
-					<div class="uppercase tracking-[1px] text-[10px] font-medium text-[var(--kef-color-text-tertiary)] mb-2">Authorizing allows this app to</div>
-					<ul class="space-y-[7px] text-[13.5px]">
-						<li class="flex gap-2.5 items-start">
-							<span class="mt-0.5 text-[var(--kef-color-success)] text-lg leading-none">✓</span>
-							<span>Verify your LeFine identity <span class="text-[var(--kef-color-text-tertiary)]">({shortEmail})</span></span>
+		<lef-oauth-card>
+			<lef-oauth-card-body>
+				<lef-oauth-section>
+					<lef-oauth-section-label>Authorizing allows this app to</lef-oauth-section-label>
+					<ul>
+						<li>
+							<lefine-text data-check aria-hidden="true">✓</lefine-text>
+							<lefine-text>Verify your LeFine identity <lefine-text data-muted>({shortEmail})</lefine-text></lefine-text>
 						</li>
-						<li class="flex gap-2.5 items-start">
-							<span class="mt-0.5 text-[var(--kef-color-success)] text-lg leading-none">✓</span>
-							<span>Know which resources you can access</span>
+						<li>
+							<lefine-text data-check aria-hidden="true">✓</lefine-text>
+							<lefine-text>Know which resources you can access</lefine-text>
 						</li>
-						<li class="flex gap-2.5 items-start">
-							<span class="mt-0.5 text-[var(--kef-color-success)] text-lg leading-none">✓</span>
-							<span>Act on your behalf <span class="text-[10px] text-[var(--kef-color-text-tertiary)]">(read profile only)</span></span>
+						<li>
+							<lefine-text data-check aria-hidden="true">✓</lefine-text>
+							<lefine-text>Act on your behalf <lefine-text data-note>(read profile only)</lefine-text></lefine-text>
 						</li>
 					</ul>
-				</div>
+				</lef-oauth-section>
 
-				<div class="border-t border-[var(--kef-color-border-light)] pt-5">
-					<div class="text-[11px] font-medium tracking-wide text-[var(--kef-color-text-label)] mb-2.5">Resources on your account</div>
+				<lef-oauth-section data-divided>
+					<lef-oauth-resource-label>Resources on your account</lef-oauth-resource-label>
 
-					<div class="flex items-center gap-3 bg-[var(--kef-color-bg)] border border-[var(--kef-color-border-light)] rounded-2xl px-3.5 py-3">
-						<div class="w-8 h-8 flex-shrink-0 rounded-xl bg-[var(--kef-color-primary-soft)] flex items-center justify-center">
-							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" class="text-[var(--kef-color-primary)]">
+					<lef-oauth-resource>
+						<lef-oauth-resource-icon>
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" aria-hidden="true">
 								<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
 								<polyline points="22,6 12,13 2,6"/>
 							</svg>
-						</div>
-						<div class="min-w-0 flex-1">
-							<div class="font-medium text-[13.5px]">Email address <span class="text-[var(--kef-color-text-tertiary)] text-xs font-normal">(read)</span></div>
-							<div class="text-[11px] text-[var(--kef-color-text-tertiary)] truncate">{shortEmail}</div>
-						</div>
-					</div>
-				</div>
+						</lef-oauth-resource-icon>
+						<lef-oauth-resource-text>
+							<lef-oauth-resource-title>Email address <lefine-text data-muted>(read)</lefine-text></lef-oauth-resource-title>
+							<lef-oauth-resource-value>{shortEmail}</lef-oauth-resource-value>
+						</lef-oauth-resource-text>
+					</lef-oauth-resource>
+				</lef-oauth-section>
 
 				<!-- Notes -->
-				<div class="mt-5 space-y-1 text-[10.5px] text-[var(--kef-color-text-tertiary)]">
-					<div class="flex items-center gap-1.5">
-						<span class="inline-block w-3 h-px bg-[var(--kef-color-border)]"></span>
-						<span>Octra is not owned or operated by LeFine</span>
-					</div>
-					<div class="flex items-center gap-1.5">
-						<span class="inline-block w-3 h-px bg-[var(--kef-color-border)]"></span>
-						<span>Created for internal trusted integration</span>
-					</div>
-				</div>
-			</div>
+				<lef-oauth-notes>
+					<lef-oauth-note>
+						<lefine-text data-dash aria-hidden="true"></lefine-text>
+						<lefine-text>Octra is not owned or operated by LeFine</lefine-text>
+					</lef-oauth-note>
+					<lef-oauth-note>
+						<lefine-text data-dash aria-hidden="true"></lefine-text>
+						<lefine-text>Created for internal trusted integration</lefine-text>
+					</lef-oauth-note>
+				</lef-oauth-notes>
+			</lef-oauth-card-body>
 
 			<!-- Action buttons -->
-			<div class="border-t border-[var(--kef-color-border)] bg-[var(--kef-color-bg)] px-7 py-5 flex gap-3">
+			<lef-oauth-actions>
 				{#if loading}
-					<div class="w-full text-center text-sm py-1 text-[var(--kef-color-text-tertiary)]">Loading session…</div>
+					<lef-oauth-loading>Loading session…</lef-oauth-loading>
 				{:else if error === 'not_logged_in' || !session}
-					<button
-						on:click={goToLogin}
-						class="flex-1 py-3 rounded-2xl bg-[var(--kef-color-primary)] hover:bg-[var(--kef-color-primary-hover)] active:scale-[0.985] text-[var(--kef-color-on-primary)] font-semibold text-sm transition-all"
-					>
+					<button type="button" data-variant="primary" data-size="lg" onclick={goToLogin}>
 						Sign in to LeFine first
 					</button>
 				{:else}
-					<button
-						on:click={deny}
-						disabled={isApproving}
-						class="flex-1 py-[13px] rounded-2xl border border-[var(--kef-color-border)] hover:bg-[var(--kef-color-bg-hover)] font-medium text-sm transition-colors disabled:opacity-60"
-					>
+					<button type="button" data-variant="ghost" onclick={deny} disabled={isApproving}>
 						Cancel
 					</button>
 
-					<button
-						on:click={approve}
-						disabled={isApproving}
-						class="flex-1 py-[13px] rounded-2xl bg-[var(--kef-color-primary)] hover:bg-[var(--kef-color-primary-hover)] text-[var(--kef-color-on-primary)] font-semibold text-sm transition-all active:scale-[0.985] disabled:opacity-70 flex items-center justify-center gap-2"
-					>
+					<button type="button" data-variant="primary" data-size="lg" onclick={approve} disabled={isApproving}>
 						{#if isApproving}
-							<svg class="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+							<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
 								<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" opacity="0.25"/>
 								<path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
 							</svg>
@@ -220,20 +199,49 @@
 						{/if}
 					</button>
 				{/if}
-			</div>
-		</div>
+			</lef-oauth-actions>
+		</lef-oauth-card>
 
-		<div class="text-center mt-5 text-[10px] text-[var(--kef-color-text-tertiary)]">
-			Authorizing will redirect back to Octra
-		</div>
-	</div>
-</div>
+		<lef-oauth-footnote>Authorizing will redirect back to Octra</lef-oauth-footnote>
+
+		{#if error && error !== 'not_logged_in'}
+			<lef-oauth-error role="alert">{error}</lef-oauth-error>
+		{/if}
+	</lef-oauth-shell>
+</lef-oauth-screen>
 
 <style>
-	.DashedConnection {
-		position: relative;
+	lef-oauth-screen {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		min-height: calc(100dvh - 4.5rem);
+		padding: 1.5rem;
+		background: var(--kef-color-bg, #f3e7cf);
+		color: var(--kef-color-text, #2e2317);
+		font-family: var(--kef-font-family);
 	}
-	.DashedConnection::before {
+
+	lef-oauth-shell {
+		display: flex;
+		flex-direction: column;
+		width: 100%;
+		max-width: 540px;
+	}
+
+	/* ─── Connection visual ─────────────────────────────────── */
+	lef-oauth-connection {
+		position: relative;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		width: 280px;
+		margin: 0 auto 1.5rem;
+		padding: 1rem 0;
+	}
+
+	lef-oauth-connection::before {
 		content: '';
 		position: absolute;
 		top: 50%;
@@ -248,5 +256,280 @@
 			transparent 9px
 		);
 		z-index: 0;
+	}
+
+	lef-oauth-badge {
+		position: relative;
+		z-index: 1;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 3.5rem;
+		height: 3.5rem;
+		border-radius: 1rem;
+		font-size: 1.875rem;
+		font-weight: 700;
+		line-height: 1;
+	}
+
+	lef-oauth-badge[data-app='octra'] {
+		background: var(--kef-color-bg-soft, #eadcbc);
+		color: var(--kef-color-primary, #7a4b2a);
+		box-shadow: inset 0 1px 0 color-mix(in oklab, white 8%, transparent),
+			0 0 0 1px var(--kef-color-border, rgb(46 35 23 / 0.18));
+	}
+
+	lef-oauth-badge[data-app='lefine'] {
+		background: var(--kef-color-primary, #7a4b2a);
+		color: var(--kef-color-on-primary, #f7edd8);
+		letter-spacing: -1.5px;
+		box-shadow: var(--kef-shadow-md, 0 4px 10px -2px rgb(36 24 13 / 0.2)),
+			0 0 0 1px var(--kef-color-border, rgb(46 35 23 / 0.18));
+	}
+
+	lef-oauth-link {
+		position: relative;
+		z-index: 1;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 2rem;
+		height: 2rem;
+		border-radius: var(--kef-radius-full, 9999px);
+		background: var(--kef-color-bg-card, #f7ecd6);
+		border: 1px solid var(--kef-color-border, rgb(46 35 23 / 0.18));
+		color: var(--kef-color-primary, #7a4b2a);
+	}
+
+	/* ─── Title ─────────────────────────────────────────────── */
+	lef-oauth-title {
+		display: block;
+		text-align: center;
+		margin-bottom: 1.5rem;
+	}
+
+	lef-oauth-title h1 {
+		margin: 0;
+		font-size: 1.375rem;
+		font-weight: 600;
+		letter-spacing: -0.3px;
+		line-height: 1.25;
+	}
+
+	lefine-text[data-accent] {
+		color: var(--kef-color-primary, #7a4b2a);
+	}
+
+	lefine-text[data-muted] {
+		color: var(--kef-color-text-tertiary, color-mix(in oklab, #2e2317 40%, transparent));
+	}
+
+	/* ─── Card ──────────────────────────────────────────────── */
+	lef-oauth-card {
+		display: block;
+		background: var(--kef-color-bg-card, #f7ecd6);
+		border: 1px solid var(--kef-color-border, rgb(46 35 23 / 0.18));
+		border-radius: 1.5rem;
+		box-shadow: var(--kef-shadow-lg, 0 10px 20px -5px rgb(36 24 13 / 0.24));
+		overflow: hidden;
+	}
+
+	lef-oauth-card-body {
+		display: block;
+		padding: 1.5rem 1.75rem 1.75rem;
+	}
+
+	lef-oauth-section {
+		display: block;
+	}
+
+	lef-oauth-section + lef-oauth-section {
+		margin-top: 1.25rem;
+	}
+
+	lef-oauth-section[data-divided] {
+		border-top: 1px solid var(--kef-color-border-light, rgb(46 35 23 / 0.09));
+		padding-top: 1.25rem;
+	}
+
+	lef-oauth-section-label {
+		display: block;
+		margin-bottom: 0.5rem;
+		font-size: 0.625rem;
+		font-weight: 500;
+		text-transform: uppercase;
+		letter-spacing: 1px;
+		color: var(--kef-color-text-tertiary, color-mix(in oklab, #2e2317 40%, transparent));
+	}
+
+	lef-oauth-section ul {
+		display: flex;
+		flex-direction: column;
+		gap: 0.4375rem;
+		margin: 0;
+		padding: 0;
+		font-size: 0.84375rem;
+	}
+
+	lef-oauth-section li {
+		display: flex;
+		align-items: flex-start;
+		gap: 0.625rem;
+	}
+
+	lefine-text[data-check] {
+		flex-shrink: 0;
+		margin-top: 0.125rem;
+		font-size: 1.125rem;
+		line-height: 1;
+		color: var(--kef-color-success, #3e6a4a);
+	}
+
+	lefine-text[data-note] {
+		font-size: 0.625rem;
+		color: var(--kef-color-text-tertiary, color-mix(in oklab, #2e2317 40%, transparent));
+	}
+
+	/* ─── Resource row ──────────────────────────────────────── */
+	lef-oauth-resource-label {
+		display: block;
+		margin-bottom: 0.625rem;
+		font-size: 0.6875rem;
+		font-weight: 500;
+		letter-spacing: 0.025em;
+		color: var(--kef-color-text-label, #4a3a28);
+	}
+
+	lef-oauth-resource {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		padding: 0.75rem 0.875rem;
+		background: var(--kef-color-bg, #f3e7cf);
+		border: 1px solid var(--kef-color-border-light, rgb(46 35 23 / 0.09));
+		border-radius: 1rem;
+	}
+
+	lef-oauth-resource-icon {
+		display: flex;
+		flex-shrink: 0;
+		align-items: center;
+		justify-content: center;
+		width: 2rem;
+		height: 2rem;
+		border-radius: 0.75rem;
+		background: var(--kef-color-primary-soft, color-mix(in oklab, #7a4b2a 20%, transparent));
+		color: var(--kef-color-primary, #7a4b2a);
+	}
+
+	lef-oauth-resource-text {
+		display: block;
+		min-width: 0;
+		flex: 1;
+	}
+
+	lef-oauth-resource-title {
+		display: block;
+		font-size: 0.84375rem;
+		font-weight: 500;
+	}
+
+	lef-oauth-resource-value {
+		display: block;
+		font-size: 0.6875rem;
+		color: var(--kef-color-text-tertiary, color-mix(in oklab, #2e2317 40%, transparent));
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	/* ─── Notes ─────────────────────────────────────────────── */
+	lef-oauth-notes {
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+		margin-top: 1.25rem;
+		font-size: 0.65625rem;
+		color: var(--kef-color-text-tertiary, color-mix(in oklab, #2e2317 40%, transparent));
+	}
+
+	lef-oauth-note {
+		display: flex;
+		align-items: center;
+		gap: 0.375rem;
+	}
+
+	lefine-text[data-dash] {
+		display: inline-block;
+		flex-shrink: 0;
+		width: 0.75rem;
+		height: 1px;
+		background: var(--kef-color-border, rgb(46 35 23 / 0.18));
+	}
+
+	/* ─── Actions ───────────────────────────────────────────── */
+	lef-oauth-actions {
+		display: flex;
+		gap: 0.75rem;
+		padding: 1.25rem 1.75rem;
+		border-top: 1px solid var(--kef-color-border, rgb(46 35 23 / 0.18));
+		background: var(--kef-color-bg, #f3e7cf);
+	}
+
+	lef-oauth-actions button {
+		flex: 1;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.5rem;
+		padding-top: 0.8125rem;
+		padding-bottom: 0.8125rem;
+		border-radius: 1rem;
+	}
+
+	lef-oauth-actions button svg {
+		width: 0.875rem;
+		height: 0.875rem;
+		animation: lef-oauth-spin 0.8s linear infinite;
+	}
+
+	lef-oauth-loading {
+		flex: 1;
+		padding: 0.25rem 0;
+		text-align: center;
+		font-size: 0.875rem;
+		color: var(--kef-color-text-tertiary, color-mix(in oklab, #2e2317 40%, transparent));
+	}
+
+	@keyframes lef-oauth-spin {
+		to {
+			transform: rotate(360deg);
+		}
+	}
+
+	/* ─── Footnote / error ──────────────────────────────────── */
+	lef-oauth-footnote {
+		display: block;
+		margin-top: 1.25rem;
+		text-align: center;
+		font-size: 0.625rem;
+		color: var(--kef-color-text-tertiary, color-mix(in oklab, #2e2317 40%, transparent));
+	}
+
+	lef-oauth-error {
+		display: block;
+		margin-top: 0.75rem;
+		padding: 0.625rem 0.875rem;
+		text-align: center;
+		font-size: 0.8125rem;
+		border-radius: 0.85rem;
+		background: var(--kef-color-error-soft, color-mix(in oklab, #9b3d35 24%, transparent));
+		color: var(--kef-color-error, #9b3d35);
+	}
+
+	@media (max-width: 640px) {
+		lef-oauth-connection {
+			display: none;
+		}
 	}
 </style>
