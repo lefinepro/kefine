@@ -67,6 +67,7 @@ services:
     environment:
       CRATER_BASE_URL: http://crater:3001
       EXCHANGE_BASE_URL: ${EXCHANGE_BASE_URL:-https://problemsets.lefine.pro}
+      LEFINE_INTEGRATION_SECRET: dev-only-lefine-octra-shared-secret-change-me
     ports:
       - "5173:5173"
     networks:

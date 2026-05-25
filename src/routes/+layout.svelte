@@ -1,6 +1,7 @@
 <script lang="ts">
-	import './+page.css';
-	import { browser } from '$app/environment';
+ 	import '../app.css';
+ 	import './+page.css';
+ 	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
