@@ -577,16 +577,18 @@ export const KEFINE_TEXT_EN = {
     applied: 'Applied',
     metricsAria: 'Solver metrics - click to focus charts',
     metricsTitle: 'Solver metrics',
-    metricsSubtitle: 'Execution time & weight',
+    metricsSubtitle: 'Execution time, price & success rate',
     compactSolversAria: 'Compact solvers',
     filesAria: 'Files',
     chartMetrics: 'Metrics',
     chartExecutionTime: 'Execution time',
-    chartSolutionWeight: 'Solution weight',
+    chartPrice: 'Price',
+    chartSuccessRate: 'Success rate',
     chartSeconds: 'seconds',
-    chartKilobytes: 'kilobytes',
+    chartUsd: 'USD',
+    chartPercent: '%',
     chartProjectAria: 'Project and slug',
-    chartFallback: 'Time & weight per solver'
+    chartFallback: 'Time, price & success per solver'
   },
   solutionView: {
     ariaLabel: 'Solver view',

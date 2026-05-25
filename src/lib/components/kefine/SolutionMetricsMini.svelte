@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { SolutionMetric } from '$lib/kefine/solutions-data';
-  import { compactChartSize, timeSeries, weightSeries } from '$lib/kefine/solver-charts';
+  import { compactChartSize, timeSeries, priceSeries } from '$lib/kefine/solver-charts';
   import SolutionChartCard from './SolutionChartCard.svelte';
   import { kefineLocaleText } from '$lib/constants/kefine-locale';
 
@@ -17,7 +17,7 @@
   } = $props();
 
   const time = $derived(timeSeries(metrics, activeSolverId));
-  const weight = $derived(weightSeries(metrics, activeSolverId));
+  const price = $derived(priceSeries(metrics, activeSolverId));
 
   const localeText = $derived($kefineLocaleText);
 </script>
@@ -65,14 +65,14 @@
   />
 
   <SolutionChartCard
-    title={localeText.solversView.chartSolutionWeight}
-    unit={localeText.solversView.chartKilobytes}
-    series={weight}
+    title={localeText.solversView.chartPrice}
+    unit={localeText.solversView.chartUsd}
+    series={price}
     metrics={metrics}
     size={compactChartSize}
     variant="alt"
-    valueFormatter={(v) => `${v.toFixed(1)}kb`}
-    seriesValue={(m) => m.solutionWeightKb}
+    valueFormatter={(v) => `$${v.toFixed(2)}`}
+    seriesValue={(m) => m.priceUsd}
   />
 </lef-metrics-mini>
 

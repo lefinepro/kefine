@@ -40,6 +40,14 @@
     "soleProprietor": "",
     "legalDisclaimer": ""
   },
+  "emailAuth": {
+    "smtpHost": "mail.lefine.pro",
+    "smtpPort": 587,
+    "smtpUsername": "app@lefine.pro",
+    "smtpPassword": "",
+    "fromEmail": "noreply@lefine.pro",
+    "fromName": "Lefine"
+  },
   "defaultActor": {
     "handle": "staff",
     "displayName": "Staff",

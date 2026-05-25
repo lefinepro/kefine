@@ -38,13 +38,14 @@ export interface SolutionMetric {
   solverId: string;
   solver: string;
   executionTimeSec: number;
-  solutionWeightKb: number;
+  priceUsd: number;
+  successRate: number;
 }
 
 export const defaultMetrics: SolutionMetric[] = [
-  { solverId: '5', solver: 'Go Proxy Basic', executionTimeSec: 1.2, solutionWeightKb: 2.4 },
-  { solverId: '6', solver: 'Go Proxy Pro', executionTimeSec: 2.4, solutionWeightKb: 5.1 },
-  { solverId: '7', solver: 'Go Proxy Enterprise', executionTimeSec: 3.8, solutionWeightKb: 7.6 }
+  { solverId: '5', solver: 'Go Proxy Basic', executionTimeSec: 1.2, priceUsd: 0.08, successRate: 82 },
+  { solverId: '6', solver: 'Go Proxy Pro', executionTimeSec: 2.4, priceUsd: 0.21, successRate: 91 },
+  { solverId: '7', solver: 'Go Proxy Enterprise', executionTimeSec: 3.8, priceUsd: 0.59, successRate: 97 }
 ];
 
 export const defaultSolutions: Solution[] = [

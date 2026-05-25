@@ -579,16 +579,18 @@ export const KEFINE_TEXT_RU = {
     applied: 'Применено',
     metricsAria: 'Метрики солвера — кликните для фокуса на графиках',
     metricsTitle: 'Метрики солвера',
-    metricsSubtitle: 'Время выполнения и вес',
+    metricsSubtitle: 'Время, цена и успешность',
     compactSolversAria: 'Компактный список солверов',
     filesAria: 'Файлы',
     chartMetrics: 'Метрики',
     chartExecutionTime: 'Время выполнения',
-    chartSolutionWeight: 'Вес решения',
+    chartPrice: 'Цена',
+    chartSuccessRate: 'Успешность',
     chartSeconds: 'секунд',
-    chartKilobytes: 'килобайт',
+    chartUsd: 'долл.',
+    chartPercent: '%',
     chartProjectAria: 'Проект и slug',
-    chartFallback: 'Время и вес по солверам'
+    chartFallback: 'Время, цена и успешность по солверам'
   },
   solutionView: {
     ariaLabel: 'Вид решения',

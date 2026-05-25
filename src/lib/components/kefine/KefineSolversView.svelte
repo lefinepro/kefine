@@ -118,11 +118,7 @@
         {/each}
       </lef-solutions-list>
 
-      <lef-task-rail
-        aria-label={localeText.solversView.metricsAria}
-        onclick={() => (chartsFocused = true)}
-        style="cursor: pointer;"
-      >
+      <lef-task-rail aria-label={localeText.solversView.metricsAria}>
         <lef-task-rail-card>
           <lef-task-rail-head>{localeText.solversView.taskDescription}</lef-task-rail-head>
           <lef-task-rail-body>{taskTitle}</lef-task-rail-body>
@@ -141,12 +137,22 @@
           </button>
         </lef-task-rail-actions>
 
-        <SolutionMetricsMini
-          metrics={defaultMetrics}
-          activeSolverId={solutions[0]?.id ?? '5'}
-          project={solutions[0]?.project}
-          slug={solutions[0]?.slug}
-        />
+        <!-- Clicking anywhere inside the metrics area expands the detailed charts.
+             Buttons above are safe because they have their own handlers and stop propagation implicitly by being separate. -->
+        <div
+          role="button"
+          tabindex="0"
+          aria-label={localeText.solversView.metricsAria}
+          onclick={() => (chartsFocused = true)}
+          style="cursor: pointer;"
+        >
+          <SolutionMetricsMini
+            metrics={defaultMetrics}
+            activeSolverId={solutions[0]?.id ?? '5'}
+            project={solutions[0]?.project}
+            slug={solutions[0]?.slug}
+          />
+        </div>
       </lef-task-rail>
     {:else}
       <!-- Charts Focused Mode -->

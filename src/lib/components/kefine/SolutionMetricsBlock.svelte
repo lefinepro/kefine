@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { SolutionMetric } from '$lib/kefine/solutions-data';
-  import { defaultChartSize, timeSeries, weightSeries } from '$lib/kefine/solver-charts';
+  import { defaultChartSize, timeSeries, priceSeries, successRateSeries } from '$lib/kefine/solver-charts';
   import SolutionChartCard from './SolutionChartCard.svelte';
   import { kefineLocaleText } from '$lib/constants/kefine-locale';
 
@@ -8,7 +8,7 @@
     metrics,
     activeSolverId,
     title = 'Solver metrics',
-    subtitle = 'Hardcoded execution time & solution weight per solver'
+    subtitle = 'Execution time, price & success rate per solver'
   }: {
     metrics: SolutionMetric[];
     activeSolverId: string;
@@ -17,7 +17,8 @@
   } = $props();
 
   const time = $derived(timeSeries(metrics, activeSolverId));
-  const weight = $derived(weightSeries(metrics, activeSolverId));
+  const price = $derived(priceSeries(metrics, activeSolverId));
+  const success = $derived(successRateSeries(metrics, activeSolverId));
 
   const localeText = $derived($kefineLocaleText);
 </script>
@@ -41,14 +42,25 @@
     />
 
     <SolutionChartCard
-      title={localeText.solversView.chartSolutionWeight}
-      unit={localeText.solversView.chartKilobytes}
-      series={weight}
+      title={localeText.solversView.chartPrice}
+      unit={localeText.solversView.chartUsd}
+      series={price}
       metrics={metrics}
       size={defaultChartSize}
       variant="alt"
-      valueFormatter={(v) => `${v.toFixed(1)}kb`}
-      seriesValue={(m) => m.solutionWeightKb}
+      valueFormatter={(v) => `$${v.toFixed(2)}`}
+      seriesValue={(m) => m.priceUsd}
+    />
+
+    <SolutionChartCard
+      title={localeText.solversView.chartSuccessRate}
+      unit={localeText.solversView.chartPercent}
+      series={success}
+      metrics={metrics}
+      size={defaultChartSize}
+      variant="primary"
+      valueFormatter={(v) => `${v.toFixed(0)}%`}
+      seriesValue={(m) => m.successRate}
     />
   </lef-metrics-grid>
 </lef-metrics-block>

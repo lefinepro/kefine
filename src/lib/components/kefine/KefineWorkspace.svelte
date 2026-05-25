@@ -8,6 +8,7 @@
   import { onMount } from 'svelte';
   import { tick } from 'svelte';
   import { cubicOut } from 'svelte/easing';
+  import { scale } from 'svelte/transition';
   import type { TransitionConfig } from 'svelte/transition';
   import { authState, clearAuthState, hydrateAuthStateFromSession, replaceAuthState, updateAuthState } from '$lib/auth/auth-store.svelte.js';
   import {
@@ -2704,8 +2705,8 @@
   onAuth={selectTopbarAuth}
   onOpenProfile={openTopbarProfile}
   onSignOut={() => { void signOutProfileSession(); }}
-  onAuthDoubleClick={() => { void openTopbarProfileSetup(); }}
-  onLocale={selectTopbarLocale}
+   onAuthDoubleClick={() => { void openTopbarProfileSetup(); }}
+   onLocale={selectTopbarLocale}
 />
 
 <main data-sidebar-expanded={leftNavExpanded}>

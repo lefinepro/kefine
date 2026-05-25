@@ -32,6 +32,12 @@ services:
       DATABASE_URL: postgresql://kefine:kefine@postgres:5432/kefine
       KEFINE_PRIVATEKEY_DEFAULT: ${KEFINE_PRIVATEKEY_DEFAULT:-}
       EXCHANGE_BASE_URL: ${EXCHANGE_BASE_URL:-https://problemsets.lefine.pro}
+      MADDY_SMTP_HOST: ${MADDY_SMTP_HOST:-mail.lefine.pro}
+      MADDY_SMTP_PORT: ${MADDY_SMTP_PORT:-587}
+      MADDY_SMTP_USERNAME: ${MADDY_SMTP_USERNAME:-app@lefine.pro}
+      MADDY_SMTP_PASSWORD: ${MADDY_SMTP_PASSWORD}
+      MADDY_FROM_EMAIL: ${MADDY_FROM_EMAIL:-noreply@lefine.pro}
+      MADDY_FROM_NAME: ${MADDY_FROM_NAME:-Lefine}
     working_dir: /app
     command: ["crystal", "run", "src/crater.cr"]
     volumes:

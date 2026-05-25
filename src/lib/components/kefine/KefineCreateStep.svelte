@@ -4,8 +4,8 @@
   import { scheduleAfter } from '$lib/utils/helpers';
   import KefineOrderListItem from '$lib/components/kefine/KefineOrderListItem.svelte';
   import SolutionMetricsMini from '$lib/components/kefine/SolutionMetricsMini.svelte';
-  import { defaultMetrics } from '$lib/kefine/solutions-data';
   import { buildActorOrderPath } from '$lib/components/kefine/kefine-workspace-helpers';
+  import { defaultMetrics } from '$lib/kefine/solutions-data';
   import { cubicOut } from 'svelte/easing';
   import { onMount } from 'svelte';
   const PLACEHOLDER_TYPE_DELAY_MS = 58;
@@ -157,6 +157,8 @@
   let placeholderVisible = $state(false);
   let placeholderFocused = $state(false);
   let inputMetaOpen = $state(false);
+  let searchRevealed = $state(false);
+  let articleRef = $state<HTMLElement | null>(null);
   let executionEditorOpen = $state(false);
   let tagEditorOpen = $state(false);
   let tagInputValue = $state('');
@@ -830,11 +832,13 @@ initialized = true;
     }
 
     queuePopoverOpen = false;
+    searchRevealed = false;
     onSubmit();
   }
 
   function handleQueueTaskClick() {
     queuePopoverOpen = false;
+    searchRevealed = false;
     void onQueueTask();
   }
 
@@ -922,6 +926,7 @@ initialized = true;
 
   function handleTaskInputFocus() {
     inputMetaOpen = true;
+    searchRevealed = true;
     placeholderFocused = true;
     stopPlaceholderAnimation({ hide: true });
   }
@@ -936,6 +941,7 @@ initialized = true;
 
   function handleTaskInputPointerDown() {
     inputMetaOpen = true;
+    searchRevealed = true;
     placeholderFocused = true;
     stopPlaceholderAnimation({ hide: true });
   }
@@ -977,6 +983,18 @@ initialized = true;
     });
   });
 
+  $effect(() => {
+    if (!searchRevealed || !articleRef) return;
+
+    function onDocumentMouseDown(e: MouseEvent) {
+      if (!articleRef!.contains(e.target as Node)) {
+        searchRevealed = false;
+      }
+    }
+    document.addEventListener('mousedown', onDocumentMouseDown);
+    return () => document.removeEventListener('mousedown', onDocumentMouseDown);
+  });
+
   function removeTag(tag: string) {
     onTagsChange?.((draft.tags ?? []).filter((item) => item !== tag));
   }
@@ -1007,7 +1025,7 @@ initialized = true;
   <p class="lefine-subtitle">{afeIntroCard.detail}</p>
 {/if}
 
-<article class="kefine-card kefine-card--wide" data-kefine-create onfocusout={handleCreateFocusOut}>
+<article bind:this={articleRef} class="kefine-card kefine-card--wide" data-kefine-create onfocusout={handleCreateFocusOut}>
   {#if template}
     <section data-part="template-banner">
       <lefine-box>
@@ -1203,7 +1221,7 @@ initialized = true;
   <p id="kefine-composer-hints" data-part="composer-hints" hidden>{composerHints}</p>
 
   <!-- Persistent task history on main page (same data as in profile) -->
-  {#if recentOrders.length > 0 || (solverSearchActive && solverSearchText?.trim())}
+  {#if (solverSearchActive && solverSearchText?.trim()) || (searchRevealed && recentOrders.length > 0)}
     <section data-part="tasks-list" data-entrance={!listEntranceDone}>
       {#if solverSearchActive && solverSearchText?.trim()}
         <a
@@ -1244,7 +1262,7 @@ initialized = true;
       {/if}
       {#each recentOrders as order, i (order.id)}
         <a
-          href={`/order/${order.id}`}
+          href={order.actorHandle || order.ownerUsername ? buildActorOrderPath(order.actorHandle ?? order.ownerUsername!, order.shareId ?? order.id) : `/order/${order.id}`}
           style="text-decoration:none; color:inherit; display:block; animation-delay: {(i + 1) * 78}ms;"
           transition:taskDropIn={{ delay: (i + 1) * 78 }}
         >
