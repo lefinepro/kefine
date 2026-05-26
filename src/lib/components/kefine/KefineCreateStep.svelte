@@ -177,6 +177,26 @@
   let isFlying = $state(false);
   let initialized = $state(false);
 
+  function orderScore(query: string, order: OrderView): number {
+    const q = query.trim().toLowerCase();
+    if (!q) return 0;
+    const title = (order.title ?? '').toLowerCase();
+    if (title === q) return 100;
+    if (title.startsWith(q)) return 50;
+    if (title.includes(q)) return 25;
+    if ((order.solver ?? '').toLowerCase().includes(q)) return 10;
+    if ((order.id ?? '').toLowerCase().includes(q)) return 5;
+    return 0;
+  }
+
+  let sortedMatchedOrders = $derived(
+    draft.description.trim()
+      ? [...matchedOrders].sort(
+          (a, b) => orderScore(draft.description, b) - orderScore(draft.description, a)
+        )
+      : matchedOrders
+  );
+
   import { solutionsStore } from '$lib/kefine/solutions-store';
   import { get } from 'svelte/store';
 
@@ -1290,27 +1310,30 @@ initialized = true;
     </section>
   {/if}
 
-  {#if isSearching && matchedOrders.length > 0}
+  {#if isSearching && sortedMatchedOrders.length > 0}
     <section data-part="recent" aria-label={isSearching ? matchedTasksLabel : solverLabel}>
       <kefine-recent-title>{matchedTasksLabel}</kefine-recent-title>
       <ul data-part="recent-list" data-compact="true" data-testid="kefine-search-results">
-        {#each matchedOrders as order (order.id)}
-          <KefineOrderListItem
-            {order}
-            {openTaskLabel}
-            {relatedItemsLabel}
-            {createServiceLabel}
-            {deleteTaskLabel}
-            showCreateService={false}
-            showDelete={true}
-            itemTestId={`kefine-search-order-${order.id}`}
-            openTestId={`kefine-open-search-order-${order.id}`}
-            deleteTestId={`kefine-delete-search-order-${order.id}`}
-            onOpen={() => onOpenOrder(order)}
-            onCreateService={(event) => onCreateServiceFromOrder?.(order, event)}
-            onOpenKeydown={(event) => handleOpenOrderKeydown(order, event)}
-            onDelete={(event) => handleDeleteClick(order, event)}
-          />
+        {#each sortedMatchedOrders as order, i (order.id)}
+          <li transition:taskDropIn={{ delay: i * 78 }} style="list-style:none;">
+            <KefineOrderListItem
+              {order}
+              {openTaskLabel}
+              {relatedItemsLabel}
+              {createServiceLabel}
+              {deleteTaskLabel}
+              showCreateService={false}
+              showDelete={true}
+              searchQuery={draft.description}
+              itemTestId={`kefine-search-order-${order.id}`}
+              openTestId={`kefine-open-search-order-${order.id}`}
+              deleteTestId={`kefine-delete-search-order-${order.id}`}
+              onOpen={() => onOpenOrder(order)}
+              onCreateService={(event) => onCreateServiceFromOrder?.(order, event)}
+              onOpenKeydown={(event) => handleOpenOrderKeydown(order, event)}
+              onDelete={(event) => handleDeleteClick(order, event)}
+            />
+          </li>
         {/each}
       </ul>
     </section>

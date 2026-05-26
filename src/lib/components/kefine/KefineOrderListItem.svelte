@@ -17,6 +17,7 @@
     showStop = false,
     showDelete = false,
     showCreateService = false,
+    searchQuery = '',
     onOpen,
     onCreateService,
     onOpenKeydown,
@@ -41,6 +42,7 @@
     showStop?: boolean;
     showDelete?: boolean;
     showCreateService?: boolean;
+    searchQuery?: string;
     onOpen: () => void;
     onCreateService?: (event: MouseEvent) => void;
     onOpenKeydown: (event: KeyboardEvent) => void;
@@ -51,6 +53,13 @@
     onStopPointerLeave?: () => void;
     onStopPointerCancel?: () => void;
   } = $props();
+
+  function highlightText(text: string, query: string): string {
+    if (!query.trim()) return text;
+    const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(${escaped})`, 'gi');
+    return text.replace(regex, '<mark style="background:color-mix(in oklab, var(--kef-color-primary, #c89a5a) 35%, transparent); color:inherit; border-radius:2px; padding:0 1px;">$1</mark>');
+  }
 
   function formatTemplateVariableLabel(key: string): string {
     const normalized = key.trim().replace(/[_-]+/g, ' ');
@@ -85,7 +94,7 @@
         </kefine-order-mark>
 
         <kefine-order-copy>
-          <kefine-order-title>{order.title}</kefine-order-title>
+          <kefine-order-title>{@html highlightText(order.title ?? '', searchQuery)}</kefine-order-title>
         </kefine-order-copy>
       </kefine-order-row>
     </summary>
