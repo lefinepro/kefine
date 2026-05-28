@@ -1,9 +1,8 @@
 <script lang="ts">
   import { browser } from '$app/environment';
-  import type { Solution } from '$lib/kefine/solutions-data';
+  import { defaultMetrics, type Solution, type SolutionMetric } from '$lib/kefine/solutions-data';
   import SolutionMetricsMini from './SolutionMetricsMini.svelte';
   import SolutionMetricsBlock from './SolutionMetricsBlock.svelte';
-  import { defaultMetrics } from '$lib/kefine/solutions-data';
   import { kefineLocaleText } from '$lib/constants/kefine-locale';
   import type { SolverHistoryTask } from '$lib/components/kefine/kefine-solver-history';
 
@@ -124,6 +123,14 @@
   const metricsById = $derived(
     new Map(defaultMetrics.map((metric) => [metric.solverId, metric]))
   );
+
+  const visibleMetrics = $derived.by<SolutionMetric[]>(() => {
+    const metrics = solutions
+      .map((solution) => metricsById.get(solution.id))
+      .filter((metric): metric is SolutionMetric => Boolean(metric));
+
+    return metrics.length > 0 ? metrics : defaultMetrics;
+  });
 
   function formatPrice(value: number | undefined): string {
     if (value === undefined || Number.isNaN(value)) return '—';
@@ -372,8 +379,8 @@
           style="cursor: pointer;"
         >
           <SolutionMetricsMini
-            metrics={defaultMetrics}
-            activeSolverId={solutions[0]?.id ?? '5'}
+            metrics={visibleMetrics}
+            activeSolverId={solutions[0]?.id ?? visibleMetrics[0]?.solverId ?? '5'}
             project={solutions[0]?.project}
             slug={solutions[0]?.slug}
           />
@@ -383,8 +390,8 @@
       <!-- Charts Focused Mode -->
       <div class="charts-main" onclick={() => (chartsFocused = false)} style="cursor: pointer;">
         <SolutionMetricsBlock
-          metrics={defaultMetrics}
-          activeSolverId={solutions[0]?.id ?? '5'}
+          metrics={visibleMetrics}
+          activeSolverId={solutions[0]?.id ?? visibleMetrics[0]?.solverId ?? '5'}
           title={localeText.solversView.metricsTitle}
           subtitle={localeText.solversView.metricsSubtitle}
         />
