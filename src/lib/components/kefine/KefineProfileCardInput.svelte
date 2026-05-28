@@ -1,5 +1,6 @@
 <script lang="ts">
   import Icon from '@iconify/svelte';
+  import { kefineLocaleText } from '$lib/constants/kefine-locale';
   import { getCardBrandPresentation } from '$lib/profile/profile-accounts';
   import type { ProfileCardVerification } from '$lib/types/user';
 
@@ -30,6 +31,7 @@
   } = $props();
 
   const brandPresentation = $derived(getCardBrandPresentation(cardNumber));
+  const localeText = $derived($kefineLocaleText);
 </script>
 
 <section class="profile-card-input-card">
@@ -51,7 +53,7 @@
       inputmode="numeric"
       maxlength="19"
       placeholder="0000 0000 0000 0000"
-      aria-label="Bank card number"
+      aria-label={localeText.profile.cardNumberAria}
     />
     <lefine-text>{holderName}</lefine-text>
   </label>
@@ -69,8 +71,8 @@
 
   {#if status}
     <lefine-box class="profile-card-status" data-status={status.status}>
-      <strong>{status.bankName ?? 'Unknown bank'}</strong>
-      <lefine-text>{status.countryName ?? 'Unknown country'} · BIN {status.bin}</lefine-text>
+      <strong>{status.bankName ?? localeText.profile.unknownBank}</strong>
+      <lefine-text>{status.countryName ?? localeText.profile.unknownCountry} · BIN {status.bin}</lefine-text>
       {#if status.rejectionReason}
         <small>{status.rejectionReason}</small>
       {/if}

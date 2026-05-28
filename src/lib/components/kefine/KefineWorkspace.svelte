@@ -2770,16 +2770,22 @@
           solverSearchActive={solverSearchActive}
           solverSearchText={solverSearchText}
           solverSearchLabel={localeText.create.solverSearchLabel}
+          solverSearchCompletedLabel={localeText.create.solverSearchCompleted}
           solverLabel={localeText.labels.solver}
           matchedOrders={matchedOrders}
           isSearching={draft.description.trim().length > 0}
           matchedTasksLabel={localeText.create.matchedTasks}
           addFileLabel={localeText.create.addFile}
           addExecutionEstimateLabel={localeText.create.addExecutionEstimate}
+          addTagLabel={localeText.create.richEditorAddTag}
+          tagPlaceholderLabel={localeText.create.richEditorTagPlaceholder}
+          removeTagLabel={localeText.create.richEditorRemoveTag}
           fileCountLabel={localeText.create.fileCount}
           composerHints={localeText.create.composerHints}
           openTaskLabel={localeText.labels.openOrderLink}
           relatedItemsLabel={localeText.labels.relatedItems}
+          createServiceLabel={localeText.create.transformToService}
+          serviceVariablesLabel={localeText.create.serviceVariables}
           executionEstimateLabel={localeText.labels.executionEstimate}
           deleteTaskLabel={localeText.buttons.delete}
           onSubmit={handleSubmit}
@@ -3080,8 +3086,8 @@
     title={localeText.auth.privateKeyTitle}
     description={localeText.auth.privateKeyDescription}
     value={privateKeyInput}
-    placeholder="pqsk_... or -----BEGIN PRIVATE KEY-----"
-    submitLabel="Sign"
+    placeholder={localeText.auth.privateKeyPlaceholder}
+    submitLabel={localeText.auth.privateKeySignLabel}
     closeLabel={localeText.buttons.closeDialog}
     generateLabel={localeText.auth.privateKeyGenerateLabel}
     onClose={() => { privateKeyDialogOpen = false; }}

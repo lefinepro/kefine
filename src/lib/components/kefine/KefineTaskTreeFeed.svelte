@@ -1,13 +1,18 @@
 <script lang="ts">
   import Icon from '@iconify/svelte';
+  import { kefineLocaleText } from '$lib/constants/kefine-locale';
   import KefineTaskCloneMenu from '$lib/components/kefine/KefineTaskCloneMenu.svelte';
   import KefineTaskSettingsMenu from '$lib/components/kefine/KefineTaskSettingsMenu.svelte';
-  let KefineRichTaskEditorDialog: any;
-  import('$lib/components/kefine/KefineRichTaskEditorDialog.svelte').then(m => KefineRichTaskEditorDialog = m.default);
+  let KefineRichTaskEditorDialog: any = $state(null);
+  import('$lib/components/kefine/KefineRichTaskEditorDialog.svelte').then((m) => {
+    KefineRichTaskEditorDialog = m.default;
+  });
 
   async function loadProsekitIfNeeded() {
     // trigger load inside dialog module if needed
-    const mod = await import('$lib/components/kefine/KefineRichTaskEditorDialog.svelte');
+    const mod = await import('$lib/components/kefine/KefineRichTaskEditorDialog.svelte') as unknown as {
+      loadProsekit?: () => Promise<void>;
+    };
     if (mod.loadProsekit) await mod.loadProsekit();
   }
   import {
@@ -72,6 +77,10 @@
     interimResult?: string;
     finalResult?: string;
     resultTitle?: string;
+    systemInstruction?: string;
+    planEditor?: string;
+    closePlanEditor?: string;
+    planPlaceholder?: string;
     expandBranch?: string;
     collapseBranch?: string;
     showHiddenBranches?: string;
@@ -117,6 +126,7 @@
   let branchVisibilityDraftByNodeId = $state<Record<string, TaskBranchVisibility>>({});
   let planEditorOpen = $state(false);
   let planDraft = $state('');
+  const localeText = $derived($kefineLocaleText);
   type ThreadUiStorageState = { collapsed: Record<string, boolean>; hiddenVisible: Record<string, boolean> };
 
   const THREAD_UI_STORAGE_KEY = 'kefine-task-thread-ui-v1';
@@ -820,8 +830,8 @@
                 value={commentDrafts[node.id] ?? ''}
                 description={labels.richEditorDescription}
                 placeholder={editorPlaceholder(node)}
-                onApply={(nextValue) => updateCommentDraft(node.id, nextValue)}
-                onStateChange={(state) => updateCommentEditorState(node.id, state)}
+                onApply={(nextValue: string) => updateCommentDraft(node.id, nextValue)}
+                onStateChange={(state: EditorDraftState) => updateCommentEditorState(node.id, state)}
                 onSubmit={() => void submitComment(node)}
                 onCancel={() => closeNodeComposer(node)}
               />
@@ -843,8 +853,8 @@
                 value={commentDrafts[node.id] ?? ''}
                 description={labels.richEditorDescription}
                 placeholder={editorPlaceholder(node)}
-                onApply={(nextValue) => updateCommentDraft(node.id, nextValue)}
-                onStateChange={(state) => updateCommentEditorState(node.id, state)}
+                onApply={(nextValue: string) => updateCommentDraft(node.id, nextValue)}
+                onStateChange={(state: EditorDraftState) => updateCommentEditorState(node.id, state)}
               />
               <kefine-thread-comment-actions>
                 {#if isCommentSubmitting(node)}
@@ -857,7 +867,7 @@
                       checked={systemInstructionEnabledByNodeId[node.id] === true}
                       onchange={(event) => toggleSystemInstruction(node.id, (event.currentTarget as HTMLInputElement).checked)}
                     />
-                    <lefine-text>System instruction</lefine-text>
+                    <lefine-text>{labels.systemInstruction ?? localeText.labels.systemInstruction}</lefine-text>
                   </label>
                 {/if}
                 <button
@@ -889,7 +899,7 @@
         </kefine-thread-comment-entry>
 
         {#if isExchangeSearchNode(node) && solutions.length > 0}
-          <div class="thread-solutions" data-testid="kefine-thread-solutions">
+          <lefine-box class="thread-solutions" data-testid="kefine-thread-solutions">
             {#each solutions as solution, si (solution.id)}
               <article
                 class="thread-solution-card"
@@ -904,7 +914,7 @@
                 </header>
                 <p class="thread-solution-desc">{solution.description}</p>
                 {#if solution.diffs?.length}
-                  <lef-file-list aria-label="Files">
+                  <lef-file-list aria-label={localeText.solversView.filesAria}>
                     {#each solution.diffs as diff}
                       <lef-file-row>
                         <lef-file-name>{diff.file}</lef-file-name>
@@ -923,8 +933,8 @@
                     <button
                       type="button"
                       class="thread-solution-view-btn"
-                      aria-label="View"
-                      title="View"
+                      aria-label={localeText.solversView.view}
+                      title={localeText.solversView.view}
                       onclick={() => onViewSolution?.(solution.id)}
                     >
                       <svg class="view-solution-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -937,17 +947,17 @@
                     <button
                       type="button"
                       class="thread-solution-apply-btn"
-                      aria-label="Apply solution"
-                      title="Apply solution"
+                      aria-label={localeText.solversView.apply}
+                      title={localeText.solversView.apply}
                       onclick={() => onApplySolution(solution.id)}
                     >
-                      Apply
+                      {localeText.solversView.apply}
                     </button>
                   {/if}
                 </lef-card-actions>
               </article>
             {/each}
-          </div>
+          </lefine-box>
         {/if}
 
       {/if}
@@ -1040,11 +1050,11 @@
   </kefine-thread>
 
   {#if planEditorOpen && currentOrder}
-    <kefine-plan-editor role="dialog" aria-modal="true" aria-label="Edit PLAN.org">
+    <kefine-plan-editor role="dialog" aria-modal="true" aria-label={labels.planEditor ?? localeText.labels.planEditor}>
       <kefine-plan-editor-panel>
         <kefine-plan-editor-head>
           <strong>PLAN.org</strong>
-          <button type="button" data-part="icon-close" aria-label="Close PLAN.org editor" onclick={closePlanEditor}>
+          <button type="button" data-part="icon-close" aria-label={labels.closePlanEditor ?? localeText.labels.closePlanEditor} onclick={closePlanEditor}>
             <Icon icon="mdi:close" width="18" height="18" aria-hidden="true" />
           </button>
         </kefine-plan-editor-head>
@@ -1055,13 +1065,13 @@
           mentionCandidates={mentionCandidates}
           value={planDraft}
           description={labels.richEditorDescription}
-          placeholder="* Plan"
-          onApply={(nextValue) => {
+          placeholder={labels.planPlaceholder ?? localeText.labels.planPlaceholder}
+          onApply={(nextValue: string) => {
             planDraft = nextValue;
           }}
         />
         <kefine-plan-editor-actions>
-          <button type="button" data-kind="secondary" onclick={closePlanEditor}>Cancel</button>
+          <button type="button" data-kind="secondary" onclick={closePlanEditor}>{localeText.buttons.cancel}</button>
           <button type="button" data-kind="primary" disabled={!planDraft.trim()} onclick={() => void savePlanEditor()}>
             {labels.apply}
           </button>

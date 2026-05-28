@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { kefineLocaleText } from '$lib/constants/kefine-locale';
+
   type FileEntry = {
     file: string;
     added: number;
@@ -15,6 +17,9 @@
     onSelect: (file: string) => void;
   } = $props();
 
+  const localeText = $derived($kefineLocaleText);
+  const labels = $derived(localeText.solutionView);
+
   function iconFor(filename: string): 'go' | 'yaml' | 'rust' | 'mod' | 'doc' {
     const lower = filename.toLowerCase();
     if (lower.endsWith('go.mod')) return 'mod';
@@ -25,9 +30,9 @@
   }
 </script>
 
-<lef-file-outline aria-label="Modified files outline">
+<lef-file-outline aria-label={labels.modifiedFilesOutline}>
   <lef-file-outline-head>
-    <strong>Files</strong>
+    <strong>{labels.files}</strong>
     <lefine-text>{files.length}</lefine-text>
   </lef-file-outline-head>
   <lef-file-outline-list role="list">

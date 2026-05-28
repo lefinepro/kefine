@@ -1,6 +1,7 @@
 <script lang="ts">
   import { browser } from '$app/environment';
   import Icon from '@iconify/svelte';
+  import { kefineLocaleText } from '$lib/constants/kefine-locale';
   import {
     isVpnOrder,
     readPaymentQuote,
@@ -107,6 +108,8 @@
     onAnonymousLogin: () => void;
   } = $props();
 
+  const localeText = $derived($kefineLocaleText);
+  const paymentCopy = $derived(localeText.payment);
   let promoCode = $state('');
   let promoFeedback = $state('');
   let promoFeedbackTone = $state<'neutral' | 'success' | 'error'>('neutral');
@@ -121,10 +124,10 @@
     const amount = effectivePaymentAmount;
     const currency = effectivePaymentCurrency;
     const formattedAmount = Number.isInteger(amount) ? String(amount) : amount.toFixed(2).replace(/\.?0+$/, '');
-    return `Pay ${formattedAmount} ${currency}`.trim();
+    return paymentCopy.payAmount(formattedAmount, currency);
   });
   const quoteReady = $derived(paymentQuote !== null && !paymentLoading);
-  const paymentRequestLabel = $derived(paymentQuote?.paymentTokenSymbol ? `EVM ${paymentQuote.paymentTokenSymbol}` : 'EVM payment');
+  const paymentRequestLabel = $derived(paymentQuote?.paymentTokenSymbol ? `EVM ${paymentQuote.paymentTokenSymbol}` : paymentCopy.evmPayment);
   const qrPayload = $derived(paymentQuote?.paymentAddress ?? null);
   const qrImageUrl = $derived.by(() => {
     if (!qrPayload) {
@@ -139,7 +142,7 @@
 
     return `https://api.qrserver.com/v1/create-qr-code/?${params.toString()}`;
   });
-  const compactPaymentAddress = $derived(paymentQuote?.paymentAddress || 'Waiting for crater payment address');
+  const compactPaymentAddress = $derived(paymentQuote?.paymentAddress || paymentCopy.waitingAddress);
 
   function formatAmount(amount: number | undefined) {
     if (amount === undefined) return '0';
@@ -177,7 +180,7 @@
       effectiveAmount,
       promoCode: normalizedCode,
       promoApplied,
-      promoMessage: normalizedCode ? (promoApplied ? 'Promo applied. VPN delivery is now unlocked.' : 'Promo code not recognized.') : undefined,
+      promoMessage: normalizedCode ? (promoApplied ? paymentCopy.promoAppliedMessage : paymentCopy.promoWrongMessage) : undefined,
       strikeOriginalPrice: promoApplied && originalAmount > 0,
       freeUnlock: promoApplied,
       paymentAddress: paymentQuote.paymentAddress,
@@ -194,7 +197,7 @@
   async function readJsonOrThrow(response: Response) {
     const body = await response.json().catch(() => null);
     if (!response.ok) {
-      throw new Error((body && typeof body === 'object' && 'error' in body && typeof body.error === 'string' ? body.error : null) ?? 'Request failed');
+      throw new Error((body && typeof body === 'object' && 'error' in body && typeof body.error === 'string' ? body.error : null) ?? paymentCopy.requestFailed);
     }
 
     return body;
@@ -214,7 +217,7 @@
       const parsed = readPaymentQuote(body);
 
       if (!parsed) {
-        throw new Error('Payment quote is invalid.');
+        throw new Error(paymentCopy.invalidQuote);
       }
 
       paymentQuote = parsed;
@@ -229,7 +232,7 @@
         paymentQuote = fallback;
         paymentError = '';
       } else {
-        paymentError = error instanceof Error ? error.message : 'Failed to load payment quote.';
+        paymentError = error instanceof Error ? error.message : paymentCopy.loadQuoteFailed;
       }
     } finally {
       paymentLoading = false;
@@ -263,7 +266,7 @@
       const parsed = readPaymentQuote(body);
 
       if (!parsed) {
-        throw new Error('Payment quote is invalid.');
+        throw new Error(paymentCopy.invalidQuote);
       }
 
       paymentQuote = parsed;
@@ -308,7 +311,7 @@
 
     try {
       if (paymentQuote.paymentAddress.toLowerCase() === ZERO_EVM_ADDRESS) {
-        throw new Error('Payment recipient address is not configured on the server.');
+        throw new Error(paymentCopy.recipientMissing);
       }
 
       await appKitModule.payWithReownErc20Transfer({
@@ -325,7 +328,7 @@
         await appKitModule.openAppKit();
       }
 
-      paymentError = error instanceof Error ? error.message : 'Failed to complete Reown payment.';
+      paymentError = error instanceof Error ? error.message : paymentCopy.paymentFailed;
     } finally {
       paySubmitting = false;
     }
@@ -353,23 +356,23 @@
           <lefine-box class="kefine-section-head">
             <p>{paymentRequestLabel}</p>
             {#if paymentQuote?.paymentTokenSymbol}
-              <lefine-text class="kefine-payment-chip">{paymentQuote.paymentTokenSymbol} on chain {paymentQuote.paymentChainId}</lefine-text>
+              <lefine-text class="kefine-payment-chip">{paymentCopy.onChain(paymentQuote.paymentTokenSymbol, paymentQuote.paymentChainId)}</lefine-text>
             {/if}
           </lefine-box>
 
           <lefine-box class="kefine-payment-qr-surface">
             {#if qrImageUrl}
-              <img class="kefine-payment-qr-image" src={qrImageUrl} alt="Payment QR code" loading="eager" />
+              <img class="kefine-payment-qr-image" src={qrImageUrl} alt={paymentCopy.qrAlt} loading="eager" />
             {:else}
               <lefine-box class="kefine-payment-qr-placeholder">
                 <Icon icon="mdi:qrcode" width="72" height="72" aria-hidden="true" />
-                <small>QR will appear when payment details are ready.</small>
+                <small>{paymentCopy.qrPending}</small>
               </lefine-box>
             {/if}
           </lefine-box>
 
           <lefine-box class="kefine-payment-address-block">
-            <lefine-text class="kefine-payment-address-label">EVM address</lefine-text>
+            <lefine-text class="kefine-payment-address-label">{paymentCopy.evmAddress}</lefine-text>
             <code>{compactPaymentAddress}</code>
           </lefine-box>
         </lefine-box>
@@ -413,7 +416,7 @@
                 data-testid="kefine-payment-promo-input"
               />
               <button type="button" data-variant="primary" onclick={applyPromoCode} disabled={promoApplying}>
-                {promoApplying ? 'Applying...' : buttons.apply}
+                {promoApplying ? paymentCopy.applying : buttons.apply}
               </button>
             </lefine-box>
             {#if promoFeedback}
@@ -428,7 +431,7 @@
           <lefine-box class="kefine-payment-action-row">
             <button type="button" data-variant="primary" onclick={handlePrimaryPaymentAction} disabled={paySubmitting || (!quoteReady && !paymentError)}>
               {#if paySubmitting}
-                Processing...
+                {paymentCopy.processing}
               {:else if paymentQuote?.freeUnlock}
                 {buttons.openResult}
               {:else}
@@ -446,12 +449,12 @@
     <section class="kefine-result-overlay" data-testid="kefine-result-panel">
       <lefine-box class="kefine-result-shell">
         <lefine-box class="kefine-result-header">
-          <button type="button" class="kefine-flow-back" aria-label="Back" onclick={onBack}>←</button>
+          <button type="button" class="kefine-flow-back" aria-label={paymentCopy.back} onclick={onBack}>←</button>
           <lefine-box class="kefine-result-title-block">
-            <p>Completed your task: {currentOrder?.title ?? '-'}</p>
+            <p>{paymentCopy.completedTask(currentOrder?.title ?? '-')}</p>
           </lefine-box>
           <lefine-box class="kefine-result-actions">
-            <button type="button" data-variant="ghost" onclick={onOpenStages}>View stages</button>
+            <button type="button" data-variant="ghost" onclick={onOpenStages}>{paymentCopy.viewStages}</button>
             <button type="button" data-variant="ghost" onclick={onRejectResult}>{buttons.rejectResult}</button>
           </lefine-box>
         </lefine-box>

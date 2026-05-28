@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { kefineLocaleText } from '$lib/constants/kefine-locale';
+
   type Comment = {
     id: string;
     text: string;
@@ -20,6 +22,8 @@
     onSubmitCorrection: (text: string) => void;
   } = $props();
 
+  const localeText = $derived($kefineLocaleText);
+  const labels = $derived(localeText.solutionView);
   let draftCorrection = $state('');
 
   function handleSubmit(event: Event) {
@@ -39,9 +43,9 @@
 <lef-task-panel>
   <lef-task-card>
     <lef-task-head>
-      <strong>Task</strong>
+      <strong>{labels.task}</strong>
       {#if comments.length > 0}
-        <lefine-text>{comments.length} {comments.length === 1 ? 'comment' : 'comments'}</lefine-text>
+        <lefine-text>{comments.length} {comments.length === 1 ? labels.comment : labels.comments}</lefine-text>
       {/if}
     </lef-task-head>
     {#if description && description !== title}
@@ -59,11 +63,11 @@
               <lef-comment-meta>
                 <lefine-text>{formatTime(comment.timestamp)}</lefine-text>
                 {#if comment.pending}
-                  <lef-correction-arrow aria-label="Correction in progress" title="Correction is being applied">
+                  <lef-correction-arrow aria-label={labels.correctionInProgress} title={labels.correctionBeingApplied}>
                     <lef-arrow-track>
                       <lef-arrow-tip>➵</lef-arrow-tip>
                     </lef-arrow-track>
-                    <lefine-text>applying…</lefine-text>
+                    <lefine-text>{labels.applying}</lefine-text>
                   </lef-correction-arrow>
                 {/if}
               </lef-comment-meta>
@@ -76,17 +80,17 @@
     <form class="lef-correction-form" onsubmit={handleSubmit}>
       <textarea
         class="lef-correction-input"
-        placeholder="Send a correction…"
+        placeholder={labels.sendCorrection}
         bind:value={draftCorrection}
         rows="1"
         disabled={isCorrectingTask}
-        aria-label="Send a correction"
+        aria-label={labels.sendCorrection}
       ></textarea>
       <button
         type="submit"
         class="lef-correction-submit"
         disabled={isCorrectingTask || !draftCorrection.trim()}
-        aria-label="Submit correction"
+        aria-label={labels.submitCorrection}
       >
         {#if isCorrectingTask}
           <lef-correction-arrow aria-hidden="true">
@@ -95,7 +99,7 @@
             </lef-arrow-track>
           </lef-correction-arrow>
         {:else}
-          <lefine-text>Send</lefine-text>
+          <lefine-text>{labels.send}</lefine-text>
         {/if}
       </button>
     </form>

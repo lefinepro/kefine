@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { kefineLocaleText } from '$lib/constants/kefine-locale';
   import {
     bodyFromFields,
     createBodyFields,
@@ -35,12 +36,15 @@
     sampleTestDetail?: string;
   } = $props();
 
-  const testCases: TestCase[] = [
+  const localeText = $derived($kefineLocaleText);
+  const labels = $derived(localeText.solutionView.testing);
+
+  const testCases = $derived.by<TestCase[]>(() => [
     {
       id: '1',
-      label: 'Test 1',
-      title: 'POST / returns proxy ready',
-      detail: 'ping=hello expects 200 with proxy ready',
+      label: labels.testLabel(1),
+      title: labels.sampleTitles.proxyReady,
+      detail: labels.sampleDetails.proxyReady,
       method: 'POST',
       endpoint: '/',
       body: '{\n  "ping": "hello"\n}',
@@ -48,9 +52,9 @@
     },
     {
       id: '2',
-      label: 'Test 2',
-      title: 'GET /health returns status ok',
-      detail: 'expects 200 with status=ok',
+      label: labels.testLabel(2),
+      title: labels.sampleTitles.health,
+      detail: labels.sampleDetails.health,
       method: 'GET',
       endpoint: '/health',
       body: '',
@@ -58,9 +62,9 @@
     },
     {
       id: '3',
-      label: 'Test 3',
-      title: 'PUT /config updates timeout',
-      detail: 'timeout=30 expects 200 with applied=true',
+      label: labels.testLabel(3),
+      title: labels.sampleTitles.config,
+      detail: labels.sampleDetails.config,
       method: 'PUT',
       endpoint: '/config',
       body: '{\n  "timeout": 30,\n  "retries": 3\n}',
@@ -68,9 +72,9 @@
     },
     {
       id: '4',
-      label: 'Test 4',
-      title: 'DELETE /cache clears all entries',
-      detail: 'expects 204 no content',
+      label: labels.testLabel(4),
+      title: labels.sampleTitles.cache,
+      detail: labels.sampleDetails.cache,
       method: 'DELETE',
       endpoint: '/cache',
       body: '',
@@ -78,9 +82,9 @@
     },
     {
       id: '5',
-      label: 'Test 5',
-      title: 'PATCH /users/1 updates name',
-      detail: 'name=alice expects 200 with updated fields',
+      label: labels.testLabel(5),
+      title: labels.sampleTitles.user,
+      detail: labels.sampleDetails.user,
       method: 'PATCH',
       endpoint: '/users/1',
       body: '{\n  "name": "alice"\n}',
@@ -88,17 +92,18 @@
     },
     {
       id: '6',
-      label: 'Test 6',
-      title: 'POST /proxy forwards request',
-      detail: 'target=http://example.com expects 200 with body',
+      label: labels.testLabel(6),
+      title: labels.sampleTitles.proxyForward,
+      detail: labels.sampleDetails.proxyForward,
       method: 'POST',
       endpoint: '/proxy',
       body: '{\n  "target": "http://example.com",\n  "method": "GET"\n}',
       response: '{\n  "status": 200,\n  "body": "<html>Hello</html>",\n  "headers": {"content-type": "text/html"}\n}'
     }
-  ];
+  ]);
 
-  let activeTest = $state<TestCase>(testCases[0]);
+  let activeTestId = $state('1');
+  const activeTest = $derived(testCases.find((tc) => tc.id === activeTestId) ?? testCases[0]);
 
   let method = $state<Method>('POST');
   let methodOpen = $state(false);
@@ -202,11 +207,11 @@
           class="method-trigger"
           style="color: {methodColors[method]}; background: {methodBgColors[method]};"
           onclick={() => (methodOpen = !methodOpen)}
-          aria-label="HTTP method"
+          aria-label={labels.httpMethodAria}
           aria-expanded={methodOpen}
         >
-          <span class="method-label">{method}</span>
-          <span class="method-chevron" class:open={methodOpen}>▾</span>
+          <lefine-text class="method-label">{method}</lefine-text>
+          <lefine-text class="method-chevron" class:open={methodOpen}>▾</lefine-text>
         </button>
         {#if methodOpen}
           <ul class="method-dropdown" role="listbox">
@@ -218,7 +223,7 @@
                 style="color: {methodColors[m]}"
                 onclick={() => selectMethod(m)}
               >
-                <span class="method-dot" style="background: {methodColors[m]}"></span>
+                <lefine-box class="method-dot" style="background: {methodColors[m]}"></lefine-box>
                 {m}
               </li>
             {/each}
@@ -229,10 +234,10 @@
         class="lef-url-input"
         type="text"
         bind:value={url}
-        aria-label="Request URL"
+        aria-label={labels.requestUrlAria}
         spellcheck="false"
       />
-      <button type="submit" class="lef-send-btn" disabled={isSending} aria-label="Send request">
+      <button type="submit" class="lef-send-btn" disabled={isSending} aria-label={labels.sendRequestAria}>
         {#if isSending}
           <svg class="rocking-flask" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M9 3h6"/>
@@ -240,7 +245,7 @@
             <path d="M7 16h10"/>
           </svg>
         {:else}
-          <lefine-text>Send</lefine-text>
+          <lefine-text>{localeText.solutionView.send}</lefine-text>
         {/if}
       </button>
     </lef-testing-row>
@@ -248,8 +253,8 @@
     <lef-testing-split>
       <lef-testing-pane>
         <lef-testing-pane-head>
-          <strong>Request body</strong>
-          <lef-body-mode role="tablist" aria-label="Request body mode">
+          <strong>{labels.requestBody}</strong>
+          <lef-body-mode role="tablist" aria-label={labels.requestBodyModeAria}>
             <button
               type="button"
               role="tab"
@@ -257,7 +262,7 @@
               class:lef-body-mode-active={bodyMode === 'form'}
               onclick={() => (bodyMode = 'form')}
             >
-              Form
+              {labels.form}
             </button>
             <button
               type="button"
@@ -266,31 +271,31 @@
               class:lef-body-mode-active={bodyMode === 'json'}
               onclick={() => (bodyMode = 'json')}
             >
-              {'{} JSON'}
+              {labels.json}
             </button>
           </lef-body-mode>
         </lef-testing-pane-head>
         {#if bodyMode === 'form'}
-          <lef-body-form aria-label="Request body form">
+          <lef-body-form aria-label={labels.requestBodyFormAria}>
             {#each bodyFields as field (field.id)}
               <lef-body-field>
                 <label>
-                  <lefine-text>Key</lefine-text>
+                  <lefine-text>{labels.key}</lefine-text>
                   <input
                     type="text"
                     value={field.key}
                     spellcheck="false"
-                    aria-label="Request body field key"
+                    aria-label={labels.requestBodyFieldKeyAria}
                     oninput={(event) => updateBodyField(field.id, { key: readInput(event) })}
                   />
                 </label>
                 <label>
-                  <lefine-text>Value</lefine-text>
+                  <lefine-text>{labels.value}</lefine-text>
                   <input
                     type="text"
                     value={field.value}
                     spellcheck="false"
-                    aria-label={`Request body ${field.key || 'field'} value`}
+                    aria-label={labels.requestBodyFieldValueAria(field.key)}
                     oninput={(event) => updateBodyField(field.id, { value: readInput(event) })}
                   />
                 </label>
@@ -302,7 +307,7 @@
             class="lef-body-input"
             value={body}
             spellcheck="false"
-            aria-label="Request body JSON"
+            aria-label={labels.requestBodyJsonAria}
             oninput={handleJsonInput}
           ></textarea>
         {/if}
@@ -310,10 +315,10 @@
 
       <lef-testing-pane>
         <lef-testing-pane-head>
-          <strong>Response</strong>
+          <strong>{labels.response}</strong>
           <lef-pane-head-right>
             {#if responseFields !== null}
-              <lef-body-mode role="tablist" aria-label="Response body mode">
+              <lef-body-mode role="tablist" aria-label={labels.responseBodyModeAria}>
                 <button
                   type="button"
                   role="tab"
@@ -321,7 +326,7 @@
                   class:lef-body-mode-active={responseMode === 'form'}
                   onclick={() => (responseMode = 'form')}
                 >
-                  Form
+                  {labels.form}
                 </button>
                 <button
                   type="button"
@@ -330,7 +335,7 @@
                   class:lef-body-mode-active={responseMode === 'json'}
                   onclick={() => (responseMode = 'json')}
                 >
-                  {'{} JSON'}
+                  {labels.json}
                 </button>
               </lef-body-mode>
             {/if}
@@ -339,35 +344,35 @@
                 <lefine-text>{status}</lefine-text>
               </lef-testing-status>
             {:else}
-              <lefine-text>not run</lefine-text>
+              <lefine-text>{labels.notRun}</lefine-text>
             {/if}
           </lef-pane-head-right>
         </lef-testing-pane-head>
         {#if response === null}
           <lef-response-box class="lef-response-box--empty">
-            <lefine-text>Press Send to see a sample response.</lefine-text>
+            <lefine-text>{labels.pressSend}</lefine-text>
           </lef-response-box>
         {:else if responseFields !== null && responseMode === 'form'}
-          <lef-body-form aria-label="Response body form">
+          <lef-body-form aria-label={labels.responseBodyFormAria}>
             {#each responseFields as field (field.id)}
               <lef-body-field>
                 <label>
-                  <lefine-text>Key</lefine-text>
+                  <lefine-text>{labels.key}</lefine-text>
                   <input
                     type="text"
                     value={field.key}
                     spellcheck="false"
-                    aria-label="Response body field key"
+                    aria-label={labels.responseBodyFieldKeyAria}
                     readonly
                   />
                 </label>
                 <label>
-                  <lefine-text>Value</lefine-text>
+                  <lefine-text>{labels.value}</lefine-text>
                   <input
                     type="text"
                     value={field.value}
                     spellcheck="false"
-                    aria-label={`Response body ${field.key || 'field'} value`}
+                    aria-label={labels.responseBodyFieldValueAria(field.key)}
                     readonly
                   />
                 </label>
@@ -388,7 +393,7 @@
           type="button"
           class="lef-testing-case"
           class:lef-testing-case--active={tc.id === activeTest.id}
-          onclick={() => (activeTest = tc)}
+          onclick={() => (activeTestId = tc.id)}
         >
           <lefine-text>{tc.label}</lefine-text>
           <strong>{tc.title}</strong>

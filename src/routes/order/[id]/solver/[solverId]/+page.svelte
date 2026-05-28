@@ -4,6 +4,7 @@
   import '$lib/kefine/jetbrains-hljs.css';
   import { solutionsStore } from '$lib/kefine/solutions-store';
   import { defaultSolutions } from '$lib/kefine/solutions-data';
+  import { kefineLocaleText } from '$lib/constants/kefine-locale';
   import SolutionCodeEditor from '$lib/components/kefine/SolutionCodeEditor.svelte';
   import SolutionTopbar from '$lib/components/kefine/SolutionTopbar.svelte';
   import SolutionTaskPanel from '$lib/components/kefine/SolutionTaskPanel.svelte';
@@ -39,6 +40,8 @@
   let isCorrectingTask = $state(false);
   let isMerged = $state(false);
   let correctionTimer: ReturnType<typeof setTimeout> | null = null;
+  const localeText = $derived($kefineLocaleText);
+  const labels = $derived(localeText.solutionView);
 
   onMount(() => {
     if (stored.length === 0) {
@@ -62,7 +65,7 @@
       ?? null
   );
 
-  const taskTitle = $derived(solution?.title ?? 'Solution');
+  const taskTitle = $derived(solution?.title ?? labels.fallbackTitle);
   const taskDescription = $derived(solution?.description ?? '');
 
   const hasCorrection = $derived(Boolean(solution?.correctedCodeLines));
@@ -149,7 +152,7 @@
 </script>
 
 <svelte:head>
-  <title>{solution ? `${solution.solver} | Lefine` : 'Solution | Lefine'}</title>
+  <title>{solution ? `${solution.solver} | Lefine` : `${labels.fallbackTitle} | Lefine`}</title>
 </svelte:head>
 
 <lef-solver-page>
@@ -172,19 +175,19 @@
         {#if hasCorrection}
           <lef-correction-status data-active={isCorrectingTask} data-show-corrected={showCorrected}>
             {#if isCorrectingTask}
-              <lef-correction-arrow aria-label="Applying correction">
+              <lef-correction-arrow aria-label={labels.correctionApplying}>
                 <lef-arrow-track>
                   <lef-arrow-tip>➵</lef-arrow-tip>
                 </lef-arrow-track>
-                <lefine-text>Applying correction…</lefine-text>
+                <lefine-text>{labels.correctionApplying}</lefine-text>
               </lef-correction-arrow>
             {:else if showCorrected}
               <lef-correction-applied>
-                <lefine-text>Showing corrected code</lefine-text>
+                <lefine-text>{labels.correctionApplied}</lefine-text>
               </lef-correction-applied>
             {:else}
               <lef-correction-pending>
-                <lefine-text>Original code (correction pending)</lefine-text>
+                <lefine-text>{labels.correctionPending}</lefine-text>
               </lef-correction-pending>
             {/if}
           </lef-correction-status>
@@ -249,7 +252,7 @@
       {/if}
     </lef-solver-grid>
   {:else}
-    <lef-empty-state>Solution not found</lef-empty-state>
+    <lef-empty-state>{labels.emptyState}</lef-empty-state>
   {/if}
 </lef-solver-page>
 

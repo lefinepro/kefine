@@ -77,6 +77,7 @@
   } = $props();
 
   const localeText = $derived($kefineLocaleText);
+  const providerDetails = $derived(localeText.auth.providerDetails);
 
   let drawerEl: HTMLElement | undefined = $state();
 
@@ -132,7 +133,7 @@
   data-authenticated={isAuthenticated}
   data-state={open ? 'open' : 'closed'}
   aria-hidden={!open}
-  onclick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+  onclick={(e: MouseEvent) => { if (e.target === e.currentTarget) onClose(); }}
 >
   {#if !isAuthenticated}
     <kefine-account-auth-grid>
@@ -147,7 +148,7 @@
           <Icon icon="mdi:wallet-outline" width="20" height="20" aria-hidden="true" />
         </kefine-account-auth-card-icon>
         <strong>{browserWalletTitle}</strong>
-        <small>Connect the injected wallet from this browser.</small>
+        <small>{providerDetails.browserWallet}</small>
       </button>
 
       <button
@@ -161,7 +162,7 @@
           <Icon icon="simple-icons:walletconnect" width="20" height="20" aria-hidden="true" />
         </kefine-account-auth-card-icon>
         <strong>{walletConnectTitle}</strong>
-         <small>Scan a WalletConnect QR code with your wallet app.</small>
+         <small>{providerDetails.walletConnect}</small>
        </button>
 
        <button
@@ -175,7 +176,7 @@
            <Icon icon="mdi:email" width="20" height="20" aria-hidden="true" />
          </kefine-account-auth-card-icon>
          <strong>{emailTitle}</strong>
-         <small>Receive a one-time code by email.</small>
+         <small>{providerDetails.emailCode}</small>
        </button>
 
        {#if false}
@@ -190,7 +191,7 @@
           <Icon icon="simple-icons:ton" width="20" height="20" aria-hidden="true" />
         </kefine-account-auth-card-icon>
         <strong>{tonConnectTitle}</strong>
-        <small>Connect a TON wallet through TonConnect.</small>
+        <small>{providerDetails.tonConnect}</small>
       </button>
       {/if}
 
@@ -206,7 +207,7 @@
           <Icon icon="mdi:google" width="20" height="20" aria-hidden="true" />
         </kefine-account-auth-card-icon>
         <strong>{googleTitle}</strong>
-        <small>Continue through the Crystal OAuth callback.</small>
+        <small>{providerDetails.crystal}</small>
       </button>
       {/if}
 
@@ -222,7 +223,7 @@
           <Icon icon="mdi:github" width="20" height="20" aria-hidden="true" />
         </kefine-account-auth-card-icon>
         <strong>{githubTitle}</strong>
-        <small>Sign in with the GitHub identity handled by Crystal.</small>
+        <small>{providerDetails.github}</small>
       </button>
       {/if}
 
@@ -237,7 +238,7 @@
           <Icon icon="mdi:fingerprint" width="20" height="20" aria-hidden="true" />
         </kefine-account-auth-card-icon>
         <strong>{passkeyTitle}</strong>
-        <small>Use a device-bound secure login.</small>
+        <small>{providerDetails.passkey}</small>
       </button>
 
       {#if showPrivateKey}
@@ -252,7 +253,7 @@
             <Icon icon="mdi:key-variant" width="20" height="20" aria-hidden="true" />
           </kefine-account-auth-card-icon>
           <strong>{privateKeyTitle}</strong>
-          <small>Use the generated actor key directly.</small>
+          <small>{providerDetails.privateKey}</small>
         </button>
       {/if}
     </kefine-account-auth-grid>
@@ -281,11 +282,11 @@
               aria-label={signOutLabel}
               title={signOutLabel}
             >
-              <div class="door-scene">
-                <div class="door-frame">
-                  <div class="door"></div>
-                </div>
-              </div>
+              <kefine-door-scene class="door-scene">
+                <kefine-door-frame class="door-frame">
+                  <kefine-door class="door"></kefine-door>
+                </kefine-door-frame>
+              </kefine-door-scene>
             </button>
         </kefine-account-profile-head>
 
@@ -317,14 +318,14 @@
                   <small>{task.status}</small>
                 </lefine-box>
                <kefine-account-task-action>
-                 <span class="kefine-account-task-action__book" title={openTaskLabel}>
-                   <span class="kefine-icon-wrap kefine-icon-wrap--closed">
+                 <lefine-text class="kefine-account-task-action__book" title={openTaskLabel}>
+                   <lefine-text class="kefine-icon-wrap kefine-icon-wrap--closed">
                      <Icon icon="mdi:book-outline" width="16" height="16" aria-hidden="true" />
-                   </span>
-                   <span class="kefine-icon-wrap kefine-icon-wrap--open">
+                   </lefine-text>
+                   <lefine-text class="kefine-icon-wrap kefine-icon-wrap--open">
                      <Icon icon="mdi:book-open-outline" width="16" height="16" aria-hidden="true" />
-                   </span>
-                 </span>
+                   </lefine-text>
+                 </lefine-text>
                </kefine-account-task-action>
              </button>
            {/each}

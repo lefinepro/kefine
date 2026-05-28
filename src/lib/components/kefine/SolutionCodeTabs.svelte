@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { kefineLocaleText } from '$lib/constants/kefine-locale';
+
   type FileEntry = {
     file: string;
     added: number;
@@ -14,9 +16,11 @@
     activeFile: string;
     onSelect: (file: string) => void;
   } = $props();
+
+  const localeText = $derived($kefineLocaleText);
 </script>
 
-<lef-tabs role="tablist" aria-label="Modified files">
+<lef-tabs role="tablist" aria-label={localeText.solutionView.modifiedFilesOutline}>
   {#each files as entry (entry.file)}
     <button
       type="button"

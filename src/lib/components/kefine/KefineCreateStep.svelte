@@ -59,17 +59,22 @@
     solverSearchActive = false,
     solverSearchText = '',
     solverSearchLabel,
+    solverSearchCompletedLabel = 'Completed',
     solverLabel,
     matchedOrders,
     isSearching,
     matchedTasksLabel,
     addFileLabel,
     addExecutionEstimateLabel,
+    addTagLabel = '+ tag',
+    tagPlaceholderLabel = 'tag',
+    removeTagLabel = (tag: string) => `Remove ${tag} tag`,
     fileCountLabel,
     composerHints,
     openTaskLabel,
     relatedItemsLabel,
     createServiceLabel = 'Transform to service',
+    serviceVariablesLabel = 'Service variables',
     deleteTaskLabel,
     onSubmit,
     onQueueTask,
@@ -126,17 +131,22 @@
     solverSearchActive?: boolean;
     solverSearchText?: string;
     solverSearchLabel: string;
+    solverSearchCompletedLabel?: string;
     solverLabel: string;
     matchedOrders: OrderView[];
     isSearching: boolean;
     matchedTasksLabel: string;
     addFileLabel: string;
     addExecutionEstimateLabel: string;
+    addTagLabel?: string;
+    tagPlaceholderLabel?: string;
+    removeTagLabel?: (tag: string) => string;
     fileCountLabel: (count: number) => string;
     composerHints: string;
     openTaskLabel: string;
     relatedItemsLabel: string;
     createServiceLabel?: string;
+    serviceVariablesLabel?: string;
     deleteTaskLabel: string;
     onSubmit: () => void;
     onQueueTask: () => Promise<void> | void;
@@ -1189,7 +1199,7 @@ initialized = true;
             bind:this={tagInput}
             bind:value={tagInputValue}
             data-part="tag-input"
-            placeholder="tag"
+            placeholder={tagPlaceholderLabel}
             maxlength="32"
             onkeydown={handleTagInputKeydown}
             onblur={() => {
@@ -1203,7 +1213,7 @@ initialized = true;
           />
         {:else}
           <button type="button" data-part="composer-chip" data-part-tag="true" onclick={() => { tagEditorOpen = true; }}>
-            <lefine-text>+ tag</lefine-text>
+            <lefine-text>{addTagLabel}</lefine-text>
           </button>
         {/if}
       </kefine-composer-strip>
@@ -1211,7 +1221,7 @@ initialized = true;
       {#if (draft.tags?.length ?? 0) > 0}
         <kefine-tag-strip data-has-tags="true">
           {#each draft.tags ?? [] as tag (`tag-${tag}`)}
-            <button type="button" data-part="tag-pill" onclick={() => removeTag(tag)} aria-label={`Remove ${tag} tag`}>
+            <button type="button" data-part="tag-pill" onclick={() => removeTag(tag)} aria-label={removeTagLabel(tag)}>
               <lefine-text>#{tag}</lefine-text>
               <strong>×</strong>
             </button>
@@ -1289,7 +1299,7 @@ initialized = true;
               </lef-arrow-wrapper>
             {/if}
 
-            <kefine-solver-search-indicator aria-label={taskCompleted ? 'Completed' : solverSearchLabel} title={taskCompleted ? 'Completed' : solverSearchLabel} data-completed={taskCompleted}>
+            <kefine-solver-search-indicator aria-label={taskCompleted ? solverSearchCompletedLabel : solverSearchLabel} title={taskCompleted ? solverSearchCompletedLabel : solverSearchLabel} data-completed={taskCompleted}>
               <kefine-solver-search-dot aria-hidden="true"></kefine-solver-search-dot>
             </kefine-solver-search-indicator>
           </kefine-solver-search-row>
@@ -1330,8 +1340,8 @@ initialized = true;
             {/if}
 
             <kefine-solver-search-indicator
-              aria-label={inProgress ? solverSearchLabel : 'Completed'}
-              title={inProgress ? solverSearchLabel : 'Completed'}
+              aria-label={inProgress ? solverSearchLabel : solverSearchCompletedLabel}
+              title={inProgress ? solverSearchLabel : solverSearchCompletedLabel}
               data-completed={!inProgress}
             >
               <kefine-solver-search-dot aria-hidden="true"></kefine-solver-search-dot>
@@ -1353,6 +1363,7 @@ initialized = true;
               {openTaskLabel}
               {relatedItemsLabel}
               {createServiceLabel}
+              {serviceVariablesLabel}
               {deleteTaskLabel}
               showCreateService={false}
               showDelete={true}

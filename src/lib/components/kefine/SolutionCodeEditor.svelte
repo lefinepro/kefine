@@ -1,5 +1,6 @@
 <script lang="ts">
   import { highlightLines } from '$lib/kefine/solution-highlight';
+  import { kefineLocaleText } from '$lib/constants/kefine-locale';
   import SolutionCodeTabs from './SolutionCodeTabs.svelte';
   import { fade } from 'svelte/transition';
 
@@ -39,6 +40,8 @@
     onSelect: (file: string) => void;
   } = $props();
 
+  const localeText = $derived($kefineLocaleText);
+  const labels = $derived(localeText.solutionView);
   const activeStats = $derived(files.find(f => f.file === activeFile));
 
   let leftHtmlLines = $state<string[]>([]);
@@ -119,16 +122,16 @@
   });
 
   function ariaLabelFor(type: SideRow['type']): string {
-    if (type === 'added') return 'added line';
-    if (type === 'removed') return 'removed line';
-    if (type === 'empty') return 'no corresponding line';
-    return 'unchanged line';
+    if (type === 'added') return labels.addedLine;
+    if (type === 'removed') return labels.removedLine;
+    if (type === 'empty') return labels.emptyLine;
+    return labels.unchangedLine;
   }
 </script>
 
 <lef-code-editor>
   {#if isLoading}
-    <lef-loading>Highlighting code...</lef-loading>
+    <lef-loading>{labels.highlightingCode}</lef-loading>
   {/if}
   <SolutionCodeTabs {files} {activeFile} {onSelect} />
 
@@ -148,16 +151,16 @@
     </lef-code-toolbar>
 
     <lef-code-headers aria-hidden="true">
-      <lef-code-header-cell>Original</lef-code-header-cell>
-      <lef-code-header-cell>Modified</lef-code-header-cell>
+      <lef-code-header-cell>{labels.original}</lef-code-header-cell>
+      <lef-code-header-cell>{labels.modified}</lef-code-header-cell>
     </lef-code-headers>
 
     <lef-code-scroll>
       {#key activeFile}
-        <div transition:fade={{ duration: 160 }}>
+        <lefine-box transition:fade={{ duration: 160 }}>
           <lef-code-split>
             <lef-code-pane>
-              <div class="lef-row-group">
+              <lefine-box class="lef-row-group">
               {#each rows as row, index (index)}
                 <lef-diff-row class:lef-diff-row--changed={row.band !== null}>
                   <lef-side
@@ -171,10 +174,10 @@
                   </lef-side>
                 </lef-diff-row>
               {/each}
-              </div>
+              </lefine-box>
             </lef-code-pane>
             <lef-code-pane>
-              <div class="lef-row-group">
+              <lefine-box class="lef-row-group">
               {#each rows as row, index (index)}
                 <lef-diff-row>
                   <lef-side
@@ -188,10 +191,10 @@
                   </lef-side>
                 </lef-diff-row>
               {/each}
-              </div>
+              </lefine-box>
             </lef-code-pane>
           </lef-code-split>
-        </div>
+        </lefine-box>
       {/key}
     </lef-code-scroll>
   </lef-code-frame>
