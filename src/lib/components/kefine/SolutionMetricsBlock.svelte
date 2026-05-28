@@ -1,6 +1,13 @@
 <script lang="ts">
   import type { SolutionMetric } from '$lib/kefine/solutions-data';
-  import { defaultChartSize, timeSeries, priceSeries, successRateSeries } from '$lib/kefine/solver-charts';
+  import {
+    defaultChartSize,
+    timeSeries,
+    priceSeries,
+    successRateSeries,
+    efficiencySeries,
+    efficiencyValue
+  } from '$lib/kefine/solver-charts';
   import SolutionChartCard from './SolutionChartCard.svelte';
   import { kefineLocaleText } from '$lib/constants/kefine-locale';
 
@@ -19,6 +26,7 @@
   const time = $derived(timeSeries(metrics, activeSolverId));
   const price = $derived(priceSeries(metrics, activeSolverId));
   const success = $derived(successRateSeries(metrics, activeSolverId));
+  const efficiency = $derived(efficiencySeries(metrics, activeSolverId));
 
   const localeText = $derived($kefineLocaleText);
 </script>
@@ -61,6 +69,17 @@
       variant="primary"
       valueFormatter={(v) => `${v.toFixed(0)}%`}
       seriesValue={(m) => m.successRate}
+    />
+
+    <SolutionChartCard
+      title={localeText.solversView.chartEfficiency}
+      unit={localeText.solversView.chartEfficiencyUnit}
+      series={efficiency}
+      metrics={metrics}
+      size={defaultChartSize}
+      variant="alt"
+      valueFormatter={(v) => v.toFixed(0)}
+      seriesValue={(m) => efficiencyValue(m)}
     />
   </lef-metrics-grid>
 </lef-metrics-block>

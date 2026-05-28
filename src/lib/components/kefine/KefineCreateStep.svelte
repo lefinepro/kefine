@@ -616,6 +616,21 @@ initialized = true;
   const afeIntroCard = $derived(afe.cards[0] ?? null);
   const afeStepCards = $derived(afe.cards.slice(1));
 
+  /**
+   * When the user submits a search whose text matches an existing recent order,
+   * we want to animate that existing row to the top and mark it completed — not
+   * render a second "in progress" placeholder row beneath it. This finds such a
+   * duplicate to suppress in the active-search placeholder rendering.
+   */
+  const activeSearchDuplicate = $derived.by(() => {
+    if (!solverSearchActive) return null;
+    const text = solverSearchText.trim().toLowerCase();
+    if (!text) return null;
+    return recentOrders.find((order) => order.title?.toLowerCase().includes(text)) ?? null;
+  });
+
+  const filteredRecentOrders = $derived(recentOrders);
+
   const searchResultHref = $derived.by(() => {
     const first = matchedOrders[0];
     if (first?.actorHandle && (first.shareId ?? first.id)) {
@@ -758,6 +773,7 @@ initialized = true;
       const timer = setTimeout(() => {
         taskCompleted = true;
         isFlying = false;
+        markSearchCompleted(solverSearchText);
         const current = solutionsStore.getAll();
         const rustSolutions = defaultSolutions.filter(s => ['1', '2', '3', '4'].includes(s.id));
         const existingIds = current.map(s => s.id);
@@ -779,7 +795,6 @@ initialized = true;
         taskCompleted = true;
         isFlying = false;
         markSearchCompleted(solverSearchText);
-        addRecentSearch(solverSearchText);
         const current = solutionsStore.getAll();
         const goSolutions = defaultSolutions.filter(s => ['5', '6', '7'].includes(s.id));
         const existingIds = current.map(s => s.id);
@@ -1243,13 +1258,13 @@ initialized = true;
   <!-- Persistent task history on main page (same data as in profile) -->
   {#if (solverSearchActive && solverSearchText?.trim()) || (searchRevealed && recentOrders.length > 0)}
     <section data-part="tasks-list" data-entrance={!listEntranceDone}>
-      {#if solverSearchActive && solverSearchText?.trim()}
+      {#if solverSearchActive && solverSearchText?.trim() && !activeSearchDuplicate}
         <a
           href={searchResultHref}
           style="text-decoration:none; color:inherit; display:block; animation-delay: 0ms;"
           transition:taskDropIn={{ delay: 0 }}
         >
-          <kefine-solver-search-row aria-live="polite">
+          <kefine-solver-search-row aria-live="polite" data-state={taskCompleted ? 'completed' : 'in-progress'}>
             <lefine-text>{solverSearchText}</lefine-text>
             {#if taskCompleted}
               <kefine-task-branch>
@@ -1280,13 +1295,16 @@ initialized = true;
           </kefine-solver-search-row>
         </a>
       {/if}
-      {#each recentOrders as order, i (order.id)}
+      {#each filteredRecentOrders as order, i (order.id)}
+        {@const isDuplicate = activeSearchDuplicate?.id === order.id}
+        {@const inProgress = isDuplicate && solverSearchActive && !taskCompleted}
         <a
           href={order.actorHandle || order.ownerUsername ? buildActorOrderPath(order.actorHandle ?? order.ownerUsername!, order.shareId ?? order.id) : `/order/${order.id}`}
-          style="text-decoration:none; color:inherit; display:block; animation-delay: {(i + 1) * 78}ms;"
-          transition:taskDropIn={{ delay: (i + 1) * 78 }}
+          style="text-decoration:none; color:inherit; display:block; animation-delay: {i * 78}ms;"
+          transition:taskDropIn={{ delay: i * 78 }}
+          data-active-task={isDuplicate ? 'true' : null}
         >
-          <kefine-solver-search-row aria-live="polite">
+          <kefine-solver-search-row aria-live="polite" data-state={inProgress ? 'in-progress' : 'completed'}>
             <lefine-text>{order.title}</lefine-text>
 
             <kefine-task-branch>
@@ -1301,7 +1319,21 @@ initialized = true;
                 </lef-cp-branch-icon>
               </kefine-task-branch>
 
-            <kefine-solver-search-indicator aria-label="Completed" title="Completed" data-completed="true">
+            {#if inProgress && isFlying}
+              <lef-arrow-wrapper>
+                <lef-wind-flow>
+                  <lef-wind-line></lef-wind-line>
+                  <lef-wind-line></lef-wind-line>
+                </lef-wind-flow>
+                <lef-flying-arrow>➵</lef-flying-arrow>
+              </lef-arrow-wrapper>
+            {/if}
+
+            <kefine-solver-search-indicator
+              aria-label={inProgress ? solverSearchLabel : 'Completed'}
+              title={inProgress ? solverSearchLabel : 'Completed'}
+              data-completed={!inProgress}
+            >
               <kefine-solver-search-dot aria-hidden="true"></kefine-solver-search-dot>
             </kefine-solver-search-indicator>
           </kefine-solver-search-row>

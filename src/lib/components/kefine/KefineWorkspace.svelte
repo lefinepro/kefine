@@ -516,17 +516,33 @@
         )
       : []
   );
-  const recentProfileOrders = $derived(
-    currentProfile
-      ? [...createdOrders]
-          .filter((order) => order.ownerProfileId === currentProfile?.id)
-          .sort(
-            (left, right) =>
-              new Date(right.createdAt).getTime() -
-              new Date(left.createdAt).getTime()
-          )
-      : []
-  );
+  const RECENT_ORDERS_LIMIT = 10;
+  const recentProfileOrders = $derived.by(() => {
+    const profile = currentProfile;
+    if (!profile) {
+      return [];
+    }
+
+    const owned = createdOrders.filter((order) => order.ownerProfileId === profile.id);
+    const query = (solverSearchActive ? solverSearchText : draft.description).trim().toLowerCase();
+    const matches = (order: OrderView) => {
+      if (!query) return false;
+      return [order.title, order.description, order.solver]
+        .filter((value): value is string => typeof value === 'string')
+        .some((value) => value.toLowerCase().includes(query));
+    };
+
+    const sorted = owned.slice().sort((left, right) => {
+      const leftMatches = matches(left);
+      const rightMatches = matches(right);
+      if (leftMatches !== rightMatches) {
+        return leftMatches ? -1 : 1;
+      }
+      return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
+    });
+
+    return sorted.slice(0, RECENT_ORDERS_LIMIT);
+  });
   const TITLE_FONT_MAX = 2.0;
   const TITLE_FONT_MIN = 1.0;
   const TITLE_FONT_SHRINK_AT = 24;
