@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'vitest';
 
-import { defaultSolutions, type Solution } from './solutions-data';
+import { defaultMetrics, defaultSolutions, type Solution } from './solutions-data';
 
 type CodeLine = Solution['codeLines'][number];
 
@@ -9,6 +9,17 @@ describe('defaultSolutions data integrity', () => {
   test('every solution has a unique id', () => {
     const ids = defaultSolutions.map(s => s.id);
     assert.equal(new Set(ids).size, ids.length);
+  });
+
+  test('every solution has pricing metrics', () => {
+    const metricIds = new Set(defaultMetrics.map(metric => metric.solverId));
+
+    for (const solution of defaultSolutions) {
+      assert.ok(
+        metricIds.has(solution.id),
+        `Solution ${solution.id} (${solution.solver}) is missing pricing metrics.`
+      );
+    }
   });
 
   test('empty lines inside an additive file are typed as added', () => {
