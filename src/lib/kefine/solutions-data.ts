@@ -43,6 +43,10 @@ export interface SolutionMetric {
 }
 
 export const defaultMetrics: SolutionMetric[] = [
+  { solverId: '1', solver: 'Basic Rust Dev', executionTimeSec: 0.7, priceUsd: 0.04, successRate: 78 },
+  { solverId: '2', solver: 'Commented Rust Expert', executionTimeSec: 1.1, priceUsd: 0.09, successRate: 84 },
+  { solverId: '3', solver: 'Interactive Rust', executionTimeSec: 1.6, priceUsd: 0.14, successRate: 87 },
+  { solverId: '4', solver: 'Modern Rust Patterns', executionTimeSec: 1.9, priceUsd: 0.18, successRate: 90 },
   { solverId: '5', solver: 'Go Proxy Basic', executionTimeSec: 1.2, priceUsd: 0.08, successRate: 82 },
   { solverId: '6', solver: 'Go Proxy Pro', executionTimeSec: 2.4, priceUsd: 0.21, successRate: 91 },
   { solverId: '7', solver: 'Go Proxy Enterprise', executionTimeSec: 3.8, priceUsd: 0.59, successRate: 97 }
