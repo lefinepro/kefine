@@ -33,12 +33,17 @@
   import type { TaskCloneFormat } from '$lib/components/kefine/kefine-task-clone';
   import type { Solution } from '$lib/kefine/solutions-data';
   import KefineSolversView from '$lib/components/kefine/KefineSolversView.svelte';
+  import {
+    buildSolverHistoryTasks,
+    resolveOrderRepositoryName
+  } from '$lib/components/kefine/kefine-solver-history';
   type EditorDraftState = any;
   type EditorMentionCandidate = any;
 
   let {
     currentOrder,
     queuedOrders = [],
+    historyOrders = [],
     labels,
     canSaveCloneLocally = false,
     canManageTask = false,
@@ -52,10 +57,12 @@
     onResumeSearch,
     solutions = [],
     onViewSolution,
-    onApplySolution
+    onApplySolution,
+    onSelectHistoryOrder
   }: {
     currentOrder: OrderView | null;
     queuedOrders?: OrderView[];
+    historyOrders?: OrderView[];
     labels: {
       boardTitle: string;
     leaveComment: string;
@@ -91,6 +98,7 @@
     solutions?: Solution[];
     onViewSolution?: ((solutionId: string) => void) | null;
     onApplySolution?: ((solutionId: string) => void) | null;
+    onSelectHistoryOrder?: ((orderId: string) => void) | null;
   } = $props();
 
   let commentDrafts = $state<Record<string, string>>({});
@@ -258,6 +266,24 @@
   const nextOrders = $derived.by(() =>
     queuedOrders.filter((order) => !currentOrder || order.id !== currentOrder.id).map((order) => buildQueuedTaskRoot(order, labels))
   );
+  const activeSolverRepositoryName = $derived.by(() =>
+    resolveOrderRepositoryName(currentOrder, solutions[0]?.project || '')
+  );
+  const solverHistoryTasks = $derived.by(() =>
+    buildSolverHistoryTasks({
+      currentOrder,
+      orders: historyOrders,
+      fallbackRepositoryName: solutions[0]?.project || labels.boardTitle
+    })
+  );
+
+  function handleSelectSolverHistoryTask(orderId: string): void {
+    if (orderId === currentOrder?.id) {
+      return;
+    }
+
+    onSelectHistoryOrder?.(orderId);
+  }
   const currentThread = $derived(buildTaskThreadNodes(currentOrder, labels));
   const taskMonogram = $derived.by(() => {
     const icon = currentOrder?.taskIcon?.trim();
@@ -970,8 +996,10 @@
     <KefineSolversView
       {solutions}
       taskTitle={currentOrder?.title || labels.boardTitle}
-      repoName={solutions[0]?.project || ''}
+      repoName={activeSolverRepositoryName}
+      historyTasks={solverHistoryTasks}
       onViewSolution={onViewSolution}
+      onSelectHistoryTask={onSelectHistoryOrder ? handleSelectSolverHistoryTask : undefined}
     />
   {:else}
   <kefine-thread-head>
