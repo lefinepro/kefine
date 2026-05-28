@@ -122,6 +122,85 @@ test.describe('Task Lifecycle', () => {
     await expect(page.getByTestId('kefine-wallet-tile')).toBeVisible();
   });
 
+  test('solver workspace link shows past task history with repository names', async ({ page }) => {
+    await mockOrderApi(page);
+
+    await page.addInitScript(() => {
+      window.localStorage.clear();
+      window.localStorage.setItem(
+        'kefine-created-orders-v1',
+        JSON.stringify([
+          {
+            id: 'order-1',
+            solver: 'Test Solver',
+            status: 'completed',
+            title: 'Previous parser task',
+            description: 'Previous parser task',
+            createdAt: '2026-03-20T00:00:00.000Z',
+            currency: 'USDC',
+            ownerUsername: 'api',
+            actorHandle: 'api',
+            shareId: 'order-1',
+            vcsEnabled: true,
+            repository: {
+              id: 'repo-order-1',
+              ownerHandle: 'api',
+              slug: 'legacy-tooling',
+              visibility: 'public'
+            }
+          },
+          {
+            id: 'order-2',
+            solver: 'Test Solver',
+            status: 'queued',
+            title: 'Нужен мини прокси на go',
+            description: 'Нужен мини прокси на go',
+            createdAt: '2026-03-21T00:00:00.000Z',
+            currency: 'USDC',
+            ownerUsername: 'api',
+            actorHandle: 'api',
+            shareId: 'order-2',
+            vcsEnabled: true,
+            repository: {
+              id: 'repo-order-2',
+              ownerHandle: 'api',
+              slug: 'current-proxy',
+              visibility: 'public'
+            }
+          }
+        ])
+      );
+      window.localStorage.setItem(
+        'kefine-order-order-2-solutions',
+        JSON.stringify([
+          {
+            id: '5',
+            solver: 'Go Proxy Basic',
+            title: 'Simple HTTP Proxy',
+            description: 'Minimal HTTP proxy with forward functionality',
+            project: 'kefine/go-proxy',
+            slug: 'feat/basic-forward',
+            diffs: [],
+            codeLines: []
+          }
+        ])
+      );
+    });
+
+    await page.goto('/@api/order-2');
+
+    await expect(page.locator('lef-solutions-list').getByText('Go Proxy Basic')).toBeVisible();
+    const tasksAside = page.getByLabel('Tasks');
+    await expect(tasksAside).toContainText('api/current-proxy');
+    await expect(tasksAside).toContainText('Нужен мини прокси на go');
+    await expect(tasksAside).toContainText('api/legacy-tooling');
+    await expect(tasksAside).toContainText('Previous parser task');
+
+    await tasksAside.getByRole('button', { name: /api\/legacy-tooling/ }).click();
+    await expect(page).toHaveURL(/\/@api\/order-1$/);
+    await expect(page.locator('kefine-thread-title').getByText('Previous parser task')).toBeVisible();
+  });
+
   test('executing flow shows fallback solver info and hides standalone promo block', async ({ page }) => {
     await mockOrderApi(page);
     await gotoAndWaitForReady(page);

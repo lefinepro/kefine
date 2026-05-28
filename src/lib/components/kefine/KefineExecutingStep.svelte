@@ -39,6 +39,7 @@
   let {
     currentOrder,
     queuedOrders = [],
+    historyOrders = [],
     execution,
     isHydratingTitle = false,
     forceFinalVpnStep = false,
@@ -62,10 +63,12 @@
     onWalletLogin,
     onPasskeyLogin,
     onAnonymous,
+    onSelectHistoryOrder,
     onCancel
   }: {
     currentOrder: OrderView | null;
     queuedOrders?: OrderView[];
+    historyOrders?: OrderView[];
     execution: ExecutionPresentation;
     isHydratingTitle?: boolean;
     forceFinalVpnStep?: boolean;
@@ -134,6 +137,7 @@
     }) => void | Promise<void>) | null;
     onPauseSearch?: (() => void | Promise<void>) | null;
     onResumeSearch?: (() => void | Promise<void>) | null;
+    onSelectHistoryOrder?: ((orderId: string) => void) | null;
     onWalletLogin: () => void;
     onPasskeyLogin: () => void;
     onAnonymous: () => void;
@@ -718,6 +722,7 @@
       <KefineTaskTreeFeed
         {currentOrder}
         {queuedOrders}
+        {historyOrders}
         canSaveCloneLocally={canSaveCloneLocally}
         canManageTask={canManageTask}
         {commentSubmittingStepId}
@@ -728,6 +733,7 @@
         onUpdateTaskSettings={onUpdateTaskSettings}
         onPauseSearch={onPauseSearch}
         onResumeSearch={onResumeSearch}
+        onSelectHistoryOrder={onSelectHistoryOrder}
         {solutions}
         onViewSolution={handleViewSolution}
         onApplySolution={handleApplySolution}

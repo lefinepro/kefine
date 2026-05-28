@@ -2840,6 +2840,7 @@
         <KefineExecutingStep
           currentOrder={currentOrder}
           queuedOrders={[]}
+          historyOrders={createdOrders}
           execution={executionPresentation}
           canSaveCloneLocally={canSaveCurrentOrderLocally}
           canManageTask={canManageCurrentOrder}
@@ -2862,6 +2863,9 @@
             if (currentOrder) {
               resumeOrder(currentOrder);
             }
+          }}
+          onSelectHistoryOrder={(orderId) => {
+            void openOrderById(orderId);
           }}
           onWalletLogin={selectTopbarAuth}
           onPasskeyLogin={choosePasskeyMethod}
