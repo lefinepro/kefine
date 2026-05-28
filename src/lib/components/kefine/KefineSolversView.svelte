@@ -5,14 +5,9 @@
   import SolutionMetricsBlock from './SolutionMetricsBlock.svelte';
   import { defaultMetrics } from '$lib/kefine/solutions-data';
   import { kefineLocaleText } from '$lib/constants/kefine-locale';
+  import type { SolverHistoryTask } from '$lib/components/kefine/kefine-solver-history';
 
-  export type SolversHistoryTask = {
-    id: string;
-    title: string;
-    description?: string;
-    href?: string;
-    isActive?: boolean;
-  };
+  export type SolversHistoryTask = SolverHistoryTask;
 
   export type SolversSettingsState = {
     isPublic: boolean;
