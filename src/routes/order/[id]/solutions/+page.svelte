@@ -1,8 +1,12 @@
 <script lang="ts">
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
+  import { browser } from '$app/environment';
   import { defaultSolutions, type Solution } from '$lib/kefine/solutions-data';
-  import KefineSolversView from '$lib/components/kefine/KefineSolversView.svelte';
+  import KefineSolversView, {
+    type SolversHistoryTask,
+    type SolversSettingsState
+  } from '$lib/components/kefine/KefineSolversView.svelte';
   import { kefineLocaleText } from '$lib/constants/kefine-locale';
 
   const id = $page.params.id;
@@ -13,6 +17,84 @@
   );
 
   const repoName = 'kefine/go-proxy';
+  const COMPLETED_SEARCHES_KEY = 'kefine-completed-solver-searches';
+  const SETTINGS_KEY = `kefine-task-settings-${id}`;
+
+  function readCompletedSearches(): string[] {
+    if (!browser) return [];
+    try {
+      const raw = localStorage.getItem(COMPLETED_SEARCHES_KEY);
+      const list = raw ? JSON.parse(raw) : [];
+      return Array.isArray(list) ? list.filter((entry) => typeof entry === 'string') : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function readSettings(): SolversSettingsState {
+    const base: SolversSettingsState = { isPublic: true, vcsEnabled: true, defaultBranch: 'main' };
+    if (!browser) return base;
+    try {
+      const raw = localStorage.getItem(SETTINGS_KEY);
+      if (!raw) return base;
+      const parsed = JSON.parse(raw);
+      return {
+        isPublic: typeof parsed?.isPublic === 'boolean' ? parsed.isPublic : base.isPublic,
+        vcsEnabled: typeof parsed?.vcsEnabled === 'boolean' ? parsed.vcsEnabled : base.vcsEnabled,
+        defaultBranch:
+          typeof parsed?.defaultBranch === 'string' && parsed.defaultBranch.trim().length > 0
+            ? parsed.defaultBranch
+            : base.defaultBranch
+      };
+    } catch {
+      return base;
+    }
+  }
+
+  let settingsState = $state<SolversSettingsState>(readSettings());
+
+  function handleApplySettings(next: SolversSettingsState) {
+    settingsState = next;
+    if (!browser) return;
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(next));
+    } catch {
+      /* ignore quota errors */
+    }
+  }
+
+  const historyTasks = $derived.by<SolversHistoryTask[]>(() => {
+    const completed = readCompletedSearches();
+    const list: SolversHistoryTask[] = [
+      {
+        id: 'current',
+        title: repoName,
+        description: taskQuery || repoName,
+        isActive: true
+      }
+    ];
+    const seen = new Set<string>([taskQuery.trim().toLowerCase()]);
+    for (const entry of completed.slice(-9).reverse()) {
+      const trimmed = entry.trim();
+      if (!trimmed) continue;
+      const key = trimmed.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      list.push({
+        id: `history-${list.length}`,
+        title: trimmed.length > 60 ? `${trimmed.slice(0, 60)}…` : trimmed,
+        description: trimmed
+      });
+      if (list.length >= 10) break;
+    }
+    return list;
+  });
+
+  function handleSelectHistoryTask(historyId: string) {
+    const task = historyTasks.find((t) => t.id === historyId);
+    if (!task || task.isActive) return;
+    goto(`/?task=${encodeURIComponent(task.description ?? task.title)}`);
+  }
 </script>
 
 <svelte:head>
@@ -23,5 +105,9 @@
   {solutions}
   taskTitle={taskQuery}
   repoName={repoName}
+  historyTasks={historyTasks}
+  settingsState={settingsState}
+  onApplySettings={handleApplySettings}
+  onSelectHistoryTask={handleSelectHistoryTask}
   onViewSolution={(solutionId) => goto(`/order/${id}/solver/${solutionId}`)}
 />

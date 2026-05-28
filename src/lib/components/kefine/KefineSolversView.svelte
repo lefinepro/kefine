@@ -1,31 +1,164 @@
 <script lang="ts">
+  import { browser } from '$app/environment';
   import type { Solution } from '$lib/kefine/solutions-data';
   import SolutionMetricsMini from './SolutionMetricsMini.svelte';
   import SolutionMetricsBlock from './SolutionMetricsBlock.svelte';
   import { defaultMetrics } from '$lib/kefine/solutions-data';
   import { kefineLocaleText } from '$lib/constants/kefine-locale';
 
+  export type SolversHistoryTask = {
+    id: string;
+    title: string;
+    description?: string;
+    href?: string;
+    isActive?: boolean;
+  };
+
+  export type SolversSettingsState = {
+    isPublic: boolean;
+    vcsEnabled: boolean;
+    defaultBranch: string;
+  };
+
   let {
     solutions = [],
     taskTitle = '',
     repoName = '',
+    historyTasks = [],
+    cloneUrl = '',
+    settingsState = { isPublic: true, vcsEnabled: true, defaultBranch: 'main' },
     onApplySolution,
     onViewSolution,
     onSettings,
-    onClone
+    onClone,
+    onApplySettings,
+    onSelectHistoryTask
   }: {
     solutions?: Solution[];
     taskTitle?: string;
     repoName?: string;
+    historyTasks?: SolversHistoryTask[];
+    cloneUrl?: string;
+    settingsState?: SolversSettingsState;
     onApplySolution?: ((id: string) => void) | null | undefined;
     onViewSolution?: ((id: string) => void) | null | undefined;
     onSettings?: (() => void) | null | undefined;
     onClone?: (() => void) | null | undefined;
+    onApplySettings?: ((next: SolversSettingsState) => void) | null | undefined;
+    onSelectHistoryTask?: ((id: string) => void) | null | undefined;
   } = $props();
 
   let chartsFocused = $state(false);
+  let clonePanelOpen = $state(false);
+  let settingsPanelOpen = $state(false);
+  let cloneTestPending = $state(false);
+  let cloneTestResult = $state<{ ok: boolean; message: string } | null>(null);
+  let copyFlash = $state(false);
+  let isPublicDraft = $state(true);
+  let vcsEnabledDraft = $state(true);
+  let branchDraft = $state('main');
+
+  $effect(() => {
+    isPublicDraft = settingsState.isPublic;
+    vcsEnabledDraft = settingsState.vcsEnabled;
+    branchDraft = settingsState.defaultBranch;
+  });
+
+  const resolvedCloneUrl = $derived.by(() => {
+    if (cloneUrl) return cloneUrl;
+    const slug = repoName ? repoName.replace(/^\/+/, '').replace(/\.git$/i, '') : 'kefine/go-proxy';
+    return `git clone https://kefine.pro/${slug}.git`;
+  });
+
+  async function copyClone() {
+    if (!browser) return;
+    try {
+      await navigator.clipboard.writeText(resolvedCloneUrl);
+      copyFlash = true;
+      setTimeout(() => (copyFlash = false), 1400);
+    } catch {
+      copyFlash = false;
+    }
+  }
+
+  async function testCloneIntegration() {
+    cloneTestPending = true;
+    cloneTestResult = null;
+    if (!browser) return;
+    try {
+      const url = resolvedCloneUrl.replace(/^git clone\s+/, '');
+      const probe = new URL(url.replace(/\.git$/, ''));
+      const response = await fetch(`${probe.origin}${probe.pathname}/info/refs?service=git-upload-pack`, {
+        method: 'HEAD',
+        mode: 'no-cors',
+        cache: 'no-store'
+      });
+      cloneTestResult = response
+        ? { ok: true, message: localeText.solversView.cloneTestOk }
+        : { ok: false, message: localeText.solversView.cloneTestFail };
+    } catch {
+      cloneTestResult = { ok: false, message: localeText.solversView.cloneTestFail };
+    } finally {
+      cloneTestPending = false;
+    }
+  }
+
+  function openClone() {
+    settingsPanelOpen = false;
+    clonePanelOpen = !clonePanelOpen;
+    onClone?.();
+  }
+
+  function openSettings() {
+    clonePanelOpen = false;
+    settingsPanelOpen = !settingsPanelOpen;
+    onSettings?.();
+  }
+
+  function applySettings() {
+    onApplySettings?.({
+      isPublic: isPublicDraft,
+      vcsEnabled: vcsEnabledDraft,
+      defaultBranch: branchDraft.trim() || 'main'
+    });
+    settingsPanelOpen = false;
+  }
 
   const localeText = $derived($kefineLocaleText);
+
+  const metricsById = $derived(
+    new Map(defaultMetrics.map((metric) => [metric.solverId, metric]))
+  );
+
+  function formatPrice(value: number | undefined): string {
+    if (value === undefined || Number.isNaN(value)) return '—';
+    if (value <= 0) return localeText.solversView.priceFree;
+    if (value < 1) return `$${value.toFixed(2)}`;
+    return `$${value.toFixed(2)}`;
+  }
+
+  function formatSeconds(value: number | undefined): string {
+    if (value === undefined || Number.isNaN(value)) return '—';
+    return `${value.toFixed(1)}s`;
+  }
+
+  function formatPercent(value: number | undefined): string {
+    if (value === undefined || Number.isNaN(value)) return '—';
+    return `${value.toFixed(0)}%`;
+  }
+
+  const fallbackHistoryTasks = $derived<SolversHistoryTask[]>([
+    {
+      id: 'current',
+      title: repoName || localeText.solversView.solvers,
+      description: taskTitle,
+      isActive: true
+    }
+  ]);
+
+  const displayedHistoryTasks = $derived(
+    historyTasks.length > 0 ? historyTasks : fallbackHistoryTasks
+  );
 </script>
 
 <div class="solutions-page-container">
@@ -33,18 +166,35 @@
     <lef-tasks-aside aria-label={localeText.solversView.tasksAside}>
       <lef-tasks-aside-head>{localeText.solversView.tasksAside}</lef-tasks-aside-head>
       <lef-tasks-aside-list>
-        <lef-tasks-aside-item data-active="true">
-          <lefine-text>{repoName || taskTitle || localeText.solversView.solvers}</lefine-text>
-          {#if repoName && taskTitle && taskTitle !== repoName}
-            <small style="color:#8B5E3C; font-size:0.72em; display:block; margin-top:1px;">{taskTitle}</small>
+        {#each displayedHistoryTasks as task (task.id)}
+          {#if onSelectHistoryTask && !task.isActive}
+            <button
+              type="button"
+              class="aside-item-btn"
+              data-active="false"
+              onclick={() => onSelectHistoryTask?.(task.id)}
+            >
+              <lefine-text>{task.title}</lefine-text>
+              {#if task.description && task.description !== task.title}
+                <small>{task.description}</small>
+              {/if}
+            </button>
+          {:else}
+            <lef-tasks-aside-item data-active={task.isActive ? 'true' : 'false'}>
+              <lefine-text>{task.title}</lefine-text>
+              {#if task.description && task.description !== task.title}
+                <small>{task.description}</small>
+              {/if}
+            </lef-tasks-aside-item>
           {/if}
-        </lef-tasks-aside-item>
+        {/each}
       </lef-tasks-aside-list>
     </lef-tasks-aside>
 
     {#if !chartsFocused}
       <lef-solutions-list>
         {#each solutions as solution, i (solution.id)}
+          {@const metric = metricsById.get(solution.id)}
           <article class="solution-card" style="--card-i: {i}">
             <header class="solution-card-header">
               <lef-solution-meta>
@@ -68,6 +218,24 @@
               {/if}
             </header>
             <p class="solution-description">{solution.description}</p>
+            {#if metric}
+              <lef-price-row aria-label={localeText.solversView.priceFrom}>
+                <lef-price-figure>
+                  <lef-price-label>{localeText.solversView.priceFrom}</lef-price-label>
+                  <lef-price-value>{formatPrice(metric.priceUsd)}</lef-price-value>
+                </lef-price-figure>
+                <lef-price-meta>
+                  <lef-price-meta-row>
+                    <lef-meta-dot data-kind="time" aria-hidden="true"></lef-meta-dot>
+                    <lefine-text>{formatSeconds(metric.executionTimeSec)}</lefine-text>
+                  </lef-price-meta-row>
+                  <lef-price-meta-row>
+                    <lef-meta-dot data-kind="success" aria-hidden="true"></lef-meta-dot>
+                    <lefine-text>{formatPercent(metric.successRate)}</lefine-text>
+                  </lef-price-meta-row>
+                </lef-price-meta>
+              </lef-price-row>
+            {/if}
             {#if solution.diffs?.length}
                 <lef-file-list aria-label={localeText.solversView.filesAria}>
 
@@ -125,17 +293,79 @@
         </lef-task-rail-card>
 
         <lef-task-rail-actions>
-            <button type="button" class="task-rail-btn" aria-label={localeText.solversView.settings} onclick={() => onSettings?.()}>
-
+          <button
+            type="button"
+            class="task-rail-btn"
+            aria-expanded={settingsPanelOpen}
+            aria-label={localeText.solversView.settings}
+            onclick={openSettings}
+          >
             <lef-task-rail-icon aria-hidden="true">⚙</lef-task-rail-icon>
             <lefine-text>{localeText.solversView.settings}</lefine-text>
           </button>
-            <button type="button" class="task-rail-btn task-rail-btn--primary" aria-label={localeText.solversView.clone} onclick={() => onClone?.()}>
-
+          <button
+            type="button"
+            class="task-rail-btn task-rail-btn--primary"
+            aria-expanded={clonePanelOpen}
+            aria-label={localeText.solversView.clone}
+            onclick={openClone}
+          >
             <lef-task-rail-icon aria-hidden="true">⤓</lef-task-rail-icon>
             <lefine-text>{localeText.solversView.clone}</lefine-text>
           </button>
         </lef-task-rail-actions>
+
+        {#if clonePanelOpen}
+          <lef-task-rail-panel data-kind="clone">
+            <lef-task-rail-head>{localeText.solversView.cloneHeading}</lef-task-rail-head>
+            <lef-task-rail-clone>
+              <code>{resolvedCloneUrl}</code>
+              <button type="button" class="task-rail-btn" onclick={copyClone}>
+                <lefine-text>
+                  {copyFlash ? localeText.solversView.copied : localeText.solversView.copy}
+                </lefine-text>
+              </button>
+            </lef-task-rail-clone>
+            <button
+              type="button"
+              class="task-rail-btn task-rail-btn--primary"
+              disabled={cloneTestPending}
+              onclick={testCloneIntegration}
+            >
+              <lefine-text>
+                {cloneTestPending
+                  ? localeText.solversView.cloneTestRunning
+                  : localeText.solversView.cloneTestRun}
+              </lefine-text>
+            </button>
+            {#if cloneTestResult}
+              <lef-task-rail-status data-state={cloneTestResult.ok ? 'ok' : 'fail'}>
+                {cloneTestResult.message}
+              </lef-task-rail-status>
+            {/if}
+          </lef-task-rail-panel>
+        {/if}
+
+        {#if settingsPanelOpen}
+          <lef-task-rail-panel data-kind="settings">
+            <lef-task-rail-head>{localeText.solversView.settingsHeading}</lef-task-rail-head>
+            <label class="settings-row">
+              <input type="checkbox" bind:checked={isPublicDraft} />
+              <lefine-text>{localeText.solversView.settingsPublic}</lefine-text>
+            </label>
+            <label class="settings-row">
+              <input type="checkbox" bind:checked={vcsEnabledDraft} />
+              <lefine-text>{localeText.solversView.settingsVcs}</lefine-text>
+            </label>
+            <label class="settings-row settings-row--input">
+              <lefine-text>{localeText.solversView.settingsBranch}</lefine-text>
+              <input type="text" bind:value={branchDraft} maxlength="40" />
+            </label>
+            <button type="button" class="task-rail-btn task-rail-btn--primary" onclick={applySettings}>
+              <lefine-text>{localeText.solversView.settingsApply}</lefine-text>
+            </button>
+          </lef-task-rail-panel>
+        {/if}
 
         <!-- Clicking anywhere inside the metrics area expands the detailed charts.
              Buttons above are safe because they have their own handlers and stop propagation implicitly by being separate. -->
@@ -243,12 +473,52 @@
     background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 14%, var(--kef-bg-card));
   }
 
-  lef-tasks-aside-item lefine-text {
+  lef-tasks-aside-item lefine-text,
+  .aside-item-btn lefine-text {
     min-width: 0;
     overflow-wrap: anywhere;
     white-space: normal;
     line-height: 1.3;
     color: var(--lefine-text);
+  }
+
+  lef-tasks-aside-item,
+  .aside-item-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.15rem;
+  }
+
+  lef-tasks-aside-item small,
+  .aside-item-btn small {
+    color: var(--lefine-text-soft);
+    font-size: 0.72em;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+
+  .aside-item-btn {
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    font: inherit;
+    border: 0;
+    padding: 0.5rem 0.6rem;
+    border-radius: 0.55rem;
+    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 6%, var(--kef-bg-card));
+    color: var(--lefine-text);
+    font-size: 0.85rem;
+    transition: background 140ms ease, transform 140ms ease;
+  }
+
+  .aside-item-btn:hover {
+    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 12%, var(--kef-bg-card));
+  }
+
+  .aside-item-btn:active {
+    transform: scale(0.98);
   }
 
   lef-solutions-list {
@@ -332,6 +602,71 @@
     color: var(--lefine-text-soft);
     font-size: 0.92rem;
     line-height: 1.45;
+  }
+
+  lef-price-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.65rem;
+    padding: 0.55rem 0.7rem;
+    border-radius: 0.6rem;
+    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 7%, var(--kef-bg-card));
+    border: 1px solid color-mix(in oklab, var(--kef-color-primary, #c89a5a) 22%, var(--kef-line));
+  }
+
+  lef-price-figure {
+    display: flex;
+    flex-direction: column;
+    gap: 0.05rem;
+    min-width: 0;
+  }
+
+  lef-price-label {
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--lefine-text-soft);
+  }
+
+  lef-price-value {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--lefine-text);
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  lef-price-meta {
+    display: grid;
+    gap: 0.15rem;
+    justify-items: end;
+    min-width: 0;
+  }
+
+  lef-price-meta-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.32rem;
+    font-size: 0.75rem;
+    color: var(--lefine-text-soft);
+    font-variant-numeric: tabular-nums;
+  }
+
+  lef-meta-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+  }
+
+  lef-meta-dot[data-kind='time'] {
+    background: var(--kef-color-primary, #c89a5a);
+  }
+
+  lef-meta-dot[data-kind='success'] {
+    background: var(--kef-success, #22c55e);
   }
 
   lef-file-list {
@@ -514,6 +849,115 @@
     display: inline-flex;
     align-items: center;
     font-size: 1rem;
+  }
+
+  lef-task-rail-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    padding: 0.7rem 0.75rem 0.8rem;
+    background: var(--kef-bg-card);
+    border: 1px solid var(--kef-line);
+    border-radius: 0.7rem;
+    animation: task-rail-panel-appear 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    transform-origin: top center;
+  }
+
+  @keyframes task-rail-panel-appear {
+    from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  lef-task-rail-clone {
+    display: flex;
+    align-items: stretch;
+    gap: 0.4rem;
+    min-width: 0;
+  }
+
+  lef-task-rail-clone code {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 0.4rem 0.55rem;
+    border-radius: 0.5rem;
+    background: color-mix(in oklab, var(--kef-line) 30%, transparent);
+    color: var(--lefine-text);
+    font-family: ui-monospace, monospace;
+    font-size: 0.72rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  lef-task-rail-status {
+    display: block;
+    padding: 0.4rem 0.55rem;
+    border-radius: 0.5rem;
+    font-size: 0.78rem;
+    border: 1px solid transparent;
+  }
+
+  lef-task-rail-status[data-state='ok'] {
+    background: color-mix(in oklab, var(--kef-success, #16a34a) 14%, var(--kef-bg-card));
+    border-color: color-mix(in oklab, var(--kef-success, #16a34a) 35%, var(--kef-line));
+    color: var(--kef-success, #16a34a);
+  }
+
+  lef-task-rail-status[data-state='fail'] {
+    background: color-mix(in oklab, var(--kef-error, #ef4444) 12%, var(--kef-bg-card));
+    border-color: color-mix(in oklab, var(--kef-error, #ef4444) 35%, var(--kef-line));
+    color: var(--kef-error, #ef4444);
+  }
+
+  .settings-row {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-size: 0.85rem;
+    color: var(--lefine-text);
+    cursor: pointer;
+  }
+
+  .settings-row input[type='checkbox'] {
+    accent-color: var(--kef-color-primary, #c89a5a);
+    width: 16px;
+    height: 16px;
+  }
+
+  .settings-row--input {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.25rem;
+    cursor: default;
+  }
+
+  .settings-row--input lefine-text {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--lefine-text-soft);
+  }
+
+  .settings-row--input input[type='text'] {
+    width: 100%;
+    padding: 0.4rem 0.55rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--kef-line);
+    background: var(--kef-bg-card);
+    color: var(--lefine-text);
+    font: inherit;
+    font-size: 0.85rem;
+  }
+
+  .settings-row--input input[type='text']:focus-visible {
+    outline: 2px solid color-mix(in oklab, var(--kef-color-primary, #c89a5a) 50%, transparent);
+    outline-offset: 1px;
+  }
+
+  .task-rail-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 
   /* Responsive */
