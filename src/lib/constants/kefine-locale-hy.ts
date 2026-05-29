@@ -90,7 +90,17 @@ export const KEFINE_TEXT_HY = {
     pinnedServicesSubtitle: 'Սկսեք կարգավորված service entry point-երից, ապա միայն գրեք ազատ ձևի lepo։',
     noRecentTasks: 'Պահված lepos դեռ չկան',
     matchedTasks: 'Գտնված ավարտված lepos',
-    noMatchedTasks: 'Այս հարցմանը համապատասխան ավարտված lepos դեռ չկան'
+    noMatchedTasks: 'Այս հարցմանը համապատասխան ավարտված lepos դեռ չկան',
+    proxyWidget: {
+      title: 'Պրոքսի սերվերը պատրաստ է',
+      subtitle: 'Ընտրեք հանգույց, պատճենեք հղումը կամ սկանավորեք QR-ը՝ lepo-ն ուղարկելու կարիք չկա։',
+      configsLabel: 'Կոնֆիգուրացիաներ',
+      protocolLabel: 'Արձանագրություն',
+      scanHintLabel: 'Սկանավորեք՝ կոնֆիգը ներմուծելու համար',
+      copyLabel: 'Պատճենել հղումը',
+      copiedLabel: 'Հղումը պատճենվեց',
+      downloadLabel: 'Ներբեռնել կոնֆիգը'
+    }
   },
   defaults: {
     ...KEFINE_TEXT_EN.defaults,

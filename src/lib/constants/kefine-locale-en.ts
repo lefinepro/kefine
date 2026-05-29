@@ -118,7 +118,17 @@ export const KEFINE_TEXT_EN = {
     pathPaymentLabel: 'Payment:',
     noRecentTasks: 'No saved lepos yet',
     matchedTasks: 'Resolved lepos',
-    noMatchedTasks: 'No resolved lepos match this query yet'
+    noMatchedTasks: 'No resolved lepos match this query yet',
+    proxyWidget: {
+      title: 'Proxy server ready',
+      subtitle: 'Pick a node, copy the link or scan the QR — no need to submit the lepo.',
+      configsLabel: 'Configurations',
+      protocolLabel: 'Protocol',
+      scanHintLabel: 'Scan to import the config',
+      copyLabel: 'Copy link',
+      copiedLabel: 'Link copied',
+      downloadLabel: 'Download config'
+    }
   },
   defaults: {
     unknownSolver: 'Unknown solver',

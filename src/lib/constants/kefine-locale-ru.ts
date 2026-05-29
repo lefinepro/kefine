@@ -118,7 +118,17 @@ export const KEFINE_TEXT_RU = {
     pathPaymentLabel: 'Оплата:',
     noRecentTasks: 'Сохранённых lepos пока нет',
     matchedTasks: 'Найденные завершённые lepos',
-    noMatchedTasks: 'По этому запросу завершённые lepos не найдены'
+    noMatchedTasks: 'По этому запросу завершённые lepos не найдены',
+    proxyWidget: {
+      title: 'Прокси-сервер готов',
+      subtitle: 'Выберите узел, скопируйте ссылку или отсканируйте QR — отправлять lepo не нужно.',
+      configsLabel: 'Конфигурации',
+      protocolLabel: 'Протокол',
+      scanHintLabel: 'Отсканируйте, чтобы импортировать конфиг',
+      copyLabel: 'Скопировать ссылку',
+      copiedLabel: 'Ссылка скопирована',
+      downloadLabel: 'Скачать конфиг'
+    }
   },
   defaults: {
     unknownSolver: 'Неизвестный решатель',

@@ -2886,6 +2886,7 @@
           isSearching={draft.description.trim().length > 0}
           matchedTasksLabel={localeText.create.matchedTasks}
           recentTasksLabel={localeText.labels.taskQueue}
+          proxyWidget={localeText.create.proxyWidget}
           addFileLabel={localeText.create.addFile}
           addExecutionEstimateLabel={localeText.create.addExecutionEstimate}
           fileCountLabel={localeText.create.fileCount}

@@ -2,7 +2,11 @@
   import { browser } from '$app/environment';
   import type { DraftOrder, OrderView, TemplatePresentation } from './kefine-workflow';
   import { scheduleAfter } from '$lib/utils/helpers';
+  import { cubicOut } from 'svelte/easing';
+  import type { TransitionConfig } from 'svelte/transition';
   import KefineOrderListItem from '$lib/components/kefine/KefineOrderListItem.svelte';
+  import KefineProxyConfigWidget from '$lib/components/kefine/KefineProxyConfigWidget.svelte';
+  import { matchesProxyServerTask, proxyConfigOptions } from '$lib/kefine/kefine-proxy-configs';
   const PLACEHOLDER_TYPE_DELAY_MS = 58;
   const PLACEHOLDER_DELETE_DELAY_MS = 34;
   const PLACEHOLDER_PAUSE_MS = 1150;
@@ -33,6 +37,7 @@
     isSearching,
     matchedTasksLabel,
     recentTasksLabel,
+    proxyWidget,
     addFileLabel,
     addExecutionEstimateLabel,
     fileCountLabel,
@@ -104,6 +109,16 @@
     isSearching: boolean;
     matchedTasksLabel: string;
     recentTasksLabel: string;
+    proxyWidget: {
+      title: string;
+      subtitle: string;
+      configsLabel: string;
+      protocolLabel: string;
+      scanHintLabel: string;
+      copyLabel: string;
+      copiedLabel: string;
+      downloadLabel: string;
+    };
     addFileLabel: string;
     addExecutionEstimateLabel: string;
     fileCountLabel: (count: number) => string;
@@ -151,6 +166,37 @@
   let taskCompleted = $state(false);
   let isFlying = $state(false);
   let initialized = $state(false);
+  let prefersReducedMotion = $state(false);
+
+  // Show the proxy config widget as soon as the user types a proxy-related task,
+  // without requiring submission. It is rendered above the task history.
+  const showProxyWidget = $derived(matchesProxyServerTask(draft.description ?? ''));
+
+  $effect(() => {
+    if (!browser) {
+      return;
+    }
+
+    const query = window.matchMedia('(prefers-reduced-motion: reduce)');
+    prefersReducedMotion = query.matches;
+    const onChange = (event: MediaQueryListEvent) => {
+      prefersReducedMotion = event.matches;
+    };
+    query.addEventListener('change', onChange);
+    return () => query.removeEventListener('change', onChange);
+  });
+
+  // Smooth reveal used when the proxy widget mounts/unmounts.
+  function proxyReveal(_: Element): TransitionConfig {
+    return {
+      duration: prefersReducedMotion ? 0 : 420,
+      easing: cubicOut,
+      css: (t, u) => `
+        opacity: ${t};
+        transform: translateY(${u * -8}px) scale(${0.98 + t * 0.02});
+      `
+    };
+  }
 
   import { solutionsStore } from '$lib/kefine/solutions-store';
 
@@ -1199,6 +1245,22 @@
 
   <input bind:this={fileInput} data-part="file-input" type="file" multiple onchange={handleFileChange} />
   <p id="kefine-composer-hints" data-part="composer-hints" hidden>{composerHints}</p>
+
+  {#if showProxyWidget}
+    <lef-proxy-widget-slot transition:proxyReveal>
+      <KefineProxyConfigWidget
+        configs={proxyConfigOptions}
+        title={proxyWidget.title}
+        subtitle={proxyWidget.subtitle}
+        configsLabel={proxyWidget.configsLabel}
+        protocolLabel={proxyWidget.protocolLabel}
+        scanHintLabel={proxyWidget.scanHintLabel}
+        copyLabel={proxyWidget.copyLabel}
+        copiedLabel={proxyWidget.copiedLabel}
+        downloadLabel={proxyWidget.downloadLabel}
+      />
+    </lef-proxy-widget-slot>
+  {/if}
 
   {#if isSearching && matchedOrders.length > 0}
     <section data-part="recent" aria-label={isSearching ? matchedTasksLabel : solverLabel}>
@@ -2951,6 +3013,11 @@
     font: inherit;
     font-weight: 600;
     text-align: center;
+  }
+
+  lef-proxy-widget-slot {
+    display: block;
+    width: 100%;
   }
 
   section[data-part='recent'] {

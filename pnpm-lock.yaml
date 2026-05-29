@@ -32,6 +32,9 @@ importers:
       prosekit:
         specifier: ^0.19.0
         version: 0.19.0(@shikijs/types@4.0.2)(@types/hast@3.0.4)(preact@10.24.2)(prosemirror-model@1.25.6)(prosemirror-state@1.4.4)(prosemirror-transform@1.12.0)(prosemirror-view@1.41.8)(react@19.2.6)(svelte@5.55.7)
+      qrcode-generator:
+        specifier: ^2.0.4
+        version: 2.0.4
       shiki:
         specifier: ^1.29.0
         version: 1.29.2
@@ -2633,6 +2636,9 @@ packages:
   proxy-from-env@2.1.0:
     resolution: {integrity: sha512-cJ+oHTW1VAEa8cJslgmUZrc+sjRKgAKl3Zyse6+PV38hZe/V6Z14TbCuXcan9F9ghlz4QrFr2c92TNF82UkYHA==}
     engines: {node: '>=10'}
+
+  qrcode-generator@2.0.4:
+    resolution: {integrity: sha512-mZSiP6RnbHl4xL2Ap5HfkjLnmxfKcPWpWe/c+5XxCuetEenqmNFf1FH/ftXPCtFG5/TDobjsjz6sSNL0Sr8Z9g==}
 
   qrcode@1.5.3:
     resolution: {integrity: sha512-puyri6ApkEHYiVl4CFzo1tDkAZ+ATcnbJrJ6RiBM1Fhctdn/ix9MTE3hRph33omisEbC/2fcfemsseiKgBPKZg==}
@@ -6483,6 +6489,8 @@ snapshots:
 
   proxy-from-env@2.1.0:
     optional: true
+
+  qrcode-generator@2.0.4: {}
 
   qrcode@1.5.3:
     dependencies:
