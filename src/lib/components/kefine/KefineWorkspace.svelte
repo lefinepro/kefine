@@ -3154,6 +3154,7 @@
     openWorkspaceLabel={localeText.profile.openPublicProfile}
     signOutLabel={localeText.profile.signOut}
     openTaskLabel={localeText.profile.openTask}
+    statusLabels={localeText.orderStatus}
     showPrivateKey={showPrivateKeyAuth}
     isAuthenticated={isAuthenticated}
     profile={currentProfile}

@@ -291,5 +291,273 @@ export const KEFINE_TEXT_HY = {
     nameLabel: 'Անուն',
     emailLabel: 'Email',
     messageLabel: 'Հաղորդագրություն'
+  },
+  placeholders: {
+    ...KEFINE_TEXT_EN.placeholders,
+    taskSearch: 'id, վերնագիր, solver, կարգավիճակ...',
+    contactName: 'Ձեր անունը',
+    contactEmail: 'your@email.com',
+    contactMessage: 'Նկարագրեք, թե ինչով կարող ենք օգնել...'
+  },
+  notes: {
+    ...KEFINE_TEXT_EN.notes,
+    waitingCompletion: 'Սպասում ենք առաջադրանքի ավարտին /task/<orderId>',
+    paymentInvoice: 'Վճարման հղում:',
+    noTasks: 'Lepos չեն գտնվել',
+    noTasksDescription: 'Ստեղծեք գոնե մեկ lepo կամ փոխեք հարցումը։'
+  },
+  executionFlow: {
+    ...KEFINE_TEXT_EN.executionFlow,
+    queued: {
+      title: 'Ուղարկվել է exchange',
+      detail: 'Առաջադրանքը գրանցված է և սպասում է կատարողների։'
+    },
+    matching: {
+      title: 'Կատարողների որոնում',
+      detail: 'Exchange-ը ընտրում է հասանելի կատարողներ այս առաջադրանքի համար։'
+    },
+    assigned: {
+      title: 'Կատարողները գտնված են',
+      detail: 'Մեկ կամ մի քանի կատարող ընդունել են առաջադրանքը և պատրաստվում են կատարմանը։'
+    },
+    running: {
+      title: 'Առաջադրանքը ընթացքի մեջ է',
+      detail: 'Կատարումն ընթանում է։ Հետևեք նոթբուքի փուլերին և կատարողի թարմացումներին ստորև։'
+    },
+    review: {
+      title: 'Արդյունքի ստուգում',
+      detail: 'Կատարողը վերադարձրել է արդյունքը։ Ստուգեք նոթբուքի փուլերը և հաստատեք, եթե անհրաժեշտ է։'
+    },
+    completed: {
+      title: 'Կատարումն ավարտված է',
+      detail: 'Վերջնական նոթբուքը և արդյունքը պատրաստ են։'
+    },
+    failed: {
+      title: 'Կատարումը ձախողվեց',
+      detail: 'Ընթացիկ գործարկումը ձախողվեց։ Դիտեք նոթբուքի վերջին փուլը համատեքստի համար։'
+    },
+    batching: {
+      title: 'Պատվերների batching',
+      detail: 'Միասին տեղադրված պատվերները խմբավորվում են՝ կատարման ծախսերը նվազեցնելու համար։'
+    },
+    competition: {
+      title: 'Մրցակցությունը սկսվել է',
+      detail: 'Solver-ները առաջարկում են գին և ստուգում ուղիները մինչև կատարումը։'
+    },
+    winnerSelected: {
+      title: 'Գտնված է լավագույն գինը',
+      detail: 'Հաղթող solver-ը ֆիքսում է ուղին և պատրաստում կատարումը։'
+    },
+    bridging: {
+      title: 'Bridging դեպի նպատակային ցանց',
+      detail: 'Ակտիվները տեղափոխվում են նպատակային ցանց, հաստատումներն ընթացքի մեջ են։'
+    },
+    'awaiting-auth': {
+      title: 'Ընտրեք շարունակելու եղանակը',
+      detail: ''
+    },
+    'awaiting-payment': {
+      title: 'Պատրաստ է վճարման',
+      detail: 'Նույնականացումը հաստատված է։ Ավարտեք վճարումը կամ դեպոզիտը՝ արդյունքը բացելու համար։'
+    }
+  },
+  subtasks: {
+    ...KEFINE_TEXT_EN.subtasks,
+    prepareConfig: {
+      id: 'prepare-config',
+      title: 'Պատրաստել կազմաձևումը',
+      detail: 'Նորմալացնել հարցումը, հավաքել համատեքստը և ֆիքսել կատարման ծավալը։'
+    },
+    runChecks: {
+      id: 'run-checks',
+      title: 'Կատարել ստուգումներ',
+      detail: 'Ստուգել կախվածությունները, dry-run-ը և անվտանգության սահմանափակումները մինչև փոխանցումը։'
+    },
+    syncArtifacts: {
+      id: 'sync-artifacts',
+      title: 'Համաժամեցնել արտեֆակտները',
+      detail: 'Տեղափոխել պատրաստված արտեֆակտները նպատակային աշխատանքային միջավայր։'
+    },
+    profileCode: {
+      id: 'profile-code',
+      title: 'Workspace-ի կրիտիկական ուղիները',
+      detail: 'Չափել ամենադանդաղ հատվածները մինչև օպտիմիզացիաները։'
+    },
+    benchmarkPaths: {
+      id: 'benchmark-paths',
+      title: 'Համեմատել տարբերակները',
+      detail: 'Համեմատել մրցակցող ռազմավարությունները և պահել ամենաարդյունավետ տարբերակը։'
+    },
+    publishResult: {
+      id: 'publish-result',
+      title: 'Հրապարակել արդյունքը',
+      detail: 'Փաթեթավորել արդյունքը և պատրաստել առաքման մակերեսը։'
+    }
+  },
+  table: {
+    ...KEFINE_TEXT_EN.table,
+    headers: {
+      task: 'Առաջադրանք',
+      solver: 'Solver',
+      status: 'Կարգավիճակ',
+      amount: 'Գումար',
+      created: 'Ստեղծվել է',
+      action: 'Գործողություն'
+    }
+  },
+  orderStatus: {
+    ...KEFINE_TEXT_EN.orderStatus,
+    queued: 'Հերթում',
+    matching: 'Ընտրություն',
+    assigned: 'Նշանակված',
+    accepted: 'Ընդունված',
+    executing: 'Կատարվում է',
+    running: 'Կատարվում է',
+    review: 'Ստուգման մեջ',
+    completed: 'Ավարտված',
+    done: 'Ավարտված',
+    rejected: 'Մերժված',
+    stopped: 'Դադարեցված',
+    cancelled: 'Դադարեցված',
+    canceled: 'Դադարեցված',
+    failed: 'Ձախողված'
+  },
+  solutionTask: {
+    ...KEFINE_TEXT_EN.solutionTask,
+    task: 'Առաջադրանք',
+    comment: 'մեկնաբանություն',
+    comments: 'մեկնաբանություն',
+    applying: 'կիրառվում է…',
+    correctionInProgress: 'Ուղղումն ընթացքի մեջ է',
+    correctionBeingApplied: 'Ուղղումը կիրառվում է',
+    sendCorrection: 'Ուղարկել ուղղում…',
+    submitCorrection: 'Ուղարկել ուղղումը',
+    send: 'Ուղարկել'
+  },
+  profile: {
+    ...KEFINE_TEXT_EN.profile,
+    title: 'Աշխատատարածք',
+    subtitle: 'Հանրային աշխատատարածք, սոցիալական հղումներ, ավարտված repos և referral կարգավորումներ։',
+    onboardingTitle: 'Լրացրեք աշխատատարածքը',
+    onboardingSubtitle: 'Մուտքից հետո ավարտեք աշխատատարածքը երկու քայլով՝ անուն և սոցիալական հղումներ։',
+    onboardingStepLabel: 'Քայլ',
+    identityTitle: 'Ինքնություն',
+    cardStepTitle: 'Քարտի բոնուս',
+    socialsStepTitle: 'Սոցիալական հղումներ',
+    firstName: 'Անուն',
+    surname: 'Ազգանուն',
+    identityLeadTitle: 'Սահմանեք աշխատատարածքի հանրային ինքնությունը',
+    identityLeadText:
+      'Անունն ու ազգանունը որոշում են, թե աշխատատարածքը ինչպես է երևում հանրային հղումներում, ավարտված repos-ում և հետևման մակերեսներում։',
+    firstNameHint: 'Օգտագործեք իրական կամ աշխատանքային անուն։ Այն ցուցադրվում է որպես հանրային ինքնության հիմնական մաս։',
+    surnameHint: 'Ավելացրեք ազգանուն, որպեսզի աշխատատարածքը ամբողջական և վստահելի երևա մյուս մասնակիցների համար։',
+    bioHint: 'Գրեք կարճ ներկայացում ձեր stack-ի, ուղղության կամ սպասվող աշխատանքի մասին։',
+    continueToCard: 'Շարունակել դեպի սոցիալական հղումներ',
+    continueToSocials: 'Շարունակել դեպի սոցիալական հղումներ',
+    finishSetup: 'Ավարտել կարգավորումը',
+    setupDone: 'Աշխատատարածքի կարգավորումն ավարտված է',
+    setupHint: 'Ավարտեք քայլերը մեկ անգամ, և սովորական աշխատատարածքի տեսքը կմնա հասանելի։',
+    bonusTitle: 'Ստացեք $100 բոնուս',
+    bonusText: 'Հաստատեք հայկական բանկին կապված քարտը։ BIN ստուգումից հետո բոնուսը կավելանա աշխատատարածքի մնացորդին։',
+    username: 'Օգտանուն',
+    displayName: 'Ցուցադրվող անուն',
+    bio: 'Կարճ տվյալներ',
+    publicToggle: 'Դարձնել աշխատատարածքը հանրային',
+    publicStatus: 'Հանրային աշխատատարածք',
+    privateStatus: 'Փակ աշխատատարածք',
+    makePublic: 'Դարձնել աշխատատարածքը հանրային',
+    makePrivate: 'Դարձնել աշխատատարածքը փակ',
+    publicHint: 'Աշխատատարածքը հիմա հանրային է։ Այն կարող են գտնել, հետևել և օգտագործել առաջադրանքներ ներգրավելու համար։',
+    privateHint: 'Աշխատատարածքը փակ է։ Բացեք կողպեքը՝ այն հանրային դարձնելու և առաջադրանքներ ներգրավելու համար։',
+    socialLinks: 'Սոցիալական հղումներ',
+    secretData: 'Գաղտնի տվյալներ',
+    sshPublicKey: 'SSH հանրային բանալի',
+    sshPublicKeyHint: 'Տեղադրեք SSH հանրային բանալին, որը պետք է թույլատրվի repo download և clone access-ի համար։',
+    privateKey: 'Private key',
+    privateKeyHint: 'Ձեր գեներացված workspace private key-ը կհայտնվի այստեղ։',
+    copyPrivateKey: 'Պատճենել private key-ը',
+    privateKeyCopied: 'Private key-ը պատճենված է',
+    socialLabel: 'Պիտակ',
+    socialUrl: 'URL',
+    addLink: 'Ավելացնել հղում',
+    save: 'Պահել աշխատատարածքը',
+    signOut: 'Դուրս գալ',
+    authDrawerSubtitle: 'Արագ մուտք դեպի ձեր աշխատատարածք և վերջին ռեպոներ։',
+    openPublicProfile: 'Բացել հանրային աշխատատարածք',
+    latestTasks: 'Վերջին ռեպոներ',
+    projects: 'Նախագծեր',
+    lepos: 'Lepos',
+    closedTasks: 'Փակված ավարտված repos',
+    publicTask: 'Դարձնել repo-ն հանրային',
+    viewAccess: 'Վճարովի դիտում',
+    watchAccess: 'Կարգավիճակի հետևում',
+    joinAccess: 'Միանալ կատարմանը',
+    cardTitle: 'Բանկային քարտի բոնուս',
+    cardHint: 'Կցեք քարտ և ստուգեք BIN-ը հայկական բանկի հետ՝ $100 բոնուս ստանալու համար։',
+    cardNumber: 'Քարտի համար կամ առաջին 6-8 թվանշանները',
+    verifyCard: 'Ստուգել քարտը',
+    skipCard: 'Բաց թողնել հիմա',
+    socialOptionalHint: 'Սոցիալական հղումները պարտադիր չեն։ Կարող եք ավարտել առանց դրանց։',
+    socialBonusHint: 'Ավելացրեք գոնե մեկ սոցիալական հղում՝ $100 քարտի բոնուսը բացելու համար։',
+    referralPercent: 'Referral տոկոս',
+    hidden: 'Այս աշխատատարածքը փակ է։',
+    follow: 'Հետևել',
+    following: 'Հետևում եք',
+    followers: 'Հետևորդներ',
+    publicTasks: 'Հանրային repos',
+    noPublicTasks: 'Հանրային repos դեռ չկան',
+    noRecentTasks: 'Վերջին repos դեռ չկան',
+    noOwnerTasks: 'Ավարտված repos դեռ չկան',
+    openTask: 'Բացել',
+    buyView: 'Գնել դիտում',
+    buyWatch: 'Հետևել կարգավիճակին',
+    buyJoin: 'Միանալ repo-ին',
+    ownerTask: 'Ձեր repo-ն',
+    accessGranted: 'Հասանելիությունը բացված է',
+    profileUnavailable: 'Աշխատատարածքը հասանելի չէ',
+    templates: 'Ծառայություններ',
+    templatesSubtitle: 'Ստեղծեք բազմակի օգտագործման ծառայություններ և տարածեք դրանք որպես առանձին entry point-եր։',
+    noTemplates: 'Ծառայություններ դեռ չկան',
+    createTemplate: 'Ստեղծել',
+    templateTitle: 'Ծառայության վերնագիր',
+    templateDescription: 'Ծառայության նշում',
+    templatePrompt: 'Ծառայության prompt',
+    templateVariables: 'Prompt փոփոխականներ',
+    templateVariableDefault: 'Լռելյայն արժեք',
+    templateLocalizationHint: 'EN, RU և HY ավտոպատճենները ստեղծվում են editor-ի ընթացիկ լեզվից։',
+    templatePrefillTitle: 'Ծառայության հարցման վերնագիր',
+    templatePrefillDescription: 'Ծառայության հարցում',
+    templatePricingMode: 'Գնի ճշգրտում',
+    templateFixedMode: 'USD',
+    templatePercentMode: 'Տոկոս',
+    templatePrice: 'Ճշգրտման գումար',
+    templatePercent: 'Ծառայության տոկոս',
+    templateFiles: 'Ծառայության ֆայլեր',
+    templateAddFiles: 'Ավելացնել ծառայության ֆայլեր',
+    templatePublish: 'Հրապարակել ծառայությունը',
+    templatePublished: 'Հրապարակված',
+    templateDraft: 'Սևագիր',
+    templatePrivate: 'Փակ',
+    templatePublic: 'Հանրային',
+    templateVisibility: 'Տեսանելիություն',
+    templateCreateCtaTitle: 'Ստեղծեք առաջին ծառայությունը',
+    templateCreateCtaDetail: 'Ծառայությունները լռելյայն թաքնված են։ Ստեղծեք մեկը, կարգավորեք գինը և բոնուսները, հետո ընտրեք փակ կամ հանրային տեսանելիություն։',
+    templateOpenEditor: 'Բացել ծառայության editor-ը',
+    templateBonusTitle: 'Ծառայության բոնուս',
+    templateBonusToggle: 'Ծառայությունից օգտվելուց հետո պարգևատրել մնացորդով',
+    templateBonusMode: 'Բոնուսի ռեժիմ',
+    templateBonusValue: 'Բոնուսի արժեք',
+    templateBonusFixed: 'Ֆիքսված USD բոնուս',
+    templateBonusPercent: 'Տոկոսային բոնուս',
+    templateBonusPreview: 'Մնացորդի պարգև',
+    templateFreeHint: 'Ծառայությունը կարող է գործնականում անվճար դառնալ, եթե բոնուսը ծածկի գինը։',
+    templateCopyLink: 'Պատճենել ծառայության հղումը',
+    templateOpen: 'Բացել ծառայությունը',
+    templateDelete: 'Ջնջել ծառայությունը',
+    templateFeePreview: 'Հեղինակի fee',
+    templateNetPreview: 'Պատվերի մնացորդ',
+    templateLinkCopied: 'Ծառայության հղումը պատճենված է',
+    templateSlug: 'Ծառայության URL',
+    templateSlugHint: 'Պարտադիր չէ։ Թողեք դատարկ՝ UUID ոճի հղումը պահպանելու համար։'
   }
 } as const;

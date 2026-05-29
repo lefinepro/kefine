@@ -11,6 +11,19 @@ export function formatKefineOrderStatus(status: string) {
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 }
 
+export function localizeKefineOrderStatus(
+  status: string,
+  labels: Partial<Record<string, string>>
+) {
+  const normalized = status.trim().toLowerCase();
+  const key = normalized || 'queued';
+  const localized = labels[key];
+  if (localized) {
+    return localized;
+  }
+  return key.charAt(0).toUpperCase() + key.slice(1);
+}
+
 export function formatKefineOrderPrice(order: OrderView, priceLabel: string) {
   if (order.estimatedCost === undefined) {
     return `${priceLabel} -`;

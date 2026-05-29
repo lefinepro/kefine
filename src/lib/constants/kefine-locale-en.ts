@@ -433,6 +433,33 @@ export const KEFINE_TEXT_EN = {
       action: 'Action'
     }
   },
+  orderStatus: {
+    queued: 'Queued',
+    matching: 'Matching',
+    assigned: 'Assigned',
+    accepted: 'Accepted',
+    executing: 'Executing',
+    running: 'Running',
+    review: 'In review',
+    completed: 'Completed',
+    done: 'Completed',
+    rejected: 'Rejected',
+    stopped: 'Stopped',
+    cancelled: 'Stopped',
+    canceled: 'Stopped',
+    failed: 'Failed'
+  },
+  solutionTask: {
+    task: 'Task',
+    comment: 'comment',
+    comments: 'comments',
+    applying: 'applying…',
+    correctionInProgress: 'Correction in progress',
+    correctionBeingApplied: 'Correction is being applied',
+    sendCorrection: 'Send a correction…',
+    submitCorrection: 'Submit correction',
+    send: 'Send'
+  },
   contact: {
     title: 'Write to Lefine',
     description: 'Fill in the message and we will open your email client with a ready draft.',
