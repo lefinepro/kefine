@@ -940,13 +940,38 @@
 
   function handleCreateFocusOut(event: FocusEvent) {
     const currentTarget = event.currentTarget as HTMLElement;
+    const nextTarget = event.relatedTarget as Node | null;
 
-    queueMicrotask(() => {
-      if (!currentTarget.contains(document.activeElement)) {
-        inputMetaOpen = false;
-      }
-    });
+    // Only collapse the composer when focus moves to another focusable element
+    // outside of it (e.g. keyboard Tab navigation). Pointer interactions are
+    // handled by the outside-pointerdown listener below, because clicking a
+    // composer chip does not reliably move focus into the composer on every
+    // browser (and some chips are replaced by inline editors on click), which
+    // previously made the menu collapse before the click could take effect.
+    if (nextTarget && !currentTarget.contains(nextTarget)) {
+      inputMetaOpen = false;
+    }
   }
+
+  $effect(() => {
+    if (!browser || !inputMetaOpen) {
+      return;
+    }
+
+    const handleWindowPointerDown = (event: PointerEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest('[data-kefine-create]')) {
+        return;
+      }
+
+      inputMetaOpen = false;
+    };
+
+    globalThis.addEventListener('pointerdown', handleWindowPointerDown);
+    return () => {
+      globalThis.removeEventListener('pointerdown', handleWindowPointerDown);
+    };
+  });
 
   function normalizeTag(value: string): string {
     return value.trim().replace(/^#+/, '').toLowerCase();
