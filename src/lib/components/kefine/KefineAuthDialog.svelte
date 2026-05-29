@@ -458,6 +458,12 @@
     gap: 0.75rem;
   }
 
+  kefine-account-profile-actions button {
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+
   kefine-account-section-head,
   kefine-account-profile-actions,
   .kefine-account-task {
@@ -578,6 +584,7 @@
 
   /* === 3D Door (scaled down from reference, lefine style) === */
   .kefine-sign-out .door-scene {
+    display: block;
     width: 15px;
     height: 20px;
     perspective: 110px;
@@ -646,6 +653,7 @@
 
   .kefine-sign-out .door-frame,
   .kefine-sign-out .door {
+    display: block;
     backface-visibility: visible;
   }
 
