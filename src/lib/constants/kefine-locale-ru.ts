@@ -435,6 +435,33 @@ export const KEFINE_TEXT_RU = {
       action: 'Действие'
     }
   },
+  orderStatus: {
+    queued: 'В очереди',
+    matching: 'Подбор',
+    assigned: 'Назначен',
+    accepted: 'Принят',
+    executing: 'Выполняется',
+    running: 'Выполняется',
+    review: 'На проверке',
+    completed: 'Завершён',
+    done: 'Завершён',
+    rejected: 'Отклонён',
+    stopped: 'Остановлен',
+    cancelled: 'Остановлен',
+    canceled: 'Остановлен',
+    failed: 'Ошибка'
+  },
+  solutionTask: {
+    task: 'Задача',
+    comment: 'комментарий',
+    comments: 'комментариев',
+    applying: 'применяется…',
+    correctionInProgress: 'Идёт корректировка',
+    correctionBeingApplied: 'Корректировка применяется',
+    sendCorrection: 'Отправить корректировку…',
+    submitCorrection: 'Отправить корректировку',
+    send: 'Отправить'
+  },
   contact: {
     title: 'Написать в Lefine',
     description: 'Заполните сообщение, и мы откроем почтовый клиент с готовым черновиком.',

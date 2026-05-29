@@ -2,6 +2,7 @@
   import Icon from '@iconify/svelte';
   import type { OrderView } from '$lib/components/kefine/kefine-workflow';
   import type { Profile } from '$lib/types/user';
+  import { localizeKefineOrderStatus } from '$lib/components/kefine/kefine-order-formatters';
 
   let {
     open,
@@ -21,6 +22,7 @@
     openWorkspaceLabel,
     signOutLabel,
     openTaskLabel,
+    statusLabels,
     showPrivateKey,
     isAuthenticated,
     profile,
@@ -55,6 +57,7 @@
     openWorkspaceLabel: string;
     signOutLabel: string;
     openTaskLabel: string;
+    statusLabels: Partial<Record<string, string>>;
     showPrivateKey: boolean;
     isAuthenticated: boolean;
     profile: Profile | null;
@@ -256,7 +259,7 @@
               <button type="button" class="kefine-account-task" onclick={() => onOpenTask(task.id)}>
                 <lefine-box class="kefine-account-task__copy">
                   <strong>{task.title}</strong>
-                  <small>{task.status}</small>
+                  <small>{localizeKefineOrderStatus(task.status, statusLabels)}</small>
                 </lefine-box>
                 <kefine-account-task-action>{openTaskLabel}</kefine-account-task-action>
               </button>
