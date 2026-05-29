@@ -1,6 +1,7 @@
 <script lang="ts">
   import Icon from '@iconify/svelte';
   import { browser } from '$app/environment';
+  import { kefineLocaleText } from '$lib/constants/kefine-locale';
   import type { Editor } from 'prosekit/core';
   let createEditor: any, defineBasicExtension: any, defineMention: any, union: any;
   let AutocompleteEmpty: any, AutocompleteItem: any, AutocompleteList: any, AutocompletePopover: any;
@@ -88,6 +89,8 @@
     autoOpenTagEditor?: boolean;
     autoOpenFilePicker?: boolean;
   } = $props();
+
+  const localeText = $derived($kefineLocaleText);
 
   let editorHost: HTMLDivElement | null = $state(null);
   let editor: Editor | null = $state(null);
@@ -820,10 +823,10 @@
       {#if !compact}
         <kefine-rich-editor-modes>
           <button type="button" data-active={editorMode === 'visual'} onclick={() => setEditorMode('visual')}>
-            Visual
+            {localeText.create.richEditorVisual}
           </button>
           <button type="button" data-active={editorMode === 'source'} onclick={() => setEditorMode('source')}>
-            Org
+            {localeText.create.richEditorSource}
           </button>
         </kefine-rich-editor-modes>
       {/if}
@@ -832,25 +835,25 @@
       {/if}
       {#if enableMeta && !compact}
         <kefine-rich-editor-strip>
-          <button type="button" data-part="meta-action" aria-label="Add file" onclick={() => fileInput?.click()}>
+          <button type="button" data-part="meta-action" aria-label={localeText.create.richEditorAddFile} onclick={() => fileInput?.click()}>
             <Icon icon="mdi:paperclip" width="17" height="17" aria-hidden="true" />
-            <lefine-text>Add file</lefine-text>
+            <lefine-text>{localeText.create.richEditorAddFile}</lefine-text>
           </button>
           {#if tagEditorOpen}
             <input
               bind:this={tagInput}
               data-part="tag-input"
               value={tagInputValue}
-              placeholder="tag"
+              placeholder={localeText.create.richEditorTagPlaceholder}
               oninput={(event) => {
                 tagInputValue = (event.currentTarget as HTMLInputElement).value;
               }}
               onkeydown={handleTagKeydown}
             />
           {:else}
-            <button type="button" data-part="meta-action" aria-label="Add tag" onclick={() => { tagEditorOpen = true; }}>
+            <button type="button" data-part="meta-action" aria-label={localeText.create.richEditorAddTag} onclick={() => { tagEditorOpen = true; }}>
               <Icon icon="mdi:tag-plus-outline" width="17" height="17" aria-hidden="true" />
-              <lefine-text>Add tag</lefine-text>
+              <lefine-text>{localeText.create.richEditorAddTag}</lefine-text>
             </button>
           {/if}
           <input bind:this={fileInput} data-part="file-input" type="file" multiple onchange={handleFileChange} />
@@ -864,7 +867,7 @@
       {#if editorLoadError}
         <kefine-rich-editor-state data-state="error">{editorLoadError}</kefine-rich-editor-state>
       {:else if editorLoading && !editorReady}
-        <kefine-rich-editor-state data-state="loading">Loading editor...</kefine-rich-editor-state>
+        <kefine-rich-editor-state data-state="loading">{localeText.create.richEditorLoading}</kefine-rich-editor-state>
       {/if}
 
       {#if editorMode === 'visual'}
@@ -902,7 +905,7 @@
                   </AutocompleteItem>
                 {/each}
                 <AutocompleteEmpty>
-                  <kefine-slash-empty>No matching blocks</kefine-slash-empty>
+                  <kefine-slash-empty>{localeText.create.richEditorNoBlocks}</kefine-slash-empty>
                 </AutocompleteEmpty>
               </AutocompleteList>
             </kefine-slash-menu>
@@ -926,7 +929,7 @@
                     </AutocompleteItem>
                   {/each}
                   <AutocompleteEmpty>
-                    <kefine-slash-empty>No matching recipients</kefine-slash-empty>
+                    <kefine-slash-empty>{localeText.create.richEditorNoRecipients}</kefine-slash-empty>
                   </AutocompleteEmpty>
                 </AutocompleteList>
               </kefine-slash-menu>
@@ -950,7 +953,7 @@
         {#if tagDrafts.length > 0}
           <kefine-rich-editor-tag-strip>
             {#each tagDrafts as tag (`tag-${tag}`)}
-              <button type="button" data-part="tag-pill" onclick={() => removeTag(tag)} aria-label={`Remove ${tag} tag`}>
+              <button type="button" data-part="tag-pill" onclick={() => removeTag(tag)} aria-label={localeText.create.richEditorRemoveTag(tag)}>
                 <lefine-text>#{tag}</lefine-text>
                 <strong>×</strong>
               </button>

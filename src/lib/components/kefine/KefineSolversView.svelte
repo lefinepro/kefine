@@ -118,6 +118,15 @@
     settingsPanelOpen = false;
   }
 
+  function setChartsFocusedFromKeyboard(event: KeyboardEvent, focused: boolean) {
+    if (event.key !== 'Enter' && event.key !== ' ') {
+      return;
+    }
+
+    event.preventDefault();
+    chartsFocused = focused;
+  }
+
   const localeText = $derived($kefineLocaleText);
 
   const metricsById = $derived(
@@ -163,7 +172,7 @@
   );
 </script>
 
-<div class="solutions-page-container">
+<lefine-box class="solutions-page-container">
   <lef-tasks-grid>
     <lef-tasks-aside aria-label={localeText.solversView.tasksAside}>
       <lef-tasks-aside-head>{localeText.solversView.tasksAside}</lef-tasks-aside-head>
@@ -371,11 +380,12 @@
 
         <!-- Clicking anywhere inside the metrics area expands the detailed charts.
              Buttons above are safe because they have their own handlers and stop propagation implicitly by being separate. -->
-        <div
+        <lefine-box
           role="button"
           tabindex="0"
           aria-label={localeText.solversView.metricsAria}
           onclick={() => (chartsFocused = true)}
+          onkeydown={(event: KeyboardEvent) => setChartsFocusedFromKeyboard(event, true)}
           style="cursor: pointer;"
         >
           <SolutionMetricsMini
@@ -384,18 +394,26 @@
             project={solutions[0]?.project}
             slug={solutions[0]?.slug}
           />
-        </div>
+        </lefine-box>
       </lef-task-rail>
     {:else}
       <!-- Charts Focused Mode -->
-      <div class="charts-main" onclick={() => (chartsFocused = false)} style="cursor: pointer;">
+      <lefine-box
+        class="charts-main"
+        role="button"
+        tabindex="0"
+        aria-label={localeText.solversView.metricsAria}
+        onclick={() => (chartsFocused = false)}
+        onkeydown={(event: KeyboardEvent) => setChartsFocusedFromKeyboard(event, false)}
+        style="cursor: pointer;"
+      >
         <SolutionMetricsBlock
           metrics={visibleMetrics}
           activeSolverId={solutions[0]?.id ?? visibleMetrics[0]?.solverId ?? '5'}
           title={localeText.solversView.metricsTitle}
           subtitle={localeText.solversView.metricsSubtitle}
         />
-      </div>
+      </lefine-box>
 
         <lef-task-rail aria-label={localeText.solversView.compactSolversAria}>
           <lef-task-rail-card>
@@ -403,18 +421,18 @@
 
         </lef-task-rail-card>
 
-        <div class="compact-solvers">
+        <lefine-box class="compact-solvers">
           {#each solutions as solution}
-            <div class="compact-solver" onclick={() => onViewSolution?.(solution.id)}>
+            <button type="button" class="compact-solver" onclick={() => onViewSolution?.(solution.id)}>
               <strong>{solution.solver}</strong>
               <small>{solution.title}</small>
-            </div>
+            </button>
           {/each}
-        </div>
+        </lefine-box>
       </lef-task-rail>
     {/if}
   </lef-tasks-grid>
-</div>
+</lefine-box>
 
 <style>
   /* Exact copy of the styles from /order/[id]/solutions/+page.svelte for 1:1 visual match in any context (thread or standalone) */

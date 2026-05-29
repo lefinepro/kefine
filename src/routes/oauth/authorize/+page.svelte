@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { loadSession, type SessionData } from '$lib/auth/session';
+	import { kefineLocaleText } from '$lib/constants/kefine-locale';
 
 	import octraMascot from '$lib/images/octra-mascot.png';
 	import lefineLogo from '$lib/images/lefine.pro.png';
@@ -73,10 +74,10 @@
 			if (data.redirect) {
 				window.location.href = data.redirect;
 			} else {
-				error = data.error || 'Failed to authorize';
+				error = data.error || oauthText.failedAuthorize;
 			}
 		} catch (e) {
-			error = 'Network error. Please try again.';
+			error = oauthText.networkError;
 		} finally {
 			isApproving = false;
 		}
@@ -93,12 +94,12 @@
 		window.location.href = url.toString();
 	}
 
-	$: displayName = session?.displayName || session?.email?.split('@')[0] || 'LeFine user';
+	$: oauthText = $kefineLocaleText.auth.oauth;
 	$: shortEmail = session?.email || '';
 </script>
 
 <svelte:head>
-	<title>Authorize Octra • LeFine</title>
+	<title>{oauthText.pageTitle}</title>
 </svelte:head>
 
 <lef-oauth-screen>
@@ -124,9 +125,9 @@
 		<!-- Title -->
 		<lef-oauth-title>
 			<h1>
-				<lefine-text data-accent>Octra</lefine-text> <lefine-text data-muted>by Octra</lefine-text><br />
-				<lefine-text data-muted>wants access to your</lefine-text><br />
-				<lefine-text data-accent>LeFine</lefine-text> account
+				<lefine-text data-accent>Octra</lefine-text> <lefine-text data-muted>{oauthText.byApp}</lefine-text><br />
+				<lefine-text data-muted>{oauthText.wantsAccess}</lefine-text><br />
+				<lefine-text data-accent>LeFine</lefine-text> {oauthText.account}
 			</h1>
 		</lef-oauth-title>
 
@@ -134,25 +135,25 @@
 		<lef-oauth-card>
 			<lef-oauth-card-body>
 				<lef-oauth-section>
-					<lef-oauth-section-label>Authorizing allows this app to</lef-oauth-section-label>
+					<lef-oauth-section-label>{oauthText.allowsTitle}</lef-oauth-section-label>
 					<ul>
 						<li>
 							<lefine-text data-check aria-hidden="true">✓</lefine-text>
-							<lefine-text>Verify your LeFine identity <lefine-text data-muted>({shortEmail})</lefine-text></lefine-text>
+							<lefine-text>{oauthText.verifyIdentity} <lefine-text data-muted>({shortEmail})</lefine-text></lefine-text>
 						</li>
 						<li>
 							<lefine-text data-check aria-hidden="true">✓</lefine-text>
-							<lefine-text>Know which resources you can access</lefine-text>
+							<lefine-text>{oauthText.knowResources}</lefine-text>
 						</li>
 						<li>
 							<lefine-text data-check aria-hidden="true">✓</lefine-text>
-							<lefine-text>Act on your behalf <lefine-text data-note>(read profile only)</lefine-text></lefine-text>
+							<lefine-text>{oauthText.actOnBehalf} <lefine-text data-note>({oauthText.readProfileOnly})</lefine-text></lefine-text>
 						</li>
 					</ul>
 				</lef-oauth-section>
 
 				<lef-oauth-section data-divided>
-					<lef-oauth-resource-label>Resources on your account</lef-oauth-resource-label>
+					<lef-oauth-resource-label>{oauthText.resourcesTitle}</lef-oauth-resource-label>
 
 					<lef-oauth-resource>
 						<lef-oauth-resource-icon>
@@ -162,7 +163,7 @@
 							</svg>
 						</lef-oauth-resource-icon>
 						<lef-oauth-resource-text>
-							<lef-oauth-resource-title>Email address <lefine-text data-muted>(read)</lefine-text></lef-oauth-resource-title>
+							<lef-oauth-resource-title>{oauthText.emailAddress} <lefine-text data-muted>({oauthText.read})</lefine-text></lef-oauth-resource-title>
 							<lef-oauth-resource-value>{shortEmail}</lef-oauth-resource-value>
 						</lef-oauth-resource-text>
 					</lef-oauth-resource>
@@ -172,11 +173,11 @@
 				<lef-oauth-notes>
 					<lef-oauth-note>
 						<lefine-text data-dash aria-hidden="true"></lefine-text>
-						<lefine-text>Octra is not owned or operated by LeFine</lefine-text>
+						<lefine-text>{oauthText.notOwned}</lefine-text>
 					</lef-oauth-note>
 					<lef-oauth-note>
 						<lefine-text data-dash aria-hidden="true"></lefine-text>
-						<lefine-text>Created for internal trusted integration</lefine-text>
+						<lefine-text>{oauthText.trustedIntegration}</lefine-text>
 					</lef-oauth-note>
 				</lef-oauth-notes>
 			</lef-oauth-card-body>
@@ -184,14 +185,14 @@
 			<!-- Action buttons -->
 			<lef-oauth-actions>
 				{#if loading}
-					<lef-oauth-loading>Loading session…</lef-oauth-loading>
+					<lef-oauth-loading>{oauthText.loadingSession}</lef-oauth-loading>
 				{:else if error === 'not_logged_in' || !session}
 					<button type="button" data-variant="primary" data-size="lg" onclick={goToLogin}>
-						Sign in to LeFine first
+						{oauthText.signInFirst}
 					</button>
 				{:else}
 					<button type="button" data-variant="ghost" onclick={deny} disabled={isApproving}>
-						Cancel
+						{$kefineLocaleText.buttons.cancel}
 					</button>
 
 					<button type="button" data-variant="primary" data-size="lg" onclick={approve} disabled={isApproving}>
@@ -200,16 +201,16 @@
 								<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" opacity="0.25"/>
 								<path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
 							</svg>
-							Authorizing…
+							{oauthText.authorizing}
 						{:else}
-							Authorize Octra
+							{oauthText.authorizeApp}
 						{/if}
 					</button>
 				{/if}
 			</lef-oauth-actions>
 		</lef-oauth-card>
 
-		<lef-oauth-footnote>Authorizing will redirect back to Octra</lef-oauth-footnote>
+		<lef-oauth-footnote>{oauthText.redirectFootnote}</lef-oauth-footnote>
 
 		{#if error && error !== 'not_logged_in'}
 			<lef-oauth-error role="alert">{error}</lef-oauth-error>

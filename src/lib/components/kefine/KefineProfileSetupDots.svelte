@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { kefineLocaleText } from '$lib/constants/kefine-locale';
+
   let {
     currentStep,
     steps = [1, 2, 3],
@@ -9,18 +11,20 @@
     onSelect?: (step: number) => void;
   } = $props();
 
+  const localeText = $derived($kefineLocaleText);
+
   function handleSelect(step: number) {
     onSelect?.(step);
   }
 </script>
 
-<lefine-box class="profile-setup-dots" aria-label="Profile setup progress">
+<lefine-box class="profile-setup-dots" aria-label={localeText.profile.setupProgress}>
   {#each steps as step}
     <button
       type="button"
       class="profile-setup-dots__dot"
       data-active={step === currentStep}
-      aria-label={`Step ${step}`}
+      aria-label={localeText.profile.stepAria(step)}
       aria-current={step === currentStep ? 'step' : undefined}
       aria-disabled={!onSelect}
       onclick={() => handleSelect(step)}

@@ -4,6 +4,7 @@
   import Icon from '@iconify/svelte';
   import { cubicOut } from 'svelte/easing';
   import type { TransitionConfig } from 'svelte/transition';
+  import { kefineLocaleText } from '$lib/constants/kefine-locale';
   import KefineTaskCloneMenu from '$lib/components/kefine/KefineTaskCloneMenu.svelte';
   import KefineTaskSettingsMenu from '$lib/components/kefine/KefineTaskSettingsMenu.svelte';
   import type { AuthMethod, ExecutionPresentation, OrderView } from './kefine-workflow';
@@ -151,6 +152,8 @@
   let commentDrafts = $state<Record<string, string>>({});
   let cancelCopyFeedback: (() => void) | null = null;
   let solutions = $state<Solution[]>([]);
+  const localeText = $derived($kefineLocaleText);
+  const vpnLabels = $derived(localeText.executionFlow.vpn);
 
   const HARDCODED_TASK_KEYWORDS = ['hello world', 'rust', 'нужен мини прокси', 'go'];
   function isHardcodedTask(title: string): boolean {
@@ -341,8 +344,8 @@
                   ? 24
                   : 12
   );
-  const copyFeedbackLabel = 'Copied';
-  const vpnStepHeadline = $derived(orderCompleted ? 'VPN package ready' : execution.headline);
+  const copyFeedbackLabel = $derived(vpnLabels.copied);
+  const vpnStepHeadline = $derived(orderCompleted ? vpnLabels.packageReady : execution.headline);
   const genericStepHeadline = $derived(
     activeGenericStep ? activeGenericStep.title : execution.headline
   );
@@ -523,7 +526,7 @@
       </lefine-box>
 
       {#if isHydratingTitle}
-        <h2 class="kefine-title-skeleton" aria-label="Loading task title"></h2>
+        <h2 class="kefine-title-skeleton" aria-label={vpnLabels.loadingTaskTitle}></h2>
       {:else}
         <h2>
           <lefine-text data-part="task-icon">{taskMonogram}</lefine-text>
@@ -538,7 +541,7 @@
 
     <section class="kefine-flow-panel">
       <lefine-box class="kefine-section-head">
-        <p>VPN service runbook</p>
+        <p>{vpnLabels.runbook}</p>
         <lefine-box class="kefine-flow-badges">
           <lefine-text class="kefine-flow-badge kefine-flow-badge--timer">
             <Icon icon="mdi:alarm" width="16" height="16" aria-hidden="true" />
@@ -560,9 +563,9 @@
 
         <lef-flow-stage-copy in:mistDissolve out:mistDissolve>
           <lef-flow-stage-meta>
-            <lef-flow-stage-label>Current phase</lef-flow-stage-label>
+            <lef-flow-stage-label>{vpnLabels.currentPhase}</lef-flow-stage-label>
             <lefine-text class="kefine-flow-badge">
-              Price: {execution.primaryMetric.value} {execution.primaryMetric.unit}
+              {vpnLabels.pricePrefix} {execution.primaryMetric.value} {execution.primaryMetric.unit}
             </lefine-text>
           </lef-flow-stage-meta>
           {#if solverIdentity.isReal}
@@ -580,8 +583,8 @@
                           href={solverIdentity.profileUrl}
                           target="_blank"
                           rel="noreferrer"
-                          aria-label="Solver workspace"
-                          title="Solver workspace"
+                          aria-label={vpnLabels.solverWorkspace}
+                          title={vpnLabels.solverWorkspace}
                         >
                           <Icon icon="mdi:open-in-new" width="16" height="16" aria-hidden="true" />
                         </a>
@@ -592,8 +595,8 @@
                         <button
                           type="button"
                           onclick={() => copySolverHandle(solverIdentity.handle)}
-                          aria-label={copiedSolverHandle === solverIdentity.handle ? copyFeedbackLabel : 'Copy solver handle'}
-                          title={copiedSolverHandle === solverIdentity.handle ? copyFeedbackLabel : 'Copy solver handle'}
+                          aria-label={copiedSolverHandle === solverIdentity.handle ? copyFeedbackLabel : vpnLabels.copySolverHandle}
+                          title={copiedSolverHandle === solverIdentity.handle ? copyFeedbackLabel : vpnLabels.copySolverHandle}
                         >
                           <Icon
                             icon={copiedSolverHandle === solverIdentity.handle ? 'mdi:check' : 'mdi:content-copy'}
@@ -637,8 +640,8 @@
         <lef-result-preview-surface>
           {#if forceFinalVpnStep || orderCompleted}
             <lef-result-preview-body>
-              <strong>VPN delivery widget</strong>
-              <p>The solver package is ready to be opened after authentication and payment are confirmed.</p>
+              <strong>{vpnLabels.deliveryWidgetTitle}</strong>
+              <p>{vpnLabels.deliveryWidgetSummary}</p>
               <lef-result-preview-lines aria-hidden="true">
                 <lefine-text></lefine-text>
                 <lefine-text></lefine-text>
@@ -647,8 +650,8 @@
             </lef-result-preview-body>
           {:else}
             <lef-result-preview-body>
-              <strong>VPN delivery widget</strong>
-              <p>The solver package is ready to be opened after authentication and payment are confirmed.</p>
+              <strong>{vpnLabels.deliveryWidgetTitle}</strong>
+              <p>{vpnLabels.deliveryWidgetSummary}</p>
               <lef-result-preview-lines aria-hidden="true">
                 <lefine-text></lefine-text>
                 <lefine-text></lefine-text>
@@ -659,23 +662,23 @@
             <lef-result-preview-gate>
               {#if vpnResultMode === 'entry'}
                 <lefine-text class="kefine-flow-badge kefine-flow-badge--timer">
-                  Price: {execution.primaryMetric.value} {execution.primaryMetric.unit}
+                  {vpnLabels.pricePrefix} {execution.primaryMetric.value} {execution.primaryMetric.unit}
                 </lefine-text>
-                <strong>Open result</strong>
-                <p>Choose how to continue to the solver result.</p>
+                <strong>{vpnLabels.openResultTitle}</strong>
+                <p>{vpnLabels.openResultDetail}</p>
                 <lef-result-preview-actions class="kefine-auth-grid">
                   <button type="button" class="kefine-auth-tile kefine-auth-tile--wallet" onclick={onWalletLogin}>
                     <lefine-box class="kefine-auth-hero kefine-auth-hero--wallet" aria-hidden="true">
                       <KefineWalletProviderGrid />
                     </lefine-box>
-                    <strong>Login</strong>
+                    <strong>{vpnLabels.login}</strong>
                   </button>
 
                   <button type="button" class="kefine-auth-tile kefine-auth-tile--anonymous" onclick={openVpnGuestOffer}>
                     <lefine-box class="kefine-auth-hero kefine-auth-hero--guest" aria-hidden="true">
                       <lefine-text class="kefine-test-badge">10 min</lefine-text>
                     </lefine-box>
-                    <strong>Test Now</strong>
+                    <strong>{vpnLabels.testNow}</strong>
                   </button>
 
                   <button type="button" class="kefine-auth-tile kefine-auth-tile--passkey" onclick={onPasskeyLogin}>
@@ -684,30 +687,30 @@
                         <Icon icon={KEFINE_AUTH_ICONS.passkey} width="100%" height="100%" aria-hidden="true" />
                       </lefine-text>
                     </lefine-box>
-                    <strong>Passkey</strong>
+                    <strong>{vpnLabels.passkey}</strong>
                   </button>
                 </lef-result-preview-actions>
               {:else}
                 <lefine-text class="kefine-flow-badge kefine-flow-badge--timer">
-                  Price: {execution.primaryMetric.value} {execution.primaryMetric.unit}
+                  {vpnLabels.pricePrefix} {execution.primaryMetric.value} {execution.primaryMetric.unit}
                 </lefine-text>
-                <strong>Guest access ready</strong>
-                <p>The background changed to guest mode. Test the VPN for 10 minutes or pay for permanent access.</p>
+                <strong>{vpnLabels.guestReadyTitle}</strong>
+                <p>{vpnLabels.guestReadyDetail}</p>
                 <lef-download-card>
                   <lef-download-actions>
                     <button type="button" class="kefine-flow-badge kefine-flow-badge--button" onclick={onAnonymous}>
-                      Test for 10 minutes
+                      {vpnLabels.testForTenMinutes}
                     </button>
                     <button type="button" class="kefine-flow-badge kefine-flow-badge--button" onclick={onWalletLogin}>
-                      Pay for permanent access
+                      {vpnLabels.payPermanentAccess}
                     </button>
                   </lef-download-actions>
                   <lef-download-copy>
-                    <strong>Download info</strong>
-                    <p>1. Download the VPN profile bundle from the solver result page.</p>
-                    <p>2. Import the `.conf` file into WireGuard or your selected VPN client.</p>
-                    <p>3. Keep the QR code nearby for mobile import and save the fallback credentials file.</p>
-                    <p>4. The guest test stays available for 10 minutes, then the profile expires automatically.</p>
+                    <strong>{vpnLabels.downloadInfo}</strong>
+                    <p>{vpnLabels.downloadStep1}</p>
+                    <p>{vpnLabels.downloadStep2}</p>
+                    <p>{vpnLabels.downloadStep3}</p>
+                    <p>{vpnLabels.downloadStep4}</p>
                   </lef-download-copy>
                 </lef-download-card>
               {/if}
