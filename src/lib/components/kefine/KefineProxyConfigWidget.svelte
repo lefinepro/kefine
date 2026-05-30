@@ -243,7 +243,7 @@
     border: 1px solid var(--kef-line);
     border-radius: var(--kef-radius-sm);
     background:
-      linear-gradient(135deg, color-mix(in oklab, var(--kef-accent) 6%, transparent), transparent 60%),
+      linear-gradient(135deg, color-mix(in oklab, var(--kef-primary) 6%, transparent), transparent 60%),
       var(--kef-bg-soft);
     min-width: 0;
   }
@@ -288,7 +288,7 @@
   }
 
   kefine-proxy-segments button[data-active='true'] {
-    background: var(--kef-accent);
+    background: var(--kef-primary);
     color: var(--kef-on-primary, #fff);
   }
 
@@ -310,9 +310,9 @@
   }
 
   kefine-proxy-row[data-active='true'] {
-    border-color: var(--kef-accent);
-    background: color-mix(in oklab, var(--kef-accent) 12%, var(--kef-bg-card));
-    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--kef-accent) 35%, transparent);
+    border-color: color-mix(in oklab, var(--kef-primary) 38%, var(--kef-border));
+    background: color-mix(in oklab, var(--kef-primary) 10%, var(--kef-bg-card));
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--kef-primary) 20%, transparent);
   }
 
   kefine-proxy-row > button[data-part='region-option'] {
@@ -402,6 +402,11 @@
     color: var(--kef-accent);
   }
 
+  kefine-proxy-row-actions button[data-part='download-btn']:hover {
+    background: color-mix(in oklab, var(--kef-accent) 92%, white);
+    border-color: var(--kef-accent);
+  }
+
   /* Right QR card */
   kefine-proxy-qr-card {
     align-items: center;
@@ -429,8 +434,8 @@
     align-items: center;
     padding: 0.12rem 0.45rem;
     border-radius: 999px;
-    background: color-mix(in oklab, var(--kef-accent) 16%, transparent);
-    color: var(--kef-accent);
+    background: color-mix(in oklab, var(--kef-primary) 16%, transparent);
+    color: var(--kef-primary);
     font-size: 0.64rem;
     font-weight: 700;
     letter-spacing: 0.04em;
@@ -447,7 +452,7 @@
     border-radius: var(--kef-radius-sm);
     border: 1px solid var(--kef-line);
     background:
-      linear-gradient(135deg, color-mix(in oklab, var(--kef-accent) 10%, transparent), transparent 70%),
+      linear-gradient(135deg, color-mix(in oklab, var(--kef-primary) 10%, transparent), transparent 70%),
       var(--kef-bg-card);
     color: var(--lefine-text);
   }
@@ -464,7 +469,7 @@
     position: absolute;
     inset: 18%;
     border-radius: 50%;
-    background: radial-gradient(circle, color-mix(in oklab, var(--kef-accent) 22%, transparent), transparent 70%);
+    background: radial-gradient(circle, color-mix(in oklab, var(--kef-primary) 22%, transparent), transparent 70%);
     filter: blur(14px);
     z-index: 0;
     pointer-events: none;
@@ -498,7 +503,7 @@
     display: inline-flex;
     align-items: center;
     gap: 0.3rem;
-    color: var(--kef-accent);
+    color: var(--kef-primary);
     font-size: 0.72rem;
     font-weight: 600;
     text-decoration: none;
@@ -507,7 +512,9 @@
   }
 
   a[data-part='guide-link']:hover {
-    opacity: 0.75;
+    color: color-mix(in oklab, var(--kef-primary) 92%, #4f3d30);
+    background: color-mix(in oklab, var(--kef-primary) 10%, transparent);
+    border-radius: var(--kef-radius-sm);
   }
 
   a[data-part='guide-link'] lefine-text {
