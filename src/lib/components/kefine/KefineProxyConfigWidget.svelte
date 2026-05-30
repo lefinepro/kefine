@@ -241,7 +241,7 @@
     gap: 0.85rem;
     padding: clamp(0.85rem, 1.8vw, 1.15rem);
     border: 1px solid var(--kef-line);
-    border-radius: var(--kef-radius-lg, 1rem);
+    border-radius: var(--kef-radius-sm);
     background:
       linear-gradient(135deg, color-mix(in oklab, var(--kef-accent) 6%, transparent), transparent 60%),
       var(--kef-bg-soft);
@@ -270,7 +270,7 @@
     padding: 0.22rem;
     gap: 0.18rem;
     border: 1px solid var(--kef-line);
-    border-radius: var(--kef-radius-ui);
+    border-radius: var(--kef-radius-sm);
     background: var(--kef-bg-card);
     flex-wrap: wrap;
   }
@@ -278,7 +278,7 @@
   kefine-proxy-segments button {
     padding: 0.32rem 0.7rem;
     border: none;
-    border-radius: calc(var(--kef-radius-ui) - 0.1rem);
+    border-radius: calc(var(--kef-radius-sm) - 0.05rem);
     background: transparent;
     color: var(--lefine-text-soft);
     font-size: 0.74rem;
@@ -304,7 +304,7 @@
     gap: 0.5rem;
     padding: 0.4rem 0.45rem 0.4rem 0.55rem;
     border: 1px solid var(--kef-line);
-    border-radius: var(--kef-radius-ui, 0.72rem);
+    border-radius: var(--kef-radius-sm);
     background: var(--kef-bg-card);
     transition: border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
   }
@@ -330,10 +330,11 @@
   }
 
   kefine-proxy-flag {
-    display: block;
+    display: flex;
+    align-items: center;
     font-size: 1.1rem;
-    line-height: 1;
-    flex: 0 0 auto;
+    line-height: 0;
+    flex-shrink: 0;
   }
 
   kefine-proxy-row-text {
@@ -371,7 +372,7 @@
     gap: 0.28rem;
     padding: 0.34rem 0.5rem;
     border: 1px solid var(--kef-line);
-    border-radius: var(--kef-radius-md, 0.45rem);
+    border-radius: var(--kef-radius-sm);
     background: var(--kef-bg-soft);
     color: var(--lefine-text);
     font-size: 0.7rem;
@@ -410,20 +411,22 @@
 
   kefine-proxy-qr-title {
     display: flex;
-    flex-wrap: wrap;
     align-items: center;
     justify-content: center;
     gap: 0.4rem;
+    white-space: nowrap;
   }
 
   kefine-proxy-qr-title strong {
     font-size: 0.92rem;
     font-weight: 700;
     color: var(--lefine-text);
+    line-height: 1;
   }
 
   kefine-proxy-proto-tag {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
     padding: 0.12rem 0.45rem;
     border-radius: 999px;
     background: color-mix(in oklab, var(--kef-accent) 16%, transparent);
@@ -432,6 +435,7 @@
     font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: uppercase;
+    line-height: 1;
   }
 
   kefine-proxy-qr-frame {
@@ -440,7 +444,7 @@
     align-items: center;
     justify-content: center;
     padding: 0.85rem;
-    border-radius: var(--kef-radius-lg, 1rem);
+    border-radius: var(--kef-radius-sm);
     border: 1px solid var(--kef-line);
     background:
       linear-gradient(135deg, color-mix(in oklab, var(--kef-accent) 10%, transparent), transparent 70%),
@@ -479,7 +483,7 @@
     margin-top: auto;
     padding: 0.55rem 0.65rem;
     border: 1px solid var(--kef-line);
-    border-radius: var(--kef-radius-md, 0.45rem);
+    border-radius: var(--kef-radius-sm);
     background: var(--kef-bg-card);
     color: var(--lefine-text-soft);
     font-family: 'Fira Mono', ui-monospace, monospace;
