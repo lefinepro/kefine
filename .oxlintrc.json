@@ -99,6 +99,17 @@
           700
         ]
       }
+    },
+    {
+      "files": [
+        "src/lib/kefine/qr-code.ts"
+      ],
+      "rules": {
+        "max-lines": [
+          "warn",
+          700
+        ]
+      }
     }
   ]
 }
