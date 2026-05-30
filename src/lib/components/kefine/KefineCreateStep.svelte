@@ -4,8 +4,10 @@
   import { scheduleAfter } from '$lib/utils/helpers';
   import KefineOrderListItem from '$lib/components/kefine/KefineOrderListItem.svelte';
   import KefineProxyConfigWidget from '$lib/components/kefine/KefineProxyConfigWidget.svelte';
+  import KefineMusicWidget from '$lib/components/kefine/KefineMusicWidget.svelte';
   import SolutionMetricsMini from '$lib/components/kefine/SolutionMetricsMini.svelte';
   import { detectProxyServerIntent } from '$lib/kefine/proxy-intent';
+  import { detectMusicExtractIntent } from '$lib/kefine/music-intent';
   import { buildActorOrderPath } from '$lib/components/kefine/kefine-workspace-helpers';
   import { defaultMetrics } from '$lib/kefine/solutions-data';
   import { cubicOut } from 'svelte/easing';
@@ -168,6 +170,11 @@
   // Show the proxy configuration widget as soon as the draft reads like a proxy
   // request — no submit required (e.g. typing "Нужен прокси сервер").
   const proxyIntentActive = $derived(detectProxyServerIntent(draft.description));
+
+  // Show the music player widget as soon as the draft reads like an
+  // "extract music/audio from video" request — no submit required
+  // (e.g. typing "Извлечь музыку из видео").
+  const musicIntentActive = $derived(detectMusicExtractIntent(draft.description));
 
   let animatedPlaceholder = $state('');
   let placeholderVisible = $state(false);
@@ -1273,6 +1280,9 @@ initialized = true;
 
   <!-- Proxy/VPN configuration preview — appears above the task history while typing -->
   <KefineProxyConfigWidget active={proxyIntentActive} />
+
+  <!-- Extracted-music preview — appears when the draft reads like "extract audio from video" -->
+  <KefineMusicWidget active={musicIntentActive} />
 
   <!-- Persistent task history on main page (same data as in profile) -->
   {#if (solverSearchActive && solverSearchText?.trim()) || (searchRevealed && recentOrders.length > 0)}

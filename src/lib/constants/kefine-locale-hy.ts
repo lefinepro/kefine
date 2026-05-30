@@ -148,6 +148,21 @@ export const KEFINE_TEXT_HY = {
     pingLabel: 'Ping',
     guideLink: 'Տեղադրման ուղեցույց'
   },
+  musicWidget: {
+    title: 'Երաժշտությունը առանձնացված է',
+    caption: 'Ձայնը առանձնացված է ձեր տեսանյութից — լսեք անմիջապես։',
+    trackTitle: 'Առանձնացված ձայնագրություն',
+    trackArtist: 'Ձեր տեսանյութից',
+    play: 'Նվագարկել',
+    pause: 'Դադար',
+    playAria: 'Նվագարկել առանձնացված ձայնագրությունը',
+    pauseAria: 'Դադարեցնել ձայնագրությունը',
+    seekAria: 'Տեղափոխվել առանձնացված ձայնագրության մեջ',
+    shuffle: 'Փոխել շապիկը',
+    shuffleAria: 'Ստեղծել նոր պատահական շապիկի ֆոն',
+    download: 'Ներբեռնել ձայնը',
+    downloadAria: 'Ներբեռնել առանձնացված ձայնային ֆայլը'
+  },
   defaults: {
     ...KEFINE_TEXT_EN.defaults,
     unknownSolver: 'Անհայտ solver',
