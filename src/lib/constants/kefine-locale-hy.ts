@@ -111,6 +111,8 @@ export const KEFINE_TEXT_HY = {
     richEditorAddTag: 'Ավելացնել tag',
     richEditorRemoveTag: (tag: string) => `Հեռացնել ${tag} tag-ը`,
     richEditorTagPlaceholder: 'tag',
+    instantAnswersLabel: 'Արագ պատասխաններ',
+    instantAnswerGoHint: 'Անցնել',
     richEditorLoading: 'Editor-ը բեռնվում է...',
     richEditorNoBlocks: 'Համապատասխան բլոկներ չկան',
     richEditorNoRecipients: 'Համապատասխան ստացողներ չկան',

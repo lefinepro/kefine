@@ -135,6 +135,8 @@ export const KEFINE_TEXT_RU = {
     richEditorAddTag: 'Добавить тег',
     richEditorRemoveTag: (tag: string) => `Удалить тег ${tag}`,
     richEditorTagPlaceholder: 'тег',
+    instantAnswersLabel: 'Быстрые ответы',
+    instantAnswerGoHint: 'Перейти',
     richEditorLoading: 'Редактор загружается...',
     richEditorNoBlocks: 'Подходящих блоков нет',
     richEditorNoRecipients: 'Подходящих получателей нет',

@@ -135,6 +135,8 @@ export const KEFINE_TEXT_EN = {
     richEditorAddTag: 'Add tag',
     richEditorRemoveTag: (tag: string) => `Remove ${tag} tag`,
     richEditorTagPlaceholder: 'tag',
+    instantAnswersLabel: 'Quick answers',
+    instantAnswerGoHint: 'Go',
     richEditorLoading: 'Loading editor...',
     richEditorNoBlocks: 'No matching blocks',
     richEditorNoRecipients: 'No matching recipients',

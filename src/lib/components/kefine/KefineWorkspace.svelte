@@ -2779,6 +2779,8 @@
           addExecutionEstimateLabel={localeText.create.addExecutionEstimate}
           addTagLabel={localeText.create.richEditorAddTag}
           tagPlaceholderLabel={localeText.create.richEditorTagPlaceholder}
+          instantAnswersLabel={localeText.create.instantAnswersLabel}
+          instantAnswerGoHint={localeText.create.instantAnswerGoHint}
           removeTagLabel={localeText.create.richEditorRemoveTag}
           fileCountLabel={localeText.create.fileCount}
           composerHints={localeText.create.composerHints}

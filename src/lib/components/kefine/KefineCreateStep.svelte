@@ -6,6 +6,11 @@
   import KefineProxyConfigWidget from '$lib/components/kefine/KefineProxyConfigWidget.svelte';
   import SolutionMetricsMini from '$lib/components/kefine/SolutionMetricsMini.svelte';
   import { detectProxyServerIntent } from '$lib/kefine/proxy-intent';
+  import {
+    findInstantAnswers,
+    type InstantAnswer,
+    type InstantAnswersData
+  } from '$lib/kefine/instant-answers';
   import { buildActorOrderPath } from '$lib/components/kefine/kefine-workspace-helpers';
   import { defaultMetrics } from '$lib/kefine/solutions-data';
   import { cubicOut } from 'svelte/easing';
@@ -70,6 +75,8 @@
     addExecutionEstimateLabel,
     addTagLabel = '+ tag',
     tagPlaceholderLabel = 'tag',
+    instantAnswersLabel = 'Quick answers',
+    instantAnswerGoHint = 'Go',
     removeTagLabel = (tag: string) => `Remove ${tag} tag`,
     fileCountLabel,
     composerHints,
@@ -142,6 +149,8 @@
     addExecutionEstimateLabel: string;
     addTagLabel?: string;
     tagPlaceholderLabel?: string;
+    instantAnswersLabel?: string;
+    instantAnswerGoHint?: string;
     removeTagLabel?: (tag: string) => string;
     fileCountLabel: (count: number) => string;
     composerHints: string;
@@ -168,6 +177,53 @@
   // Show the proxy configuration widget as soon as the draft reads like a proxy
   // request — no submit required (e.g. typing "Нужен прокси сервер").
   const proxyIntentActive = $derived(detectProxyServerIntent(draft.description));
+
+  // Instant answers: a frontend-only autocomplete of known websites loaded from
+  // /instant-answers.json. As the user types, matching sites are surfaced as
+  // direct links (e.g. "sound cloud" -> https://soundcloud.com/).
+  let instantSites = $state<InstantAnswer[]>([]);
+  let instantHighlight = $state(-1);
+  let instantDismissed = $state(false);
+
+  onMount(() => {
+    if (!browser) return;
+    fetch('/instant-answers.json')
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data: InstantAnswersData | null) => {
+        if (data && Array.isArray(data.sites)) {
+          instantSites = data.sites;
+        }
+      })
+      .catch(() => {
+        // Autocomplete is a progressive enhancement; ignore load failures.
+      });
+  });
+
+  const instantAnswers = $derived(
+    instantDismissed ? [] : findInstantAnswers(draft.description, instantSites)
+  );
+  const instantAnswersOpen = $derived(instantAnswers.length > 0);
+
+  $effect(() => {
+    // Reset the highlight whenever the visible suggestion set changes.
+    void draft.description;
+    instantHighlight = -1;
+  });
+
+  $effect(() => {
+    // Re-enable suggestions once the user starts typing again after dismissing.
+    if (draft.description.trim() === '') {
+      instantDismissed = false;
+    }
+  });
+
+  function openInstantAnswer(site: InstantAnswer) {
+    if (browser) {
+      window.open(site.url, '_blank', 'noopener,noreferrer');
+    }
+    instantDismissed = true;
+    instantHighlight = -1;
+  }
 
   let animatedPlaceholder = $state('');
   let placeholderVisible = $state(false);
@@ -833,6 +889,35 @@ initialized = true;
   });
 
   function handleTaskInputKeydown(event: KeyboardEvent) {
+    // Instant-answers keyboard navigation takes priority while the dropdown is open.
+    if (instantAnswersOpen) {
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        instantHighlight = (instantHighlight + 1) % instantAnswers.length;
+        return;
+      }
+
+      if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        instantHighlight =
+          (instantHighlight - 1 + instantAnswers.length) % instantAnswers.length;
+        return;
+      }
+
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        instantDismissed = true;
+        instantHighlight = -1;
+        return;
+      }
+
+      if (event.key === 'Enter' && instantHighlight >= 0) {
+        event.preventDefault();
+        openInstantAnswer(instantAnswers[instantHighlight]);
+        return;
+      }
+    }
+
     if (event.key !== 'Enter') {
       return;
     }
@@ -1003,6 +1088,7 @@ initialized = true;
     queueMicrotask(() => {
       if (!currentTarget.contains(document.activeElement)) {
         inputMetaOpen = false;
+        instantHighlight = -1;
       }
     });
   }
@@ -1176,6 +1262,35 @@ initialized = true;
       </kefine-submit-popover>
     {/if}
   </fieldset>
+
+  {#if instantAnswersOpen}
+    <kefine-instant-answers
+      data-part="instant-answers"
+      role="listbox"
+      aria-label={instantAnswersLabel}
+    >
+      {#each instantAnswers as site, index (site.url)}
+        <a
+          href={site.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          data-part="instant-answer"
+          data-highlighted={index === instantHighlight}
+          role="option"
+          aria-selected={index === instantHighlight}
+          onclick={() => openInstantAnswer(site)}
+          onpointerenter={() => { instantHighlight = index; }}
+        >
+          <kefine-instant-icon aria-hidden="true">{site.icon}</kefine-instant-icon>
+          <kefine-instant-text>
+            <lefine-text data-part="instant-name">{site.name}</lefine-text>
+            <lefine-text data-part="instant-url">{site.url}</lefine-text>
+          </kefine-instant-text>
+          <kefine-instant-go aria-hidden="true">{instantAnswerGoHint} ↗</kefine-instant-go>
+        </a>
+      {/each}
+    </kefine-instant-answers>
+  {/if}
 
   {#if inputMetaOpen}
     <kefine-input-meta data-part="input-meta">
