@@ -25,6 +25,17 @@ describe('defaultSolutions data integrity', () => {
     }
   });
 
+  test('a quick test marked as failing surfaces the actual outcome', () => {
+    for (const solution of defaultSolutions) {
+      const quickTest = solution.quickTest;
+      if (!quickTest || quickTest.passes !== false) continue;
+      assert.ok(
+        quickTest.actual && quickTest.actual.trim().length > 0,
+        `Solution ${solution.id} quick test is marked as failing but has no actual outcome to show.`
+      );
+    }
+  });
+
   test('every solution has pricing metrics', () => {
     const metricIds = new Set(defaultMetrics.map(metric => metric.solverId));
 

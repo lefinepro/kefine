@@ -5,6 +5,13 @@ export interface QuickTest {
   title: string;
   /** Expected outcome, e.g. `200 · proxy ready`. */
   expected: string;
+  /** Whether running the test succeeds. Defaults to `true` when omitted. */
+  passes?: boolean;
+  /**
+   * Actual outcome reported after running the test. Defaults to `expected`
+   * when the test passes; set it to show a mismatch when `passes` is `false`.
+   */
+  actual?: string;
 }
 
 export interface Solution {

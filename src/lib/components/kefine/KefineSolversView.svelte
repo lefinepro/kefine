@@ -42,6 +42,19 @@
     onSelectHistoryTask?: ((id: string) => void) | null | undefined;
   } = $props();
 
+  type QuickTestStatus = 'idle' | 'running' | 'passed' | 'failed';
+  let quickTestStatus = $state<Record<string, QuickTestStatus>>({});
+
+  function runQuickTest(solution: Solution) {
+    const test = solution.quickTest;
+    if (!test || quickTestStatus[solution.id] === 'running') return;
+    quickTestStatus = { ...quickTestStatus, [solution.id]: 'running' };
+    const passes = test.passes ?? true;
+    setTimeout(() => {
+      quickTestStatus = { ...quickTestStatus, [solution.id]: passes ? 'passed' : 'failed' };
+    }, 650);
+  }
+
   let chartsFocused = $state(false);
   let clonePanelOpen = $state(false);
   let settingsPanelOpen = $state(false);
@@ -248,7 +261,8 @@
               </lef-price-row>
             {/if}
             {#if solution.quickTest}
-              <lef-quick-test aria-label={localeText.solversView.quickTestAria}>
+              {@const status = quickTestStatus[solution.id] ?? 'idle'}
+              <lef-quick-test data-state={status} aria-label={localeText.solversView.quickTestAria}>
                 <lef-quick-test-head>
                   <strong>{localeText.solversView.quickTest}</strong>
                   <lef-quick-test-cmd>{solution.quickTest.command}</lef-quick-test-cmd>
@@ -258,6 +272,30 @@
                   <lefine-text>{localeText.solversView.quickTestExpect}</lefine-text>
                   <strong>{solution.quickTest.expected}</strong>
                 </lef-quick-test-expect>
+                {#if status === 'passed' || status === 'failed'}
+                  <lef-quick-test-result data-state={status}>
+                    <strong>
+                      {status === 'passed'
+                        ? localeText.solversView.quickTestPass
+                        : localeText.solversView.quickTestFail}
+                    </strong>
+                    {#if status === 'failed'}
+                      <lefine-text>{localeText.solversView.quickTestGot}</lefine-text>
+                      <code>{solution.quickTest.actual ?? '—'}</code>
+                    {/if}
+                  </lef-quick-test-result>
+                {/if}
+                <button
+                  type="button"
+                  class="quick-test-run"
+                  disabled={status === 'running'}
+                  aria-label={localeText.solversView.quickTestRun}
+                  onclick={() => runQuickTest(solution)}
+                >
+                  {status === 'running'
+                    ? localeText.solversView.quickTestRunning
+                    : localeText.solversView.quickTestRun}
+                </button>
               </lef-quick-test>
             {:else if solution.diffs?.length}
                 <lef-file-list aria-label={localeText.solversView.filesAria}>
@@ -742,8 +780,20 @@
     gap: 0.3rem;
     padding: 0.4rem 0.5rem;
     border-radius: 0.4rem;
-    border: 1px solid color-mix(in oklab, var(--kef-success, #22c55e) 28%, var(--kef-line));
-    background: color-mix(in oklab, var(--kef-success, #22c55e) 8%, transparent);
+    /* Neutral by default — only a run colours the block (green pass / red fail). */
+    border: 1px solid var(--kef-line);
+    background: color-mix(in oklab, var(--kef-line) 22%, transparent);
+    transition: background 160ms ease, border-color 160ms ease;
+  }
+
+  lef-quick-test[data-state='passed'] {
+    border-color: color-mix(in oklab, var(--kef-success, #22c55e) 40%, var(--kef-line));
+    background: color-mix(in oklab, var(--kef-success, #22c55e) 12%, transparent);
+  }
+
+  lef-quick-test[data-state='failed'] {
+    border-color: color-mix(in oklab, var(--kef-error, #ef4444) 40%, var(--kef-line));
+    background: color-mix(in oklab, var(--kef-error, #ef4444) 12%, transparent);
   }
 
   lef-quick-test-head {
@@ -757,7 +807,7 @@
     font-size: 0.66rem;
     text-transform: uppercase;
     letter-spacing: 0.07em;
-    color: var(--kef-success, #16a34a);
+    color: var(--lefine-text-soft);
     font-weight: 700;
   }
 
@@ -787,7 +837,67 @@
   lef-quick-test-expect strong {
     font-family: ui-monospace, monospace;
     font-weight: 700;
+    color: var(--lefine-text);
+  }
+
+  lef-quick-test-result {
+    display: inline-flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    font-size: 0.72rem;
+  }
+
+  lef-quick-test-result strong {
+    font-weight: 700;
+  }
+
+  lef-quick-test-result[data-state='passed'] strong {
     color: var(--kef-success, #16a34a);
+  }
+
+  lef-quick-test-result[data-state='failed'] strong {
+    color: var(--kef-error, #ef4444);
+  }
+
+  lef-quick-test-result lefine-text {
+    color: var(--lefine-text-soft);
+  }
+
+  lef-quick-test-result code {
+    font-family: ui-monospace, monospace;
+    color: var(--kef-error, #ef4444);
+  }
+
+  .quick-test-run {
+    align-self: flex-start;
+    margin-top: 0.1rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.7rem;
+    border-radius: 0.4rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    border: 1px solid color-mix(in oklab, var(--kef-color-primary, #c89a5a) 35%, var(--kef-line));
+    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 14%, var(--kef-bg-card));
+    color: var(--lefine-text);
+    cursor: pointer;
+    transition: background 140ms ease, transform 140ms ease;
+  }
+
+  .quick-test-run:hover {
+    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 22%, var(--kef-bg-card));
+  }
+
+  .quick-test-run:active {
+    transform: scale(0.97);
+  }
+
+  .quick-test-run:disabled {
+    opacity: 0.6;
+    cursor: progress;
   }
 
   lef-card-actions {
