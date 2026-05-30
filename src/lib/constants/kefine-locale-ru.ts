@@ -152,6 +152,26 @@ export const KEFINE_TEXT_RU = {
     matchedTasks: 'Найденные завершённые repos',
     noMatchedTasks: 'По этому запросу завершённые repos не найдены'
   },
+  proxyWidget: {
+    badge: 'Мгновенный просмотр',
+    title: 'Прокси-сервер готов',
+    subtitle: 'Выберите регион и протокол и подключайтесь за секунды — оформление не требуется.',
+    regionLabel: 'Регион',
+    serversLabel: 'Серверы',
+    protocolLabel: 'Протокол',
+    linkLabel: 'Ссылка подключения',
+    configLabel: 'Файл конфигурации',
+    qrTitle: 'Сканируйте для подключения',
+    qrHint: 'Откройте в клиенте, чтобы импортировать профиль',
+    copyLink: 'Скопировать ссылку',
+    copyConfig: 'Скопировать конфиг',
+    copied: 'Скопировано',
+    download: 'Скачать конфиг',
+    downloadShort: 'Конфиг',
+    copyLinkAria: (city: string) => `Скопировать ссылку подключения для ${city}`,
+    downloadAria: (city: string) => `Скачать файл конфигурации для ${city}`,
+    pingLabel: 'Пинг'
+  },
   defaults: {
     unknownSolver: 'Неизвестный решатель',
     taskTitle: 'Lepo',

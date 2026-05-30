@@ -3,7 +3,9 @@
   import type { DraftOrder, OrderView, TemplatePresentation } from './kefine-workflow';
   import { scheduleAfter } from '$lib/utils/helpers';
   import KefineOrderListItem from '$lib/components/kefine/KefineOrderListItem.svelte';
+  import KefineProxyConfigWidget from '$lib/components/kefine/KefineProxyConfigWidget.svelte';
   import SolutionMetricsMini from '$lib/components/kefine/SolutionMetricsMini.svelte';
+  import { detectProxyServerIntent } from '$lib/kefine/proxy-intent';
   import { buildActorOrderPath } from '$lib/components/kefine/kefine-workspace-helpers';
   import { defaultMetrics } from '$lib/kefine/solutions-data';
   import { cubicOut } from 'svelte/easing';
@@ -162,6 +164,10 @@
     onExecutionEstimateChange?: (value: string) => void;
     onOpenSolution?: (solutionId: string) => void;
   } = $props();
+
+  // Show the proxy configuration widget as soon as the draft reads like a proxy
+  // request — no submit required (e.g. typing "Нужен прокси сервер").
+  const proxyIntentActive = $derived(detectProxyServerIntent(draft.description));
 
   let animatedPlaceholder = $state('');
   let placeholderVisible = $state(false);
@@ -1264,6 +1270,9 @@ initialized = true;
 
   <input bind:this={fileInput} data-part="file-input" type="file" multiple onchange={handleFileChange} />
   <p id="kefine-composer-hints" data-part="composer-hints" hidden>{composerHints}</p>
+
+  <!-- Proxy/VPN configuration preview — appears above the task history while typing -->
+  <KefineProxyConfigWidget active={proxyIntentActive} />
 
   <!-- Persistent task history on main page (same data as in profile) -->
   {#if (solverSearchActive && solverSearchText?.trim()) || (searchRevealed && recentOrders.length > 0)}

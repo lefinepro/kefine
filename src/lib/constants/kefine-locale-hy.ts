@@ -128,6 +128,26 @@ export const KEFINE_TEXT_HY = {
     matchedTasks: 'Գտնված ավարտված repos',
     noMatchedTasks: 'Այս հարցմանը համապատասխան ավարտված repos դեռ չկան'
   },
+  proxyWidget: {
+    badge: 'Ակնթարթային նախադիտում',
+    title: 'Պրոքսի սերվերը պատրաստ է',
+    subtitle: 'Ընտրեք տարածաշրջանն ու արձանագրությունը և միացեք վայրկյանների ընթացքում՝ առանց վճարման։',
+    regionLabel: 'Տարածաշրջան',
+    serversLabel: 'Սերվերներ',
+    protocolLabel: 'Արձանագրություն',
+    linkLabel: 'Միացման հղում',
+    configLabel: 'Կարգավորման ֆայլ',
+    qrTitle: 'Սկանավորեք միանալու համար',
+    qrHint: 'Բացեք ձեր հաճախորդում՝ պրոֆիլը ներմուծելու համար',
+    copyLink: 'Պատճենել հղումը',
+    copyConfig: 'Պատճենել կարգավորումը',
+    copied: 'Պատճենվեց',
+    download: 'Ներբեռնել կարգավորումը',
+    downloadShort: 'Կարգավորում',
+    copyLinkAria: (city: string) => `Պատճենել ${city}-ի միացման հղումը`,
+    downloadAria: (city: string) => `Ներբեռնել ${city}-ի կարգավորման ֆայլը`,
+    pingLabel: 'Ping'
+  },
   defaults: {
     ...KEFINE_TEXT_EN.defaults,
     unknownSolver: 'Անհայտ solver',

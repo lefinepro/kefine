@@ -152,6 +152,26 @@ export const KEFINE_TEXT_EN = {
     matchedTasks: 'Resolved repos',
     noMatchedTasks: 'No resolved repos match this query yet'
   },
+  proxyWidget: {
+    badge: 'Instant preview',
+    title: 'Proxy server ready',
+    subtitle: 'Pick a region and protocol, then connect in seconds — no checkout needed.',
+    regionLabel: 'Region',
+    serversLabel: 'Servers',
+    protocolLabel: 'Protocol',
+    linkLabel: 'Connection link',
+    configLabel: 'Config file',
+    qrTitle: 'Scan to connect',
+    qrHint: 'Open it in your client to import the profile',
+    copyLink: 'Copy link',
+    copyConfig: 'Copy config',
+    copied: 'Copied',
+    download: 'Download config',
+    downloadShort: 'Config',
+    copyLinkAria: (city: string) => `Copy connection link for ${city}`,
+    downloadAria: (city: string) => `Download config file for ${city}`,
+    pingLabel: 'Ping'
+  },
   defaults: {
     unknownSolver: 'Unknown solver',
     taskTitle: 'Lepo',
