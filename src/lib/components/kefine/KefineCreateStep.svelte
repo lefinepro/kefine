@@ -3460,6 +3460,78 @@ initialized = true;
     box-shadow: none;
   }
 
+  kefine-instant-answers {
+    display: grid;
+    gap: 0.2rem;
+    margin-top: 0.4rem;
+    padding: 0.35rem;
+    border-radius: 0.7rem;
+    border: 1px solid color-mix(in oklab, var(--kef-line-strong) 60%, transparent);
+    background: color-mix(in oklab, var(--kef-bg-card) 96%, white 4%);
+    box-shadow: 0 12px 24px color-mix(in oklab, var(--lefine-text) 14%, transparent);
+  }
+
+  a[data-part='instant-answer'] {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.55rem 0.7rem;
+    border-radius: 0.5rem;
+    color: var(--lefine-text);
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  a[data-part='instant-answer'][data-highlighted='true'],
+  a[data-part='instant-answer']:hover {
+    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 12%, var(--kef-bg-card));
+  }
+
+  kefine-instant-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.8rem;
+    height: 1.8rem;
+    flex-shrink: 0;
+    font-size: 1.1rem;
+    line-height: 1;
+  }
+
+  kefine-instant-text {
+    display: grid;
+    gap: 0.05rem;
+    min-width: 0;
+    flex: 1;
+  }
+
+  lefine-text[data-part='instant-name'] {
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  lefine-text[data-part='instant-url'] {
+    color: var(--lefine-text-soft);
+    font-size: 0.82rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  kefine-instant-go {
+    flex-shrink: 0;
+    color: var(--kef-color-primary, #c89a5a);
+    font-size: 0.82rem;
+    font-weight: 600;
+    opacity: 0;
+    transition: opacity 0.12s ease;
+  }
+
+  a[data-part='instant-answer'][data-highlighted='true'] kefine-instant-go,
+  a[data-part='instant-answer']:hover kefine-instant-go {
+    opacity: 1;
+  }
+
   kefine-composer-strip {
     display: flex;
     flex-wrap: wrap;
