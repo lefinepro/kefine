@@ -247,7 +247,19 @@
                 </lef-price-meta>
               </lef-price-row>
             {/if}
-            {#if solution.diffs?.length}
+            {#if solution.quickTest}
+              <lef-quick-test aria-label={localeText.solversView.quickTestAria}>
+                <lef-quick-test-head>
+                  <strong>{localeText.solversView.quickTest}</strong>
+                  <lef-quick-test-cmd>{solution.quickTest.command}</lef-quick-test-cmd>
+                </lef-quick-test-head>
+                <lef-quick-test-title>{solution.quickTest.title}</lef-quick-test-title>
+                <lef-quick-test-expect>
+                  <lefine-text>{localeText.solversView.quickTestExpect}</lefine-text>
+                  <strong>{solution.quickTest.expected}</strong>
+                </lef-quick-test-expect>
+              </lef-quick-test>
+            {:else if solution.diffs?.length}
                 <lef-file-list aria-label={localeText.solversView.filesAria}>
 
                 {#each solution.diffs as diff}
@@ -723,6 +735,60 @@
 
   lef-file-added { color: var(--kef-success, #22c55e); }
   lef-file-removed { color: var(--kef-error, #ef4444); }
+
+  lef-quick-test {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    padding: 0.4rem 0.5rem;
+    border-radius: 0.4rem;
+    border: 1px solid color-mix(in oklab, var(--kef-success, #22c55e) 28%, var(--kef-line));
+    background: color-mix(in oklab, var(--kef-success, #22c55e) 8%, transparent);
+  }
+
+  lef-quick-test-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  lef-quick-test-head strong {
+    font-size: 0.66rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--kef-success, #16a34a);
+    font-weight: 700;
+  }
+
+  lef-quick-test-cmd {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: ui-monospace, monospace;
+    font-size: 0.72rem;
+    color: var(--lefine-text);
+  }
+
+  lef-quick-test-title {
+    font-size: 0.78rem;
+    color: var(--lefine-text);
+    line-height: 1.35;
+  }
+
+  lef-quick-test-expect {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.35rem;
+    font-size: 0.72rem;
+    color: var(--lefine-text-soft);
+  }
+
+  lef-quick-test-expect strong {
+    font-family: ui-monospace, monospace;
+    font-weight: 700;
+    color: var(--kef-success, #16a34a);
+  }
 
   lef-card-actions {
     display: flex;

@@ -1,3 +1,12 @@
+export interface QuickTest {
+  /** Short, runnable invocation shown monospace, e.g. `POST /` or `cargo run`. */
+  command: string;
+  /** What the test verifies, e.g. `Forwards a request`. */
+  title: string;
+  /** Expected outcome, e.g. `200 · proxy ready`. */
+  expected: string;
+}
+
 export interface Solution {
   id: string;
   solver: string;
@@ -5,6 +14,11 @@ export interface Solution {
   description: string;
   project?: string;
   slug?: string;
+  /**
+   * A single quick test the user can run to validate the solution right away,
+   * surfaced on the solution card instead of the list of changed files.
+   */
+  quickTest?: QuickTest;
   codeLines: Array<{
     text: string;
     type: 'added' | 'removed' | 'unchanged';
@@ -58,6 +72,11 @@ export const defaultSolutions: Solution[] = [
     solver: 'Basic Rust Dev',
     title: 'Simple Hello World without comments',
     description: 'Minimal implementation with just the basics',
+    quickTest: {
+      command: 'cargo run',
+      title: 'Prints the greeting',
+      expected: 'Hello, world!'
+    },
     diffs: [
       { file: 'src/main.rs', added: 3, removed: 0 }
     ],
@@ -72,6 +91,11 @@ export const defaultSolutions: Solution[] = [
     solver: 'Commented Rust Expert',
     title: 'Hello World with detailed comments',
     description: 'Educational version with explanations for each line',
+    quickTest: {
+      command: 'cargo run',
+      title: 'Prints the greeting',
+      expected: 'Hello, world!'
+    },
     diffs: [
       { file: 'src/main.rs', added: 9, removed: 0 }
     ],
@@ -92,6 +116,11 @@ export const defaultSolutions: Solution[] = [
     solver: 'Interactive Rust',
     title: 'Interactive Hello World with user input',
     description: 'Reads user input and responds accordingly',
+    quickTest: {
+      command: 'echo "Ada" | cargo run',
+      title: 'Greets the entered name',
+      expected: 'Hello, Ada!'
+    },
     diffs: [
       { file: 'src/main.rs', added: 11, removed: 0 }
     ],
@@ -114,6 +143,11 @@ export const defaultSolutions: Solution[] = [
     solver: 'Modern Rust Patterns',
     title: 'Hello World using modern Rust patterns',
     description: 'Uses Result handling and modern syntax',
+    quickTest: {
+      command: 'echo "Ada" | cargo run',
+      title: 'Greets the entered name',
+      expected: 'Hello, Ada!'
+    },
     diffs: [
       { file: 'src/main.rs', added: 14, removed: 0 }
     ],
@@ -141,6 +175,11 @@ export const defaultSolutions: Solution[] = [
     description: 'Minimal HTTP proxy with forward functionality',
     project: 'kefine/go-proxy',
     slug: 'feat/basic-forward',
+    quickTest: {
+      command: 'POST /',
+      title: 'Forwards a request',
+      expected: '200 · proxy ready'
+    },
     diffs: [
       { file: 'main.go', added: 33, removed: 0 },
       { file: 'config.yaml', added: 7, removed: 0 },
@@ -339,6 +378,11 @@ export const defaultSolutions: Solution[] = [
     description: 'Proxy with request/response logging and error handling',
     project: 'kefine/go-proxy',
     slug: 'feat/structured-logging',
+    quickTest: {
+      command: 'GET /health',
+      title: 'Reports healthy status',
+      expected: '200 · status ok'
+    },
     diffs: [
       { file: 'main.go', added: 43, removed: 0 },
       { file: 'config.go', added: 16, removed: 0 },
@@ -481,6 +525,11 @@ export const defaultSolutions: Solution[] = [
     description: 'Enterprise features: rate limiting, caching, metrics',
     project: 'kefine/go-proxy',
     slug: 'feat/auth-rate-metrics',
+    quickTest: {
+      command: 'POST /proxy',
+      title: 'Forwards under the rate limit',
+      expected: '200 · forwarded'
+    },
     diffs: [
       { file: 'main.go', added: 34, removed: 0 },
       { file: 'ratelimit.go', added: 16, removed: 0 },
