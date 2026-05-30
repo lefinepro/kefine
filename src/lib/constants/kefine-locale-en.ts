@@ -174,6 +174,21 @@ export const KEFINE_TEXT_EN = {
     pingLabel: 'Ping',
     guideLink: 'Setup guide'
   },
+  musicWidget: {
+    title: 'Music extracted',
+    caption: 'Audio separated from your video — preview it instantly.',
+    trackTitle: 'Extracted track',
+    trackArtist: 'From your video',
+    play: 'Play',
+    pause: 'Pause',
+    playAria: 'Play the extracted track',
+    pauseAria: 'Pause the extracted track',
+    seekAria: 'Seek within the extracted track',
+    shuffle: 'Shuffle cover',
+    shuffleAria: 'Generate a new random cover background',
+    download: 'Download audio',
+    downloadAria: 'Download the extracted audio file'
+  },
   defaults: {
     unknownSolver: 'Unknown solver',
     taskTitle: 'Lepo',

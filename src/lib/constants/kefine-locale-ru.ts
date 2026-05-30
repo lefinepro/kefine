@@ -174,6 +174,21 @@ export const KEFINE_TEXT_RU = {
     pingLabel: 'Пинг',
     guideLink: 'Инструкция по настройке'
   },
+  musicWidget: {
+    title: 'Музыка извлечена',
+    caption: 'Аудио отделено от вашего видео — слушайте сразу.',
+    trackTitle: 'Извлечённая дорожка',
+    trackArtist: 'Из вашего видео',
+    play: 'Воспроизвести',
+    pause: 'Пауза',
+    playAria: 'Воспроизвести извлечённую дорожку',
+    pauseAria: 'Поставить дорожку на паузу',
+    seekAria: 'Перемотать извлечённую дорожку',
+    shuffle: 'Сменить обложку',
+    shuffleAria: 'Сгенерировать новый случайный фон обложки',
+    download: 'Скачать аудио',
+    downloadAria: 'Скачать извлечённый аудиофайл'
+  },
   defaults: {
     unknownSolver: 'Неизвестный решатель',
     taskTitle: 'Lepo',
