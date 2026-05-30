@@ -153,7 +153,6 @@ export const KEFINE_TEXT_EN = {
     noMatchedTasks: 'No resolved repos match this query yet'
   },
   proxyWidget: {
-    badge: 'Instant preview',
     title: 'Proxy server ready',
     subtitle: 'Pick a region and protocol, then connect in seconds — no checkout needed.',
     regionLabel: 'Region',
@@ -170,7 +169,8 @@ export const KEFINE_TEXT_EN = {
     downloadShort: 'Config',
     copyLinkAria: (city: string) => `Copy connection link for ${city}`,
     downloadAria: (city: string) => `Download config file for ${city}`,
-    pingLabel: 'Ping'
+    pingLabel: 'Ping',
+    guideLink: 'Setup guide'
   },
   defaults: {
     unknownSolver: 'Unknown solver',

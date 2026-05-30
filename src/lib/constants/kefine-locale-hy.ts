@@ -129,7 +129,6 @@ export const KEFINE_TEXT_HY = {
     noMatchedTasks: 'Այս հարցմանը համապատասխան ավարտված repos դեռ չկան'
   },
   proxyWidget: {
-    badge: 'Ակնթարթային նախադիտում',
     title: 'Պրոքսի սերվերը պատրաստ է',
     subtitle: 'Ընտրեք տարածաշրջանն ու արձանագրությունը և միացեք վայրկյանների ընթացքում՝ առանց վճարման։',
     regionLabel: 'Տարածաշրջան',
@@ -146,7 +145,8 @@ export const KEFINE_TEXT_HY = {
     downloadShort: 'Կարգավորում',
     copyLinkAria: (city: string) => `Պատճենել ${city}-ի միացման հղումը`,
     downloadAria: (city: string) => `Ներբեռնել ${city}-ի կարգավորման ֆայլը`,
-    pingLabel: 'Ping'
+    pingLabel: 'Ping',
+    guideLink: 'Տեղադրման ուղեցույց'
   },
   defaults: {
     ...KEFINE_TEXT_EN.defaults,

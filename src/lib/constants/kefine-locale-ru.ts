@@ -153,7 +153,6 @@ export const KEFINE_TEXT_RU = {
     noMatchedTasks: 'По этому запросу завершённые repos не найдены'
   },
   proxyWidget: {
-    badge: 'Мгновенный просмотр',
     title: 'Прокси-сервер готов',
     subtitle: 'Выберите регион и протокол и подключайтесь за секунды — оформление не требуется.',
     regionLabel: 'Регион',
@@ -170,7 +169,8 @@ export const KEFINE_TEXT_RU = {
     downloadShort: 'Конфиг',
     copyLinkAria: (city: string) => `Скопировать ссылку подключения для ${city}`,
     downloadAria: (city: string) => `Скачать файл конфигурации для ${city}`,
-    pingLabel: 'Пинг'
+    pingLabel: 'Пинг',
+    guideLink: 'Инструкция по настройке'
   },
   defaults: {
     unknownSolver: 'Неизвестный решатель',

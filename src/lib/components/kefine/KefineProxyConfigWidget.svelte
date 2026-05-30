@@ -108,7 +108,7 @@
       <!-- Left card: switchable list of proxy servers, each with copy + download -->
       <kefine-proxy-list-card>
         <kefine-proxy-card-head>
-          <kefine-proxy-control-label>{copy.serversLabel}</kefine-proxy-control-label>
+          <lefine-text data-part="proxy-control-label">{copy.serversLabel}</lefine-text>
           <kefine-proxy-segments role="group" aria-label={copy.protocolLabel}>
             {#each PROXY_PROTOCOLS as protocol (protocol.id)}
               <button
@@ -199,16 +199,20 @@
           <kefine-proxy-qr-glow aria-hidden="true"></kefine-proxy-qr-glow>
         </kefine-proxy-qr-frame>
 
-        <kefine-proxy-qr-hint>{copy.qrHint}</kefine-proxy-qr-hint>
+        <lefine-text data-part="proxy-qr-hint">{copy.qrHint}</lefine-text>
 
         <kefine-proxy-link-value>{selectedProfile.link}</kefine-proxy-link-value>
+        <a data-part="guide-link" href="https://lefine.pro/proxy/setup" target="_blank" rel="noopener noreferrer">
+          <lefine-text>{copy.guideLink}</lefine-text>
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+            <polyline points="15 3 21 3 21 9"></polyline>
+            <line x1="10" y1="14" x2="21" y2="3"></line>
+          </svg>
+        </a>
       </kefine-proxy-qr-card>
     </kefine-proxy-grid>
 
-    <kefine-proxy-foot>
-      <kefine-proxy-pulse aria-hidden="true"></kefine-proxy-pulse>
-      <lefine-text>{copy.badge}</lefine-text>
-    </kefine-proxy-foot>
   </kefine-proxy-widget>
 {/if}
 
@@ -222,44 +226,10 @@
     margin: 0.55rem 0 0.9rem;
   }
 
-  kefine-proxy-foot {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    align-self: flex-start;
-    color: var(--kef-accent);
-    font-size: 0.68rem;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-  }
-
-  kefine-proxy-pulse {
-    display: block;
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: var(--kef-accent);
-    box-shadow: 0 0 0 0 color-mix(in oklab, var(--kef-accent) 70%, transparent);
-    animation: kefine-proxy-pulse 1.8s ease-out infinite;
-  }
-
-  @keyframes kefine-proxy-pulse {
-    0% {
-      box-shadow: 0 0 0 0 color-mix(in oklab, var(--kef-accent) 65%, transparent);
-    }
-    70% {
-      box-shadow: 0 0 0 7px transparent;
-    }
-    100% {
-      box-shadow: 0 0 0 0 transparent;
-    }
-  }
-
   /* Two-column layout: server list on the left, QR card on the right. */
   kefine-proxy-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+    grid-template-columns: 1fr 1fr;
     gap: var(--kef-space-3, 1.35rem);
     align-items: stretch;
   }
@@ -286,7 +256,7 @@
     flex-wrap: wrap;
   }
 
-  kefine-proxy-control-label {
+  lefine-text[data-part='proxy-control-label'] {
     display: block;
     font-size: 0.68rem;
     font-weight: 700;
@@ -300,7 +270,7 @@
     padding: 0.22rem;
     gap: 0.18rem;
     border: 1px solid var(--kef-line);
-    border-radius: 999px;
+    border-radius: var(--kef-radius-ui);
     background: var(--kef-bg-card);
     flex-wrap: wrap;
   }
@@ -308,7 +278,7 @@
   kefine-proxy-segments button {
     padding: 0.32rem 0.7rem;
     border: none;
-    border-radius: 999px;
+    border-radius: calc(var(--kef-radius-ui) - 0.1rem);
     background: transparent;
     color: var(--lefine-text-soft);
     font-size: 0.74rem;
@@ -439,8 +409,10 @@
   }
 
   kefine-proxy-qr-title {
-    display: inline-flex;
+    display: flex;
+    flex-wrap: wrap;
     align-items: center;
+    justify-content: center;
     gap: 0.4rem;
   }
 
@@ -494,7 +466,7 @@
     pointer-events: none;
   }
 
-  kefine-proxy-qr-hint {
+  lefine-text[data-part='proxy-qr-hint'] {
     display: block;
     font-size: 0.72rem;
     color: var(--lefine-text-soft);
@@ -515,8 +487,27 @@
     line-height: 1.4;
     text-align: left;
     word-break: break-all;
-    max-height: 4.6rem;
-    overflow: auto;
+    overflow: hidden;
+  }
+
+  a[data-part='guide-link'] {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    color: var(--kef-accent);
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: opacity 0.18s ease;
+    margin-top: 0.2rem;
+  }
+
+  a[data-part='guide-link']:hover {
+    opacity: 0.75;
+  }
+
+  a[data-part='guide-link'] lefine-text {
+    line-height: 1;
   }
 
   @media (max-width: 640px) {
