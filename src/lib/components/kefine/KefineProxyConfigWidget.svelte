@@ -104,17 +104,6 @@
 
 {#if active}
   <kefine-proxy-widget transition:widgetReveal aria-label={copy.title} data-testid="kefine-proxy-widget">
-    <kefine-proxy-head>
-      <kefine-proxy-badge>
-        <kefine-proxy-pulse aria-hidden="true"></kefine-proxy-pulse>
-        <lefine-text>{copy.badge}</lefine-text>
-      </kefine-proxy-badge>
-      <kefine-proxy-titles>
-        <strong>{copy.title}</strong>
-        <p>{copy.subtitle}</p>
-      </kefine-proxy-titles>
-    </kefine-proxy-head>
-
     <kefine-proxy-grid>
       <!-- Left card: switchable list of proxy servers, each with copy + download -->
       <kefine-proxy-list-card>
@@ -215,40 +204,31 @@
         <kefine-proxy-link-value>{selectedProfile.link}</kefine-proxy-link-value>
       </kefine-proxy-qr-card>
     </kefine-proxy-grid>
+
+    <kefine-proxy-foot>
+      <kefine-proxy-pulse aria-hidden="true"></kefine-proxy-pulse>
+      <lefine-text>{copy.badge}</lefine-text>
+    </kefine-proxy-foot>
   </kefine-proxy-widget>
 {/if}
 
 <style>
+  /* The widget is a lightweight inline block that sits directly under the task
+     input — two bare cards plus a small caption, never a full-page panel. */
   kefine-proxy-widget {
     display: flex;
     flex-direction: column;
-    gap: var(--kef-space-3, 1.35rem);
-    margin: 0.4rem 0 1.1rem;
-    padding: clamp(1rem, 2.4vw, 1.45rem);
-    background:
-      radial-gradient(120% 140% at 0% 0%, color-mix(in oklab, var(--kef-accent) 12%, transparent), transparent 60%),
-      var(--kef-bg-card);
-    border: 1px solid var(--kef-line);
-    border-radius: var(--kef-radius-lg, 1rem);
-    box-shadow: 0 18px 40px -32px color-mix(in oklab, var(--lefine-text) 60%, transparent);
+    gap: 0.6rem;
+    margin: 0.55rem 0 0.9rem;
   }
 
-  kefine-proxy-head {
-    display: flex;
-    flex-direction: column;
-    gap: 0.55rem;
-  }
-
-  kefine-proxy-badge {
+  kefine-proxy-foot {
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
     align-self: flex-start;
-    padding: 0.28rem 0.6rem;
-    border-radius: 999px;
-    background: color-mix(in oklab, var(--kef-accent) 16%, transparent);
     color: var(--kef-accent);
-    font-size: 0.7rem;
+    font-size: 0.68rem;
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -274,25 +254,6 @@
     100% {
       box-shadow: 0 0 0 0 transparent;
     }
-  }
-
-  kefine-proxy-titles {
-    display: flex;
-    flex-direction: column;
-    gap: 0.2rem;
-  }
-
-  kefine-proxy-titles strong {
-    font-size: 1.05rem;
-    font-weight: 700;
-    color: var(--lefine-text);
-  }
-
-  kefine-proxy-titles p {
-    margin: 0;
-    font-size: 0.82rem;
-    line-height: 1.45;
-    color: var(--lefine-text-soft);
   }
 
   /* Two-column layout: server list on the left, QR card on the right. */
