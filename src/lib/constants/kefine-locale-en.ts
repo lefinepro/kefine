@@ -157,6 +157,7 @@ export const KEFINE_TEXT_EN = {
     title: 'Proxy server ready',
     subtitle: 'Pick a region and protocol, then connect in seconds — no checkout needed.',
     regionLabel: 'Region',
+    serversLabel: 'Servers',
     protocolLabel: 'Protocol',
     linkLabel: 'Connection link',
     configLabel: 'Config file',
@@ -166,6 +167,9 @@ export const KEFINE_TEXT_EN = {
     copyConfig: 'Copy config',
     copied: 'Copied',
     download: 'Download config',
+    downloadShort: 'Config',
+    copyLinkAria: (city: string) => `Copy connection link for ${city}`,
+    downloadAria: (city: string) => `Download config file for ${city}`,
     pingLabel: 'Ping'
   },
   defaults: {

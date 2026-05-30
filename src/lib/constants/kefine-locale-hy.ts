@@ -133,6 +133,7 @@ export const KEFINE_TEXT_HY = {
     title: 'Պրոքսի սերվերը պատրաստ է',
     subtitle: 'Ընտրեք տարածաշրջանն ու արձանագրությունը և միացեք վայրկյանների ընթացքում՝ առանց վճարման։',
     regionLabel: 'Տարածաշրջան',
+    serversLabel: 'Սերվերներ',
     protocolLabel: 'Արձանագրություն',
     linkLabel: 'Միացման հղում',
     configLabel: 'Կարգավորման ֆայլ',
@@ -142,6 +143,9 @@ export const KEFINE_TEXT_HY = {
     copyConfig: 'Պատճենել կարգավորումը',
     copied: 'Պատճենվեց',
     download: 'Ներբեռնել կարգավորումը',
+    downloadShort: 'Կարգավորում',
+    copyLinkAria: (city: string) => `Պատճենել ${city}-ի միացման հղումը`,
+    downloadAria: (city: string) => `Ներբեռնել ${city}-ի կարգավորման ֆայլը`,
     pingLabel: 'Ping'
   },
   defaults: {

@@ -157,6 +157,7 @@ export const KEFINE_TEXT_RU = {
     title: 'Прокси-сервер готов',
     subtitle: 'Выберите регион и протокол и подключайтесь за секунды — оформление не требуется.',
     regionLabel: 'Регион',
+    serversLabel: 'Серверы',
     protocolLabel: 'Протокол',
     linkLabel: 'Ссылка подключения',
     configLabel: 'Файл конфигурации',
@@ -166,6 +167,9 @@ export const KEFINE_TEXT_RU = {
     copyConfig: 'Скопировать конфиг',
     copied: 'Скопировано',
     download: 'Скачать конфиг',
+    downloadShort: 'Конфиг',
+    copyLinkAria: (city: string) => `Скопировать ссылку подключения для ${city}`,
+    downloadAria: (city: string) => `Скачать файл конфигурации для ${city}`,
     pingLabel: 'Пинг'
   },
   defaults: {
