@@ -333,8 +333,9 @@
     display: flex;
     align-items: center;
     font-size: 1.1rem;
-    line-height: 0;
+    line-height: 1;
     flex-shrink: 0;
+    transform: translateY(-0.08em);
   }
 
   kefine-proxy-row-text {
@@ -403,7 +404,6 @@
   }
 
   kefine-proxy-row-actions button[data-part='download-btn']:hover {
-    background: color-mix(in oklab, var(--kef-accent) 92%, white);
     border-color: var(--kef-accent);
   }
 
