@@ -10,7 +10,6 @@
   import {
     findInstantAnswers,
     faviconUrl,
-    INSTANT_ANSWERS_LIMIT,
     type InstantAnswer,
     type InstantAnswersData
   } from '$lib/kefine/instant-answers';
@@ -82,8 +81,9 @@
     tagPlaceholderLabel = 'tag',
     instantAnswersLabel = 'Quick answers',
     instantAnswerGoHint = 'Go',
-    instantPinLabel = 'Pin for next search',
+    instantPinLabel = 'Pin to prompt',
     instantUnpinLabel = 'Unpin',
+    instantPinnedLabel = 'Pinned to prompt',
     instantMenuLabel = 'More actions',
     instantQrLabel = 'Download QR code',
     instantAgentLabel = 'View site with agent',
@@ -165,6 +165,7 @@
     instantAnswerGoHint?: string;
     instantPinLabel?: string;
     instantUnpinLabel?: string;
+    instantPinnedLabel?: string;
     instantMenuLabel?: string;
     instantQrLabel?: string;
     instantAgentLabel?: string;
@@ -211,7 +212,8 @@
   let qrSite = $state<InstantAnswer | null>(null);
 
   const PINNED_INSTANT_KEY = 'kefine-pinned-instant-answers';
-  // URLs the user pinned so they resurface on the next search.
+  // URLs the user pinned to the prompt; their favicons stay attached to the
+  // search box (the "connecting prompt") so they remain handy across searches.
   let pinnedUrls = $state<string[]>([]);
 
   onMount(() => {
@@ -242,22 +244,17 @@
 
   const instantAnswers = $derived.by(() => {
     if (instantDismissed) return [];
-    const matched = findInstantAnswers(draft.description, instantSites);
-    // Surface pinned sites at the top of the next search, even when they don't
-    // match the current query — that's what the pin button is for.
-    if (!draft.description.trim() || pinnedUrls.length === 0) {
-      return matched;
-    }
-    const pinnedSites = pinnedUrls
-      .map((url) => instantSites.find((site) => site.url === url))
-      .filter((site): site is InstantAnswer => Boolean(site));
-    const seen = new Set(pinnedSites.map((site) => site.url));
-    return [...pinnedSites, ...matched.filter((site) => !seen.has(site.url))].slice(
-      0,
-      INSTANT_ANSWERS_LIMIT
-    );
+    return findInstantAnswers(draft.description, instantSites);
   });
   const instantAnswersOpen = $derived(instantAnswers.length > 0);
+
+  // Sites the user pinned to the prompt, rendered as favicon chips attached to
+  // the search box so they stay connected to the prompt across searches.
+  const pinnedAnswers = $derived(
+    pinnedUrls
+      .map((url) => instantSites.find((site) => site.url === url))
+      .filter((site): site is InstantAnswer => Boolean(site))
+  );
 
   function isPinned(url: string): boolean {
     return pinnedUrls.includes(url);
@@ -1425,13 +1422,7 @@ initialized = true;
       onpointerleave={handleSubmitPressEnd}
       onpointercancel={handleSubmitPressEnd}
     >
-      <kefine-exec-arrow aria-hidden="true">
-        <svg viewBox="0 0 28 20" width="28" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M3 10h19" />
-          <path d="M16 4l6 6-6 6" />
-          <path d="M9 6.5l3.4 3.5L9 13.5" />
-        </svg>
-      </kefine-exec-arrow>
+      <kefine-exec-arrow aria-hidden="true">➵</kefine-exec-arrow>
     </button>
     {#if queuePopoverOpen}
       <kefine-submit-popover data-part="queue-popover" role="dialog" aria-label={backgroundExecuteAria}>
@@ -1441,6 +1432,50 @@ initialized = true;
       </kefine-submit-popover>
     {/if}
   </fieldset>
+
+  {#if pinnedAnswers.length > 0}
+    <kefine-pinned-strip data-part="pinned-strip" aria-label={instantPinnedLabel}>
+      {#each pinnedAnswers as site (site.url)}
+        <kefine-pinned-chip data-part="pinned-chip">
+          <a
+            href={site.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            data-part="pinned-chip-link"
+            title={site.url}
+          >
+            <kefine-instant-icon data-part="pinned-icon" aria-hidden="true">
+              {#if faviconUrl(site.url) && !failedFavicons.has(site.url)}
+                <img
+                  data-part="instant-favicon"
+                  src={faviconUrl(site.url)}
+                  alt=""
+                  width="18"
+                  height="18"
+                  loading="lazy"
+                  onerror={() => markFaviconFailed(site.url)}
+                />
+              {:else}
+                <kefine-instant-emoji>{site.icon}</kefine-instant-emoji>
+              {/if}
+            </kefine-instant-icon>
+            <lefine-text data-part="pinned-name">{site.name}</lefine-text>
+          </a>
+          <button
+            type="button"
+            data-part="pinned-remove"
+            title={instantUnpinLabel}
+            aria-label={instantUnpinLabel}
+            onclick={() => togglePin(site.url)}
+          >
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
+        </kefine-pinned-chip>
+      {/each}
+    </kefine-pinned-strip>
+  {/if}
 
   {#if instantAnswersOpen}
     <kefine-instant-answers
@@ -3703,12 +3738,10 @@ initialized = true;
     justify-content: center;
     width: 100%;
     height: 100%;
-  }
-
-  kefine-exec-arrow svg {
-    width: clamp(1.5rem, 4.4vw, 2.05rem);
-    height: auto;
-    display: block;
+    font-size: clamp(2.35rem, 8vw, 3.6rem);
+    font-weight: 400;
+    line-height: 1;
+    text-align: center;
   }
 
   @keyframes kefine-solver-search-spin {
@@ -3733,6 +3766,70 @@ initialized = true;
     border-radius: 0.4rem;
     background: color-mix(in oklab, var(--kef-bg-card) 86%, var(--kef-bg-soft) 14%);
     box-shadow: none;
+  }
+
+  kefine-pinned-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.45rem;
+    padding-left: 0.15rem;
+  }
+
+  kefine-pinned-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.15rem;
+    padding: 0.2rem 0.3rem 0.2rem 0.2rem;
+    border-radius: 999px;
+    border: 1px solid color-mix(in oklab, var(--kef-color-primary, #c89a5a) 45%, transparent);
+    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 10%, var(--kef-bg-card));
+  }
+
+  a[data-part='pinned-chip-link'] {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 0;
+    padding: 0.05rem 0.15rem;
+    color: var(--lefine-text);
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  kefine-instant-icon[data-part='pinned-icon'] {
+    width: 1.4rem;
+    height: 1.4rem;
+    font-size: 0.95rem;
+  }
+
+  lefine-text[data-part='pinned-name'] {
+    font-size: 0.82rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 9rem;
+  }
+
+  button[data-part='pinned-remove'] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--lefine-text-soft);
+    cursor: pointer;
+    transition: background-color 0.12s ease, color 0.12s ease;
+  }
+
+  button[data-part='pinned-remove']:hover {
+    background: color-mix(in oklab, var(--lefine-text) 12%, transparent);
+    color: var(--lefine-text);
   }
 
   kefine-instant-answers {

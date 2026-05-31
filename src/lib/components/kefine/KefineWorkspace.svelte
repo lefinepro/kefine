@@ -2783,6 +2783,7 @@
           instantAnswerGoHint={localeText.create.instantAnswerGoHint}
           instantPinLabel={localeText.create.instantPinLabel}
           instantUnpinLabel={localeText.create.instantUnpinLabel}
+          instantPinnedLabel={localeText.create.instantPinnedLabel}
           instantMenuLabel={localeText.create.instantMenuLabel}
           instantQrLabel={localeText.create.instantQrLabel}
           instantAgentLabel={localeText.create.instantAgentLabel}
