@@ -2,7 +2,7 @@ require "kemal"
 require "json"
 require "../utils/config"
 
-module Crater
+module Lepos
   module Handlers
     module NodeInfo
       def self.register(config : Utils::Config)
@@ -25,12 +25,12 @@ module Crater
           {
             version:  "2.0",
             software: {
-              name:    "Crater",
-              version: Crater::VERSION,
+              name:    "lepos",
+              version: Lepos::VERSION,
             },
-            protocols:         ["activitypub", "forgefed"],
-            services:          {inbound: [] of String, outbound: [] of String},
-            usage:             {
+            protocols: ["activitypub", "forgefed"],
+            services:  {inbound: [] of String, outbound: [] of String},
+            usage:     {
               users:      {total: 0, activeMonth: 0, activeHalfyear: 0},
               localPosts: 0,
             },

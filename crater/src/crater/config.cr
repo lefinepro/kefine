@@ -1,4 +1,4 @@
-module Crater
+module Lepos
   module Config
     CONFIG      = Utils::Config.load
     PORT        = CONFIG.port

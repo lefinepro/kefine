@@ -1,6 +1,6 @@
 require "kemal"
 
-module Crater
+module Lepos
   class CorsHandler
     include HTTP::Handler
 

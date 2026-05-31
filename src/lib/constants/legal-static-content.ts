@@ -8,7 +8,7 @@ export const PRIVACY_CONTENT: Record<KefineLocale, Omit<LegalPageContent, 'updat
     title: 'Privacy Policy',
     intro: [
       'This Privacy Policy explains how Lefine collects, uses, and protects personal data when you visit the website, create solver tasks, authenticate, make payments, or use related digital delivery features.',
-      'This policy applies to the Lefine product and related services delivered through the website and crater-backed infrastructure.'
+      'This policy applies to the Lefine product and related services delivered through the website and Lepos-backed infrastructure.'
     ],
     sections: [
       {
@@ -69,7 +69,7 @@ export const PRIVACY_CONTENT: Record<KefineLocale, Omit<LegalPageContent, 'updat
     title: 'Политика конфиденциальности',
     intro: [
       'Эта Политика конфиденциальности объясняет, как Lefine собирает, использует и защищает персональные данные, когда вы посещаете сайт, создаёте задачи, проходите авторизацию, совершаете оплату или используете цифровую выдачу результата.',
-      'Политика применяется к продукту Lefine и связанным сервисам, работающим через сайт и crater-инфраструктуру.'
+      'Политика применяется к продукту Lefine и связанным сервисам, работающим через сайт и Lepos-инфраструктуру.'
     ],
     sections: [
       {
@@ -130,7 +130,7 @@ export const PRIVACY_CONTENT: Record<KefineLocale, Omit<LegalPageContent, 'updat
     title: 'Գաղտնիության քաղաքականություն',
     intro: [
       'Այս Գաղտնիության քաղաքականությունը բացատրում է, թե ինչպես է Lefine-ը հավաքում, օգտագործում և պաշտպանում անձնական տվյալները, երբ դուք այցելում եք կայքը, ստեղծում եք առաջադրանքներ, անցնում եք նույնականացում, կատարում եք վճարումներ կամ ստանում եք թվային արդյունքներ։',
-      'Քաղաքականությունը վերաբերում է Lefine արտադրանքին և կայքի ու crater ենթակառուցվածքի միջոցով մատուցվող ծառայություններին։'
+      'Քաղաքականությունը վերաբերում է Lefine արտադրանքին և կայքի ու Lepos ենթակառուցվածքի միջոցով մատուցվող ծառայություններին։'
     ],
     sections: [
       {

@@ -2,7 +2,7 @@ import { proxyCraterRequest } from '$lib/server/crater-proxy';
 
 export async function proxyCreateOrder(request: Request, fetchFn: typeof fetch): Promise<Response> {
   return proxyCraterRequest(request, fetchFn, '/create', {
-    errorMessage: 'Failed to reach crater.'
+    errorMessage: 'Failed to reach Lepos.'
   });
 }
 
@@ -13,7 +13,7 @@ export async function proxyOrderStatus(
   orderId?: string
 ): Promise<Response> {
   return proxyCraterRequest(request, fetchFn, orderPath, {
-    errorMessage: 'Failed to reach crater.',
+    errorMessage: 'Failed to reach Lepos.',
     context: orderId ? { orderId } : undefined
   });
 }

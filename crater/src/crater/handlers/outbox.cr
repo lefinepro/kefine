@@ -1,10 +1,9 @@
 require "kemal"
 require "json"
 require "../order_queue"
-require "../activitypub/types"
 require "../utils/config"
 
-module Crater
+module Lepos
   module Handlers
     module Outbox
       def self.register(config : Utils::Config)
@@ -43,29 +42,26 @@ module Crater
           activities = use_global_collection ? OrderQueue.activity_page(parsed_page) : OrderQueue.activity_page_for_actor(actor_uri, parsed_page)
           total_items = use_global_collection ? OrderQueue.total_items : OrderQueue.total_items_for_actor(actor_uri)
           has_more = (parsed_page * OrderQueue::EVENT_PAGE_SIZE) < total_items
+          page_id = "#{actor_uri}/outbox?page=#{parsed_page}"
+          page_payload = Aptok.ordered_collection_page(
+            page_id,
+            "#{actor_uri}/outbox",
+            activities.compact_map(&.as_h?),
+            has_more ? "#{actor_uri}/outbox?page=#{parsed_page + 1}" : nil,
+            parsed_page > 1 ? "#{actor_uri}/outbox?page=#{parsed_page - 1}" : nil
+          )
+          page_payload["totalItems"] = Aptok.json(total_items)
+          page_payload["first"] = Aptok.json("#{actor_uri}/outbox?page=1")
 
-          return({
-            "@context"     => ActivityPub::CONTEXT,
-            "id"           => "#{actor_uri}/outbox?page=#{parsed_page}",
-            "type"         => "OrderedCollectionPage",
-            "partOf"       => "#{actor_uri}/outbox",
-            "orderedItems" => activities,
-            "totalItems"   => total_items,
-            "first"        => "#{actor_uri}/outbox?page=1",
-            "next"         => has_more ? "#{actor_uri}/outbox?page=#{parsed_page + 1}" : nil,
-            "prev"         => parsed_page > 1 ? "#{actor_uri}/outbox?page=#{parsed_page - 1}" : nil,
-          }.to_json)
+          return page_payload.to_json
         end
 
         total_items = use_global_collection ? OrderQueue.total_items : OrderQueue.total_items_for_actor(actor_uri)
+        collection = Aptok.ordered_collection("#{actor_uri}/outbox", [] of Aptok::JsonMap, total_items)
+        collection.delete("orderedItems")
+        collection["first"] = Aptok.json("#{actor_uri}/outbox?page=1") if total_items > 0
 
-        {
-          "@context"   => ActivityPub::CONTEXT,
-          "id"         => "#{actor_uri}/outbox",
-          "type"       => "OrderedCollection",
-          "totalItems" => total_items,
-          "first"      => total_items > 0 ? "#{actor_uri}/outbox?page=1" : nil,
-        }.to_json
+        collection.to_json
       end
     end
   end

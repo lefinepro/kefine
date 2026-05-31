@@ -4,7 +4,7 @@ require "pg"
 require "./order_queue"
 require "./utils/config"
 
-module Crater
+module Lepos
   module PaymentStore
     record PromoQuote,
       order_id : String,
@@ -161,41 +161,41 @@ module Crater
 
     def self.to_json_payload(order : OrderQueue::OrderRecord, quote : PromoQuote) : String
       {
-        orderId: order.id,
-        title: order.title,
-        status: order.status,
-        currency: quote.currency,
-        originalAmount: quote.original_amount,
-        effectiveAmount: quote.effective_amount,
-        promoCode: quote.promo_code,
-        promoApplied: quote.promo_applied,
-        promoMessage: quote.promo_message,
-        strikeOriginalPrice: quote.strike_original_price,
-        freeUnlock: quote.free_unlock,
-        paymentAddress: quote.payment_address,
-        paymentRequest: quote.payment_request,
-        paymentChainId: quote.payment_chain_id,
-        paymentTokenAddress: quote.payment_token_address,
-        paymentTokenSymbol: quote.payment_token_symbol,
-        paymentTokenDecimals: quote.payment_token_decimals,
-        paymentUrl: order.payment_url,
-        labels: quote.labels,
-        templateFeeAmount: quote.template_fee_amount,
+        orderId:                 order.id,
+        title:                   order.title,
+        status:                  order.status,
+        currency:                quote.currency,
+        originalAmount:          quote.original_amount,
+        effectiveAmount:         quote.effective_amount,
+        promoCode:               quote.promo_code,
+        promoApplied:            quote.promo_applied,
+        promoMessage:            quote.promo_message,
+        strikeOriginalPrice:     quote.strike_original_price,
+        freeUnlock:              quote.free_unlock,
+        paymentAddress:          quote.payment_address,
+        paymentRequest:          quote.payment_request,
+        paymentChainId:          quote.payment_chain_id,
+        paymentTokenAddress:     quote.payment_token_address,
+        paymentTokenSymbol:      quote.payment_token_symbol,
+        paymentTokenDecimals:    quote.payment_token_decimals,
+        paymentUrl:              order.payment_url,
+        labels:                  quote.labels,
+        templateFeeAmount:       quote.template_fee_amount,
         templateAuthorProfileId: quote.template_author_profile_id,
-        templateAuthorUsername: quote.template_author_username,
-        templatePricingMode: order.template_pricing_mode,
-        templatePricingValue: order.template_pricing_value,
-        templateSlug: order.template_slug
+        templateAuthorUsername:  quote.template_author_username,
+        templatePricingMode:     order.template_pricing_mode,
+        templatePricingValue:    order.template_pricing_value,
+        templateSlug:            order.template_slug,
       }.to_json
     end
 
     def self.to_config_payload(config : Utils::Config) : String
       {
-        paymentAddress: config.payment_evm_address,
-        paymentChainId: config.payment_chain_id,
-        paymentTokenAddress: config.payment_token_address,
-        paymentTokenSymbol: config.payment_token_symbol,
-        paymentTokenDecimals: config.payment_token_decimals
+        paymentAddress:       config.payment_evm_address,
+        paymentChainId:       config.payment_chain_id,
+        paymentTokenAddress:  config.payment_token_address,
+        paymentTokenSymbol:   config.payment_token_symbol,
+        paymentTokenDecimals: config.payment_token_decimals,
       }.to_json
     end
 

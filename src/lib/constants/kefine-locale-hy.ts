@@ -273,8 +273,8 @@ export const KEFINE_TEXT_HY = {
   },
   errors: {
     ...KEFINE_TEXT_EN.errors,
-    backendUnavailableTitle: 'Crater-ը կազմաձևված չէ',
-    backendUnavailableDetail: 'Backend health ստուգումը ձախողվեց։ Գործարկեք crater-ը կամ ուղղեք կազմաձևված crater URL-ը։',
+    backendUnavailableTitle: 'Lepos-ը կազմաձևված չէ',
+    backendUnavailableDetail: 'Backend health ստուգումը ձախողվեց։ Գործարկեք Lepos-ը կամ ուղղեք կազմաձևված Lepos URL-ը։',
     orderRequired: 'Առաջադրանքի տեքստը պարտադիր է',
     loadGeneric: 'Չհաջողվեց ստեղծել առաջադրանքը',
     fallback: 'Չհաջողվեց ստեղծել առաջադրանքը',

@@ -11,14 +11,14 @@ require "./order_queue"
 require "./utils/config"
 require "./lepos_config"
 
-module Crater
+module Lepos
   module RepositoryStore
-    DEFAULT_BRANCH = "main"
-    AD_HOC_ORDER_PREFIX = "__repo__:"
-    EXCHANGE_FEED_ACTOR = "feed@problemsets.lefine.pro"
-    PLAN_DOCUMENT_PATH = "PLAN.org"
-    LEGACY_PLAN_DOCUMENT_PATH = ".meta/lefine.pro.org"
-    ISSUE_ARTIFACT_EXTENSIONS = {".patch", ".diff", ".org"}
+    DEFAULT_BRANCH             = "main"
+    AD_HOC_ORDER_PREFIX        = "__repo__:"
+    EXCHANGE_FEED_ACTOR        = "feed@problemsets.lefine.pro"
+    PLAN_DOCUMENT_PATH         = "PLAN.org"
+    LEGACY_PLAN_DOCUMENT_PATH  = ".meta/lefine.pro.org"
+    ISSUE_ARTIFACT_EXTENSIONS  = {".patch", ".diff", ".org"}
     ISSUE_ARTIFACT_MEDIA_TYPES = {"application/x-git-patch", "text/x-diff", "text/org", "application/org"}
 
     struct GitAclRule
@@ -166,7 +166,12 @@ module Crater
     end
 
     private def self.repo_root : String
-      presence(ENV["KEFINE_GIT_ROOT"]?.try(&.strip)) || File.expand_path(".meta/crater/git", Dir.current)
+      configured = presence(ENV["KEFINE_GIT_ROOT"]?.try(&.strip))
+      return configured if configured
+
+      lepos_root = File.expand_path(".meta/lepos/git", Dir.current)
+      legacy_root = File.expand_path(".meta/crater/git", Dir.current)
+      Dir.exists?(legacy_root) && !Dir.exists?(lepos_root) ? legacy_root : lepos_root
     end
 
     private def self.repositories_root : String
@@ -350,7 +355,7 @@ module Crater
         agent_source_url: agent_source_url(config),
         acl_rules: [
           GitAclRule.new(id: "main-admin", branch_pattern: DEFAULT_BRANCH, allowed_groups: ["admin"]),
-          GitAclRule.new(id: "all-exchange", branch_pattern: "*", allowed_groups: ["exchange"])
+          GitAclRule.new(id: "all-exchange", branch_pattern: "*", allowed_groups: ["exchange"]),
         ]
       )
     end
@@ -462,7 +467,7 @@ module Crater
     private def self.receive_hook_script(stage : String, repository_id : String) : String
       [
         "#!/bin/sh",
-        %(exec /app/bin/crater git-receive-hook --stage #{stage} --repo-id #{repository_id})
+        %(exec /app/bin/lepos git-receive-hook --stage #{stage} --repo-id #{repository_id}),
       ].join('\n') + '\n'
     end
 
@@ -525,7 +530,7 @@ module Crater
         "** Recommended structure",
         "- Keep one subdirectory per task or issue.",
         "- Add `.org` planning notes next to `.patch` or `.diff` handoff files.",
-        "- Preserve product context in `#{config.main_readme_path}`."
+        "- Preserve product context in `#{config.main_readme_path}`.",
       ].join('\n')
     end
 
@@ -559,7 +564,7 @@ module Crater
         "- Keep issue-specific notes in this directory.",
         "",
         "*** Verification",
-        "- Record manual and automated validation steps."
+        "- Record manual and automated validation steps.",
       ].join('\n')
     end
 
@@ -580,7 +585,7 @@ module Crater
         presence(order.description) || order.title,
         "",
         "** Product Description",
-        presence(order.description) || "-"
+        presence(order.description) || "-",
       ].join('\n')
     end
 
@@ -609,7 +614,7 @@ module Crater
         ":STATE: active",
         ":END:",
         "",
-        body
+        body,
       ].join('\n')
     end
 
@@ -1044,8 +1049,8 @@ module Crater
         owner_handle_for(repository, config) == normalized_owner &&
           (
             repository.project_id == normalized_clone_name ||
-            repository.order_id == normalized_clone_name ||
-            repository.slug == normalized_clone_name
+              repository.order_id == normalized_clone_name ||
+              repository.slug == normalized_clone_name
           )
       end
     end
@@ -1171,7 +1176,7 @@ module Crater
         "- Actor: @#{normalize_handle(actor_handle)}",
         "- From: #{old_revision}",
         "- To: #{new_revision}",
-        "- Clone: #{project_ssh_clone_url(record, config)}"
+        "- Clone: #{project_ssh_clone_url(record, config)}",
       ].join('\n')
 
       existing_order_id = database(config).query_one?(
@@ -1195,17 +1200,17 @@ module Crater
 
       payload = JSON.parse(
         {
-          "title" => title,
-          "description" => body,
-          "labels" => ["git", "exchange-auto-run", "repo:#{record.slug}", "branch:#{branch_name}"],
-          "ownerUsername" => owner_handle,
+          "title"            => title,
+          "description"      => body,
+          "labels"           => ["git", "exchange-auto-run", "repo:#{record.slug}", "branch:#{branch_name}"],
+          "ownerUsername"    => owner_handle,
           "ownerDisplayName" => owner_handle,
-          "actorHandle" => normalize_handle(actor_handle),
-          "vcsEnabled" => false,
-          "document" => {
-            "format" => "markdown",
-            "content" => body
-          }
+          "actorHandle"      => normalize_handle(actor_handle),
+          "vcsEnabled"       => false,
+          "document"         => {
+            "format"  => "markdown",
+            "content" => body,
+          },
         }.to_json
       )
 
@@ -1249,28 +1254,28 @@ module Crater
       lepos_settings = resolve_lepos_config(record)
       reps_settings = resolve_reps_config(record, lepos_settings)
       {
-        "id" => JSON::Any.new(record.id),
-        "projectId" => JSON::Any.new(record.project_id),
-        "orderId" => JSON::Any.new(record.order_id),
-        "slug" => JSON::Any.new(record.slug),
-        "ownerHandle" => JSON::Any.new(owner_handle),
-        "name" => JSON::Any.new(record.name),
-        "visibility" => JSON::Any.new(record.visibility),
-        "defaultBranch" => JSON::Any.new(lepos_settings.default_branch),
-        "serverUuid" => JSON::Any.new(record.server_uuid),
-        "publicCloneUrl" => JSON::Any.new(record.public_clone_url || ""),
-        "sshCloneUrl" => JSON::Any.new(record.ssh_clone_url || ""),
-        "projectCloneUrl" => JSON::Any.new(project_public_url || project_ssh_url),
+        "id"                    => JSON::Any.new(record.id),
+        "projectId"             => JSON::Any.new(record.project_id),
+        "orderId"               => JSON::Any.new(record.order_id),
+        "slug"                  => JSON::Any.new(record.slug),
+        "ownerHandle"           => JSON::Any.new(owner_handle),
+        "name"                  => JSON::Any.new(record.name),
+        "visibility"            => JSON::Any.new(record.visibility),
+        "defaultBranch"         => JSON::Any.new(lepos_settings.default_branch),
+        "serverUuid"            => JSON::Any.new(record.server_uuid),
+        "publicCloneUrl"        => JSON::Any.new(record.public_clone_url || ""),
+        "sshCloneUrl"           => JSON::Any.new(record.ssh_clone_url || ""),
+        "projectCloneUrl"       => JSON::Any.new(project_public_url || project_ssh_url),
         "projectPublicCloneUrl" => JSON::Any.new(project_public_url || ""),
-        "projectSshCloneUrl" => JSON::Any.new(project_ssh_url),
-        "projectArchiveUrl" => JSON::Any.new(project_archive_url(record, config)),
-        "gitSettings" => settings_json_payload(settings),
-        "leposConfig" => JSON.parse(lepos_settings.payload.to_json),
-        "repsConfig" => JSON.parse(reps_settings.payload.to_json),
-        "repositoryUrl" => JSON::Any.new("#{config.crater_url}/repositories/#{record.slug}"),
-        "projectUrl" => JSON::Any.new("#{config.crater_url}/projects/#{record.project_id}"),
-        "createdAt" => JSON::Any.new(record.created_at),
-        "updatedAt" => JSON::Any.new(record.updated_at)
+        "projectSshCloneUrl"    => JSON::Any.new(project_ssh_url),
+        "projectArchiveUrl"     => JSON::Any.new(project_archive_url(record, config)),
+        "gitSettings"           => settings_json_payload(settings),
+        "leposConfig"           => JSON.parse(lepos_settings.payload.to_json),
+        "repsConfig"            => JSON.parse(reps_settings.payload.to_json),
+        "repositoryUrl"         => JSON::Any.new("#{config.crater_url}/repositories/#{record.slug}"),
+        "projectUrl"            => JSON::Any.new("#{config.crater_url}/projects/#{record.project_id}"),
+        "createdAt"             => JSON::Any.new(record.created_at),
+        "updatedAt"             => JSON::Any.new(record.updated_at),
       }
     end
 

@@ -7,13 +7,12 @@ require "time"
 require "uri"
 require "uuid"
 
-require "./activitypub/types"
-require "./forgefed/types"
+require "./aptok"
 require "./utils/actor_keys"
 require "./utils/config"
 require "./solver_fetcher"
 
-module Crater
+module Lepos
   module OrderQueue
     EVENT_PAGE_SIZE = 20
 
@@ -116,7 +115,7 @@ module Crater
       "Pulse Engine",
       "Arcane Agents",
       "Northline Solver",
-      "Ozon Runner"
+      "Ozon Runner",
     ]
 
     @@db : DB::Database? = nil
@@ -223,7 +222,7 @@ module Crater
           solver_info.name,
           solver_info.handle,
           solver_info.profile_url,
-          solver_info.id
+          solver_info.id,
         }
       end
 
@@ -334,7 +333,7 @@ module Crater
       content = title.strip if content.empty?
 
       {
-        "format" => "markdown",
+        "format"  => "markdown",
         "content" => content,
       }.to_json
     end
@@ -346,7 +345,7 @@ module Crater
         content = to_string(object["content"]?) || description.to_s
         format = to_string(object["format"]?) || "markdown"
         return {
-          "format" => format,
+          "format"  => format,
           "content" => content,
         }.to_json
       end
@@ -444,8 +443,8 @@ module Crater
 
               JSON.parse(
                 {
-                  "value" => value,
-                  "kind" => kind,
+                  "value"      => value,
+                  "kind"       => kind,
                   "targetKind" => target_kind,
                 }.to_json
               )
@@ -454,8 +453,8 @@ module Crater
             if mention_payloads.size > 0
               payloads << JSON.parse(
                 {
-                  "nodeKey" => node_key,
-                  "content" => content_value,
+                  "nodeKey"  => node_key,
+                  "content"  => content_value,
                   "mentions" => mention_payloads,
                 }.to_json
               )
@@ -660,8 +659,8 @@ module Crater
       parse_order_payload_from_map(object_payload, config)
     end
 
-    private def self.parse_order_payload(activity : ActivityPub::Activity, config : Utils::Config) : OrderRecord
-      parse_order_payload_from_map(activity.object.as_h? || {} of String => JSON::Any, config)
+    private def self.parse_order_payload(activity : Aptok::Vocab::Activity, config : Utils::Config) : OrderRecord
+      parse_order_payload_from_map(AptokPayload.activity_object(activity).as_h? || {} of String => JSON::Any, config)
     end
 
     private def self.ticket_payload(payload : Hash(String, JSON::Any)) : Hash(String, JSON::Any)?
@@ -788,78 +787,79 @@ module Crater
       attachments = combined_attachments(order, status, config)
       system_instruction = exchange_system_instruction(order)
       routed_comments = routed_comment_payloads(order)
-      ticket_payload = {
-        "@context" => [ActivityPub::CONTEXT, ForgeFed::CONTEXT],
-        "id" => "#{object_id}/ticket",
-        "orderId" => order.id,
-        "type" => "Ticket",
-        "name" => order.title,
-        "content" => order.description,
-        "status" => status,
-        "reporter" => actor_did,
-        "labels" => order.labels,
-        "estimatedCost" => order.estimated_cost,
-        "currency" => order.currency,
-        "executionEstimate" => order.execution_estimate,
-        "templateId" => order.template_id,
-        "templateSlug" => order.template_slug,
-        "templateAuthorProfileId" => order.template_author_profile_id,
-        "templateAuthorUsername" => order.template_author_username,
-        "templateAuthorDisplayName" => order.template_author_display_name,
-        "templatePricingMode" => order.template_pricing_mode,
-        "templatePricingValue" => order.template_pricing_value,
-        "ownerProfileId" => order.owner_profile_id,
-        "ownerUsername" => order.owner_username,
-        "ownerDisplayName" => order.owner_display_name,
-        "actorHandle" => order.actor_handle,
-        "actorDid" => actor_did,
-        "isPublicTask" => order.is_public_task,
-        "vcsEnabled" => order.vcs_enabled,
-        "document" => JSON.parse(order.document_json || build_default_document_json(order.title, order.description)),
-        "attachment" => attachments
-      }
-      ticket_payload["systemInstruction"] = JSON::Any.new(system_instruction) if system_instruction
-      ticket_payload["commentRoutes"] = JSON.parse(routed_comments.to_json) if routed_comments.size > 0
+      document = JSON.parse(order.document_json || build_default_document_json(order.title, order.description))
 
-      object_payload = {
-        "@context" => [
-          ActivityPub::CONTEXT,
-          ForgeFed::CONTEXT,
-          "https://w3id.org/fep/0ea0",
-        ],
-        "id" => object_id,
-        "orderId" => order.id,
-        "type" => "Offer",
-        "name" => order.title,
-        "content" => order.description,
-        "object" => JSON.parse(ticket_payload.to_json),
-        "status" => status,
-        "solver" => order.solver,
-        "estimatedCost" => order.estimated_cost,
-        "currency" => order.currency,
-        "executionEstimate" => order.execution_estimate,
-        "uiScenario" => order.ui_scenario,
-        "labels" => order.labels,
-        "published" => order.updated_at,
-        "templateId" => order.template_id,
-        "templateSlug" => order.template_slug,
-        "templateAuthorProfileId" => order.template_author_profile_id,
-        "templateAuthorUsername" => order.template_author_username,
-        "templateAuthorDisplayName" => order.template_author_display_name,
-        "templatePricingMode" => order.template_pricing_mode,
-        "templatePricingValue" => order.template_pricing_value,
-        "ownerProfileId" => order.owner_profile_id,
-        "ownerUsername" => order.owner_username,
-        "ownerDisplayName" => order.owner_display_name,
-        "actorHandle" => order.actor_handle,
-        "actorDid" => actor_did,
-        "isPublicTask" => order.is_public_task,
-        "vcsEnabled" => order.vcs_enabled,
-        "document" => JSON.parse(order.document_json || build_default_document_json(order.title, order.description)),
-        "attachment" => attachments
-      }
-      object_payload["systemInstruction"] = JSON::Any.new(system_instruction) if system_instruction
-      object_payload["commentRoutes"] = JSON.parse(routed_comments.to_json) if routed_comments.size > 0
+      ticket_payload = Aptok.forgefed_ticket(
+        "#{object_id}/ticket",
+        order.title,
+        order.description || "",
+        attributed_to: actor_did,
+        context: object_id,
+        resolved: status == "completed",
+        attachment: attachments.compact_map(&.as_h?)
+      )
+      ticket_payload["orderId"] = Aptok.json(order.id)
+      ticket_payload["status"] = Aptok.json(status)
+      ticket_payload["reporter"] = Aptok.json(actor_did)
+      ticket_payload["labels"] = Aptok.json(order.labels)
+      ticket_payload["estimatedCost"] = Aptok.json(order.estimated_cost)
+      ticket_payload["currency"] = Aptok.json(order.currency)
+      ticket_payload["executionEstimate"] = Aptok.json(order.execution_estimate)
+      ticket_payload["templateId"] = Aptok.json(order.template_id)
+      ticket_payload["templateSlug"] = Aptok.json(order.template_slug)
+      ticket_payload["templateAuthorProfileId"] = Aptok.json(order.template_author_profile_id)
+      ticket_payload["templateAuthorUsername"] = Aptok.json(order.template_author_username)
+      ticket_payload["templateAuthorDisplayName"] = Aptok.json(order.template_author_display_name)
+      ticket_payload["templatePricingMode"] = Aptok.json(order.template_pricing_mode)
+      ticket_payload["templatePricingValue"] = Aptok.json(order.template_pricing_value)
+      ticket_payload["ownerProfileId"] = Aptok.json(order.owner_profile_id)
+      ticket_payload["ownerUsername"] = Aptok.json(order.owner_username)
+      ticket_payload["ownerDisplayName"] = Aptok.json(order.owner_display_name)
+      ticket_payload["actorHandle"] = Aptok.json(order.actor_handle)
+      ticket_payload["actorDid"] = Aptok.json(actor_did)
+      ticket_payload["isPublicTask"] = Aptok.json(order.is_public_task)
+      ticket_payload["vcsEnabled"] = Aptok.json(order.vcs_enabled)
+      ticket_payload["document"] = Aptok.json(document)
+      ticket_payload["systemInstruction"] = Aptok.json(system_instruction) if system_instruction
+      ticket_payload["commentRoutes"] = Aptok.json(routed_comments) if routed_comments.size > 0
+
+      object_payload = Aptok.object(
+        "Offer",
+        object_id,
+        Aptok::JsonMap{
+          "@context"                  => Aptok.json([Aptok::ACTIVITYSTREAMS_CONTEXT, Aptok::FORGEFED_CONTEXT, "https://w3id.org/fep/0ea0"]),
+          "orderId"                   => Aptok.json(order.id),
+          "name"                      => Aptok.json(order.title),
+          "content"                   => Aptok.json(order.description),
+          "object"                    => Aptok.json(ticket_payload),
+          "status"                    => Aptok.json(status),
+          "solver"                    => Aptok.json(order.solver),
+          "estimatedCost"             => Aptok.json(order.estimated_cost),
+          "currency"                  => Aptok.json(order.currency),
+          "executionEstimate"         => Aptok.json(order.execution_estimate),
+          "uiScenario"                => Aptok.json(order.ui_scenario),
+          "labels"                    => Aptok.json(order.labels),
+          "published"                 => Aptok.json(order.updated_at),
+          "templateId"                => Aptok.json(order.template_id),
+          "templateSlug"              => Aptok.json(order.template_slug),
+          "templateAuthorProfileId"   => Aptok.json(order.template_author_profile_id),
+          "templateAuthorUsername"    => Aptok.json(order.template_author_username),
+          "templateAuthorDisplayName" => Aptok.json(order.template_author_display_name),
+          "templatePricingMode"       => Aptok.json(order.template_pricing_mode),
+          "templatePricingValue"      => Aptok.json(order.template_pricing_value),
+          "ownerProfileId"            => Aptok.json(order.owner_profile_id),
+          "ownerUsername"             => Aptok.json(order.owner_username),
+          "ownerDisplayName"          => Aptok.json(order.owner_display_name),
+          "actorHandle"               => Aptok.json(order.actor_handle),
+          "actorDid"                  => Aptok.json(actor_did),
+          "isPublicTask"              => Aptok.json(order.is_public_task),
+          "vcsEnabled"                => Aptok.json(order.vcs_enabled),
+          "document"                  => Aptok.json(document),
+          "attachment"                => Aptok.json(attachments),
+        }
+      )
+      object_payload["systemInstruction"] = Aptok.json(system_instruction) if system_instruction
+      object_payload["commentRoutes"] = Aptok.json(routed_comments) if routed_comments.size > 0
 
       JSON.parse(object_payload.to_json)
     end
@@ -884,94 +884,89 @@ module Crater
       vless_uri = "vless://32274730-3454-49e3-b2d9-e6adf153b176@provider.akashprovid.com:32701?encryption=none&flow=xtls-rprx-vision&fp=chrome&pbk=1Lj8mfaT2j_ScjZvTQmAhFrsy9rdmFpNTObdhZxoJzs&security=reality&sid=ea392ae8&sni=github.com&type=tcp#UsServer1"
 
       {
-        "@context" => ActivityPub::CONTEXT,
-        "id" => "#{order.id}/delivery",
-        "type" => "Article",
-        "name" => "VPN delivery package",
-        "summary" => "Structured VPN connection package and setup guide.",
-        "mediaType" => "text/markdown",
+        "@context"     => Aptok::ACTIVITYSTREAMS_CONTEXT,
+        "id"           => "#{order.id}/delivery",
+        "type"         => "Article",
+        "name"         => "VPN delivery package",
+        "summary"      => "Structured VPN connection package and setup guide.",
+        "mediaType"    => "text/markdown",
         "attributedTo" => order_actor_did(order, config),
-        "url" => "/vless-us1.jsonc",
-        "content" => "Provisioned VLESS access package with client setup steps for mobile and desktop.",
-        "generator" => {
+        "url"          => "/vless-us1.jsonc",
+        "content"      => "Provisioned VLESS access package with client setup steps for mobile and desktop.",
+        "generator"    => {
           "type" => "Service",
-          "name" => "Crater"
+          "name" => "Lepos",
         },
-        "tag" => ["vpn", "vless", "delivery"],
+        "tag"        => ["vpn", "vless", "delivery"],
         "attachment" => [
           {
             "type" => "Link",
             "name" => "VLESS profile",
-            "href" => vless_uri
+            "href" => vless_uri,
           },
           {
             "type" => "Link",
             "name" => "Config file",
-            "href" => "/vless-us1.jsonc"
+            "href" => "/vless-us1.jsonc",
           },
           {
-            "type" => "Article",
+            "type"     => "Article",
             "position" => 1,
-            "name" => "Android setup",
-            "content" => "Install Exclave or v2rayNG, import the VLESS URI, confirm the UsServer1 profile, then connect and verify the new IP."
+            "name"     => "Android setup",
+            "content"  => "Install Exclave or v2rayNG, import the VLESS URI, confirm the UsServer1 profile, then connect and verify the new IP.",
           },
           {
-            "type" => "Article",
+            "type"     => "Article",
             "position" => 2,
-            "name" => "iOS setup",
-            "content" => "Open Shadowrocket or Stash, import the VLESS URI from clipboard or URL, approve the VPN profile, then connect."
+            "name"     => "iOS setup",
+            "content"  => "Open Shadowrocket or Stash, import the VLESS URI from clipboard or URL, approve the VPN profile, then connect.",
           },
           {
-            "type" => "Article",
+            "type"     => "Article",
             "position" => 3,
-            "name" => "Desktop setup",
-            "content" => "Use v2rayN on Windows, V2RayU on macOS, or NekoBox on Linux. Import the same VLESS URI, select UsServer1, and enable system proxy if required."
+            "name"     => "Desktop setup",
+            "content"  => "Use v2rayN on Windows, V2RayU on macOS, or NekoBox on Linux. Import the same VLESS URI, select UsServer1, and enable system proxy if required.",
           },
           {
-            "type" => "Article",
+            "type"     => "Article",
             "position" => 4,
-            "name" => "Verification",
-            "content" => "After connection, open whatismyip.com or run curl ifconfig.me to verify that traffic is routed through the provisioned endpoint."
-          }
-        ]
+            "name"     => "Verification",
+            "content"  => "After connection, open whatismyip.com or run curl ifconfig.me to verify that traffic is routed through the provisioned endpoint.",
+          },
+        ],
       }
     end
 
     def self.activity_for(order : OrderRecord, status : String, config : Utils::Config) : JSON::Any
-      activity_payload = {
-        "@context" => [
-          ActivityPub::CONTEXT,
-          ForgeFed::CONTEXT,
-          "https://w3id.org/fep/0ea0"
-        ],
-        "id" => UUID.random.to_s,
-        "type" => status == "queued" ? "Create" : "Update",
-        "actor" => order_actor_did(order, config),
-        "object" => activity_object(order, status, config),
-        "to" => [
-          "https://www.w3.org/ns/activitystreams#Public"
-        ],
-        "published" => current_time
-      }
+      activity_id = UUID.random.to_s
+      actor = order_actor_did(order, config)
+      object = activity_object(order, status, config).as_h.as(Aptok::JsonMap)
+      activity = if status == "queued"
+                   Aptok.create(activity_id, actor, object, [Aptok::PUBLIC_COLLECTION])
+                 else
+                   Aptok.update(activity_id, actor, object, [Aptok::PUBLIC_COLLECTION])
+                 end
+      activity["@context"] = Aptok.json([Aptok::ACTIVITYSTREAMS_CONTEXT, Aptok::FORGEFED_CONTEXT, "https://w3id.org/fep/0ea0"])
+      activity["published"] = Aptok.json(current_time)
 
-      JSON.parse(activity_payload.to_json)
+      JSON.parse(activity.to_json)
     end
 
-    def self.activity_for_payload(payload : JSON::Any, config : Utils::Config) : ActivityPub::Activity
+    def self.activity_for_payload(payload : JSON::Any, config : Utils::Config) : Aptok::Vocab::Activity
       raise BadRequest.new("Payload must be JSON object") unless payload.as_h?
 
       record = parse_order_payload(payload, config)
-      ActivityPub::Activity.from_json(activity_for(record, record.status, config).to_json)
+      AptokPayload.activity_from_json(activity_for(record, record.status, config).to_json)
     end
 
-    private def self.post_to_exchange_inbox(activity : ActivityPub::Activity, config : Utils::Config) : Nil
+    private def self.post_to_exchange_inbox(activity : Aptok::Vocab::Activity, config : Utils::Config) : Nil
       inbox_url = config.order_queue_inbox
       Log.info { "[order_queue:deliver] posting activity=#{activity.type} id=#{activity.id} to=#{inbox_url}" }
       response = HTTP::Client.post(
         inbox_url,
         headers: HTTP::Headers{
-          "Accept" => "application/activity+json, application/json",
-          "Content-Type" => "application/activity+json"
+          "Accept"       => "application/activity+json, application/json",
+          "Content-Type" => "application/activity+json",
         },
         body: activity.to_json,
         tls: inbox_url.starts_with?("https://")
@@ -990,7 +985,7 @@ module Crater
       raise DeliveryFailed.new("Failed to deliver activity to exchange inbox: #{ex.message}")
     end
 
-    def self.receive_create(activity : ActivityPub::Activity, config : Utils::Config) : OrderRecord
+    def self.receive_create(activity : Aptok::Vocab::Activity, config : Utils::Config) : OrderRecord
       raise Error::InvalidActivity.new("Activity type must be Create") unless activity.type == "Create"
 
       record = parse_order_payload(activity, config)
@@ -1004,7 +999,7 @@ module Crater
       record
     end
 
-    def self.submit_create(activity : ActivityPub::Activity, config : Utils::Config) : OrderRecord
+    def self.submit_create(activity : Aptok::Vocab::Activity, config : Utils::Config) : OrderRecord
       raise Error::InvalidActivity.new("Activity type must be Create") unless activity.type == "Create"
 
       record = parse_order_payload(activity, config)
@@ -1031,7 +1026,7 @@ module Crater
       record
     end
 
-    def self.submit_update(activity : ActivityPub::Activity, config : Utils::Config) : OrderRecord
+    def self.submit_update(activity : Aptok::Vocab::Activity, config : Utils::Config) : OrderRecord
       raise Error::InvalidActivity.new("Activity type must be Update") unless activity.type == "Update"
 
       record = parse_order_payload(activity, config)
@@ -1206,26 +1201,20 @@ module Crater
         record.updated_at = current_time
         persist_order(record, config)
 
-        persist_activity(
-          JSON.parse(
-            {
-              "@context" => [ActivityPub::CONTEXT],
-              "id" => UUID.random.to_s,
-              "type" => "Update",
-              "actor" => order_actor_did(record, config),
-              "object" => {
-                "id" => record.id,
-                "type" => "Note",
-                "document" => JSON.parse(record.document_json.not_nil!)
-              },
-              "published" => record.updated_at
-            }.to_json
-          ),
+        note = Aptok.object(
+          "Note",
           record.id,
-          config
+          Aptok::JsonMap{
+            "document" => Aptok.json(JSON.parse(record.document_json.not_nil!)),
+          }
         )
+        activity = Aptok.update(UUID.random.to_s, order_actor_did(record, config), note, [Aptok::PUBLIC_COLLECTION])
+        activity["@context"] = Aptok.json([Aptok::ACTIVITYSTREAMS_CONTEXT])
+        activity["published"] = Aptok.json(record.updated_at)
 
-        outbound_update = ActivityPub::Activity.from_json(activity_for(record, record.status, config).to_json)
+        persist_activity(JSON.parse(activity.to_json), record.id, config)
+
+        outbound_update = AptokPayload.activity_from_json(activity_for(record, record.status, config).to_json)
         spawn do
           begin
             post_to_exchange_inbox(outbound_update, config)
@@ -1250,6 +1239,7 @@ module Crater
         record
       end
     end
+
     private def self.normalize_actor_handle(value : String?) : String?
       return nil unless value
 

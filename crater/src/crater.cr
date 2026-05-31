@@ -1,6 +1,5 @@
 require "kemal"
-require "./crater/activitypub/types"
-require "./crater/forgefed/types"
+require "./crater/aptok"
 require "./crater/handlers/webfinger"
 require "./crater/handlers/nodeinfo"
 require "./crater/handlers/actor"
@@ -27,7 +26,7 @@ require "./crater/ssh_key_store"
 require "./crater/ssh_git_shell"
 require "./crater/git_receive_hook"
 
-module Crater
+module Lepos
   VERSION = "0.1.0"
 
   def self.run
@@ -37,30 +36,30 @@ module Crater
     actor_private_key_string = Utils::ActorKeys.encode_private_key_string(actor_private_key)
     actor_public_key_string = Utils::ActorKeys.derive_public_key_string(actor_private_key)
     actor_key_source = if !ENV["KEFINE_PRIVATEKEY_DEFAULT"]?.try(&.strip).to_s.empty?
-      "KEFINE_PRIVATEKEY_DEFAULT"
-    elsif !config.actor_private_key.strip.empty?
-      "kefine.config.json defaultActor.privateKey"
-    else
-      "unconfigured"
-    end
+                         "KEFINE_PRIVATEKEY_DEFAULT"
+                       elsif !config.actor_private_key.strip.empty?
+                         "kefine.config.json defaultActor.privateKey"
+                       else
+                         "unconfigured"
+                       end
 
-    puts "[crater] default actor: @#{config.actor_username}"
-    puts "[crater] private key loaded: #{!actor_private_key.strip.empty?}"
-    puts "[crater] private key source: #{actor_key_source}"
-    puts "[crater] private key string: #{actor_private_key_string.empty? ? "unavailable" : actor_private_key_string}"
-    puts "[crater] public key string: #{actor_public_key_string.empty? ? "unavailable" : actor_public_key_string}"
-    puts "[crater] actor address: #{actor_address || "unavailable"}"
+    puts "[lepos] default actor: @#{config.actor_username}"
+    puts "[lepos] private key loaded: #{!actor_private_key.strip.empty?}"
+    puts "[lepos] private key source: #{actor_key_source}"
+    puts "[lepos] private key string: #{actor_private_key_string.empty? ? "unavailable" : actor_private_key_string}"
+    puts "[lepos] public key string: #{actor_public_key_string.empty? ? "unavailable" : actor_public_key_string}"
+    puts "[lepos] actor address: #{actor_address || "unavailable"}"
 
     # Middleware
     add_handler CorsHandler.new
     add_handler RequestLogger.new
 
-    # ActivityPub discovery
+    # Aptok-backed federation discovery
     Handlers::WebFinger.register(config)
     Handlers::NodeInfo.register(config)
     Handlers::Actor.register(config)
 
-    # ActivityPub inbox/outbox
+    # Aptok-backed federation inbox/outbox
     Handlers::Inbox.register(config)
     Handlers::Outbox.register(config)
     Handlers::Orders.register(config)
@@ -71,7 +70,7 @@ module Crater
     Handlers::OauthAuth.register(config)
     Handlers::EmailCodeAuth.register(config)
 
-    # ForgeFed project endpoints
+    # Aptok-backed project endpoints
     Handlers::Projects.register(config)
     Handlers::GitHttp.register(config)
     Handlers::ForgeFedResources.register(config)
@@ -79,7 +78,7 @@ module Crater
 
     get "/health" do |env|
       env.response.content_type = "application/json"
-      %({"status":"ok","service":"crater","version":"#{VERSION}"})
+      %({"status":"ok","service":"lepos","version":"#{VERSION}"})
     end
 
     Kemal.config.port = config.port
@@ -89,15 +88,15 @@ module Crater
   end
 end
 
-config = Crater::Utils::Config.load
+config = Lepos::Utils::Config.load
 
 case ARGV.first?
 when "authorized-keys"
-  Crater::SshKeyStore.print_authorized_keys(STDOUT, config)
+  Lepos::SshKeyStore.print_authorized_keys(STDOUT, config)
 when "ssh-shell"
-  Crater::SshGitShell.run(config, ARGV[1..])
+  Lepos::SshGitShell.run(config, ARGV[1..])
 when "git-receive-hook"
-  Crater::GitReceiveHook.run(config, ARGV[1..])
+  Lepos::GitReceiveHook.run(config, ARGV[1..])
 else
-  Crater.run
+  Lepos.run
 end

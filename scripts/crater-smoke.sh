@@ -9,7 +9,7 @@ cleanup() {
 
 trap cleanup EXIT
 
-./scripts/container-compose.sh up -d postgres crater
+./scripts/container-compose.sh up -d postgres lepos
 
 for attempt in $(seq 1 60); do
   if curl -fsS http://127.0.0.1:3001/health >/dev/null; then
@@ -17,7 +17,7 @@ for attempt in $(seq 1 60); do
   fi
 
   if [ "$attempt" -eq 60 ]; then
-    echo "crater health check did not become ready" >&2
+    echo "lepos health check did not become ready" >&2
     exit 1
   fi
 

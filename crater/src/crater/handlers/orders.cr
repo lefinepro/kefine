@@ -3,15 +3,14 @@ require "json"
 require "log"
 require "../order_queue"
 require "../repository_store"
-require "../activitypub/types"
 require "./inbox"
 require "../utils/config"
 
-module Crater
+module Lepos
   module Handlers
     module Orders
-      ISSUE_ARTIFACT_EXTENSIONS = {".patch", ".diff", ".org"}
-      ISSUE_ARTIFACT_MEDIA_TYPES = {"application/x-git-patch", "text/x-diff", "text/org", "application/org", "text/plain"}
+      ISSUE_ARTIFACT_EXTENSIONS        = {".patch", ".diff", ".org"}
+      ISSUE_ARTIFACT_MEDIA_TYPES       = {"application/x-git-patch", "text/x-diff", "text/org", "application/org", "text/plain"}
       ISSUE_ARTIFACT_CONTENT_MAX_BYTES = 512 * 1024
 
       def self.register(config : Utils::Config)
@@ -80,22 +79,22 @@ module Crater
 
         env.response.status_code = 202
         {
-          accepted: true,
-          orderId: record.id,
-          status: record.status,
-          solver: record.solver,
-          solverName: record.solver_name,
-          solverHandle: record.solver_handle,
+          accepted:         true,
+          orderId:          record.id,
+          status:           record.status,
+          solver:           record.solver,
+          solverName:       record.solver_name,
+          solverHandle:     record.solver_handle,
           solverProfileUrl: record.solver_profile_url,
-          ownerProfileId: record.owner_profile_id,
-          ownerUsername: record.owner_username,
+          ownerProfileId:   record.owner_profile_id,
+          ownerUsername:    record.owner_username,
           ownerDisplayName: record.owner_display_name,
-          actorHandle: record.actor_handle,
-          actorDid: record.actor_did,
-          vcsEnabled: record.vcs_enabled,
-          uiScenario: record.ui_scenario,
-          projectId: repository.try(&.project_id),
-          repository: repository ? RepositoryStore.to_json_payload(repository) : nil
+          actorHandle:      record.actor_handle,
+          actorDid:         record.actor_did,
+          vcsEnabled:       record.vcs_enabled,
+          uiScenario:       record.ui_scenario,
+          projectId:        repository.try(&.project_id),
+          repository:       repository ? RepositoryStore.to_json_payload(repository) : nil,
         }.to_json
       end
 
@@ -147,10 +146,10 @@ module Crater
         size = file.size.try(&.to_i64) || ::File.size(file.tempfile.path).to_i64
 
         attachment = {
-          "type" => issue_artifact ? issue_artifact_type(filename, media_type) : "Document",
-          "name" => filename,
+          "type"      => issue_artifact ? issue_artifact_type(filename, media_type) : "Document",
+          "name"      => filename,
           "mediaType" => media_type,
-          "size" => size,
+          "size"      => size,
         } of String => String | Int64 | String
 
         content = read_issue_artifact_content(file, filename, issue_artifact)

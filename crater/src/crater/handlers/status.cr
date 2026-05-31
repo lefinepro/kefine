@@ -5,7 +5,7 @@ require "../order_queue"
 require "../repository_store"
 require "../utils/config"
 
-module Crater
+module Lepos
   module Handlers
     module Status
       def self.register(config : Utils::Config = Utils::Config.load)
@@ -132,39 +132,39 @@ module Crater
         end
 
         {
-          orderId: record.id,
-          status: record.status,
-          solver: record.solver,
-          solverName: record.solver_name,
-          solverHandle: record.solver_handle,
-          solverProfileUrl: record.solver_profile_url,
-          title: record.title,
-          description: record.description || "",
-          estimatedCost: record.estimated_cost,
-          currency: record.currency,
-          executionEstimate: record.execution_estimate,
-          uiScenario: record.ui_scenario,
-          labels: record.labels,
-          templateId: record.template_id,
-          templateSlug: record.template_slug,
-          templateAuthorProfileId: record.template_author_profile_id,
-          templateAuthorUsername: record.template_author_username,
+          orderId:                   record.id,
+          status:                    record.status,
+          solver:                    record.solver,
+          solverName:                record.solver_name,
+          solverHandle:              record.solver_handle,
+          solverProfileUrl:          record.solver_profile_url,
+          title:                     record.title,
+          description:               record.description || "",
+          estimatedCost:             record.estimated_cost,
+          currency:                  record.currency,
+          executionEstimate:         record.execution_estimate,
+          uiScenario:                record.ui_scenario,
+          labels:                    record.labels,
+          templateId:                record.template_id,
+          templateSlug:              record.template_slug,
+          templateAuthorProfileId:   record.template_author_profile_id,
+          templateAuthorUsername:    record.template_author_username,
           templateAuthorDisplayName: record.template_author_display_name,
-          templatePricingMode: record.template_pricing_mode,
-          templatePricingValue: record.template_pricing_value,
-          ownerProfileId: record.owner_profile_id,
-          ownerUsername: record.owner_username,
-          ownerDisplayName: record.owner_display_name,
-          actorHandle: record.actor_handle,
-          actorDid: record.actor_did,
-          isPublicTask: record.is_public_task,
-          vcsEnabled: vcs_enabled,
-          document: document,
-          activities: activities,
-          projectId: repository.try(&.project_id),
-          repository: repository ? RepositoryStore.to_json_payload(repository) : nil,
-          createdAt: record.created_at,
-          updatedAt: record.updated_at
+          templatePricingMode:       record.template_pricing_mode,
+          templatePricingValue:      record.template_pricing_value,
+          ownerProfileId:            record.owner_profile_id,
+          ownerUsername:             record.owner_username,
+          ownerDisplayName:          record.owner_display_name,
+          actorHandle:               record.actor_handle,
+          actorDid:                  record.actor_did,
+          isPublicTask:              record.is_public_task,
+          vcsEnabled:                vcs_enabled,
+          document:                  document,
+          activities:                activities,
+          projectId:                 repository.try(&.project_id),
+          repository:                repository ? RepositoryStore.to_json_payload(repository) : nil,
+          createdAt:                 record.created_at,
+          updatedAt:                 record.updated_at,
         }.to_json
       end
 

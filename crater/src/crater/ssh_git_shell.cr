@@ -2,7 +2,7 @@ require "./repository_store"
 require "./ssh_key_store"
 require "./utils/config"
 
-module Crater
+module Lepos
   module SshGitShell
     private def self.normalize_actor(value : String?) : String
       value.to_s.strip.downcase.gsub(/^@+/, "").gsub(/[^a-z0-9._-]+/, "-").gsub(/^[._-]+|[._-]+$/, "")
