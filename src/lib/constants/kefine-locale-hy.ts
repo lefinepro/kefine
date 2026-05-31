@@ -179,7 +179,6 @@ export const KEFINE_TEXT_HY = {
     targetAria: 'Թարգմանության արդյունք',
     sourcePlaceholder: 'Սկսեք գրել տեքստը կամ տեղադրեք հղում',
     targetPlaceholder: '',
-    quickTranslate: 'Արագ թարգմանել',
     swapAria: 'Փոխել թարգմանության լեզուները',
     clearSourceAria: 'Մաքրել սկզբնական տեքստը',
     copySourceAria: 'Պատճենել սկզբնական տեքստը',

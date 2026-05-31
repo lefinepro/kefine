@@ -128,9 +128,6 @@
             <button type="button" aria-label={copy.copySourceAria} title={copy.copySourceAria}>
               <Icon icon="lucide:copy" aria-hidden="true" />
             </button>
-            <button type="button" data-part="translator-fast">
-              {copy.quickTranslate}
-            </button>
           </kefine-translate-actions>
         </kefine-translate-pane>
 
@@ -319,7 +316,7 @@
 
   kefine-translate-actions {
     display: grid;
-    grid-template-columns: repeat(3, 1.5rem) minmax(5.2rem, auto);
+    grid-template-columns: repeat(3, 1.5rem);
     align-items: center;
     gap: 0.16rem;
     min-height: 2rem;
@@ -350,25 +347,6 @@
   button[data-part='translator-swap'] :global(svg) {
     width: 0.9rem;
     height: 0.9rem;
-  }
-
-  button[data-part='translator-fast'] {
-    justify-self: start;
-    width: auto;
-    max-width: 8.5rem;
-    padding: 0 0.58rem;
-    border-radius: 999px;
-    background: #ff7a1a;
-    color: #fff;
-    font-size: 0.62rem;
-    font-weight: 800;
-    white-space: nowrap;
-  }
-
-  button[data-part='translator-fast']:hover {
-    background: color-mix(in oklab, #ff7a1a 86%, #ffffff);
-    color: #fff;
-    transform: translateY(-1px);
   }
 
   button[data-part='translator-swap'] {
@@ -419,7 +397,7 @@
     }
 
     kefine-translate-actions {
-      grid-template-columns: repeat(3, 1.45rem) minmax(4.8rem, auto);
+      grid-template-columns: repeat(3, 1.45rem);
       padding-inline: 0.34rem;
     }
 
@@ -427,10 +405,5 @@
       grid-template-columns: repeat(6, 1.42rem);
     }
 
-    button[data-part='translator-fast'] {
-      max-width: 6.2rem;
-      padding-inline: 0.44rem;
-      font-size: 0.58rem;
-    }
   }
 </style>

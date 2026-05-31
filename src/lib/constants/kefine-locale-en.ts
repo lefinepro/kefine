@@ -203,7 +203,6 @@ export const KEFINE_TEXT_EN = {
     targetAria: 'Translation result',
     sourcePlaceholder: 'Start typing text or paste a link',
     targetPlaceholder: '',
-    quickTranslate: 'Quick translate',
     swapAria: 'Swap translation languages',
     clearSourceAria: 'Clear source text',
     copySourceAria: 'Copy source text',

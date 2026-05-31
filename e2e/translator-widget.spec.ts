@@ -17,6 +17,7 @@ test.describe('Translator widget', () => {
     await expect(widget.locator("[data-part='translator-target-pane']")).toBeVisible();
     await expect(widget.locator("[data-part='translator-source-input']")).toHaveValue('');
     await expect(widget.locator("[data-part='translator-target-output']")).toHaveValue('');
+    await expect(widget.locator("[data-part='translator-fast']")).toHaveCount(0);
 
     await input.fill('');
     await input.pressSequentially('Перевод с китайского на английский');
