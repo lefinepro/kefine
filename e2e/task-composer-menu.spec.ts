@@ -22,8 +22,19 @@ test.describe('Task composer menu', () => {
     const count = await chips.count();
     expect(count).toBeGreaterThanOrEqual(3);
     for (let index = 0; index < count; index += 1) {
-      const cursor = await chips.nth(index).evaluate((node) => getComputedStyle(node).cursor);
-      expect(cursor).toBe('pointer');
+      const style = await chips.nth(index).evaluate((node) => {
+        const computed = getComputedStyle(node);
+        return {
+          cursor: computed.cursor,
+          borderStyle: computed.borderTopStyle,
+          borderWidth: computed.borderTopWidth
+        };
+      });
+      expect(style.cursor).toBe('pointer');
+      // A clickable chip must have a visible outline/border at rest so it reads
+      // as a button, not flat text (the original "Bad" feedback on the menu).
+      expect(style.borderStyle).not.toBe('none');
+      expect(Number.parseFloat(style.borderWidth)).toBeGreaterThan(0);
     }
 
     // The tag chip is clickable: clicking it swaps in the tag editor input.

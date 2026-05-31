@@ -3378,11 +3378,11 @@ initialized = true;
     min-height: 2.35rem;
     padding: 0.5rem 0.95rem;
     border-radius: 999px;
-    border: 0;
-    background: color-mix(in oklab, var(--kef-bg-card) 90%, var(--kef-bg-soft) 10%);
+    border: var(--kef-border-width-soft) solid var(--kef-line);
+    background: color-mix(in oklab, var(--kef-bg-card) 68%, var(--kef-bg-soft) 32%);
     color: var(--lefine-text);
     font: inherit;
-    box-shadow: none;
+    box-shadow: 0 1px 2px color-mix(in oklab, var(--kef-primary) 14%, transparent);
   }
 
   button[data-part='composer-chip'] {
@@ -3390,20 +3390,25 @@ initialized = true;
     align-items: center;
     gap: 0.4rem;
     letter-spacing: -0.01em;
+    font-weight: 500;
     cursor: pointer;
     transition:
       background-color 160ms ease,
+      border-color 160ms ease,
+      box-shadow 160ms ease,
       color 160ms ease,
       transform 120ms ease;
   }
 
   button[data-part='composer-chip']:hover {
-    background: color-mix(in oklab, var(--kef-bg-card) 78%, var(--kef-color-primary) 22%);
-    color: var(--kef-color-primary);
+    background: color-mix(in oklab, var(--kef-bg-card) 66%, var(--kef-primary) 34%);
+    border-color: var(--kef-line-primary);
+    box-shadow: 0 2px 6px color-mix(in oklab, var(--kef-primary) 22%, transparent);
+    color: var(--kef-primary);
   }
 
   button[data-part='composer-chip']:focus-visible {
-    outline: 2px solid color-mix(in oklab, var(--kef-color-primary) 60%, transparent);
+    outline: 2px solid color-mix(in oklab, var(--kef-primary) 60%, transparent);
     outline-offset: 2px;
   }
 
@@ -3412,8 +3417,8 @@ initialized = true;
   }
 
   button[data-part='composer-chip'][data-part-tag='true']:hover {
-    border-color: color-mix(in oklab, var(--kef-color-primary) 45%, var(--kef-line));
-    color: var(--kef-color-primary);
+    border-color: var(--kef-line-primary);
+    color: var(--kef-primary);
   }
 
   kefine-execution-editor {
