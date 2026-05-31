@@ -133,6 +133,8 @@ module Crater
     end
 
     def self.run(config : Utils::Config, args : Array(String)) : NoReturn
+      deny("Repositories feature is disabled.") unless config.repositories_enabled
+
       stage = parse_stage(args)
       repository_id = parse_arg(args, "--repo-id")
       repository = RepositoryStore.find_by_id(repository_id, config)

@@ -165,6 +165,10 @@ module Crater
       end
     end
 
+    private def self.ensure_enabled!(config : Utils::Config) : Nil
+      raise "Repositories feature is disabled." unless config.repositories_enabled
+    end
+
     private def self.repo_root : String
       presence(ENV["KEFINE_GIT_ROOT"]?.try(&.strip)) || File.expand_path(".meta/crater/git", Dir.current)
     end
@@ -831,6 +835,7 @@ module Crater
       content : String,
       config : Utils::Config = Utils::Config.load
     ) : Nil
+      ensure_enabled!(config)
       temp_path = File.join(worktrees_root, "plan-#{record.id}-#{UUID.random}")
       FileUtils.rm_rf(temp_path)
       FileUtils.mkdir_p(temp_path)
@@ -985,6 +990,7 @@ module Crater
     end
 
     def self.update_git_settings(record : RepositoryRecord, settings : GitSettings, config : Utils::Config = Utils::Config.load) : GitSettings
+      ensure_enabled!(config)
       setup(config)
       normalized = normalize_git_settings(settings, config)
       now = current_time
@@ -1033,6 +1039,7 @@ module Crater
     end
 
     def self.prepare_git_transport(record : RepositoryRecord) : Nil
+      ensure_enabled!(Utils::Config.load)
       install_receive_hooks(record)
     end
 
@@ -1051,6 +1058,7 @@ module Crater
     end
 
     def self.ensure_ad_hoc_for_owner_and_clone_name(owner_handle : String, clone_name : String, config : Utils::Config = Utils::Config.load) : RepositoryRecord
+      ensure_enabled!(config)
       normalized_owner = normalize_handle(owner_handle)
       normalized_clone_name = normalize_clone_name(clone_name)
       existing = find_by_owner_and_project_clone_name(normalized_owner, normalized_clone_name, config)
@@ -1099,6 +1107,7 @@ module Crater
     end
 
     def self.ensure_for_order(order : OrderQueue::OrderRecord, config : Utils::Config = Utils::Config.load) : RepositoryRecord
+      ensure_enabled!(config)
       existing = find_by_order(order.id, config)
       if existing
         visibility = resolve_visibility(order)
@@ -1158,6 +1167,7 @@ module Crater
       config : Utils::Config = Utils::Config.load,
       lepos_settings : LeposConfig::RepositorySettings = LeposConfig::RepositorySettings.default
     ) : String
+      ensure_enabled!(config)
       setup(config)
       return "" unless pull_push_allowed?(branch_name, lepos_settings)
       now = current_time

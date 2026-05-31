@@ -81,6 +81,9 @@ Main sections:
   "app": {
     "reownProjectId": "your_reown_project_id"
   },
+  "features": {
+    "repositories": false
+  },
   "origins": {
     "primary": "https://lefine.pro",
     "legal": "https://legal.lefine.pro",
@@ -104,9 +107,36 @@ Notes:
 - `backend.craterBaseUrl` is the crater base URL used by the SvelteKit proxy for order, payment, and passkey operations.
 - `backend.exchangeBaseUrl` is the exchange base URL crater uses for user IDs and payment links.
 - `backend.databaseUrl` is the Postgres connection string crater uses for orders, payment redemptions, passkey users, challenges, sessions, and outbox activity persistence.
+- `features.repositories` controls the VCS/git repository feature.
 - `company.*` controls the new `/legal-information` company page. Empty optional fields are hidden automatically.
 
-### 2a. Repository defaults: `.lepos.rcl`
+### 2a. Feature flags: `features`
+
+Optional `features` section toggles whole features on or off. Every flag defaults to
+enabled, so omitting the section keeps the full experience. Set a flag to `false` to
+hide and disable that feature for the deployment:
+
+```json
+{
+  "features": {
+    "repositories": false
+  }
+}
+```
+
+Available flags:
+
+- `repositories` - controls the VCS/git repository feature. When disabled, the
+  "Create git repo", "Enable VCS", "Git access", repository clone/archive entries,
+  Crater project/git/ForgeFed/SSH-key routes, and API-side VCS creation are disabled.
+
+Each flag accepts booleans as well as common string/number forms (`true`/`false`,
+`1`/`0`, `yes`/`no`, `on`/`off`, `enabled`/`disabled`). A flag can also be overridden
+per process with an environment variable named `KEFINE_FEATURE_<ID>` (uppercased),
+for example `KEFINE_FEATURE_REPOSITORIES=true`. The environment variable wins over the
+value in `kefine.config.json`.
+
+### 2b. Repository defaults: `.lepos.rcl`
 
 When a task repository is created, crater now seeds it with `.lepos.rcl` in the repository root.
 You can use this config to control repository storage behavior:

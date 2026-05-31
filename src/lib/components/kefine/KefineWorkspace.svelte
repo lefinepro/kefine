@@ -2,7 +2,7 @@
   import { browser } from '$app/environment';
   import { goto, replaceState } from '$app/navigation';
   import { page } from '$app/state';
-  import { resolvePublicRuntimeConfig } from '$lib/config/public-config';
+  import { isFeatureEnabled, resolvePublicRuntimeConfig } from '$lib/config/public-config';
   import { isSpecialRuntimeOrigin } from '$lib/config/special-runtime';
   import { resolveOrderProxyBasePath } from '$lib/order-proxy-path';
   import { onMount } from 'svelte';
@@ -105,6 +105,7 @@
   } = $props();
   const localeText = $derived($kefineLocaleText);
   const runtimeConfig = $derived(resolvePublicRuntimeConfig(page.data.publicConfig));
+  const repositoriesEnabled = $derived(isFeatureEnabled('repositories', runtimeConfig));
   const activeLocale = $derived(readLocaleFromPathname(page.url.pathname) ?? 'en');
 
   function getNormalizedInitialOrderId() {
@@ -2359,12 +2360,19 @@
   }
 
   async function handleUpdateTaskSettings(
-    patch: Partial<Pick<OrderView, 'title' | 'description' | 'taskIcon' | 'shareId' | 'isPublicTask' | 'vcsEnabled' | 'repository'>> & {
+    rawPatch: Partial<Pick<OrderView, 'title' | 'description' | 'taskIcon' | 'shareId' | 'isPublicTask' | 'vcsEnabled' | 'repository'>> & {
       gitSettings?: import('./kefine-workflow').RepositoryGitSettings;
     }
   ) {
     if (!currentOrder) {
       return;
+    }
+
+    const patch = { ...rawPatch };
+    if (!repositoriesEnabled) {
+      delete patch.vcsEnabled;
+      delete patch.gitSettings;
+      delete patch.repository;
     }
 
     updateProfileTask(currentOrder.id, patch);
@@ -2860,6 +2868,7 @@
           execution={executionPresentation}
           canSaveCloneLocally={canSaveCurrentOrderLocally}
           canManageTask={canManageCurrentOrder}
+          repositoriesEnabled={repositoriesEnabled}
           isHydratingTitle={isHydratingRoute && !currentOrder?.title.trim()}
           isConfirmingStep={confirmStepLoading}
           commentSubmittingStepId={stepCommentLoadingId}
