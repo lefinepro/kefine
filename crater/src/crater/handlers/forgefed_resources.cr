@@ -1,6 +1,6 @@
 require "kemal"
 require "json"
-require "../activitypub/types"
+require "../aptok"
 require "../forgefed_store"
 require "../repository_store"
 require "../utils/config"

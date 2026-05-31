@@ -1,6 +1,6 @@
 require "kemal"
 require "json"
-require "../activitypub/types"
+require "../aptok"
 require "../utils/config"
 require "../utils/actor_keys"
 
@@ -44,7 +44,7 @@ module Lepos
           shared_inbox: "#{config.crater_url}/inbox",
           public_key: public_key
         )
-        actor["@context"] = Aptok.json([ActivityPub::CONTEXT, ActivityPub::SECURITY_CONTEXT])
+        actor["@context"] = Aptok.json([Aptok::ACTIVITYSTREAMS_CONTEXT, Aptok::SECURITY_CONTEXT])
         actor.to_json
       end
 
@@ -61,7 +61,7 @@ module Lepos
           "#{actor_id}/outbox",
           name: "Key #{normalized}"
         )
-        actor["@context"] = Aptok.json([ActivityPub::CONTEXT, ActivityPub::SECURITY_CONTEXT])
+        actor["@context"] = Aptok.json([Aptok::ACTIVITYSTREAMS_CONTEXT, Aptok::SECURITY_CONTEXT])
         actor.to_json
       end
     end

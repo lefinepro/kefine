@@ -3,7 +3,6 @@ require "json"
 require "log"
 require "../order_queue"
 require "../repository_store"
-require "../activitypub/types"
 require "./inbox"
 require "../utils/config"
 

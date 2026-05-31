@@ -23,9 +23,10 @@ fi
 [tasks."backend:deps"]
 description = "Install Lepos dependencies with shards"
 run = '''
-if [ ! -d crater/lib/kemal ]; then
+if [ ! -d crater/lib/kemal ] || [ ! -f crater/lib/rcl/src/rcl/document.cr ]; then
   cd crater && shards install
 fi
+./scripts/patch-rcl-crystal-merge.sh
 '''
 
 [tasks."backend:build"]

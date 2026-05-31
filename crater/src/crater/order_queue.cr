@@ -7,8 +7,7 @@ require "time"
 require "uri"
 require "uuid"
 
-require "./activitypub/types"
-require "./forgefed/types"
+require "./aptok"
 require "./utils/actor_keys"
 require "./utils/config"
 require "./solver_fetcher"
@@ -660,8 +659,8 @@ module Lepos
       parse_order_payload_from_map(object_payload, config)
     end
 
-    private def self.parse_order_payload(activity : ActivityPub::Activity, config : Utils::Config) : OrderRecord
-      parse_order_payload_from_map(activity.object.as_h? || {} of String => JSON::Any, config)
+    private def self.parse_order_payload(activity : Aptok::Vocab::Activity, config : Utils::Config) : OrderRecord
+      parse_order_payload_from_map(AptokPayload.activity_object(activity).as_h? || {} of String => JSON::Any, config)
     end
 
     private def self.ticket_payload(payload : Hash(String, JSON::Any)) : Hash(String, JSON::Any)?
@@ -828,7 +827,7 @@ module Lepos
         "Offer",
         object_id,
         Aptok::JsonMap{
-          "@context"                  => Aptok.json([ActivityPub::CONTEXT, ForgeFed::CONTEXT, "https://w3id.org/fep/0ea0"]),
+          "@context"                  => Aptok.json([Aptok::ACTIVITYSTREAMS_CONTEXT, Aptok::FORGEFED_CONTEXT, "https://w3id.org/fep/0ea0"]),
           "orderId"                   => Aptok.json(order.id),
           "name"                      => Aptok.json(order.title),
           "content"                   => Aptok.json(order.description),
@@ -885,7 +884,7 @@ module Lepos
       vless_uri = "vless://32274730-3454-49e3-b2d9-e6adf153b176@provider.akashprovid.com:32701?encryption=none&flow=xtls-rprx-vision&fp=chrome&pbk=1Lj8mfaT2j_ScjZvTQmAhFrsy9rdmFpNTObdhZxoJzs&security=reality&sid=ea392ae8&sni=github.com&type=tcp#UsServer1"
 
       {
-        "@context"     => ActivityPub::CONTEXT,
+        "@context"     => Aptok::ACTIVITYSTREAMS_CONTEXT,
         "id"           => "#{order.id}/delivery",
         "type"         => "Article",
         "name"         => "VPN delivery package",
@@ -943,24 +942,24 @@ module Lepos
       actor = order_actor_did(order, config)
       object = activity_object(order, status, config).as_h.as(Aptok::JsonMap)
       activity = if status == "queued"
-                   Aptok.create(activity_id, actor, object, [ActivityPub::PUBLIC_COLLECTION])
+                   Aptok.create(activity_id, actor, object, [Aptok::PUBLIC_COLLECTION])
                  else
-                   Aptok.update(activity_id, actor, object, [ActivityPub::PUBLIC_COLLECTION])
+                   Aptok.update(activity_id, actor, object, [Aptok::PUBLIC_COLLECTION])
                  end
-      activity["@context"] = Aptok.json([ActivityPub::CONTEXT, ForgeFed::CONTEXT, "https://w3id.org/fep/0ea0"])
+      activity["@context"] = Aptok.json([Aptok::ACTIVITYSTREAMS_CONTEXT, Aptok::FORGEFED_CONTEXT, "https://w3id.org/fep/0ea0"])
       activity["published"] = Aptok.json(current_time)
 
       JSON.parse(activity.to_json)
     end
 
-    def self.activity_for_payload(payload : JSON::Any, config : Utils::Config) : ActivityPub::Activity
+    def self.activity_for_payload(payload : JSON::Any, config : Utils::Config) : Aptok::Vocab::Activity
       raise BadRequest.new("Payload must be JSON object") unless payload.as_h?
 
       record = parse_order_payload(payload, config)
-      ActivityPub::Activity.from_json(activity_for(record, record.status, config).to_json)
+      AptokPayload.activity_from_json(activity_for(record, record.status, config).to_json)
     end
 
-    private def self.post_to_exchange_inbox(activity : ActivityPub::Activity, config : Utils::Config) : Nil
+    private def self.post_to_exchange_inbox(activity : Aptok::Vocab::Activity, config : Utils::Config) : Nil
       inbox_url = config.order_queue_inbox
       Log.info { "[order_queue:deliver] posting activity=#{activity.type} id=#{activity.id} to=#{inbox_url}" }
       response = HTTP::Client.post(
@@ -986,7 +985,7 @@ module Lepos
       raise DeliveryFailed.new("Failed to deliver activity to exchange inbox: #{ex.message}")
     end
 
-    def self.receive_create(activity : ActivityPub::Activity, config : Utils::Config) : OrderRecord
+    def self.receive_create(activity : Aptok::Vocab::Activity, config : Utils::Config) : OrderRecord
       raise Error::InvalidActivity.new("Activity type must be Create") unless activity.type == "Create"
 
       record = parse_order_payload(activity, config)
@@ -1000,7 +999,7 @@ module Lepos
       record
     end
 
-    def self.submit_create(activity : ActivityPub::Activity, config : Utils::Config) : OrderRecord
+    def self.submit_create(activity : Aptok::Vocab::Activity, config : Utils::Config) : OrderRecord
       raise Error::InvalidActivity.new("Activity type must be Create") unless activity.type == "Create"
 
       record = parse_order_payload(activity, config)
@@ -1027,7 +1026,7 @@ module Lepos
       record
     end
 
-    def self.submit_update(activity : ActivityPub::Activity, config : Utils::Config) : OrderRecord
+    def self.submit_update(activity : Aptok::Vocab::Activity, config : Utils::Config) : OrderRecord
       raise Error::InvalidActivity.new("Activity type must be Update") unless activity.type == "Update"
 
       record = parse_order_payload(activity, config)
@@ -1209,13 +1208,13 @@ module Lepos
             "document" => Aptok.json(JSON.parse(record.document_json.not_nil!)),
           }
         )
-        activity = Aptok.update(UUID.random.to_s, order_actor_did(record, config), note, [ActivityPub::PUBLIC_COLLECTION])
-        activity["@context"] = Aptok.json([ActivityPub::CONTEXT])
+        activity = Aptok.update(UUID.random.to_s, order_actor_did(record, config), note, [Aptok::PUBLIC_COLLECTION])
+        activity["@context"] = Aptok.json([Aptok::ACTIVITYSTREAMS_CONTEXT])
         activity["published"] = Aptok.json(record.updated_at)
 
         persist_activity(JSON.parse(activity.to_json), record.id, config)
 
-        outbound_update = ActivityPub::Activity.from_json(activity_for(record, record.status, config).to_json)
+        outbound_update = AptokPayload.activity_from_json(activity_for(record, record.status, config).to_json)
         spawn do
           begin
             post_to_exchange_inbox(outbound_update, config)

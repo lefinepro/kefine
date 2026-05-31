@@ -8,10 +8,10 @@ private def test_config : Lepos::Utils::Config
 end
 
 describe "Lepos Aptok federation payloads" do
-  it "exposes ActivityPub and ForgeFed constants through Aptok" do
-    Lepos::ActivityPub::CONTEXT.should eq(Aptok::ACTIVITYSTREAMS_CONTEXT)
-    Lepos::ActivityPub::PUBLIC_COLLECTION.should eq(Aptok::PUBLIC_COLLECTION)
-    Lepos::ForgeFed::CONTEXT.should eq(Aptok::FORGEFED_CONTEXT)
+  it "uses Aptok constants directly" do
+    Aptok::ACTIVITYSTREAMS_CONTEXT.should eq("https://www.w3.org/ns/activitystreams")
+    Aptok::PUBLIC_COLLECTION.should eq("https://www.w3.org/ns/activitystreams#Public")
+    Aptok::FORGEFED_CONTEXT.should eq("https://forgefed.org/ns")
   end
 
   it "builds order activities with Aptok Create and ForgeFed Ticket payloads" do

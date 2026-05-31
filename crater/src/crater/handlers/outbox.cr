@@ -1,7 +1,6 @@
 require "kemal"
 require "json"
 require "../order_queue"
-require "../activitypub/types"
 require "../utils/config"
 
 module Lepos

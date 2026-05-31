@@ -334,6 +334,7 @@ Option B: run the backend directly with Crystal
 ```bash
 cd crater
 shards install
+../scripts/patch-rcl-crystal-merge.sh
 crystal run src/crater.cr
 ```
 

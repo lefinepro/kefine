@@ -1,6 +1,5 @@
 require "kemal"
-require "./crater/activitypub/types"
-require "./crater/forgefed/types"
+require "./crater/aptok"
 require "./crater/handlers/webfinger"
 require "./crater/handlers/nodeinfo"
 require "./crater/handlers/actor"
@@ -55,12 +54,12 @@ module Lepos
     add_handler CorsHandler.new
     add_handler RequestLogger.new
 
-    # Aptok-backed ActivityPub discovery
+    # Aptok-backed federation discovery
     Handlers::WebFinger.register(config)
     Handlers::NodeInfo.register(config)
     Handlers::Actor.register(config)
 
-    # Aptok-backed ActivityPub inbox/outbox
+    # Aptok-backed federation inbox/outbox
     Handlers::Inbox.register(config)
     Handlers::Outbox.register(config)
     Handlers::Orders.register(config)
@@ -71,7 +70,7 @@ module Lepos
     Handlers::OauthAuth.register(config)
     Handlers::EmailCodeAuth.register(config)
 
-    # Aptok-backed ForgeFed project endpoints
+    # Aptok-backed project endpoints
     Handlers::Projects.register(config)
     Handlers::GitHttp.register(config)
     Handlers::ForgeFedResources.register(config)

@@ -1,6 +1,6 @@
 require "kemal"
 require "json"
-require "../forgefed/types"
+require "../aptok"
 require "../order_queue"
 require "../repository_store"
 require "../utils/config"

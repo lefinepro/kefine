@@ -5,8 +5,7 @@ require "log"
 require "pg"
 require "uuid"
 
-require "./activitypub/types"
-require "./forgefed/types"
+require "./aptok"
 require "./repository_store"
 require "./utils/config"
 
@@ -814,16 +813,16 @@ module Lepos
 
     private def self.merge_request_create_activity(repository : RepositoryStore::RepositoryRecord, tracker : PatchTrackerRecord, mr : MergeRequestRecord, config : Utils::Config) : JSON::Any
       object = merge_request_json(mr, config).as_h.as(Aptok::JsonMap)
-      activity = Aptok.create(activity_uri("mr-create", config), tracker.actor_uri, object, [ActivityPub::PUBLIC_COLLECTION])
-      activity["@context"] = Aptok.json([ActivityPub::CONTEXT, ForgeFed::CONTEXT])
+      activity = Aptok.create(activity_uri("mr-create", config), tracker.actor_uri, object, [Aptok::PUBLIC_COLLECTION])
+      activity["@context"] = Aptok.json([Aptok::ACTIVITYSTREAMS_CONTEXT, Aptok::FORGEFED_CONTEXT])
       activity["published"] = Aptok.json(current_time)
       json_any(activity)
     end
 
     private def self.merge_request_update_activity(repository : RepositoryStore::RepositoryRecord, tracker : PatchTrackerRecord, mr : MergeRequestRecord, config : Utils::Config) : JSON::Any
       object = merge_request_json(mr, config).as_h.as(Aptok::JsonMap)
-      activity = Aptok.update(activity_uri("mr-update", config), tracker.actor_uri, object, [ActivityPub::PUBLIC_COLLECTION])
-      activity["@context"] = Aptok.json([ActivityPub::CONTEXT, ForgeFed::CONTEXT])
+      activity = Aptok.update(activity_uri("mr-update", config), tracker.actor_uri, object, [Aptok::PUBLIC_COLLECTION])
+      activity["@context"] = Aptok.json([Aptok::ACTIVITYSTREAMS_CONTEXT, Aptok::FORGEFED_CONTEXT])
       activity["published"] = Aptok.json(current_time)
       json_any(activity)
     end
@@ -1041,7 +1040,7 @@ module Lepos
         "Offer",
         merge_request.offer_uri,
         Aptok::JsonMap{
-          "@context" => Aptok.json([ActivityPub::CONTEXT, ForgeFed::CONTEXT]),
+          "@context" => Aptok.json([Aptok::ACTIVITYSTREAMS_CONTEXT, Aptok::FORGEFED_CONTEXT]),
           "origin"   => Aptok.json(merge_request.origin_uri),
           "target"   => Aptok.json(merge_request.target_uri),
           "object"   => Aptok.json(merge_request.patch_collection_uri),
@@ -1075,7 +1074,7 @@ module Lepos
           "Patch",
           file.file_uri,
           Aptok::JsonMap{
-            "@context"  => Aptok.json([ActivityPub::CONTEXT, ForgeFed::CONTEXT]),
+            "@context"  => Aptok.json([Aptok::ACTIVITYSTREAMS_CONTEXT, Aptok::FORGEFED_CONTEXT]),
             "mediaType" => Aptok.json("text/x-diff"),
             "name"      => Aptok.json(file.name),
             "url"       => Aptok.json(file.file_uri),
@@ -1083,7 +1082,7 @@ module Lepos
         )
       end
       collection = Aptok.ordered_collection(patch_set.collection_uri, patches)
-      collection["@context"] = Aptok.json([ActivityPub::CONTEXT, ForgeFed::CONTEXT])
+      collection["@context"] = Aptok.json([Aptok::ACTIVITYSTREAMS_CONTEXT, Aptok::FORGEFED_CONTEXT])
       json_any(collection)
     end
 
@@ -1121,8 +1120,8 @@ module Lepos
       updated = persist_merge_request(merged, config)
       tracker = find_patch_tracker(merge_request.patch_tracker_id, config)
       if tracker
-        accept = Aptok.accept(activity_uri("mr-apply", config), tracker.actor_uri, updated.ticket_uri, [ActivityPub::PUBLIC_COLLECTION])
-        accept["@context"] = Aptok.json([ActivityPub::CONTEXT, ForgeFed::CONTEXT])
+        accept = Aptok.accept(activity_uri("mr-apply", config), tracker.actor_uri, updated.ticket_uri, [Aptok::PUBLIC_COLLECTION])
+        accept["@context"] = Aptok.json([Aptok::ACTIVITYSTREAMS_CONTEXT, Aptok::FORGEFED_CONTEXT])
         accept["published"] = Aptok.json(current_time)
         persist_activity(tracker.actor_uri, "Accept", json_any(accept), updated.ticket_uri, config)
       end
