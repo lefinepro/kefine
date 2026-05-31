@@ -8,6 +8,7 @@ describe('kefine locale bundles', () => {
     ['executionFlow.queued.title', KEFINE_TEXT_EN.executionFlow.queued.title, KEFINE_TEXT_RU.executionFlow.queued.title, KEFINE_TEXT_HY.executionFlow.queued.title],
     ['profile.subtitle', KEFINE_TEXT_EN.profile.subtitle, KEFINE_TEXT_RU.profile.subtitle, KEFINE_TEXT_HY.profile.subtitle],
     ['solversView.tasksAside', KEFINE_TEXT_EN.solversView.tasksAside, KEFINE_TEXT_RU.solversView.tasksAside, KEFINE_TEXT_HY.solversView.tasksAside],
+    ['solversView.quickTest', KEFINE_TEXT_EN.solversView.quickTest, KEFINE_TEXT_RU.solversView.quickTest, KEFINE_TEXT_HY.solversView.quickTest],
     ['solutionView.tabs.testing.label', KEFINE_TEXT_EN.solutionView.tabs.testing.label, KEFINE_TEXT_RU.solutionView.tabs.testing.label, KEFINE_TEXT_HY.solutionView.tabs.testing.label],
     ['table.headers.task', KEFINE_TEXT_EN.table.headers.task, KEFINE_TEXT_RU.table.headers.task, KEFINE_TEXT_HY.table.headers.task]
   ] as const;
