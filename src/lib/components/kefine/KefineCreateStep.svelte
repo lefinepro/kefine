@@ -6,6 +6,7 @@
   import KefineProxyConfigWidget from '$lib/components/kefine/KefineProxyConfigWidget.svelte';
   import KefineMusicWidget from '$lib/components/kefine/KefineMusicWidget.svelte';
   import KefineWeatherWidget from '$lib/components/kefine/KefineWeatherWidget.svelte';
+  import KefineTranslatorWidget from '$lib/components/kefine/KefineTranslatorWidget.svelte';
   import SolutionMetricsMini from '$lib/components/kefine/SolutionMetricsMini.svelte';
   import { detectProxyServerIntent } from '$lib/kefine/proxy-intent';
   import {
@@ -17,6 +18,7 @@
   import { createQrMatrix, qrMatrixToSvgPath } from '$lib/kefine/qr-code';
   import { detectMusicExtractIntent } from '$lib/kefine/music-intent';
   import { detectWeatherIntent } from '$lib/kefine/weather-intent';
+  import { detectTranslationIntent } from '$lib/kefine/translation-intent';
   import { buildActorOrderPath } from '$lib/components/kefine/kefine-workspace-helpers';
   import { defaultMetrics } from '$lib/kefine/solutions-data';
   import { cubicOut } from 'svelte/easing';
@@ -203,6 +205,10 @@
   // Weather instant answer, matching the proxy/music intent widgets: render the
   // forecast card while the prompt is still being composed.
   const weatherIntentActive = $derived(detectWeatherIntent(draft.description));
+
+  // Translation instant answer: render an empty translator surface for generic
+  // "Translate/Перевод" prompts and preselect languages when the pair is named.
+  const translationIntentActive = $derived(detectTranslationIntent(draft.description));
 
   // Instant answers: a frontend-only autocomplete of known websites loaded from
   // /instant-answers.json. As the user types, matching sites are surfaced as
@@ -1690,6 +1696,9 @@ initialized = true;
 
   <!-- Weather instant answer — appears for prompts such as "Погода Гомель" -->
   <KefineWeatherWidget active={weatherIntentActive} query={draft.description} />
+
+  <!-- Translator instant answer — appears for prompts such as "Перевод с китайского на английский" -->
+  <KefineTranslatorWidget active={translationIntentActive} query={draft.description} />
 
   <!-- Extracted-music preview — appears when the draft reads like "extract audio from video" -->
   <KefineMusicWidget active={musicIntentActive} />
