@@ -105,6 +105,7 @@
   } = $props();
   const localeText = $derived($kefineLocaleText);
   const runtimeConfig = $derived(resolvePublicRuntimeConfig(page.data.publicConfig));
+  const repositoriesEnabled = $derived(runtimeConfig.features.repositories !== false);
   const activeLocale = $derived(readLocaleFromPathname(page.url.pathname) ?? 'en');
 
   function getNormalizedInitialOrderId() {
@@ -2460,12 +2461,21 @@
   }
 
   async function handleUpdateTaskSettings(
-    patch: Partial<Pick<OrderView, 'title' | 'description' | 'taskIcon' | 'shareId' | 'isPublicTask' | 'vcsEnabled' | 'repository'>> & {
+    rawPatch: Partial<Pick<OrderView, 'title' | 'description' | 'taskIcon' | 'shareId' | 'isPublicTask' | 'vcsEnabled' | 'repository'>> & {
       gitSettings?: import('./kefine-workflow').RepositoryGitSettings;
     }
   ) {
     if (!currentOrder) {
       return;
+    }
+
+    // When the repositories feature is disabled, never let VCS settings be
+    // toggled on, even if the UI control is somehow reachable.
+    const patch = { ...rawPatch };
+    if (!repositoriesEnabled) {
+      delete patch.vcsEnabled;
+      delete patch.gitSettings;
+      delete patch.repository;
     }
 
     updateProfileTask(currentOrder.id, patch);
@@ -2957,6 +2967,7 @@
           execution={executionPresentation}
           canSaveCloneLocally={canSaveCurrentOrderLocally}
           canManageTask={canManageCurrentOrder}
+          repositoriesEnabled={repositoriesEnabled}
           isHydratingTitle={isHydratingRoute && !currentOrder?.title.trim()}
           isConfirmingStep={confirmStepLoading}
           commentSubmittingStepId={stepCommentLoadingId}

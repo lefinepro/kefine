@@ -6,9 +6,11 @@
 
   let {
     order,
+    repositoriesEnabled = true,
     onApply
   }: {
     order: OrderView | null;
+    repositoriesEnabled?: boolean;
     onApply: (patch: Partial<Pick<OrderView, 'title' | 'description' | 'taskIcon' | 'shareId' | 'isPublicTask' | 'vcsEnabled' | 'repository'>> & {
       gitSettings?: RepositoryGitSettings;
     }) => void | Promise<void>;
@@ -222,7 +224,7 @@
               <Icon icon="mdi:close" width="18" height="18" aria-hidden="true" />
             </button>
           </kefine-task-settings-head>
-          {#if !vcsEnabledDraft && !order.repository}
+          {#if repositoriesEnabled && !vcsEnabledDraft && !order.repository}
             <button type="button" data-part="secondary" data-kind="create-repo" onclick={createGitRepo}>
               <Icon icon="mdi:source-repository" width="16" height="16" aria-hidden="true" />
               <lefine-text>Create git repo</lefine-text>
@@ -247,12 +249,14 @@
             <input bind:checked={isPublicDraft} type="checkbox" />
             <lefine-text>Make public</lefine-text>
           </label>
-          <label data-part="toggle">
-            <input bind:checked={vcsEnabledDraft} type="checkbox" />
-            <lefine-text>Enable VCS</lefine-text>
-          </label>
+          {#if repositoriesEnabled}
+            <label data-part="toggle">
+              <input bind:checked={vcsEnabledDraft} type="checkbox" />
+              <lefine-text>Enable VCS</lefine-text>
+            </label>
+          {/if}
 
-          {#if vcsEnabledDraft}
+          {#if repositoriesEnabled && vcsEnabledDraft}
             <kefine-task-settings-git>
               <strong>Git access</strong>
               <label data-part="toggle">

@@ -20,7 +20,10 @@ export default defineConfig({
         command: `pnpm dev --host 127.0.0.1 --port ${PORT}`,
         port: PORT,
         reuseExistingServer: !process.env.CI,
-        timeout: 120000
+        timeout: 120000,
+        // Re-enable the repositories feature so the VCS/clone e2e coverage keeps
+        // exercising the enabled path even though it ships disabled by default.
+        env: { KEFINE_FEATURE_REPOSITORIES: 'true' }
       },
   projects: [
     {
