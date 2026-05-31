@@ -2,7 +2,7 @@ require "kemal"
 require "json"
 require "../utils/config"
 
-module Crater
+module Lepos
   module Handlers
     module WebFinger
       def self.register(config : Utils::Config)
@@ -17,9 +17,9 @@ module Crater
           env.response.content_type = "application/jrd+json"
 
           {
-            subject:  resource,
-            aliases:  [config.actor_id, "#{config.crater_url}/actor/#{config.actor_username}"],
-            links: [
+            subject: resource,
+            aliases: [config.actor_id, "#{config.crater_url}/actor/#{config.actor_username}"],
+            links:   [
               {
                 rel:  "self",
                 type: "application/activity+json",

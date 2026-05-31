@@ -1,13 +1,13 @@
 # Lefine
 
-Kefine is a SvelteKit application for submitting solver tasks, tracking their execution state, and moving through authentication and payment flows. This repository also includes a small backend service called `crater` that accepts orders and serves order status updates.
+Kefine is a SvelteKit application for submitting solver tasks, tracking their execution state, and moving through authentication and payment flows. This repository also includes a small backend service called Lepos that accepts orders and serves order status updates.
 
 ## Tech stack
 
 - Frontend: SvelteKit + Vite + TypeScript
 - Package manager: Bun
 - End-to-end tests: Playwright
-- Local backend: Crystal (`crater`)
+- Local backend: Crystal Lepos service (source lives in `crater/`)
 
 ## What you can do in the app
 
@@ -42,7 +42,7 @@ Then open:
 - Frontend: `http://localhost:5173`
 - Backend: `http://localhost:3001`
 
-This is the easiest way to run the frontend together with the local `crater` service.
+This is the easiest way to run the frontend together with the local Lepos service.
 
 The frontend production container is built from the repo root [Containerfile](/home/kg/datastore/dev/lefine/kefine/Containerfile) and serves requests through Caddy on port `5173` by default.
 
@@ -101,14 +101,14 @@ Main sections:
 Notes:
 
 - `app.reownProjectId` is needed if you want wallet login/connect flows to work correctly.
-- `backend.craterBaseUrl` is the crater base URL used by the SvelteKit proxy for order, payment, and passkey operations.
-- `backend.exchangeBaseUrl` is the exchange base URL crater uses for user IDs and payment links.
-- `backend.databaseUrl` is the Postgres connection string crater uses for orders, payment redemptions, passkey users, challenges, sessions, and outbox activity persistence.
+- `backend.craterBaseUrl` is the legacy config key for the Lepos base URL used by the SvelteKit proxy for order, payment, and passkey operations.
+- `backend.exchangeBaseUrl` is the exchange base URL Lepos uses for user IDs and payment links.
+- `backend.databaseUrl` is the Postgres connection string Lepos uses for orders, payment redemptions, passkey users, challenges, sessions, and outbox activity persistence.
 - `company.*` controls the new `/legal-information` company page. Empty optional fields are hidden automatically.
 
 ### 2a. Repository defaults: `.lepos.rcl`
 
-When a task repository is created, crater now seeds it with `.lepos.rcl` in the repository root.
+When a task repository is created, Lepos now seeds it with `.lepos.rcl` in the repository root.
 You can use this config to control repository storage behavior:
 
 ```rcl
@@ -151,7 +151,7 @@ agent_system_prompt_path = "agents/system_prompt.md"
 
 If `reps.rcl` is missing, `reps.toml` is checked next.
 
-If `.lepos.rcl` is absent, crater uses default values and writes a new default `.lepos.rcl` on first seed.
+If `.lepos.rcl` is absent, Lepos uses default values and writes a new default `.lepos.rcl` on first seed.
 Both `/status/:id` and `/projects/:id/repository` now expose repository `.lepos.rcl` settings under `repository.leposConfig`, so clients can inspect `issueStorage` and path settings for repositories they receive.
 
 ### Git hooks and CI
@@ -176,7 +176,7 @@ git config core.hooksPath .githooks
 
 ### Remote exchange mode
 
-To test against the hosted Lefine exchange instead of the local `crater`, use:
+To test against the hosted Lefine exchange instead of the local Lepos service, use:
 
 ```json
 {
@@ -189,22 +189,22 @@ To test against the hosted Lefine exchange instead of the local `crater`, use:
 
 With this setup:
 
-- the frontend sends task, payment, and passkey requests only to the app's own crater-facing routes,
-- the SvelteKit server forwards those requests to crater,
-- crater persists orders, outbox activity, users, passkeys, challenges, sessions, and payment redemptions in Postgres, while still using `backend.exchangeBaseUrl` for exchange-facing URLs,
-- the UI keeps polling status updates through crater instead of talking to the exchange directly.
+- the frontend sends task, payment, and passkey requests only to the app's own Lepos-facing routes,
+- the SvelteKit server forwards those requests to Lepos,
+- Lepos persists orders, outbox activity, users, passkeys, challenges, sessions, and payment redemptions in Postgres, while still using `backend.exchangeBaseUrl` for exchange-facing URLs,
+- the UI keeps polling status updates through Lepos instead of talking to the exchange directly.
 
-### External crater / global URLs
+### External Lepos / global URLs
 
-If `crater` is exposed on a public URL, do not leave the container defaults on `localhost`.
+If Lepos is exposed on a public URL, do not leave the container defaults on `localhost`.
 
 Use separate values for:
 
-- `backend.craterBaseUrl`: the public base URL crater uses when generating `orderId`, actor IDs, inbox/outbox URLs, and related links
-- `backend.exchangeBaseUrl`: the public exchange/app base URL crater uses for `/pay/*`, user IDs, and exchange-facing links
+- `backend.craterBaseUrl`: the public base URL Lepos uses when generating `orderId`, actor IDs, inbox/outbox URLs, and related links
+- `backend.exchangeBaseUrl`: the public exchange/app base URL Lepos uses for `/pay/*`, user IDs, and exchange-facing links
 - `origins.primary`: the public frontend origin
 
-Example when crater is hosted directly on `https://lefine.pro` and exchange is hosted on `https://lefine.pro/exchange`:
+Example when Lepos is hosted directly on `https://lefine.pro` and exchange is hosted on `https://lefine.pro/exchange`:
 
 ```json
 {
@@ -248,9 +248,9 @@ With that setup:
 
 For this setup:
 
-- new `orderId` values are emitted under the configured public crater/exchange URLs instead of local defaults
+- new `orderId` values are emitted under the configured public Lepos/exchange URLs instead of local defaults
 - payment and exchange-facing links are emitted under the configured exchange URL
-- the frontend proxies requests to the hosted crater at `https://lefine.pro`
+- the frontend proxies requests to the hosted Lepos service at `https://lefine.pro`
 
 ### 3. Start the full local stack
 
@@ -265,7 +265,7 @@ This command:
 - ensures frontend dependencies are installed,
 - starts Postgres via `nerdctl compose`,
 - waits until the database is ready,
-- starts `crater` in a container on `http://localhost:3001`,
+- starts Lepos in a container on `http://localhost:3001`,
 - starts the SvelteKit frontend on `http://localhost:5173`.
 
 You can also run just `mise run`, because the default task maps to `dev`.
@@ -293,10 +293,10 @@ Server target:
 
 Client config template lives at [`scripts/frpc.dev-proxy.toml`](/home/kg/datastore/dev/lefine/kefine/scripts/frpc.dev-proxy.toml).
 
-The tunnel is configured so both the frontend and `crater` live behind the same public origin:
+The tunnel is configured so both the frontend and Lepos live behind the same public origin:
 
 - frontend traffic goes to local `127.0.0.1:5173`
-- `crater` paths on the same domain go to local `127.0.0.1:3001`
+- Lepos paths on the same domain go to local `127.0.0.1:3001`
 - app runtime config in [`kefine.config.json`](/home/kg/datastore/dev/lefine/kefine/kefine.config.json) points both `origins.*` and `backend.*BaseUrl` to `https://dev-proxy.col.pub`
 - TLS is terminated on the public server by Caddy running under `nerdctl compose`, which proxies to local FRP HTTP routing on port `8080`
 
@@ -326,7 +326,7 @@ If you do not want to use the one-command `mise` flow, you still have two practi
 Option A: run only the backend in a container
 
 ```bash
-nerdctl compose up --build crater
+nerdctl compose up --build lepos
 ```
 
 Option B: run the backend directly with Crystal
@@ -366,7 +366,7 @@ http://localhost:5173
 
 What happens next:
 
-- The app creates an order through `crater`
+- The app creates an order through Lepos
 - You are redirected to `/task/:id`
 - The task detail screen shows solver, ETA, price, and current status
 
@@ -394,8 +394,8 @@ The task detail flow supports several auth paths before payment:
 
 #### Passkey
 
-- Uses crater-backed routes under `/passkeys/*`
-- Crater stores passkeys, sessions, and exchange user accounts in `.data/exchange-state.json` by default
+- Uses Lepos-backed routes under `/passkeys/*`
+- Lepos stores passkeys, sessions, and exchange user accounts in `.data/exchange-state.json` by default
 - Useful for testing passwordless authentication locally
 
 Important:
@@ -450,9 +450,9 @@ bun run test:e2e
 
 ## Useful development notes
 
-- The frontend assumes crater is reachable on port `3001` unless `backend.craterBaseUrl` overrides it.
+- The frontend assumes Lepos is reachable on port `3001` unless `backend.craterBaseUrl` overrides it.
 - Exchange-facing IDs and payment links are derived from `backend.exchangeBaseUrl`.
-- Passkey and exchange account data are stored by crater in `.data/exchange-state.json`; deleting that file resets local state.
+- Passkey and exchange account data are stored by Lepos in `.data/exchange-state.json`; deleting that file resets local state.
 - The backend default configuration is development-friendly and should work locally without additional setup.
 
 ## Production preview build
@@ -489,8 +489,8 @@ docker run --rm -p 5173:5173 kefine-frontend
 
 Check that:
 
-- `crater` is running on `localhost:3001`
-- `backend.craterBaseUrl` in `kefine.config.json` points to the correct crater URL
+- Lepos is running on `localhost:3001`
+- `backend.craterBaseUrl` in `kefine.config.json` points to the correct Lepos URL
 - your browser can access both the frontend and backend ports
 
 ### Wallet connect does not work
@@ -507,14 +507,14 @@ Check that:
 
 - your browser supports WebAuthn/passkeys
 - you are testing on a valid local origin
-- `.data/exchange-state.json` is writable by crater
+- `.data/exchange-state.json` is writable by Lepos
 
 ## Repository structure
 
 ```text
 .
 ├── src/                 # SvelteKit frontend
-├── crater/              # Crystal backend service
+├── crater/              # Crystal Lepos backend service source
 ├── e2e/                 # Playwright tests
 ├── packages/            # Shared local packages
 ├── Dockerfile           # Frontend container

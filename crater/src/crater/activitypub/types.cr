@@ -1,90 +1,62 @@
 require "json"
+require "../aptok"
 
-module Crater
+module Lepos
   module ActivityPub
-    CONTEXT        = "https://www.w3.org/ns/activitystreams"
-    SECURITY_CONTEXT = "https://w3id.org/security/v1"
+    CONTEXT           = Aptok::ACTIVITYSTREAMS_CONTEXT
+    SECURITY_CONTEXT  = Aptok::SECURITY_CONTEXT
+    PUBLIC_COLLECTION = Aptok::PUBLIC_COLLECTION
 
-    struct Activity
-      include JSON::Serializable
+    class Activity
+      getter json : Aptok::JsonMap
+      getter parsed : Aptok::Vocab::Activity
 
-      @[JSON::Field(key: "@context")]
-      getter context : JSON::Any
+      def self.from_json(value : String) : Activity
+        parsed = JSON.parse(value)
+        map = parsed.as_h? || raise JSON::ParseException.new("Activity payload must be an object", 1, 1)
+        new(map.as(Aptok::JsonMap))
+      end
 
-      getter id : String
-      getter type : String
-      getter actor : String
-      getter object : JSON::Any
-      getter published : String?
-      getter to : Array(String)?
-      getter cc : Array(String)?
-    end
+      def initialize(@json : Aptok::JsonMap)
+        @parsed = Aptok::Vocab::Activity.from_json_ld(@json)
+      end
 
-    struct PublicKey
-      include JSON::Serializable
+      def context : JSON::Any?
+        @json["@context"]?
+      end
 
-      getter id : String
-      getter owner : String
+      def id : String
+        @parsed.id || @json["id"]?.try(&.as_s?) || ""
+      end
 
-      @[JSON::Field(key: "publicKeyPem")]
-      getter public_key_pem : String
-    end
+      def type : String
+        @parsed.type || @json["type"]?.try(&.as_s?) || ""
+      end
 
-    struct Endpoints
-      include JSON::Serializable
+      def actor : String
+        @parsed.actor || @json["actor"]?.try(&.as_s?) || ""
+      end
 
-      @[JSON::Field(key: "sharedInbox")]
-      getter shared_inbox : String?
-    end
+      def object : JSON::Any
+        @json["object"]? || JSON::Any.new(nil)
+      end
 
-    struct Actor
-      include JSON::Serializable
+      def published : String?
+        @parsed.published || @json["published"]?.try(&.as_s?)
+      end
 
-      @[JSON::Field(key: "@context")]
-      getter context : Array(String)
+      def to : Array(String)?
+        values = @parsed.to
+        values.empty? ? nil : values
+      end
 
-      getter id : String
-      getter type : String
-      getter name : String
+      def cc : Array(String)?
+        values = @parsed.cc
+        values.empty? ? nil : values
+      end
 
-      @[JSON::Field(key: "preferredUsername")]
-      getter preferred_username : String
-
-      getter inbox : String
-      getter outbox : String
-      getter endpoints : Endpoints?
-
-      @[JSON::Field(key: "publicKey")]
-      getter public_key : PublicKey
-    end
-
-    struct OrderedCollection
-      include JSON::Serializable
-
-      @[JSON::Field(key: "@context")]
-      getter context : String
-
-      getter id : String
-      getter type : String
-
-      @[JSON::Field(key: "totalItems")]
-      getter total_items : Int32
-
-      @[JSON::Field(key: "orderedItems")]
-      getter ordered_items : Array(JSON::Any)
-
-      getter first : String?
-      getter last : String?
-
-      def initialize(
-        @id : String,
-        @total_items : Int32,
-        @ordered_items : Array(JSON::Any) = [] of JSON::Any,
-        @first : String? = nil,
-        @last : String? = nil
-      )
-        @context = CONTEXT
-        @type = "OrderedCollection"
+      def to_json(builder : JSON::Builder) : Nil
+        @json.to_json(builder)
       end
     end
   end

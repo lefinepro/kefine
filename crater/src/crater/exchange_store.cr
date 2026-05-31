@@ -10,10 +10,10 @@ require "uuid"
 
 require "./utils/config"
 
-module Crater
+module Lepos
   module ExchangeStore
     CHALLENGE_TTL = 5.minutes
-    SESSION_TTL = 30.days
+    SESSION_TTL   = 30.days
 
     class CredentialRecord
       include JSON::Serializable
@@ -367,34 +367,34 @@ module Crater
         credentials = user.try(&.credentials) || [] of CredentialRecord
         {
           transaction_id: challenge.transaction_id,
-          options: {
+          options:        {
             challenge: challenge.challenge,
-            rp: {
+            rp:        {
               name: rp_name,
-              id: rp_id
+              id:   rp_id,
             },
             user: {
-              id: Base64.urlsafe_encode(username.to_slice, padding: false),
-              name: username,
-              displayName: username
+              id:          Base64.urlsafe_encode(username.to_slice, padding: false),
+              name:        username,
+              displayName: username,
             },
             pubKeyCredParams: [
               {type: "public-key", alg: -7},
-              {type: "public-key", alg: -257}
+              {type: "public-key", alg: -257},
             ],
-            timeout: 60000,
-            attestation: "none",
+            timeout:                60000,
+            attestation:            "none",
             authenticatorSelection: {
-              residentKey: "preferred",
-              userVerification: "preferred"
+              residentKey:      "preferred",
+              userVerification: "preferred",
             },
             excludeCredentials: credentials.map do |credential|
               {
-                id: credential.id,
-                type: "public-key"
+                id:   credential.id,
+                type: "public-key",
               }
-            end
-          }
+            end,
+          },
         }
       end
     end
@@ -476,18 +476,18 @@ module Crater
 
         {
           transaction_id: challenge.transaction_id,
-          options: {
-            challenge: challenge.challenge,
-            timeout: 60000,
-            rpId: rp_id,
+          options:        {
+            challenge:        challenge.challenge,
+            timeout:          60000,
+            rpId:             rp_id,
             allowCredentials: credentials.map do |credential|
               {
-                id: credential.id,
-                type: "public-key"
+                id:   credential.id,
+                type: "public-key",
               }
             end,
-            userVerification: "preferred"
-          }
+            userVerification: "preferred",
+          },
         }
       end
     end

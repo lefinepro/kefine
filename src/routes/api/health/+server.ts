@@ -3,5 +3,5 @@ import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = ({ request, fetch }) =>
   proxyCraterRequest(request, fetch, '/health', {
-    errorMessage: 'Failed to reach crater health endpoint.'
+    errorMessage: 'Failed to reach Lepos health endpoint.'
   });

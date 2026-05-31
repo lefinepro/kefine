@@ -4,7 +4,7 @@ require "../activitypub/types"
 require "../utils/config"
 require "../utils/actor_keys"
 
-module Crater
+module Lepos
   module Handlers
     module Actor
       def self.register(config : Utils::Config)
@@ -30,29 +30,22 @@ module Crater
         public_key_string = Utils::ActorKeys.derive_public_key_string(config.resolved_actor_private_key_pem)
         actor_type = normalized_username == config.actor_username ? "Application" : "Person"
         actor_name = normalized_username == config.actor_username ? config.actor_display_name : normalized_username
+        public_key = Aptok.public_key("#{actor_id}#main-key", actor_id, public_key_pem)
+        public_key["publicKeyString"] = Aptok.json(public_key_string)
 
-        {
-          "@context" => [
-            ActivityPub::CONTEXT,
-            ActivityPub::SECURITY_CONTEXT,
-          ],
-          "id"                => actor_id,
-          "type"              => actor_type,
-          "preferredUsername" => normalized_username,
-          "name"              => actor_name,
-          "summary"           => normalized_username == config.actor_username ? "Kefine ForgeFed/ActivityPub proxy service" : "Kefine task actor",
-          "inbox"             => "#{actor_id}/inbox",
-          "outbox"            => "#{actor_id}/outbox",
-          "endpoints"         => {
-            "sharedInbox" => "#{config.crater_url}/inbox",
-          },
-          "publicKey" => {
-            "id"              => "#{actor_id}#main-key",
-            "owner"           => actor_id,
-            "publicKeyPem"    => public_key_pem,
-            "publicKeyString" => public_key_string,
-          },
-        }.to_json
+        actor = Aptok.actor(
+          actor_type,
+          actor_id,
+          normalized_username,
+          "#{actor_id}/inbox",
+          "#{actor_id}/outbox",
+          name: actor_name,
+          summary: normalized_username == config.actor_username ? "Kefine Lepos federation service" : "Kefine lepo actor",
+          shared_inbox: "#{config.crater_url}/inbox",
+          public_key: public_key
+        )
+        actor["@context"] = Aptok.json([ActivityPub::CONTEXT, ActivityPub::SECURITY_CONTEXT])
+        actor.to_json
       end
 
       private def self.render_key_actor(env, suffix : String, config : Utils::Config)
@@ -60,18 +53,16 @@ module Crater
         normalized = suffix.downcase.gsub(/[^a-z0-9]+/, "-").gsub(/^-+|-+$/, "")
         actor_id = "#{config.crater_url}/actors/by-key/#{normalized}"
 
-        {
-          "@context" => [
-            ActivityPub::CONTEXT,
-            ActivityPub::SECURITY_CONTEXT,
-          ],
-          "id" => actor_id,
-          "type" => "Person",
-          "preferredUsername" => normalized,
-          "name" => "Key #{normalized}",
-          "inbox" => "#{actor_id}/inbox",
-          "outbox" => "#{actor_id}/outbox",
-        }.to_json
+        actor = Aptok.actor(
+          "Person",
+          actor_id,
+          normalized,
+          "#{actor_id}/inbox",
+          "#{actor_id}/outbox",
+          name: "Key #{normalized}"
+        )
+        actor["@context"] = Aptok.json([ActivityPub::CONTEXT, ActivityPub::SECURITY_CONTEXT])
+        actor.to_json
       end
     end
   end

@@ -17,7 +17,7 @@ export function loadCraterConfig(env: Record<string, string | undefined> = proce
     nodeEnv: optionalEnv('NODE_ENV', 'development', env),
     simpleApiUrl: optionalEnv('SIMPLE_API_URL', 'http://localhost:4000', env),
     domain: optionalEnv('DOMAIN', 'localhost:3001', env),
-    actorUsername: optionalEnv('ACTOR_USERNAME', 'crater', env),
+    actorUsername: optionalEnv('ACTOR_USERNAME', 'lepos', env),
     logLevel: optionalEnv('LOG_LEVEL', 'info', env)
   };
 }

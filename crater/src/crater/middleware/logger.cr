@@ -1,6 +1,6 @@
 require "kemal"
 
-module Crater
+module Lepos
   class RequestLogger
     include HTTP::Handler
 

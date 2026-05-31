@@ -6,7 +6,7 @@ require "./handlers/actor"
 require "./handlers/inbox"
 require "./handlers/outbox"
 
-module Crater
+module Lepos
   module Server
     def self.run
       # Register all route handlers
@@ -19,7 +19,7 @@ module Crater
       # Health check
       get "/health" do |env|
         env.response.content_type = "application/json"
-        %({"status": "ok", "service": "crater", "version": "0.1.0"})
+        %({"status": "ok", "service": "lepos", "version": "0.1.0"})
       end
 
       # CORS headers for federation
@@ -30,9 +30,9 @@ module Crater
       end
 
       Kemal.config.port = Config::PORT
-      Kemal.config.env  = Config::CRYSTAL_ENV
+      Kemal.config.env = Config::CRYSTAL_ENV
 
-      puts "Starting Crater on port #{Config::PORT} (#{Config::CRYSTAL_ENV})"
+      puts "Starting Lepos on port #{Config::PORT} (#{Config::CRYSTAL_ENV})"
       puts "Base URL: #{Config::BASE_URL}"
 
       Kemal.run

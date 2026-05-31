@@ -139,7 +139,7 @@
 
     return `https://api.qrserver.com/v1/create-qr-code/?${params.toString()}`;
   });
-  const compactPaymentAddress = $derived(paymentQuote?.paymentAddress || 'Waiting for crater payment address');
+  const compactPaymentAddress = $derived(paymentQuote?.paymentAddress || 'Waiting for Lepos payment address');
 
   function formatAmount(amount: number | undefined) {
     if (amount === undefined) return '0';

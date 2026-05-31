@@ -3,7 +3,7 @@ require "./repository_store"
 require "./order_queue"
 require "./utils/config"
 
-module Crater
+module Lepos
   module GitReceiveHook
     struct RefUpdate
       getter old_revision : String

@@ -411,8 +411,8 @@ export const KEFINE_TEXT_EN = {
     }
   },
   errors: {
-    backendUnavailableTitle: 'Crater not configured',
-    backendUnavailableDetail: 'The backend health check failed. Start crater or fix the configured crater URL.',
+    backendUnavailableTitle: 'Lepos not configured',
+    backendUnavailableDetail: 'The backend health check failed. Start Lepos or fix the configured Lepos URL.',
     orderRequired: 'Task text is required',
     loadGeneric: 'Could not create task',
     unknown: 'Unknown error',

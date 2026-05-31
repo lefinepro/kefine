@@ -4,7 +4,7 @@ require "../activitypub/types"
 require "../order_queue"
 require "../utils/config"
 
-module Crater
+module Lepos
   module Handlers
     module Inbox
       ACCEPTED_TYPES = %w[Create Update]
@@ -54,11 +54,11 @@ module Crater
 
         env.response.status_code = 202
         {
-          accepted: true,
-          orderId: order.id,
-          status: order.status,
-          solver: order.solver,
-          uiScenario: order.ui_scenario
+          accepted:   true,
+          orderId:    order.id,
+          status:     order.status,
+          solver:     order.solver,
+          uiScenario: order.ui_scenario,
         }.to_json
       end
 

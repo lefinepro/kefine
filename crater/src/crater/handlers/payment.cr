@@ -5,7 +5,7 @@ require "../order_queue"
 require "../payment_store"
 require "../utils/config"
 
-module Crater
+module Lepos
   module Handlers
     module Payment
       def self.register(config : Utils::Config)

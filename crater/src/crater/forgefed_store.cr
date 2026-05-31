@@ -6,13 +6,14 @@ require "pg"
 require "uuid"
 
 require "./activitypub/types"
+require "./forgefed/types"
 require "./repository_store"
 require "./utils/config"
 
-module Crater
+module Lepos
   module ForgeFedStore
     OUTBOX_PAGE_SIZE = 20
-    ZERO_OID = "0000000000000000000000000000000000000000"
+    ZERO_OID         = "0000000000000000000000000000000000000000"
 
     class PatchTrackerRecord
       property id : String
@@ -398,6 +399,10 @@ module Crater
       "#{config.crater_url}/actors/by-key/#{key_suffix}"
     end
 
+    private def self.json_any(payload : Aptok::JsonMap) : JSON::Any
+      JSON.parse(payload.to_json)
+    end
+
     private def self.branch_key_suffix(name : String, default_branch : String) : String?
       return nil if name == default_branch
 
@@ -460,7 +465,7 @@ module Crater
         "while read oldrev newrev refname; do",
         "  printf '%s %s %s\\n' \"$oldrev\" \"$newrev\" \"$refname\" >> \"$QUEUE\"",
         "done",
-        "git --git-dir=\"$PWD\" update-server-info >/dev/null 2>&1 || true"
+        "git --git-dir=\"$PWD\" update-server-info >/dev/null 2>&1 || true",
       ].join('\n')
       File.write(hook_path, script)
       File.chmod(hook_path, 0o755)
@@ -808,47 +813,37 @@ module Crater
     end
 
     private def self.merge_request_create_activity(repository : RepositoryStore::RepositoryRecord, tracker : PatchTrackerRecord, mr : MergeRequestRecord, config : Utils::Config) : JSON::Any
-      JSON.parse(
-        {
-          "@context" => [ActivityPub::CONTEXT, ForgeFed::CONTEXT],
-          "id" => activity_uri("mr-create", config),
-          "type" => "Create",
-          "actor" => tracker.actor_uri,
-          "object" => JSON.parse(merge_request_json(mr, config).to_json),
-          "published" => current_time
-        }.to_json
-      )
+      object = merge_request_json(mr, config).as_h.as(Aptok::JsonMap)
+      activity = Aptok.create(activity_uri("mr-create", config), tracker.actor_uri, object, [ActivityPub::PUBLIC_COLLECTION])
+      activity["@context"] = Aptok.json([ActivityPub::CONTEXT, ForgeFed::CONTEXT])
+      activity["published"] = Aptok.json(current_time)
+      json_any(activity)
     end
 
     private def self.merge_request_update_activity(repository : RepositoryStore::RepositoryRecord, tracker : PatchTrackerRecord, mr : MergeRequestRecord, config : Utils::Config) : JSON::Any
-      JSON.parse(
-        {
-          "@context" => [ActivityPub::CONTEXT, ForgeFed::CONTEXT],
-          "id" => activity_uri("mr-update", config),
-          "type" => "Update",
-          "actor" => tracker.actor_uri,
-          "object" => JSON.parse(merge_request_json(mr, config).to_json),
-          "published" => current_time
-        }.to_json
-      )
+      object = merge_request_json(mr, config).as_h.as(Aptok::JsonMap)
+      activity = Aptok.update(activity_uri("mr-update", config), tracker.actor_uri, object, [ActivityPub::PUBLIC_COLLECTION])
+      activity["@context"] = Aptok.json([ActivityPub::CONTEXT, ForgeFed::CONTEXT])
+      activity["published"] = Aptok.json(current_time)
+      json_any(activity)
     end
 
     private def self.push_activity(repository : RepositoryStore::RepositoryRecord, push : PushEventRecord, branch : BranchRecord?, config : Utils::Config) : JSON::Any
       target = branch ? JSON.parse(branch_json(branch, config).to_json) : JSON.parse(repository_json(repository, config).to_json)
-      JSON.parse(
-        {
-          "@context" => [ActivityPub::CONTEXT, ForgeFed::CONTEXT],
-          "id" => push.activity_uri,
-          "type" => "Push",
-          "actor" => repository_uri(repository, config),
-          "attributedTo" => push.attributed_to,
-          "target" => target,
-          "published" => push.created_at,
-          "ref" => push.ref,
-          "hashBefore" => push.old_oid,
-          "hashAfter" => push.new_oid
-        }.to_json
+      target_id = branch ? branch_uri(branch.id, config) : repository_uri(repository, config)
+      activity = Aptok.forgefed_push(
+        push.activity_uri,
+        repository_uri(repository, config),
+        push.attributed_to || repository_uri(repository, config),
+        target_id,
+        [] of Aptok::JsonMap,
+        push.old_oid,
+        push.new_oid
       )
+      activity["target"] = Aptok.json(target)
+      activity["published"] = Aptok.json(push.created_at)
+      activity["ref"] = Aptok.json(push.ref)
+      json_any(activity)
     end
 
     private def self.next_patch_version(merge_request_id : String, config : Utils::Config) : Int32
@@ -996,108 +991,100 @@ module Crater
 
     def self.repository_json(repository : RepositoryStore::RepositoryRecord, config : Utils::Config = Utils::Config.load) : JSON::Any
       tracker = ensure_repository_resources(repository, config)
-      JSON.parse(
-        {
-          "@context" => [ActivityPub::CONTEXT, ForgeFed::CONTEXT],
-          "id" => repository_uri(repository, config),
-          "type" => "Repository",
-          "name" => repository.name,
-          "context" => "#{config.crater_url}/projects/#{repository.project_id}",
-          "cloneUri" => repository.public_clone_url || repository.ssh_clone_url || "",
-          "pushUri" => repository.ssh_clone_url || "",
-          "published" => repository.created_at,
-          "summary" => repository.name,
-          "ticketsTrackedBy" => tracker.actor_uri,
-          "sendPatchesTo" => tracker.actor_uri
-        }.to_json
+      repository_actor = repository_uri(repository, config)
+      payload = Aptok.forgefed_repository(
+        repository_actor,
+        repository.name,
+        "#{repository_actor}/inbox",
+        "#{repository_actor}/outbox",
+        clone_uri: repository.public_clone_url || repository.ssh_clone_url,
+        push_uris: [repository.ssh_clone_url].compact,
+        summary: repository.name,
+        tickets_tracked_by: tracker.actor_uri,
+        send_patches_to: tracker.actor_uri,
+        context: "#{config.crater_url}/projects/#{repository.project_id}"
       )
+      payload["published"] = Aptok.json(repository.created_at)
+      json_any(payload)
     end
 
     def self.patch_tracker_json(tracker : PatchTrackerRecord, config : Utils::Config = Utils::Config.load) : JSON::Any
       repo = RepositoryStore.list(config).find { |item| item.id == tracker.repository_id }
-      JSON.parse(
-        {
-          "@context" => [ActivityPub::CONTEXT, ForgeFed::CONTEXT],
-          "id" => tracker.actor_uri,
-          "type" => "PatchTracker",
-          "name" => repo ? "#{repo.name} patches" : "Patch tracker",
-          "inbox" => tracker.inbox_uri,
-          "outbox" => tracker.outbox_uri,
-          "tracksPatchesFor" => repo ? repository_uri(repo, config) : nil
-        }.to_json
+      payload = Aptok.forgefed_patch_tracker(
+        tracker.actor_uri,
+        repo ? "#{repo.name} patches" : "Patch tracker",
+        context: repo ? repository_uri(repo, config) : nil,
+        inbox: tracker.inbox_uri,
+        outbox: tracker.outbox_uri
       )
+      payload["tracksPatchesFor"] = Aptok.json(repository_uri(repo, config)) if repo
+      json_any(payload)
     end
 
     def self.branch_json(branch : BranchRecord, config : Utils::Config = Utils::Config.load) : JSON::Any
       repository = RepositoryStore.list(config).find { |item| item.id == branch.repository_id }
-      JSON.parse(
-        {
-          "@context" => [ActivityPub::CONTEXT, ForgeFed::CONTEXT],
-          "id" => branch_uri(branch.id, config),
-          "type" => "Branch",
-          "context" => repository ? repository_uri(repository, config) : nil,
-          "name" => branch.name,
-          "ref" => branch.ref,
-          "team" => branch.actor_uri,
-          "head" => branch.head_sha
-        }.to_json
+      payload = Aptok.forgefed_branch(
+        branch_uri(branch.id, config),
+        repository ? repository_uri(repository, config) : branch.repository_id,
+        branch.name,
+        branch.ref,
+        team: branch.actor_uri
       )
+      payload["head"] = Aptok.json(branch.head_sha)
+      payload["isDefault"] = Aptok.json(branch.is_default)
+      payload["deletedAt"] = Aptok.json(branch.deleted_at) if branch.deleted_at
+      json_any(payload)
     end
 
     def self.merge_request_json(merge_request : MergeRequestRecord, config : Utils::Config = Utils::Config.load) : JSON::Any
-      attachments = [] of JSON::Any
-      offer = {
-        "id" => merge_request.offer_uri,
-        "type" => "Offer",
-        "origin" => merge_request.origin_uri,
-        "target" => merge_request.target_uri,
-        "object" => merge_request.patch_collection_uri,
-        "mrDiff" => {
-          "type" => "Link",
-          "href" => merge_request.diff_uri || merge_request_diff_uri(merge_request.id, config)
+      offer = Aptok.object(
+        "Offer",
+        merge_request.offer_uri,
+        Aptok::JsonMap{
+          "@context" => Aptok.json([ActivityPub::CONTEXT, ForgeFed::CONTEXT]),
+          "origin"   => Aptok.json(merge_request.origin_uri),
+          "target"   => Aptok.json(merge_request.target_uri),
+          "object"   => Aptok.json(merge_request.patch_collection_uri),
+          "mrDiff"   => Aptok.json({
+            "type" => "Link",
+            "href" => merge_request.diff_uri || merge_request_diff_uri(merge_request.id, config),
+          }),
         }
-      }
-      attachments << JSON.parse(offer.to_json)
-      JSON.parse(
-        {
-          "@context" => [ActivityPub::CONTEXT, ForgeFed::CONTEXT],
-          "id" => merge_request.ticket_uri,
-          "type" => "Ticket",
-          "context" => patch_tracker_uri(merge_request.patch_tracker_id, config),
-          "attributedTo" => merge_request.source_actor_uri,
-          "summary" => merge_request.title,
-          "content" => merge_request.description,
-          "mediaType" => "text/plain",
-          "published" => merge_request.created_at,
-          "updated" => merge_request.updated_at,
-          "isResolved" => merge_request.status == "merged",
-          "attachment" => attachments,
-          "status" => merge_request.status
-        }.to_json
       )
+      payload = Aptok.forgefed_ticket(
+        merge_request.ticket_uri,
+        merge_request.title,
+        merge_request.description,
+        attributed_to: merge_request.source_actor_uri,
+        context: patch_tracker_uri(merge_request.patch_tracker_id, config),
+        resolved: merge_request.status == "merged",
+        attachment: [offer]
+      )
+      payload["summary"] = Aptok.json(merge_request.title)
+      payload["mediaType"] = Aptok.json("text/plain")
+      payload["published"] = Aptok.json(merge_request.created_at)
+      payload["updated"] = Aptok.json(merge_request.updated_at)
+      payload["isResolved"] = Aptok.json(merge_request.status == "merged")
+      payload["status"] = Aptok.json(merge_request.status)
+      json_any(payload)
     end
 
     def self.patch_set_json(patch_set : PatchSetRecord, config : Utils::Config = Utils::Config.load) : JSON::Any
       patches = list_patch_files(patch_set.id, config).map do |file|
-        JSON.parse(
-          {
-            "@context" => [ActivityPub::CONTEXT, ForgeFed::CONTEXT],
-            "id" => file.file_uri,
-            "type" => "Patch",
-            "mediaType" => "text/x-diff",
-            "name" => file.name,
-            "url" => file.file_uri
-          }.to_json
+        Aptok.object(
+          "Patch",
+          file.file_uri,
+          Aptok::JsonMap{
+            "@context"  => Aptok.json([ActivityPub::CONTEXT, ForgeFed::CONTEXT]),
+            "mediaType" => Aptok.json("text/x-diff"),
+            "name"      => Aptok.json(file.name),
+            "url"       => Aptok.json(file.file_uri),
+          }
         )
       end
-      JSON.parse(
-        {
-          "@context" => [ActivityPub::CONTEXT, ForgeFed::CONTEXT],
-          "id" => patch_set.collection_uri,
-          "type" => "OrderedCollection",
-          "orderedItems" => patches
-        }.to_json
-      )
+      collection = Aptok.ordered_collection(patch_set.collection_uri, patches)
+      collection["@context"] = Aptok.json([ActivityPub::CONTEXT, ForgeFed::CONTEXT])
+      json_any(collection)
     end
 
     def self.sync_and_get_repository(slug : String, config : Utils::Config = Utils::Config.load) : RepositoryStore::RepositoryRecord?
@@ -1134,17 +1121,10 @@ module Crater
       updated = persist_merge_request(merged, config)
       tracker = find_patch_tracker(merge_request.patch_tracker_id, config)
       if tracker
-        accept = JSON.parse(
-          {
-            "@context" => [ActivityPub::CONTEXT, ForgeFed::CONTEXT],
-            "id" => activity_uri("mr-apply", config),
-            "type" => "Accept",
-            "actor" => tracker.actor_uri,
-            "object" => updated.ticket_uri,
-            "published" => current_time
-          }.to_json
-        )
-        persist_activity(tracker.actor_uri, "Accept", accept, updated.ticket_uri, config)
+        accept = Aptok.accept(activity_uri("mr-apply", config), tracker.actor_uri, updated.ticket_uri, [ActivityPub::PUBLIC_COLLECTION])
+        accept["@context"] = Aptok.json([ActivityPub::CONTEXT, ForgeFed::CONTEXT])
+        accept["published"] = Aptok.json(current_time)
+        persist_activity(tracker.actor_uri, "Accept", json_any(accept), updated.ticket_uri, config)
       end
       sync_repository(repository, config)
       updated

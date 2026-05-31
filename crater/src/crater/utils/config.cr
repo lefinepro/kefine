@@ -1,7 +1,7 @@
 require "json"
 require "uri"
 
-module Crater
+module Lepos
   module Utils
     struct Config
       getter port : Int32
@@ -180,7 +180,7 @@ module Crater
       private def self.find_config_path : String?
         candidates = [
           File.expand_path("kefine.config.json", Dir.current),
-          File.expand_path("../kefine.config.json", Dir.current)
+          File.expand_path("../kefine.config.json", Dir.current),
         ]
 
         candidates.find { |candidate| File.exists?(candidate) }

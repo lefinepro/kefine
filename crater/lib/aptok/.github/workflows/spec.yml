@@ -1,0 +1,61 @@
+name: spec
+
+on:
+  push:
+    branches: [release, main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    container:
+      image: crystallang/crystal:1.12.2
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run spec-check hooks
+        env:
+          APTOK_STRICT_FORMAT: "1"
+        run: sh .meta/hooks/check-all.sh
+
+  sqlite:
+    # Integration test for the opt-in crystal-sqlite3-backed driver, which
+    # links against libsqlite3. Kept separate so the default suite stays
+    # dependency-free.
+    runs-on: ubuntu-latest
+    container:
+      image: crystallang/crystal:1.12.2
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install SQLite
+        run: apt-get update && apt-get install -y libsqlite3-dev
+      - name: Install shards
+        run: shards install
+      - name: Run SQLite driver spec
+        run: crystal spec spec/drivers/sqlite_driver.cr
+
+  postgres:
+    # Integration test for the crystal-pg-backed Postgres driver against a real
+    # PostgreSQL server.
+    runs-on: ubuntu-latest
+    container:
+      image: crystallang/crystal:1.12.2
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: aptok
+          POSTGRES_PASSWORD: secret
+          POSTGRES_DB: aptok_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install shards
+        run: shards install
+      - name: Run Postgres driver spec
+        env:
+          APTOK_TEST_POSTGRES_URL: postgres://aptok:secret@postgres:5432/aptok_test
+        run: crystal spec spec/drivers/postgres_driver.cr

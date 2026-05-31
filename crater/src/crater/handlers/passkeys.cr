@@ -2,7 +2,7 @@ require "json"
 require "../exchange_store"
 require "../utils/config"
 
-module Crater
+module Lepos
   module Handlers
     module Passkeys
       def self.register(config : Utils::Config)
@@ -17,7 +17,7 @@ module Crater
             result = ExchangeStore.begin_registration(config, username, rp_id, rp_name)
             {
               transactionId: result[:transaction_id],
-              options: result[:options]
+              options:       result[:options],
             }.to_json
           rescue ex
             env.response.status_code = 400
@@ -35,11 +35,11 @@ module Crater
           begin
             session = ExchangeStore.finish_registration(config, username, transaction_id, response_payload)
             {
-              verified: true,
-              token: session.token,
-              userId: session.user_id,
-              username: session.username,
-              expiresAt: session.expires_at
+              verified:  true,
+              token:     session.token,
+              userId:    session.user_id,
+              username:  session.username,
+              expiresAt: session.expires_at,
             }.to_json
           rescue ex
             env.response.status_code = 400
@@ -57,7 +57,7 @@ module Crater
             result = ExchangeStore.begin_authentication(config, username, rp_id)
             {
               transactionId: result[:transaction_id],
-              options: result[:options]
+              options:       result[:options],
             }.to_json
           rescue ex
             env.response.status_code = 400
@@ -74,11 +74,11 @@ module Crater
           begin
             session = ExchangeStore.finish_authentication(config, transaction_id, response_payload)
             {
-              verified: true,
-              token: session.token,
-              userId: session.user_id,
-              username: session.username,
-              expiresAt: session.expires_at
+              verified:  true,
+              token:     session.token,
+              userId:    session.user_id,
+              username:  session.username,
+              expiresAt: session.expires_at,
             }.to_json
           rescue ex
             env.response.status_code = 400

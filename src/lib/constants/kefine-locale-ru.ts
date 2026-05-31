@@ -413,8 +413,8 @@ export const KEFINE_TEXT_RU = {
     }
   },
   errors: {
-    backendUnavailableTitle: 'Crater не настроен',
-    backendUnavailableDetail: 'Проверка состояния backend не прошла. Запустите crater или исправьте настроенный crater URL.',
+    backendUnavailableTitle: 'Lepos не настроен',
+    backendUnavailableDetail: 'Проверка состояния backend не прошла. Запустите Lepos или исправьте настроенный Lepos URL.',
     orderRequired: 'Текст задачи обязателен',
     loadGeneric: 'Не удалось создать задачу',
     unknown: 'Неизвестная ошибка',

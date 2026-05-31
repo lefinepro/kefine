@@ -22,7 +22,7 @@ function makeOrderPayload(id) {
     accepted: true,
     shareId: id,
     isPublicTask: true,
-    // Crater payload typically nests order under "order"
+    // Lepos payload typically nests order under "order"
     order: {
       id,
       title: TITLE,
@@ -41,7 +41,7 @@ function makeOrderPayload(id) {
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const pathname = url.pathname;
-  console.log(`[mock-crater] ${req.method} ${pathname}`);
+  console.log(`[mock-lepos] ${req.method} ${pathname}`);
 
   if (pathname === '/health') {
     return ok(res, { ok: true });
@@ -76,5 +76,5 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, '127.0.0.1', () => {
-  console.log(`mock-crater listening on http://127.0.0.1:${PORT} (share=${SHARE_ID}, title=${TITLE})`);
+  console.log(`mock-lepos listening on http://127.0.0.1:${PORT} (share=${SHARE_ID}, title=${TITLE})`);
 });
