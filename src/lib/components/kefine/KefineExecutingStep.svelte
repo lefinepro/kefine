@@ -26,7 +26,6 @@
     walletNetworkLabel,
     canSaveCloneLocally = false,
     canManageTask = false,
-    repositoriesEnabled = true,
     isConfirmingStep = false,
     commentSubmittingStepId = null,
     confirmCurrentStepLabel,
@@ -100,7 +99,6 @@
     walletNetworkLabel: string;
     canSaveCloneLocally?: boolean;
     canManageTask?: boolean;
-    repositoriesEnabled?: boolean;
     isConfirmingStep?: boolean;
     commentSubmittingStepId?: string | null;
     confirmCurrentStepLabel?: string;
@@ -474,17 +472,12 @@
         <button type="button" class="kefine-flow-back" onclick={onCancel} aria-label={labels.cancel}>←</button>
         <lefine-box class="kefine-flow-topline-actions">
           {#if currentOrder && onUpdateTaskSettings}
-            <KefineTaskSettingsMenu
-              order={currentOrder}
-              repositoriesEnabled={repositoriesEnabled}
-              onApply={onUpdateTaskSettings}
-            />
+            <KefineTaskSettingsMenu order={currentOrder} onApply={onUpdateTaskSettings} />
           {/if}
           {#if currentOrder && onExportClone}
             <KefineTaskCloneMenu
               order={currentOrder}
               canSaveLocally={canSaveCloneLocally}
-              repositoriesEnabled={repositoriesEnabled}
               onExport={onExportClone}
               onSaveLocally={onSaveCloneLocally ?? undefined}
             />
@@ -694,7 +687,6 @@
         {queuedOrders}
         canSaveCloneLocally={canSaveCloneLocally}
         canManageTask={canManageTask}
-        repositoriesEnabled={repositoriesEnabled}
         {commentSubmittingStepId}
         {solutions}
         onApplySolution={handleApplySolution}

@@ -23,29 +23,10 @@ export type KefineDefaultActorPublicConfig = {
   displayName: string;
 };
 
-/**
- * Identifiers for features that can be toggled on or off through configuration.
- * Add new feature flags here and to {@link DEFAULT_FEATURE_FLAGS}.
- */
-export type KefineFeatureFlagId = 'repositories';
-
-export type KefineFeatureFlags = Record<KefineFeatureFlagId, boolean>;
-
-/**
- * Default state for every feature flag. Features default to enabled so that
- * existing behaviour is preserved unless a deployment explicitly opts out.
- */
-export const DEFAULT_FEATURE_FLAGS: KefineFeatureFlags = {
-  repositories: true
-};
-
-export const KEFINE_FEATURE_FLAG_IDS = Object.keys(DEFAULT_FEATURE_FLAGS) as KefineFeatureFlagId[];
-
 export type KefinePublicRuntimeConfig = {
   app: KefinePublicAppConfig;
   services: KefinePinnedServiceConfig[];
   defaultActor: KefineDefaultActorPublicConfig;
-  features: KefineFeatureFlags;
   backend: {
     craterBaseUrl: string;
   };
@@ -74,7 +55,6 @@ export const DEFAULT_PUBLIC_RUNTIME_CONFIG: KefinePublicRuntimeConfig = {
     handle: 'staff',
     displayName: 'Staff'
   },
-  features: { ...DEFAULT_FEATURE_FLAGS },
   backend: {
     craterBaseUrl: 'http://localhost:3001'
   }
@@ -82,42 +62,6 @@ export const DEFAULT_PUBLIC_RUNTIME_CONFIG: KefinePublicRuntimeConfig = {
 
 export function normalizeText(value: unknown, fallback = ''): string {
   return typeof value === 'string' ? value.trim() || fallback : fallback;
-}
-
-/**
- * Normalizes an arbitrary value into a complete set of feature flags. Each known
- * flag accepts an explicit boolean (or the strings/numbers commonly used in JSON
- * config and environment files); anything else falls back to the default state.
- */
-export function normalizeFeatureFlags(value: unknown): KefineFeatureFlags {
-  const source = value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
-  const features = {} as KefineFeatureFlags;
-  for (const id of KEFINE_FEATURE_FLAG_IDS) {
-    features[id] = normalizeBoolean(source[id], DEFAULT_FEATURE_FLAGS[id]);
-  }
-  return features;
-}
-
-function normalizeBoolean(value: unknown, fallback: boolean): boolean {
-  if (typeof value === 'boolean') {
-    return value;
-  }
-  if (typeof value === 'number') {
-    return value !== 0;
-  }
-  if (typeof value === 'string') {
-    const normalized = value.trim().toLowerCase();
-    if (normalized === '') {
-      return fallback;
-    }
-    if (['true', '1', 'yes', 'on', 'enabled'].includes(normalized)) {
-      return true;
-    }
-    if (['false', '0', 'no', 'off', 'disabled'].includes(normalized)) {
-      return false;
-    }
-  }
-  return fallback;
 }
 
 export function resolvePublicRuntimeConfig(value: unknown): KefinePublicRuntimeConfig {
@@ -129,7 +73,6 @@ export function resolvePublicRuntimeConfig(value: unknown): KefinePublicRuntimeC
     app?: Partial<KefinePublicAppConfig>;
     services?: unknown;
     defaultActor?: Partial<KefineDefaultActorPublicConfig>;
-    features?: unknown;
   };
   const app: Partial<KefinePublicAppConfig> = source.app ?? {};
   const defaultActor: Partial<KefineDefaultActorPublicConfig> = source.defaultActor ?? {};
@@ -169,7 +112,6 @@ export function resolvePublicRuntimeConfig(value: unknown): KefinePublicRuntimeC
       handle: normalizeText(defaultActor.handle, DEFAULT_PUBLIC_RUNTIME_CONFIG.defaultActor.handle),
       displayName: normalizeText(defaultActor.displayName, DEFAULT_PUBLIC_RUNTIME_CONFIG.defaultActor.displayName)
     },
-    features: normalizeFeatureFlags(source.features),
     backend: {
       craterBaseUrl: normalizeText((value as { backend?: { craterBaseUrl?: string } }).backend?.craterBaseUrl, DEFAULT_PUBLIC_RUNTIME_CONFIG.backend.craterBaseUrl)
     }
@@ -188,15 +130,4 @@ export function setBrowserPublicRuntimeConfig(value: unknown): void {
 
 export function readBrowserPublicRuntimeConfig(): KefinePublicRuntimeConfig {
   return browserPublicRuntimeConfig ?? DEFAULT_PUBLIC_RUNTIME_CONFIG;
-}
-
-/**
- * Returns whether the given feature is enabled. When no config is provided the
- * browser runtime config is used, so this is safe to call from client code.
- */
-export function isFeatureEnabled(
-  feature: KefineFeatureFlagId,
-  config: KefinePublicRuntimeConfig = readBrowserPublicRuntimeConfig()
-): boolean {
-  return config.features[feature] !== false;
 }
