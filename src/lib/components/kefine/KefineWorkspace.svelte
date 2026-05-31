@@ -1335,13 +1335,19 @@
       authDialogOpen = false;
       return;
     }
+
     authButtonLoading = true;
-    await ensureDialogComponentsLoaded();
-    await tick();
-    await new Promise(r => requestAnimationFrame(r));
-    authDialogOpen = true;
-    await tick();
-    authButtonLoading = false;
+    try {
+      await ensureDialogComponentsLoaded();
+      await tick();
+      await new Promise(r => requestAnimationFrame(r));
+      authDialogOpen = true;
+      await tick();
+    } catch (error) {
+      console.error('[auth] selectTopbarAuth failed', error);
+    } finally {
+      authButtonLoading = false;
+    }
   }
 
   async function openTopbarProfile() {
