@@ -197,6 +197,34 @@ export const KEFINE_TEXT_RU = {
     download: 'Скачать аудио',
     downloadAria: 'Скачать извлечённый аудиофайл'
   },
+  weatherWidget: {
+    title: 'Погода',
+    defaultLocation: 'Гомель',
+    belarus: 'Беларусь',
+    unitLabel: 'Единицы температуры',
+    celsius: 'Цельсий',
+    fahrenheit: 'Фаренгейт',
+    metricsLabel: 'Подробности погоды',
+    feelsLike: 'Ощущается как',
+    humidity: 'Влажность',
+    wind: 'Ветер',
+    pressure: 'Давление',
+    windUnit: 'км/ч',
+    pressureUnit: 'гПа',
+    hourlyLabel: 'Почасовой прогноз',
+    dailyLabel: 'Прогноз по дням',
+    highLabel: 'Максимум',
+    lowLabel: 'Минимум',
+    days: ['вт', 'ср', 'чт', 'пт', 'сб', 'вс', 'пн'],
+    conditions: {
+      mostlyCloudy: 'Преимущественно облачно',
+      partlyCloudy: 'Переменная облачность',
+      sunny: 'Солнечно',
+      clearNight: 'Ясно',
+      rain: 'Дождь',
+      cloudy: 'Облачно'
+    }
+  },
   defaults: {
     unknownSolver: 'Неизвестный решатель',
     taskTitle: 'Lepo',

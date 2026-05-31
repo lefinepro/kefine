@@ -197,6 +197,34 @@ export const KEFINE_TEXT_EN = {
     download: 'Download audio',
     downloadAria: 'Download the extracted audio file'
   },
+  weatherWidget: {
+    title: 'Weather',
+    defaultLocation: 'Gomel',
+    belarus: 'Belarus',
+    unitLabel: 'Temperature unit',
+    celsius: 'Celsius',
+    fahrenheit: 'Fahrenheit',
+    metricsLabel: 'Weather details',
+    feelsLike: 'Feels like',
+    humidity: 'Humidity',
+    wind: 'Wind',
+    pressure: 'Pressure',
+    windUnit: 'km/h',
+    pressureUnit: 'hPa',
+    hourlyLabel: 'Hourly forecast',
+    dailyLabel: 'Daily forecast',
+    highLabel: 'High',
+    lowLabel: 'Low',
+    days: ['Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Mon'],
+    conditions: {
+      mostlyCloudy: 'Mostly cloudy',
+      partlyCloudy: 'Partly cloudy',
+      sunny: 'Sunny',
+      clearNight: 'Clear',
+      rain: 'Rain',
+      cloudy: 'Cloudy'
+    }
+  },
   defaults: {
     unknownSolver: 'Unknown solver',
     taskTitle: 'Lepo',
