@@ -1,12 +1,20 @@
 <script lang="ts">
+  import { browser } from '$app/environment';
+  import { onDestroy } from 'svelte';
   import { cubicOut } from 'svelte/easing';
   import Icon from '@iconify/svelte';
   import { kefineLocaleText } from '$lib/constants/kefine-locale';
-  import { extractWeatherLocation } from '$lib/kefine/weather-intent';
+  import { getWeatherTarget, type WeatherTarget } from '$lib/kefine/weather-intent';
   import {
-    buildWeatherForecast,
+    buildOpenMeteoForecastUrl,
+    buildOpenMeteoGeocodeUrl,
+    buildWeatherForecastFromOpenMeteo,
     formatTemperature,
+    pickOpenMeteoGeocodeResult,
+    resolveKnownWeatherLocation,
     type WeatherCondition,
+    type WeatherForecast,
+    type WeatherResolvedLocation,
     type WeatherUnit
   } from '$lib/kefine/weather-forecast';
 
@@ -14,10 +22,21 @@
 
   const localeText = $derived($kefineLocaleText);
   const copy = $derived(localeText.weatherWidget);
+  const target = $derived(active ? getWeatherTarget(query) : null);
+  const targetKey = $derived(target ? (target.kind === 'named' ? `named:${target.query.toLocaleLowerCase()}` : 'geo') : '');
+
+  type LoadState = 'idle' | 'locating' | 'loading' | 'ready' | 'error';
 
   let unit = $state<WeatherUnit>('celsius');
-  const location = $derived(extractWeatherLocation(query, copy.defaultLocation));
-  const forecast = $derived(buildWeatherForecast(location));
+  let forecast = $state<WeatherForecast | null>(null);
+  let loadState = $state<LoadState>('idle');
+  let statusMessage = $state('');
+  let activeController: AbortController | null = null;
+  let requestSequence = 0;
+
+  onDestroy(() => {
+    activeController?.abort();
+  });
 
   function widgetReveal(_node: HTMLElement, { duration = 460 }: { duration?: number } = {}) {
     return {
@@ -64,107 +83,269 @@
   function temp(celsius: number, selectedUnit: WeatherUnit): string {
     return formatTemperature(celsius, selectedUnit);
   }
+
+  async function fetchJson<T>(url: string, signal: AbortSignal): Promise<T> {
+    const response = await fetch(url, { signal });
+    if (!response.ok) {
+      throw new Error(`Weather request failed with ${response.status}`);
+    }
+
+    return await response.json() as T;
+  }
+
+  function getCurrentPosition(signal: AbortSignal): Promise<GeolocationPosition> {
+    return new Promise((resolve, reject) => {
+      if (!browser || !navigator.geolocation) {
+        reject(new Error(copy.geolocationUnavailable));
+        return;
+      }
+
+      const abort = () => reject(new DOMException('Aborted', 'AbortError'));
+      signal.addEventListener('abort', abort, { once: true });
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          signal.removeEventListener('abort', abort);
+          resolve(position);
+        },
+        (error) => {
+          signal.removeEventListener('abort', abort);
+          reject(error);
+        },
+        {
+          enableHighAccuracy: false,
+          maximumAge: 10 * 60 * 1000,
+          timeout: 10_000
+        }
+      );
+    });
+  }
+
+  async function resolveNamedLocation(queryText: string, signal: AbortSignal): Promise<WeatherResolvedLocation | null> {
+    const known = resolveKnownWeatherLocation(queryText);
+    if (known) {
+      return known;
+    }
+
+    const response = await fetchJson<Parameters<typeof pickOpenMeteoGeocodeResult>[0]>(
+      buildOpenMeteoGeocodeUrl(queryText),
+      signal
+    );
+    return pickOpenMeteoGeocodeResult(response);
+  }
+
+  async function loadWeather(nextTarget: WeatherTarget, signal: AbortSignal, sequence: number) {
+    let location: WeatherResolvedLocation | null = null;
+
+    if (nextTarget.kind === 'named') {
+      loadState = 'loading';
+      statusMessage = copy.loadingNamed(nextTarget.query);
+      location = await resolveNamedLocation(nextTarget.query, signal);
+      if (!location) {
+        throw new Error(copy.locationNotFound(nextTarget.query));
+      }
+    } else {
+      loadState = 'locating';
+      statusMessage = copy.geolocationPrompt;
+      const position = await getCurrentPosition(signal);
+      location = {
+        name: copy.currentLocation,
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude
+      };
+      loadState = 'loading';
+      statusMessage = copy.loadingForecast;
+    }
+
+    const response = await fetchJson<Parameters<typeof buildWeatherForecastFromOpenMeteo>[1]>(
+      buildOpenMeteoForecastUrl(location),
+      signal
+    );
+
+    if (sequence !== requestSequence || signal.aborted) {
+      return;
+    }
+
+    forecast = buildWeatherForecastFromOpenMeteo(location, response);
+    loadState = 'ready';
+    statusMessage = '';
+  }
+
+  function errorMessage(error: unknown): string {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      return '';
+    }
+
+    if (typeof GeolocationPositionError !== 'undefined' && error instanceof GeolocationPositionError) {
+      if (error.code === error.PERMISSION_DENIED) {
+        return copy.geolocationDenied;
+      }
+      return copy.geolocationUnavailable;
+    }
+
+    if (error instanceof Error && error.message) {
+      return error.message;
+    }
+
+    return copy.forecastUnavailable;
+  }
+
+  $effect(() => {
+    const nextTarget = target;
+    const nextKey = targetKey;
+
+    activeController?.abort();
+    activeController = null;
+    requestSequence += 1;
+
+    if (!active || !nextTarget || !nextKey || !browser) {
+      forecast = null;
+      loadState = 'idle';
+      statusMessage = '';
+      return;
+    }
+
+    const sequence = requestSequence;
+    const controller = new AbortController();
+    activeController = controller;
+    forecast = null;
+    loadState = nextTarget.kind === 'geolocation' ? 'locating' : 'loading';
+    statusMessage = nextTarget.kind === 'geolocation' ? copy.geolocationPrompt : copy.loadingNamed(nextTarget.query);
+
+    const delay = nextTarget.kind === 'named' ? 250 : 550;
+    const timer = window.setTimeout(() => {
+      void loadWeather(nextTarget, controller.signal, sequence).catch((error) => {
+        if (sequence !== requestSequence || controller.signal.aborted) {
+          return;
+        }
+
+        forecast = null;
+        loadState = 'error';
+        statusMessage = errorMessage(error);
+      });
+    }, delay);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  });
 </script>
 
-{#if active}
+{#if active && target}
   <kefine-weather-widget
     transition:widgetReveal
-    aria-label={`${copy.title} ${forecast.location}`}
+    aria-label={forecast ? `${copy.title} ${forecast.location}` : copy.title}
     data-testid="kefine-weather-widget"
   >
-    <kefine-weather-card>
-      <kefine-weather-head>
-        <kefine-weather-title>
-          <strong>{conditionLabel(forecast.condition)}</strong>
-          <lefine-text>
-            {forecast.location}{#if forecast.countryCode === 'belarus'}, {copy.belarus}{/if}
-          </lefine-text>
-        </kefine-weather-title>
+    <kefine-weather-card data-state={loadState}>
+      {#if forecast}
+        <kefine-weather-head>
+          <kefine-weather-title>
+            <strong>{conditionLabel(forecast.condition)}</strong>
+            <lefine-text>
+              {forecast.location}{#if forecast.country}, {forecast.country}{/if}
+            </lefine-text>
+          </kefine-weather-title>
 
-        <kefine-weather-units role="group" aria-label={copy.unitLabel}>
-          <button
-            type="button"
-            data-active={unit === 'celsius'}
-            aria-pressed={unit === 'celsius'}
-            aria-label={copy.celsius}
-            onpointerdown={(event) => handleUnitPointerDown(event, 'celsius')}
-            onclick={() => selectUnit('celsius')}
-          >
-            °C
-          </button>
-          <button
-            type="button"
-            data-active={unit === 'fahrenheit'}
-            aria-pressed={unit === 'fahrenheit'}
-            aria-label={copy.fahrenheit}
-            onpointerdown={(event) => handleUnitPointerDown(event, 'fahrenheit')}
-            onclick={() => selectUnit('fahrenheit')}
-          >
-            °F
-          </button>
-        </kefine-weather-units>
-      </kefine-weather-head>
-
-      <kefine-weather-now>
-        <kefine-weather-primary>
-          <kefine-weather-main-icon aria-hidden="true">
-            <Icon icon={conditionIcon(forecast.condition)} aria-hidden="true" />
-          </kefine-weather-main-icon>
-          <kefine-weather-current>
-            <strong data-part="weather-current-temp">{temp(forecast.currentTempC, unit)}</strong>
-            <lefine-text>{copy.feelsLike} {temp(forecast.feelsLikeC, unit)}</lefine-text>
-          </kefine-weather-current>
-        </kefine-weather-primary>
-
-        <kefine-weather-metrics aria-label={copy.metricsLabel}>
-          <kefine-weather-metric>
-            <lefine-text>{copy.humidity}</lefine-text>
-            <strong>{forecast.humidity}%</strong>
-          </kefine-weather-metric>
-          <kefine-weather-metric>
-            <lefine-text>{copy.wind}</lefine-text>
-            <strong>{forecast.windKph} {copy.windUnit}</strong>
-          </kefine-weather-metric>
-          <kefine-weather-metric>
-            <lefine-text>{copy.pressure}</lefine-text>
-            <strong>{forecast.pressureHpa} {copy.pressureUnit}</strong>
-          </kefine-weather-metric>
-        </kefine-weather-metrics>
-      </kefine-weather-now>
-
-      <kefine-weather-hourly data-part="weather-hourly" aria-label={copy.hourlyLabel}>
-        {#each forecast.hourly as hour (`${hour.time}-${hour.condition}`)}
-          <kefine-weather-hour data-part="weather-hour">
-            <lefine-text>{hour.time}</lefine-text>
-            <kefine-weather-small-icon aria-hidden="true">
-              <Icon icon={conditionIcon(hour.condition)} aria-hidden="true" />
-            </kefine-weather-small-icon>
-            <strong>{temp(hour.temperatureC, unit)}</strong>
-          </kefine-weather-hour>
-        {/each}
-      </kefine-weather-hourly>
-
-      <kefine-weather-daily data-part="weather-daily" aria-label={copy.dailyLabel}>
-        {#each forecast.daily as day (`${day.dayIndex}-${day.condition}`)}
-          <kefine-weather-day data-part="weather-day">
-            <lefine-text>{copy.days[day.dayIndex] ?? copy.days[0]}</lefine-text>
-            <kefine-weather-small-icon aria-hidden="true">
-              <Icon icon={conditionIcon(day.condition)} aria-hidden="true" />
-            </kefine-weather-small-icon>
-            {#if day.precipitationChance > 0}
-              <kefine-weather-rain>{day.precipitationChance}%</kefine-weather-rain>
-            {:else}
-              <kefine-weather-rain aria-hidden="true"> </kefine-weather-rain>
-            {/if}
-            <kefine-weather-temp-range
-              aria-label={`${copy.highLabel} ${temp(day.highC, unit)}, ${copy.lowLabel} ${temp(day.lowC, unit)}`}
+          <kefine-weather-units role="group" aria-label={copy.unitLabel}>
+            <button
+              type="button"
+              data-active={unit === 'celsius'}
+              aria-pressed={unit === 'celsius'}
+              aria-label={copy.celsius}
+              onpointerdown={(event) => handleUnitPointerDown(event, 'celsius')}
+              onclick={() => selectUnit('celsius')}
             >
-              <strong>{temp(day.highC, unit)}</strong>
-              <lefine-text>{temp(day.lowC, unit)}</lefine-text>
-            </kefine-weather-temp-range>
-          </kefine-weather-day>
-        {/each}
-      </kefine-weather-daily>
+              °C
+            </button>
+            <button
+              type="button"
+              data-active={unit === 'fahrenheit'}
+              aria-pressed={unit === 'fahrenheit'}
+              aria-label={copy.fahrenheit}
+              onpointerdown={(event) => handleUnitPointerDown(event, 'fahrenheit')}
+              onclick={() => selectUnit('fahrenheit')}
+            >
+              °F
+            </button>
+          </kefine-weather-units>
+        </kefine-weather-head>
+
+        <kefine-weather-now>
+          <kefine-weather-primary>
+            <kefine-weather-main-icon aria-hidden="true">
+              <Icon icon={conditionIcon(forecast.condition)} aria-hidden="true" />
+            </kefine-weather-main-icon>
+            <kefine-weather-current>
+              <strong data-part="weather-current-temp">{temp(forecast.currentTempC, unit)}</strong>
+              <lefine-text>{copy.feelsLike} {temp(forecast.feelsLikeC, unit)}</lefine-text>
+            </kefine-weather-current>
+          </kefine-weather-primary>
+
+          <kefine-weather-metrics aria-label={copy.metricsLabel}>
+            <kefine-weather-metric>
+              <lefine-text>{copy.humidity}</lefine-text>
+              <strong>{forecast.humidity}%</strong>
+            </kefine-weather-metric>
+            <kefine-weather-metric>
+              <lefine-text>{copy.wind}</lefine-text>
+              <strong>{forecast.windKph} {copy.windUnit}</strong>
+            </kefine-weather-metric>
+            <kefine-weather-metric>
+              <lefine-text>{copy.pressure}</lefine-text>
+              <strong>{forecast.pressureHpa} {copy.pressureUnit}</strong>
+            </kefine-weather-metric>
+          </kefine-weather-metrics>
+        </kefine-weather-now>
+
+        <kefine-weather-hourly data-part="weather-hourly" aria-label={copy.hourlyLabel}>
+          {#each forecast.hourly as hour (`${hour.time}-${hour.condition}`)}
+            <kefine-weather-hour data-part="weather-hour">
+              <lefine-text>{hour.time}</lefine-text>
+              <kefine-weather-small-icon aria-hidden="true">
+                <Icon icon={conditionIcon(hour.condition)} aria-hidden="true" />
+              </kefine-weather-small-icon>
+              <strong>{temp(hour.temperatureC, unit)}</strong>
+            </kefine-weather-hour>
+          {/each}
+        </kefine-weather-hourly>
+
+        <kefine-weather-daily data-part="weather-daily" aria-label={copy.dailyLabel}>
+          {#each forecast.daily as day (`${day.date}-${day.condition}`)}
+            <kefine-weather-day data-part="weather-day">
+              <lefine-text>{copy.weekdays[day.weekdayIndex] ?? day.label}</lefine-text>
+              <kefine-weather-small-icon aria-hidden="true">
+                <Icon icon={conditionIcon(day.condition)} aria-hidden="true" />
+              </kefine-weather-small-icon>
+              {#if day.precipitationChance > 0}
+                <kefine-weather-rain>{day.precipitationChance}%</kefine-weather-rain>
+              {:else}
+                <kefine-weather-rain aria-hidden="true"> </kefine-weather-rain>
+              {/if}
+              <kefine-weather-temp-range
+                aria-label={`${copy.highLabel} ${temp(day.highC, unit)}, ${copy.lowLabel} ${temp(day.lowC, unit)}`}
+              >
+                <strong>{temp(day.highC, unit)}</strong>
+                <lefine-text>{temp(day.lowC, unit)}</lefine-text>
+              </kefine-weather-temp-range>
+            </kefine-weather-day>
+          {/each}
+        </kefine-weather-daily>
+      {:else}
+        <kefine-weather-status>
+          <kefine-weather-main-icon aria-hidden="true">
+            <Icon icon={loadState === 'error' ? 'mdi:map-marker-alert-outline' : 'mdi:crosshairs-gps'} aria-hidden="true" />
+          </kefine-weather-main-icon>
+          <kefine-weather-status-copy>
+            <strong>{copy.title}</strong>
+            <lefine-text>{statusMessage || copy.loadingForecast}</lefine-text>
+            {#if loadState === 'error'}
+              <small>{copy.typeCityHint}</small>
+            {/if}
+          </kefine-weather-status-copy>
+        </kefine-weather-status>
+      {/if}
     </kefine-weather-card>
   </kefine-weather-widget>
 {/if}
@@ -173,22 +354,25 @@
   kefine-weather-widget {
     display: flex;
     flex-direction: column;
-    margin: 0.55rem 0 0.9rem;
+    width: min(100%, calc(100vw - 7rem));
+    max-width: 64rem;
+    justify-self: center;
+    margin: 0.55rem auto 0.9rem;
   }
 
   kefine-weather-card {
     display: flex;
     flex-direction: column;
     gap: clamp(0.8rem, 1.7vw, 1rem);
+    min-width: 0;
     padding: clamp(0.8rem, 1.7vw, 1.05rem);
+    overflow: hidden;
     border: 1px solid var(--kef-line);
     border-radius: var(--kef-radius-sm);
     background:
       radial-gradient(circle at 12% 10%, color-mix(in oklab, #ffd45f 16%, transparent), transparent 28%),
       linear-gradient(135deg, color-mix(in oklab, #62b8ff 10%, transparent), transparent 58%),
       var(--kef-bg-soft);
-    min-width: 0;
-    overflow: hidden;
   }
 
   kefine-weather-head,
@@ -204,17 +388,20 @@
   kefine-weather-metric,
   kefine-weather-hour,
   kefine-weather-day,
-  kefine-weather-temp-range {
+  kefine-weather-temp-range,
+  kefine-weather-status-copy {
     display: flex;
     flex-direction: column;
     min-width: 0;
   }
 
-  kefine-weather-title {
+  kefine-weather-title,
+  kefine-weather-status-copy {
     gap: 0.12rem;
   }
 
-  kefine-weather-title strong {
+  kefine-weather-title strong,
+  kefine-weather-status-copy strong {
     color: var(--lefine-text);
     font-size: clamp(0.95rem, 1.9vw, 1.05rem);
     line-height: 1.15;
@@ -224,10 +411,16 @@
   kefine-weather-current lefine-text,
   kefine-weather-metric lefine-text,
   kefine-weather-hour lefine-text,
-  kefine-weather-day lefine-text {
+  kefine-weather-day lefine-text,
+  kefine-weather-status-copy lefine-text,
+  kefine-weather-status-copy small {
     color: var(--lefine-text-soft);
     font-size: 0.76rem;
     line-height: 1.2;
+  }
+
+  kefine-weather-status-copy small {
+    margin-top: 0.2rem;
   }
 
   kefine-weather-units {
@@ -271,11 +464,16 @@
     align-items: center;
   }
 
-  kefine-weather-primary {
+  kefine-weather-primary,
+  kefine-weather-status {
     display: flex;
     align-items: center;
     gap: 0.72rem;
     min-width: 0;
+  }
+
+  kefine-weather-status {
+    min-height: 5.1rem;
   }
 
   kefine-weather-main-icon {
@@ -290,6 +488,11 @@
     color: #ffd45f;
     font-size: clamp(1.45rem, 4.8vw, 1.95rem);
     box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--kef-line) 75%, transparent);
+  }
+
+  kefine-weather-card[data-state='error'] kefine-weather-main-icon {
+    background: color-mix(in oklab, #ff6b5f 14%, var(--kef-bg-card));
+    color: #ff7b6f;
   }
 
   kefine-weather-main-icon :global(svg) {
@@ -406,6 +609,11 @@
   }
 
   @media (max-width: 680px) {
+    kefine-weather-widget {
+      width: 100%;
+      max-width: 100%;
+    }
+
     kefine-weather-head,
     kefine-weather-now {
       grid-template-columns: 1fr;
@@ -440,7 +648,8 @@
       padding: 0.72rem;
     }
 
-    kefine-weather-primary {
+    kefine-weather-primary,
+    kefine-weather-status {
       gap: 0.58rem;
     }
 
