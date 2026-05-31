@@ -733,7 +733,7 @@ export const KEFINE_TEXT_HY = {
     quickTest: 'Արագ թեստ',
     quickTestAria: 'Արագ թեստ, որը կարող եք գործարկել՝ լուծումը ստուգելու համար',
     quickTestExpect: 'ակնկալում է',
-    quickTestRun: 'Գործարկել թեստը',
+    quickTestRun: 'Թեստ',
     quickTestRunning: 'Գործարկվում է…',
     quickTestPass: 'Անցավ',
     quickTestFail: 'Ձախողվեց',

@@ -762,7 +762,7 @@ export const KEFINE_TEXT_RU = {
     quickTest: 'Быстрый тест',
     quickTestAria: 'Быстрый тест, который можно запустить для проверки решения',
     quickTestExpect: 'ожидает',
-    quickTestRun: 'Запустить тест',
+    quickTestRun: 'Тест',
     quickTestRunning: 'Запуск…',
     quickTestPass: 'Пройден',
     quickTestFail: 'Не пройден',

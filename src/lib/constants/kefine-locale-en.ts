@@ -760,7 +760,7 @@ export const KEFINE_TEXT_EN = {
     quickTest: 'Quick test',
     quickTestAria: 'Quick test you can run to validate this solution',
     quickTestExpect: 'expects',
-    quickTestRun: 'Run test',
+    quickTestRun: 'Test',
     quickTestRunning: 'Running…',
     quickTestPass: 'Passed',
     quickTestFail: 'Failed',

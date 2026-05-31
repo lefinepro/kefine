@@ -870,7 +870,7 @@
   }
 
   .quick-test-run {
-    align-self: flex-start;
+    align-self: flex-end;
     margin-top: 0.1rem;
     display: inline-flex;
     align-items: center;
