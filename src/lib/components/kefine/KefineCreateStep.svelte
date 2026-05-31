@@ -5,6 +5,7 @@
   import KefineOrderListItem from '$lib/components/kefine/KefineOrderListItem.svelte';
   import KefineProxyConfigWidget from '$lib/components/kefine/KefineProxyConfigWidget.svelte';
   import KefineMusicWidget from '$lib/components/kefine/KefineMusicWidget.svelte';
+  import KefineWeatherWidget from '$lib/components/kefine/KefineWeatherWidget.svelte';
   import SolutionMetricsMini from '$lib/components/kefine/SolutionMetricsMini.svelte';
   import { detectProxyServerIntent } from '$lib/kefine/proxy-intent';
   import {
@@ -15,6 +16,7 @@
   } from '$lib/kefine/instant-answers';
   import { createQrMatrix, qrMatrixToSvgPath } from '$lib/kefine/qr-code';
   import { detectMusicExtractIntent } from '$lib/kefine/music-intent';
+  import { detectWeatherIntent } from '$lib/kefine/weather-intent';
   import { buildActorOrderPath } from '$lib/components/kefine/kefine-workspace-helpers';
   import { defaultMetrics } from '$lib/kefine/solutions-data';
   import { cubicOut } from 'svelte/easing';
@@ -197,6 +199,10 @@
   // Show the proxy configuration widget as soon as the draft reads like a proxy
   // request — no submit required (e.g. typing "Нужен прокси сервер").
   const proxyIntentActive = $derived(detectProxyServerIntent(draft.description));
+
+  // Weather instant answer, matching the proxy/music intent widgets: render the
+  // forecast card while the prompt is still being composed.
+  const weatherIntentActive = $derived(detectWeatherIntent(draft.description));
 
   // Instant answers: a frontend-only autocomplete of known websites loaded from
   // /instant-answers.json. As the user types, matching sites are surfaced as
@@ -1681,6 +1687,9 @@ initialized = true;
 
   <!-- Proxy/VPN configuration preview — appears above the task history while typing -->
   <KefineProxyConfigWidget active={proxyIntentActive} />
+
+  <!-- Weather instant answer — appears for prompts such as "Погода Гомель" -->
+  <KefineWeatherWidget active={weatherIntentActive} query={draft.description} />
 
   <!-- Extracted-music preview — appears when the draft reads like "extract audio from video" -->
   <KefineMusicWidget active={musicIntentActive} />

@@ -173,6 +173,34 @@ export const KEFINE_TEXT_HY = {
     download: 'Ներբեռնել ձայնը',
     downloadAria: 'Ներբեռնել առանձնացված ձայնային ֆայլը'
   },
+  weatherWidget: {
+    title: 'Եղանակ',
+    defaultLocation: 'Գոմել',
+    belarus: 'Բելառուս',
+    unitLabel: 'Ջերմաստիճանի միավոր',
+    celsius: 'Ցելսիուս',
+    fahrenheit: 'Ֆարենհայթ',
+    metricsLabel: 'Եղանակի տվյալներ',
+    feelsLike: 'Զգացվում է որպես',
+    humidity: 'Խոնավություն',
+    wind: 'Քամի',
+    pressure: 'Ճնշում',
+    windUnit: 'կմ/ժ',
+    pressureUnit: 'հՊա',
+    hourlyLabel: 'Ժամային կանխատեսում',
+    dailyLabel: 'Օրական կանխատեսում',
+    highLabel: 'Առավելագույն',
+    lowLabel: 'Նվազագույն',
+    days: ['երք', 'չրք', 'հնգ', 'ուրբ', 'շբթ', 'կիր', 'երկ'],
+    conditions: {
+      mostlyCloudy: 'Հիմնականում ամպամած',
+      partlyCloudy: 'Փոփոխական ամպամածություն',
+      sunny: 'Արևոտ',
+      clearNight: 'Պարզ',
+      rain: 'Անձրև',
+      cloudy: 'Ամպամած'
+    }
+  },
   defaults: {
     ...KEFINE_TEXT_EN.defaults,
     unknownSolver: 'Անհայտ solver',
