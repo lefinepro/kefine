@@ -3,6 +3,8 @@
   import type { DraftOrder, OrderView, TemplatePresentation } from './kefine-workflow';
   import { scheduleAfter } from '$lib/utils/helpers';
   import KefineOrderListItem from '$lib/components/kefine/KefineOrderListItem.svelte';
+  import KefineWeatherWidget from '$lib/components/kefine/KefineWeatherWidget.svelte';
+  import { detectWeatherIntent } from '$lib/kefine/weather-intent';
   const PLACEHOLDER_TYPE_DELAY_MS = 58;
   const PLACEHOLDER_DELETE_DELAY_MS = 34;
   const PLACEHOLDER_PAUSE_MS = 1150;
@@ -495,6 +497,7 @@
   let taskSearchText = $state('');
   const isMultilineDraft = $derived(draft.description.includes('\n'));
   const effectiveTaskCompleted = $derived(taskCompleted || solverSearchCompleted);
+  const weatherIntentActive = $derived(detectWeatherIntent(draft.description));
 
   function solutionIdsForTaskText(value: string): string[] | null {
     const text = value.trim().toLowerCase();
@@ -1259,6 +1262,8 @@
     </section>
   {/if}
 </article>
+
+<KefineWeatherWidget active={weatherIntentActive} query={draft.description} />
 
 {#if pinnedServices.length > 0}
   <lef-services-showcase>
