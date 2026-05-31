@@ -1919,6 +1919,9 @@ initialized = true;
   }
 
   [data-kefine-create] {
+    /* Shared leading inset of the search-input text; mirrored at each breakpoint
+       so the pinned chips and instant-answer rows stay on the same left rail. */
+    --kef-task-pad-inline: clamp(0.72rem, 2.5vw, 0.92rem);
     grid-template-rows: auto auto auto minmax(0, auto);
     align-content: start;
     gap: 0.62rem;
@@ -3654,7 +3657,7 @@ initialized = true;
     resize: none;
     overflow-x: auto;
     overflow-y: hidden;
-    padding-inline: clamp(0.72rem, 2.5vw, 0.92rem);
+    padding-inline: var(--kef-task-pad-inline);
     padding-top: max(0.48rem, calc((clamp(3.3rem, 7vw, 4rem) - 1.04em) / 2));
     padding-bottom: max(0.48rem, calc((clamp(3.3rem, 7vw, 4rem) - 1.04em) / 2));
     overflow-wrap: normal;
@@ -3686,7 +3689,7 @@ initialized = true;
     min-width: 0;
     max-width: 100%;
     min-height: clamp(3.3rem, 7vw, 4rem);
-    padding-inline: clamp(0.72rem, 2.5vw, 0.92rem);
+    padding-inline: var(--kef-task-pad-inline);
     padding-top: max(0.48rem, calc((clamp(3.3rem, 7vw, 4rem) - 1.04em) / 2));
     padding-bottom: max(0.48rem, calc((clamp(3.3rem, 7vw, 4rem) - 1.04em) / 2));
     color: color-mix(in oklab, var(--kef-on-primary) 78%, transparent);
@@ -3773,7 +3776,8 @@ initialized = true;
     flex-wrap: wrap;
     gap: 0.4rem;
     margin-top: 0.45rem;
-    padding-left: 0.15rem;
+    /* Align the chip icon with the search-input text (tracks the same inset). */
+    padding-left: calc(var(--kef-task-pad-inline) - 0.05rem);
   }
 
   kefine-pinned-chip {
@@ -3789,7 +3793,7 @@ initialized = true;
   a[data-part='pinned-chip-link'] {
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.5rem;
     min-width: 0;
     padding: 0.05rem 0.15rem;
     color: var(--lefine-text);
@@ -3858,10 +3862,11 @@ initialized = true;
   a[data-part='instant-answer'] {
     display: flex;
     align-items: center;
-    gap: 0.7rem;
+    gap: 0.5rem;
     flex: 1;
     min-width: 0;
-    padding: 0.55rem 0.7rem;
+    /* Align the leading icon with the search-input text (tracks the same inset). */
+    padding: 0.55rem 0.7rem 0.55rem calc(var(--kef-task-pad-inline) - 0.05rem);
     border-radius: 0.5rem;
     color: var(--lefine-text);
     text-decoration: none;
@@ -3872,10 +3877,10 @@ initialized = true;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 1.8rem;
-    height: 1.8rem;
+    width: 1.4rem;
+    height: 1.4rem;
     flex-shrink: 0;
-    font-size: 1.1rem;
+    font-size: 0.95rem;
     line-height: 1;
     border-radius: 50%;
     overflow: hidden;
@@ -4250,6 +4255,7 @@ initialized = true;
 
   @media (min-width: 960px) {
     [data-kefine-create] {
+      --kef-task-pad-inline: 1rem;
       width: min(64rem, calc(100vw - 8rem));
     }
 
@@ -4272,13 +4278,11 @@ initialized = true;
       height: 4.5rem;
       font-size: clamp(1.2rem, 1.6vw, 1.75rem);
       line-height: 1.02;
-      padding-inline: 1rem;
       padding-top: calc((4.5rem - 1.02em) / 2);
       padding-bottom: calc((4.5rem - 1.02em) / 2);
     }
 
     kefine-task-placeholder {
-      padding-inline: 1rem;
       padding-top: calc((4.5rem - 1.02em) / 2);
       padding-bottom: calc((4.5rem - 1.02em) / 2);
     }
@@ -4292,6 +4296,7 @@ initialized = true;
 
   @media (max-width: 760px) {
     [data-kefine-create] {
+      --kef-task-pad-inline: 0.78rem;
       width: min(100%, calc(100vw - 2rem));
     }
 
@@ -4324,11 +4329,6 @@ initialized = true;
     kefine-task-placeholder[data-size='compact'] {
       font-size: 0.68rem;
       line-height: 1.08;
-    }
-
-    textarea[data-part='task-input'],
-    kefine-task-placeholder {
-      padding-inline: 0.78rem;
     }
 
     kefine-submit-popover {
