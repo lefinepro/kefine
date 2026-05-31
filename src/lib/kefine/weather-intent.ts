@@ -1,7 +1,6 @@
 /**
- * Lightweight detector for weather / forecast prompts. It mirrors the other
- * composer intent detectors: cheap, Unicode-aware and deliberately local so the
- * widget can react while the user is still typing.
+ * Lightweight detector for weather / forecast prompts. The parser stays local
+ * so the composer can react while the user is still typing.
  */
 
 const WEATHER_WORDS: readonly string[] = [
@@ -19,26 +18,28 @@ const WEATHER_WORDS: readonly string[] = [
 ];
 
 const LOCATION_PATTERNS: readonly RegExp[] = [
-  /(?:^|[^\p{L}\p{N}])(?:weather|forecast|temperature)[\s,:-]*(?:in|for|at|near)?[\s,:-]*(?<location>[\p{L}\p{M}\p{N}][\p{L}\p{M}\p{N}\s.'-]{1,63})/iu,
-  /(?:^|[^\p{L}\p{N}])(?:прогноз)(?:\s+погоды)?[\s,:-]*(?:в|во|для|на)?[\s,:-]*(?<location>[\p{L}\p{M}\p{N}][\p{L}\p{M}\p{N}\s.'-]{1,63})/iu,
-  /(?:^|[^\p{L}\p{N}])(?:погода|погоды|температура|температуру)[\s,:-]*(?:в|во|для|на)?[\s,:-]*(?<location>[\p{L}\p{M}\p{N}][\p{L}\p{M}\p{N}\s.'-]{1,63})/iu,
-  /(?:^|[^\p{L}\p{N}])(?:եղանակ|եղանակը|կանխատեսում)[\s,:-]*(?:ում|համար)?[\s,:-]*(?<location>[\p{L}\p{M}\p{N}][\p{L}\p{M}\p{N}\s.'-]{1,63})/iu,
+  /(?:^|[^\p{L}\p{N}])(?:weather|forecast|temperature)[\s,:-]*(?:in|for|at|near)?[\s,:-]*(?<location>[\p{L}\p{M}\p{N}][\p{L}\p{M}\p{N}\s.'-]{0,63})/iu,
+  /(?:^|[^\p{L}\p{N}])(?:прогноз)(?:\s+погоды)?[\s,:-]*(?:в|во|для|на)?[\s,:-]*(?<location>[\p{L}\p{M}\p{N}][\p{L}\p{M}\p{N}\s.'-]{0,63})/iu,
+  /(?:^|[^\p{L}\p{N}])(?:погода|погоды|температура|температуру)[\s,:-]*(?:в|во|для|на)?[\s,:-]*(?<location>[\p{L}\p{M}\p{N}][\p{L}\p{M}\p{N}\s.'-]{0,63})/iu,
+  /(?:^|[^\p{L}\p{N}])(?:եղանակը|եղանակ|կանխատեսում)[\s,:-]*(?:ում|համար)?[\s,:-]*(?<location>[\p{L}\p{M}\p{N}][\p{L}\p{M}\p{N}\s.'-]{0,63})/iu,
   /(?:^|[^\p{L}\p{N}])(?<location>[\p{L}\p{M}\p{N}][\p{L}\p{M}\p{N}\s.'-]{1,42})[\s,:-]+(?:weather|forecast)(?:$|[^\p{L}\p{N}])/iu,
   /(?:^|[^\p{L}\p{N}])(?<location>[\p{L}\p{M}\p{N}][\p{L}\p{M}\p{N}\s.'-]{1,42})[\s,:-]+(?:погода|прогноз)(?:$|[^\p{L}\p{N}])/iu,
   /(?:^|[^\p{L}\p{N}])(?<location>[\p{L}\p{M}\p{N}][\p{L}\p{M}\p{N}\s.'-]{1,42})[\s,:-]+(?:եղանակ|կանխատեսում)(?:$|[^\p{L}\p{N}])/iu
 ];
 
 const TRAILING_FILLER =
-  /(?:[\s,;:!?()[\]{}'"-]+(?:today|tomorrow|now|please|pls|сегодня|завтра|сейчас|пожалуйста))+$/iu;
+  /(?:[\s,;:!?()[\]{}'"-]+(?:today|tomorrow|now|please|pls|сегодня|завтра|сейчас|пожалуйста|այսօր|վաղը|հիմա))+$/iu;
+const FILLER_ONLY =
+  /^(?:today|tomorrow|now|please|pls|сегодня|завтра|сейчас|пожалуйста|այսօր|վաղը|հիմա)$/iu;
+
+export type WeatherTarget =
+  | { kind: 'geolocation' }
+  | { kind: 'named'; query: string };
 
 function escapeForRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-/**
- * Whole-word test that works for Latin, Cyrillic and Armenian. JavaScript `\b`
- * is ASCII-only, so we assert non-letter boundaries manually.
- */
 function containsWord(haystack: string, word: string): boolean {
   const pattern = new RegExp(`(?:^|[^\\p{L}\\p{N}])${escapeForRegExp(word)}(?:$|[^\\p{L}\\p{N}])`, 'iu');
   return pattern.test(haystack);
@@ -62,6 +63,10 @@ function cleanLocation(value: string): string {
     .replace(/\s+/g, ' ')
     .trim();
 
+  if (!cleaned || FILLER_ONLY.test(cleaned)) {
+    return '';
+  }
+
   return titleCaseLocation(cleaned);
 }
 
@@ -78,9 +83,9 @@ export function detectWeatherIntent(text: string | null | undefined): boolean {
   return WEATHER_WORDS.some((word) => containsWord(normalized, word));
 }
 
-export function extractWeatherLocation(text: string | null | undefined, fallback = 'Gomel'): string {
+export function extractWeatherLocationQuery(text: string | null | undefined): string | null {
   if (!text) {
-    return fallback;
+    return null;
   }
 
   for (const pattern of LOCATION_PATTERNS) {
@@ -91,5 +96,14 @@ export function extractWeatherLocation(text: string | null | undefined, fallback
     }
   }
 
-  return fallback;
+  return null;
+}
+
+export function getWeatherTarget(text: string | null | undefined): WeatherTarget | null {
+  if (!detectWeatherIntent(text)) {
+    return null;
+  }
+
+  const query = extractWeatherLocationQuery(text);
+  return query ? { kind: 'named', query } : { kind: 'geolocation' };
 }

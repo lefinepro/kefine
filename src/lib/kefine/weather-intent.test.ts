@@ -1,19 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { detectWeatherIntent, extractWeatherLocation } from './weather-intent';
+import { detectWeatherIntent, getWeatherTarget } from './weather-intent';
 
 describe('detectWeatherIntent', () => {
-  it('matches the Russian reference phrasing from the issue', () => {
-    expect(detectWeatherIntent('Погода Гомель')).toBe(true);
-    expect(detectWeatherIntent('прогноз погоды в Минске')).toBe(true);
+  it('matches bare weather prompts that should use geolocation', () => {
+    expect(detectWeatherIntent('Weather')).toBe(true);
+    expect(detectWeatherIntent('Погода')).toBe(true);
+    expect(detectWeatherIntent('եղանակ')).toBe(true);
   });
 
-  it('matches English weather phrasing', () => {
-    expect(detectWeatherIntent('weather in Gomel')).toBe(true);
+  it('matches named weather prompts', () => {
+    expect(detectWeatherIntent('Weather Gomel,')).toBe(true);
+    expect(detectWeatherIntent('weather in New York')).toBe(true);
     expect(detectWeatherIntent('show me the forecast for New York')).toBe(true);
-    expect(detectWeatherIntent('temperature Berlin')).toBe(true);
-  });
-
-  it('matches Armenian weather phrasing', () => {
+    expect(detectWeatherIntent('прогноз погоды в Минске')).toBe(true);
     expect(detectWeatherIntent('եղանակը Երևան')).toBe(true);
   });
 
@@ -26,21 +25,26 @@ describe('detectWeatherIntent', () => {
   });
 });
 
-describe('extractWeatherLocation', () => {
-  it('extracts the location from Russian weather prompts', () => {
-    expect(extractWeatherLocation('Погода Гомель')).toBe('Гомель');
-    expect(extractWeatherLocation('прогноз погоды в минске')).toBe('Минске');
-    expect(extractWeatherLocation('Погода Гомель сегодня')).toBe('Гомель');
+describe('getWeatherTarget', () => {
+  it('uses geolocation when a weather prompt has no explicit place', () => {
+    expect(getWeatherTarget('Weather')).toEqual({ kind: 'geolocation' });
+    expect(getWeatherTarget('Погода сейчас')).toEqual({ kind: 'geolocation' });
   });
 
-  it('extracts the location from English weather prompts', () => {
-    expect(extractWeatherLocation('weather in gomel')).toBe('Gomel');
-    expect(extractWeatherLocation('show me the forecast for new york')).toBe('New York');
-    expect(extractWeatherLocation('berlin weather')).toBe('Berlin');
-    expect(extractWeatherLocation('weather in gomel today')).toBe('Gomel');
+  it('extracts a named place from English weather prompts', () => {
+    expect(getWeatherTarget('Weather Gomel,')).toEqual({ kind: 'named', query: 'Gomel' });
+    expect(getWeatherTarget('weather in gomel today')).toEqual({ kind: 'named', query: 'Gomel' });
+    expect(getWeatherTarget('show me the forecast for new york')).toEqual({ kind: 'named', query: 'New York' });
+    expect(getWeatherTarget('berlin weather')).toEqual({ kind: 'named', query: 'Berlin' });
   });
 
-  it('falls back when no location is present', () => {
-    expect(extractWeatherLocation('weather')).toBe('Gomel');
+  it('extracts a named place from Russian and Armenian weather prompts', () => {
+    expect(getWeatherTarget('Погода Гомель')).toEqual({ kind: 'named', query: 'Гомель' });
+    expect(getWeatherTarget('прогноз погоды в минске')).toEqual({ kind: 'named', query: 'Минске' });
+    expect(getWeatherTarget('եղանակը Երևան')).toEqual({ kind: 'named', query: 'Երևան' });
+  });
+
+  it('ignores non-weather prompts', () => {
+    expect(getWeatherTarget('make a proxy server')).toBeNull();
   });
 });
