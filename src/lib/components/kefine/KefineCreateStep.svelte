@@ -1259,6 +1259,13 @@ initialized = true;
     });
   }
 
+  // Keep the composer menu open when its chips/pills are pressed: without this the
+  // mousedown blurs the task input, focus falls outside the card, and
+  // handleCreateFocusOut tears the whole menu down before the click can act.
+  function keepComposerFocus(event: MouseEvent) {
+    event.preventDefault();
+  }
+
   function normalizeTag(value: string): string {
     return value.trim().replace(/^#+/, '').toLowerCase();
   }
@@ -1546,7 +1553,7 @@ initialized = true;
   {#if inputMetaOpen}
     <kefine-input-meta data-part="input-meta">
       <kefine-composer-strip aria-label={composerHints}>
-        <button type="button" data-part="composer-chip" title={backgroundExecuteAria} onclick={() => fileInput?.click()}>
+        <button type="button" data-part="composer-chip" title={backgroundExecuteAria} onmousedown={keepComposerFocus} onclick={() => fileInput?.click()}>
           <lefine-text>{addFileLabel}</lefine-text>
           {#if draft.files.length > 0}
             <strong>{fileCountLabel(draft.files.length)}</strong>
@@ -1562,7 +1569,7 @@ initialized = true;
             />
           </kefine-execution-editor>
         {:else}
-          <button type="button" data-part="composer-chip" onclick={() => { executionEditorOpen = true; }}>
+          <button type="button" data-part="composer-chip" onmousedown={keepComposerFocus} onclick={() => { executionEditorOpen = true; }}>
             <lefine-text>{addExecutionEstimateLabel}</lefine-text>
           </button>
         {/if}
@@ -1584,7 +1591,7 @@ initialized = true;
             }}
           />
         {:else}
-          <button type="button" data-part="composer-chip" data-part-tag="true" onclick={() => { tagEditorOpen = true; }}>
+          <button type="button" data-part="composer-chip" data-part-tag="true" onmousedown={keepComposerFocus} onclick={() => { tagEditorOpen = true; }}>
             <lefine-text>{addTagLabel}</lefine-text>
           </button>
         {/if}
@@ -1593,7 +1600,7 @@ initialized = true;
       {#if (draft.tags?.length ?? 0) > 0}
         <kefine-tag-strip data-has-tags="true">
           {#each draft.tags ?? [] as tag (`tag-${tag}`)}
-            <button type="button" data-part="tag-pill" onclick={() => removeTag(tag)} aria-label={removeTagLabel(tag)}>
+            <button type="button" data-part="tag-pill" onmousedown={keepComposerFocus} onclick={() => removeTag(tag)} aria-label={removeTagLabel(tag)}>
               <lefine-text>#{tag}</lefine-text>
               <strong>×</strong>
             </button>
@@ -1615,7 +1622,7 @@ initialized = true;
       {#if draft.files.length > 0}
         <kefine-file-list>
           {#each draft.files as file, index (`${file.name}-${file.size}-${index}`)}
-            <button type="button" data-part="file-pill" onclick={() => onRemoveFile(index)}>
+            <button type="button" data-part="file-pill" onmousedown={keepComposerFocus} onclick={() => onRemoveFile(index)}>
               {#if isImageFile(file) && filePreviews.has(index)}
                 <lefine-box data-part="file-preview-wrapper">
                   <img
@@ -2885,6 +2892,18 @@ initialized = true;
     background: color-mix(in oklab, var(--kef-bg-card) 92%, white 8%);
     color: var(--lefine-text);
     flex: 0 0 auto;
+    cursor: pointer;
+    transition:
+      background-color 160ms ease,
+      transform 120ms ease;
+  }
+
+  button[data-part='tag-pill']:hover {
+    background: color-mix(in oklab, var(--kef-bg-card) 80%, var(--kef-color-primary) 20%);
+  }
+
+  button[data-part='tag-pill']:active {
+    transform: scale(0.97);
   }
 
   [data-part="tasks-list"] {
@@ -3947,11 +3966,11 @@ initialized = true;
     min-height: 2.35rem;
     padding: 0.5rem 0.95rem;
     border-radius: 999px;
-    border: 0;
-    background: color-mix(in oklab, var(--kef-bg-card) 90%, var(--kef-bg-soft) 10%);
+    border: var(--kef-border-width-soft) solid var(--kef-line);
+    background: color-mix(in oklab, var(--kef-bg-card) 68%, var(--kef-bg-soft) 32%);
     color: var(--lefine-text);
     font: inherit;
-    box-shadow: none;
+    box-shadow: 0 1px 2px color-mix(in oklab, var(--kef-primary) 14%, transparent);
   }
 
   button[data-part='composer-chip'] {
@@ -3959,6 +3978,35 @@ initialized = true;
     align-items: center;
     gap: 0.4rem;
     letter-spacing: -0.01em;
+    font-weight: 500;
+    cursor: pointer;
+    transition:
+      background-color 160ms ease,
+      border-color 160ms ease,
+      box-shadow 160ms ease,
+      color 160ms ease,
+      transform 120ms ease;
+  }
+
+  button[data-part='composer-chip']:hover {
+    background: color-mix(in oklab, var(--kef-bg-card) 66%, var(--kef-primary) 34%);
+    border-color: var(--kef-line-primary);
+    box-shadow: 0 2px 6px color-mix(in oklab, var(--kef-primary) 22%, transparent);
+    color: var(--kef-primary);
+  }
+
+  button[data-part='composer-chip']:focus-visible {
+    outline: 2px solid color-mix(in oklab, var(--kef-primary) 60%, transparent);
+    outline-offset: 2px;
+  }
+
+  button[data-part='composer-chip']:active {
+    transform: scale(0.97);
+  }
+
+  button[data-part='composer-chip'][data-part-tag='true']:hover {
+    border-color: var(--kef-line-primary);
+    color: var(--kef-primary);
   }
 
   kefine-execution-editor {
@@ -3990,6 +4038,18 @@ initialized = true;
     display: inline-flex;
     align-items: center;
     gap: 0.65rem;
+    cursor: pointer;
+    transition:
+      background-color 160ms ease,
+      transform 120ms ease;
+  }
+
+  button[data-part='file-pill']:hover {
+    background: color-mix(in oklab, var(--kef-bg-card) 80%, var(--kef-color-primary) 20%);
+  }
+
+  button[data-part='file-pill']:active {
+    transform: scale(0.97);
   }
 
   img[data-part='file-preview'] {
