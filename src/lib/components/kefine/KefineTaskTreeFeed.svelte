@@ -32,6 +32,7 @@
     labels,
     canSaveCloneLocally = false,
     canManageTask = false,
+    repositoriesEnabled = true,
     commentSubmittingStepId = null,
     solutions = [],
     onSubmitStepComment,
@@ -68,6 +69,7 @@
   };
     canSaveCloneLocally?: boolean;
     canManageTask?: boolean;
+    repositoriesEnabled?: boolean;
     commentSubmittingStepId?: string | null;
     onSubmitStepComment?: ((stepId: string, content: string) => Promise<void> | void) | null;
     onSaveDocument?: ((content: string) => Promise<void> | void) | null;
@@ -1003,12 +1005,17 @@
         <KefineTaskCloneMenu
           order={currentOrder}
           canSaveLocally={canSaveCloneLocally}
+          repositoriesEnabled={repositoriesEnabled}
           onExport={onExportClone}
           onSaveLocally={onSaveCloneLocally ?? undefined}
         />
       {/if}
       {#if currentOrder && onUpdateTaskSettings}
-        <KefineTaskSettingsMenu order={currentOrder} onApply={onUpdateTaskSettings} />
+        <KefineTaskSettingsMenu
+          order={currentOrder}
+          repositoriesEnabled={repositoriesEnabled}
+          onApply={onUpdateTaskSettings}
+        />
       {/if}
     </kefine-thread-head-actions>
   </kefine-thread-head>
