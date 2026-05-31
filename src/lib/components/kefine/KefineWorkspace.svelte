@@ -2779,6 +2779,16 @@
           addExecutionEstimateLabel={localeText.create.addExecutionEstimate}
           addTagLabel={localeText.create.richEditorAddTag}
           tagPlaceholderLabel={localeText.create.richEditorTagPlaceholder}
+          instantAnswersLabel={localeText.create.instantAnswersLabel}
+          instantAnswerGoHint={localeText.create.instantAnswerGoHint}
+          instantPinLabel={localeText.create.instantPinLabel}
+          instantUnpinLabel={localeText.create.instantUnpinLabel}
+          instantPinnedLabel={localeText.create.instantPinnedLabel}
+          instantMenuLabel={localeText.create.instantMenuLabel}
+          instantQrLabel={localeText.create.instantQrLabel}
+          instantAgentLabel={localeText.create.instantAgentLabel}
+          instantAddProjectLabel={localeText.create.instantAddProjectLabel}
+          instantQrDownloadLabel={localeText.create.instantQrDownloadLabel}
           removeTagLabel={localeText.create.richEditorRemoveTag}
           fileCountLabel={localeText.create.fileCount}
           composerHints={localeText.create.composerHints}

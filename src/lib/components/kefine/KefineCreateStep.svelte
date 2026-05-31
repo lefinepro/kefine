@@ -7,6 +7,13 @@
   import KefineMusicWidget from '$lib/components/kefine/KefineMusicWidget.svelte';
   import SolutionMetricsMini from '$lib/components/kefine/SolutionMetricsMini.svelte';
   import { detectProxyServerIntent } from '$lib/kefine/proxy-intent';
+  import {
+    findInstantAnswers,
+    faviconUrl,
+    type InstantAnswer,
+    type InstantAnswersData
+  } from '$lib/kefine/instant-answers';
+  import { createQrMatrix, qrMatrixToSvgPath } from '$lib/kefine/qr-code';
   import { detectMusicExtractIntent } from '$lib/kefine/music-intent';
   import { buildActorOrderPath } from '$lib/components/kefine/kefine-workspace-helpers';
   import { defaultMetrics } from '$lib/kefine/solutions-data';
@@ -72,6 +79,16 @@
     addExecutionEstimateLabel,
     addTagLabel = '+ tag',
     tagPlaceholderLabel = 'tag',
+    instantAnswersLabel = 'Quick answers',
+    instantAnswerGoHint = 'Go',
+    instantPinLabel = 'Pin to prompt',
+    instantUnpinLabel = 'Unpin',
+    instantPinnedLabel = 'Pinned to prompt',
+    instantMenuLabel = 'More actions',
+    instantQrLabel = 'Download QR code',
+    instantAgentLabel = 'View site with agent',
+    instantAddProjectLabel = 'Add to project',
+    instantQrDownloadLabel = 'Download',
     removeTagLabel = (tag: string) => `Remove ${tag} tag`,
     fileCountLabel,
     composerHints,
@@ -144,6 +161,16 @@
     addExecutionEstimateLabel: string;
     addTagLabel?: string;
     tagPlaceholderLabel?: string;
+    instantAnswersLabel?: string;
+    instantAnswerGoHint?: string;
+    instantPinLabel?: string;
+    instantUnpinLabel?: string;
+    instantPinnedLabel?: string;
+    instantMenuLabel?: string;
+    instantQrLabel?: string;
+    instantAgentLabel?: string;
+    instantAddProjectLabel?: string;
+    instantQrDownloadLabel?: string;
     removeTagLabel?: (tag: string) => string;
     fileCountLabel: (count: number) => string;
     composerHints: string;
@@ -171,6 +198,191 @@
   // request — no submit required (e.g. typing "Нужен прокси сервер").
   const proxyIntentActive = $derived(detectProxyServerIntent(draft.description));
 
+  // Instant answers: a frontend-only autocomplete of known websites loaded from
+  // /instant-answers.json. As the user types, matching sites are surfaced as
+  // direct links (e.g. "sound cloud" -> https://soundcloud.com/).
+  let instantSites = $state<InstantAnswer[]>([]);
+  let instantHighlight = $state(-1);
+  let instantDismissed = $state(false);
+  // URLs whose favicon failed to load — fall back to the emoji icon for those.
+  let failedFavicons = $state<Set<string>>(new Set());
+  // Which row's "⋯" actions menu is currently open (by site url), if any.
+  let instantMenuOpen = $state<string | null>(null);
+  // Site whose QR-code card is currently shown, if any.
+  let qrSite = $state<InstantAnswer | null>(null);
+
+  const PINNED_INSTANT_KEY = 'kefine-pinned-instant-answers';
+  // URLs the user pinned to the prompt; their favicons stay attached to the
+  // search box (the "connecting prompt") so they remain handy across searches.
+  let pinnedUrls = $state<string[]>([]);
+
+  onMount(() => {
+    if (!browser) return;
+    fetch('/instant-answers.json')
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data: InstantAnswersData | null) => {
+        if (data && Array.isArray(data.sites)) {
+          instantSites = data.sites;
+        }
+      })
+      .catch(() => {
+        // Autocomplete is a progressive enhancement; ignore load failures.
+      });
+
+    try {
+      const raw = localStorage.getItem(PINNED_INSTANT_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          pinnedUrls = parsed.filter((url): url is string => typeof url === 'string');
+        }
+      }
+    } catch {
+      // Pinning is a progressive enhancement; ignore storage failures.
+    }
+  });
+
+  const instantAnswers = $derived.by(() => {
+    if (instantDismissed) return [];
+    return findInstantAnswers(draft.description, instantSites);
+  });
+  const instantAnswersOpen = $derived(instantAnswers.length > 0);
+
+  // Sites the user pinned to the prompt, rendered as favicon chips attached to
+  // the search box so they stay connected to the prompt across searches.
+  const pinnedAnswers = $derived(
+    pinnedUrls
+      .map((url) => instantSites.find((site) => site.url === url))
+      .filter((site): site is InstantAnswer => Boolean(site))
+  );
+
+  function isPinned(url: string): boolean {
+    return pinnedUrls.includes(url);
+  }
+
+  function togglePin(url: string) {
+    const next = pinnedUrls.includes(url)
+      ? pinnedUrls.filter((entry) => entry !== url)
+      : [...pinnedUrls, url];
+    pinnedUrls = next;
+    if (browser) {
+      try {
+        localStorage.setItem(PINNED_INSTANT_KEY, JSON.stringify(next));
+      } catch {
+        // Ignore storage failures (private mode, quota, etc.).
+      }
+    }
+  }
+
+  function markFaviconFailed(url: string) {
+    if (failedFavicons.has(url)) return;
+    failedFavicons = new Set(failedFavicons).add(url);
+  }
+
+  function toggleInstantMenu(url: string) {
+    instantMenuOpen = instantMenuOpen === url ? null : url;
+  }
+
+  function openQrCard(site: InstantAnswer) {
+    qrSite = site;
+    instantMenuOpen = null;
+  }
+
+  function viewWithAgent(site: InstantAnswer) {
+    instantMenuOpen = null;
+    if (browser) {
+      window.open(site.url, '_blank', 'noopener,noreferrer');
+    }
+  }
+
+  function addToProject(site: InstantAnswer) {
+    instantMenuOpen = null;
+    const current = draft.description.trim();
+    const next = current ? `${current}\n${site.url}` : site.url;
+    onDescriptionChange?.(next);
+  }
+
+  // Render the QR code for the open card locally (no external request) using the
+  // dependency-free generator already shipped for the proxy widget.
+  const qrMatrix = $derived.by(() => {
+    if (!qrSite) return null;
+    try {
+      return createQrMatrix(qrSite.url, { errorCorrectionLevel: 'medium' });
+    } catch {
+      return null;
+    }
+  });
+  const qrPath = $derived(qrMatrix ? qrMatrixToSvgPath(qrMatrix) : '');
+  const qrViewBox = $derived(qrMatrix ? `-2 -2 ${qrMatrix.size + 4} ${qrMatrix.size + 4}` : '0 0 1 1');
+
+  function downloadQr() {
+    if (!browser || !qrSite || !qrMatrix) return;
+    const dimension = qrMatrix.size + 4;
+    const svg =
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-2 -2 ${dimension} ${dimension}" width="320" height="320">` +
+      `<rect x="-2" y="-2" width="${dimension}" height="${dimension}" fill="#ffffff"/>` +
+      `<path d="${qrPath}" fill="#000000"/></svg>`;
+    const blob = new Blob([svg], { type: 'image/svg+xml' });
+    const objectUrl = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = objectUrl;
+    anchor.download = `${qrSite.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')}-qr.svg`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(objectUrl);
+  }
+
+  $effect(() => {
+    // Reset the highlight whenever the visible suggestion set changes.
+    void draft.description;
+    instantHighlight = -1;
+  });
+
+  $effect(() => {
+    // Re-enable suggestions once the user starts typing again after dismissing.
+    if (draft.description.trim() === '') {
+      instantDismissed = false;
+    }
+  });
+
+  function openInstantAnswer(site: InstantAnswer) {
+    if (browser) {
+      window.open(site.url, '_blank', 'noopener,noreferrer');
+    }
+    instantDismissed = true;
+    instantHighlight = -1;
+    instantMenuOpen = null;
+  }
+
+  $effect(() => {
+    if (!browser || (!instantMenuOpen && !qrSite)) {
+      return;
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest('[data-part="instant-actions"], [data-part="qr-card"]')) {
+        return;
+      }
+      instantMenuOpen = null;
+      qrSite = null;
+    };
+
+    const handleKeydown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        instantMenuOpen = null;
+        qrSite = null;
+      }
+    };
+
+    globalThis.addEventListener('pointerdown', handlePointerDown);
+    globalThis.addEventListener('keydown', handleKeydown);
+    return () => {
+      globalThis.removeEventListener('pointerdown', handlePointerDown);
+      globalThis.removeEventListener('keydown', handleKeydown);
+    };
+  });
   // Show the music player widget as soon as the draft reads like an
   // "extract music/audio from video" request — no submit required
   // (e.g. typing "Извлечь музыку из видео").
@@ -840,6 +1052,35 @@ initialized = true;
   });
 
   function handleTaskInputKeydown(event: KeyboardEvent) {
+    // Instant-answers keyboard navigation takes priority while the dropdown is open.
+    if (instantAnswersOpen) {
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        instantHighlight = (instantHighlight + 1) % instantAnswers.length;
+        return;
+      }
+
+      if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        instantHighlight =
+          (instantHighlight - 1 + instantAnswers.length) % instantAnswers.length;
+        return;
+      }
+
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        instantDismissed = true;
+        instantHighlight = -1;
+        return;
+      }
+
+      if (event.key === 'Enter' && instantHighlight >= 0) {
+        event.preventDefault();
+        openInstantAnswer(instantAnswers[instantHighlight]);
+        return;
+      }
+    }
+
     if (event.key !== 'Enter') {
       return;
     }
@@ -1010,6 +1251,7 @@ initialized = true;
     queueMicrotask(() => {
       if (!currentTarget.contains(document.activeElement)) {
         inputMetaOpen = false;
+        instantHighlight = -1;
       }
     });
   }
@@ -1190,6 +1432,158 @@ initialized = true;
       </kefine-submit-popover>
     {/if}
   </fieldset>
+
+  {#if pinnedAnswers.length > 0}
+    <kefine-pinned-strip data-part="pinned-strip" aria-label={instantPinnedLabel}>
+      {#each pinnedAnswers as site (site.url)}
+        <kefine-pinned-chip data-part="pinned-chip">
+          <a
+            href={site.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            data-part="pinned-chip-link"
+            title={site.url}
+          >
+            <kefine-instant-icon data-part="pinned-icon" aria-hidden="true">
+              {#if faviconUrl(site.url) && !failedFavicons.has(site.url)}
+                <img
+                  data-part="instant-favicon"
+                  src={faviconUrl(site.url)}
+                  alt=""
+                  width="18"
+                  height="18"
+                  loading="lazy"
+                  onerror={() => markFaviconFailed(site.url)}
+                />
+              {:else}
+                <kefine-instant-emoji>{site.icon}</kefine-instant-emoji>
+              {/if}
+            </kefine-instant-icon>
+            <lefine-text data-part="pinned-name">{site.name}</lefine-text>
+          </a>
+          <button
+            type="button"
+            data-part="pinned-remove"
+            title={instantUnpinLabel}
+            aria-label={instantUnpinLabel}
+            onclick={() => togglePin(site.url)}
+          >
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
+        </kefine-pinned-chip>
+      {/each}
+    </kefine-pinned-strip>
+  {/if}
+
+  {#if instantAnswersOpen}
+    <kefine-instant-answers
+      data-part="instant-answers"
+      role="listbox"
+      aria-label={instantAnswersLabel}
+    >
+      {#each instantAnswers as site, index (site.url)}
+        <kefine-instant-row
+          data-part="instant-row"
+          data-highlighted={index === instantHighlight}
+        >
+          <a
+            href={site.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            data-part="instant-answer"
+            role="option"
+            aria-selected={index === instantHighlight}
+            onclick={() => openInstantAnswer(site)}
+            onpointerenter={() => { instantHighlight = index; }}
+          >
+            <kefine-instant-icon aria-hidden="true">
+              {#if faviconUrl(site.url) && !failedFavicons.has(site.url)}
+                <img
+                  data-part="instant-favicon"
+                  src={faviconUrl(site.url)}
+                  alt=""
+                  width="20"
+                  height="20"
+                  loading="lazy"
+                  onerror={() => markFaviconFailed(site.url)}
+                />
+              {:else}
+                <kefine-instant-emoji>{site.icon}</kefine-instant-emoji>
+              {/if}
+            </kefine-instant-icon>
+            <kefine-instant-text>
+              <lefine-text data-part="instant-name">{site.name}</lefine-text>
+              <lefine-text data-part="instant-url">{site.url}</lefine-text>
+            </kefine-instant-text>
+            <kefine-instant-go aria-hidden="true">{instantAnswerGoHint} ↗</kefine-instant-go>
+          </a>
+          <kefine-instant-actions data-part="instant-actions">
+            <button
+              type="button"
+              data-part="instant-action"
+              data-pinned={isPinned(site.url)}
+              aria-pressed={isPinned(site.url)}
+              title={isPinned(site.url) ? instantUnpinLabel : instantPinLabel}
+              aria-label={isPinned(site.url) ? instantUnpinLabel : instantPinLabel}
+              onclick={() => togglePin(site.url)}
+            >
+              <svg viewBox="0 0 24 24" width="16" height="16" fill={isPinned(site.url) ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M9 4h6l-1 6 3 3v2H7v-2l3-3-1-6z" />
+                <path d="M12 15v5" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              data-part="instant-action"
+              aria-haspopup="menu"
+              aria-expanded={instantMenuOpen === site.url}
+              title={instantMenuLabel}
+              aria-label={instantMenuLabel}
+              onclick={() => toggleInstantMenu(site.url)}
+            >
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
+                <circle cx="5" cy="12" r="1.8" />
+                <circle cx="12" cy="12" r="1.8" />
+                <circle cx="19" cy="12" r="1.8" />
+              </svg>
+            </button>
+            {#if instantMenuOpen === site.url}
+              <kefine-instant-menu data-part="instant-menu" role="menu" aria-label={instantMenuLabel}>
+                <button type="button" data-part="instant-menu-item" role="menuitem" onclick={() => openQrCard(site)}>
+                  {instantQrLabel}
+                </button>
+                <button type="button" data-part="instant-menu-item" role="menuitem" onclick={() => viewWithAgent(site)}>
+                  {instantAgentLabel}
+                </button>
+                <button type="button" data-part="instant-menu-item" role="menuitem" onclick={() => addToProject(site)}>
+                  {instantAddProjectLabel}
+                </button>
+              </kefine-instant-menu>
+            {/if}
+          </kefine-instant-actions>
+        </kefine-instant-row>
+      {/each}
+    </kefine-instant-answers>
+  {/if}
+
+  {#if qrSite}
+    <kefine-qr-card data-part="qr-card" role="dialog" aria-label={qrSite.name}>
+      <lefine-text data-part="qr-name">{qrSite.name}</lefine-text>
+      <kefine-qr-frame data-part="qr-image">
+        {#if qrMatrix}
+          <svg viewBox={qrViewBox} role="img" aria-label={qrSite.name} preserveAspectRatio="xMidYMid meet">
+            <path d={qrPath} fill="currentColor" shape-rendering="crispEdges"></path>
+          </svg>
+        {/if}
+      </kefine-qr-frame>
+      <lefine-text data-part="qr-url">{qrSite.url}</lefine-text>
+      <button type="button" data-part="qr-download" onclick={downloadQr}>
+        {instantQrDownloadLabel}
+      </button>
+    </kefine-qr-card>
+  {/if}
 
   {#if inputMetaOpen}
     <kefine-input-meta data-part="input-meta">
@@ -1525,6 +1919,9 @@ initialized = true;
   }
 
   [data-kefine-create] {
+    /* Shared leading inset of the search-input text; mirrored at each breakpoint
+       so the pinned chips and instant-answer rows stay on the same left rail. */
+    --kef-task-pad-inline: clamp(0.72rem, 2.5vw, 0.92rem);
     grid-template-rows: auto auto auto minmax(0, auto);
     align-content: start;
     gap: 0.62rem;
@@ -3260,7 +3657,7 @@ initialized = true;
     resize: none;
     overflow-x: auto;
     overflow-y: hidden;
-    padding-inline: clamp(0.72rem, 2.5vw, 0.92rem);
+    padding-inline: var(--kef-task-pad-inline);
     padding-top: max(0.48rem, calc((clamp(3.3rem, 7vw, 4rem) - 1.04em) / 2));
     padding-bottom: max(0.48rem, calc((clamp(3.3rem, 7vw, 4rem) - 1.04em) / 2));
     overflow-wrap: normal;
@@ -3292,7 +3689,7 @@ initialized = true;
     min-width: 0;
     max-width: 100%;
     min-height: clamp(3.3rem, 7vw, 4rem);
-    padding-inline: clamp(0.72rem, 2.5vw, 0.92rem);
+    padding-inline: var(--kef-task-pad-inline);
     padding-top: max(0.48rem, calc((clamp(3.3rem, 7vw, 4rem) - 1.04em) / 2));
     padding-bottom: max(0.48rem, calc((clamp(3.3rem, 7vw, 4rem) - 1.04em) / 2));
     color: color-mix(in oklab, var(--kef-on-primary) 78%, transparent);
@@ -3372,6 +3769,289 @@ initialized = true;
     border-radius: 0.4rem;
     background: color-mix(in oklab, var(--kef-bg-card) 86%, var(--kef-bg-soft) 14%);
     box-shadow: none;
+  }
+
+  kefine-pinned-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.45rem;
+    /* Align the chip icon with the search-input text (tracks the same inset). */
+    padding-left: calc(var(--kef-task-pad-inline) - 0.05rem);
+  }
+
+  kefine-pinned-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.15rem;
+    padding: 0.2rem 0.3rem 0.2rem 0.2rem;
+    border-radius: 999px;
+    border: 1px solid color-mix(in oklab, var(--kef-color-primary, #c89a5a) 45%, transparent);
+    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 10%, var(--kef-bg-card));
+  }
+
+  a[data-part='pinned-chip-link'] {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    padding: 0.05rem 0.15rem;
+    color: var(--lefine-text);
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  kefine-instant-icon[data-part='pinned-icon'] {
+    width: 1.4rem;
+    height: 1.4rem;
+    font-size: 0.95rem;
+  }
+
+  lefine-text[data-part='pinned-name'] {
+    font-size: 0.82rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 9rem;
+  }
+
+  button[data-part='pinned-remove'] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--lefine-text-soft);
+    cursor: pointer;
+    transition: background-color 0.12s ease, color 0.12s ease;
+  }
+
+  button[data-part='pinned-remove']:hover {
+    background: color-mix(in oklab, var(--lefine-text) 12%, transparent);
+    color: var(--lefine-text);
+  }
+
+  kefine-instant-answers {
+    display: grid;
+    gap: 0.2rem;
+    margin-top: 0.4rem;
+    padding: 0.35rem;
+    border-radius: 0.7rem;
+    border: 1px solid color-mix(in oklab, var(--kef-line-strong) 60%, transparent);
+    background: color-mix(in oklab, var(--kef-bg-card) 96%, white 4%);
+    box-shadow: 0 12px 24px color-mix(in oklab, var(--lefine-text) 14%, transparent);
+  }
+
+  kefine-instant-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    border-radius: 0.5rem;
+  }
+
+  kefine-instant-row[data-highlighted='true'] {
+    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 12%, var(--kef-bg-card));
+  }
+
+  a[data-part='instant-answer'] {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1;
+    min-width: 0;
+    /* Align the leading icon with the search-input text (tracks the same inset). */
+    padding: 0.55rem 0.7rem 0.55rem calc(var(--kef-task-pad-inline) - 0.05rem);
+    border-radius: 0.5rem;
+    color: var(--lefine-text);
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  kefine-instant-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.4rem;
+    height: 1.4rem;
+    flex-shrink: 0;
+    font-size: 0.95rem;
+    line-height: 1;
+    border-radius: 50%;
+    overflow: hidden;
+    background: color-mix(in oklab, var(--lefine-text) 8%, transparent);
+  }
+
+  img[data-part='instant-favicon'] {
+    width: 1.15rem;
+    height: 1.15rem;
+    object-fit: contain;
+    display: block;
+  }
+
+  kefine-instant-emoji {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+
+  kefine-instant-actions {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.1rem;
+    flex-shrink: 0;
+    padding-right: 0.4rem;
+  }
+
+  button[data-part='instant-action'] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.85rem;
+    height: 1.85rem;
+    padding: 0;
+    border: none;
+    border-radius: 0.45rem;
+    background: transparent;
+    color: var(--lefine-text-soft);
+    cursor: pointer;
+    transition: background-color 0.12s ease, color 0.12s ease;
+  }
+
+  button[data-part='instant-action']:hover {
+    background: color-mix(in oklab, var(--lefine-text) 10%, transparent);
+    color: var(--lefine-text);
+  }
+
+  button[data-part='instant-action'][data-pinned='true'] {
+    color: var(--kef-color-primary, #c89a5a);
+  }
+
+  kefine-instant-menu {
+    position: absolute;
+    top: calc(100% + 0.25rem);
+    right: 0;
+    z-index: 5;
+    display: grid;
+    gap: 0.1rem;
+    min-width: 13rem;
+    padding: 0.3rem;
+    border-radius: 0.55rem;
+    border: 1px solid color-mix(in oklab, var(--kef-line-strong) 60%, transparent);
+    background: var(--kef-bg-card);
+    box-shadow: 0 14px 30px color-mix(in oklab, var(--lefine-text) 22%, transparent);
+  }
+
+  button[data-part='instant-menu-item'] {
+    display: block;
+    width: 100%;
+    padding: 0.45rem 0.6rem;
+    border: none;
+    border-radius: 0.4rem;
+    background: transparent;
+    color: var(--lefine-text);
+    font-size: 0.86rem;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  button[data-part='instant-menu-item']:hover {
+    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 14%, var(--kef-bg-card));
+  }
+
+  kefine-qr-card {
+    display: grid;
+    justify-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    margin-left: auto;
+    width: max-content;
+    padding: 1rem 1.2rem;
+    border-radius: 0.7rem;
+    border: 1px solid color-mix(in oklab, var(--kef-line-strong) 60%, transparent);
+    background: var(--kef-bg-card);
+    box-shadow: 0 14px 30px color-mix(in oklab, var(--lefine-text) 18%, transparent);
+  }
+
+  lefine-text[data-part='qr-name'] {
+    font-weight: 600;
+  }
+
+  kefine-qr-frame[data-part='qr-image'] {
+    display: block;
+    width: 11rem;
+    height: 11rem;
+    border-radius: 0.4rem;
+    background: white;
+    padding: 0.5rem;
+    color: #111;
+  }
+
+  kefine-qr-frame[data-part='qr-image'] svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  lefine-text[data-part='qr-url'] {
+    color: var(--lefine-text-soft);
+    font-size: 0.8rem;
+    max-width: 14rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  button[data-part='qr-download'] {
+    padding: 0.4rem 0.9rem;
+    border: none;
+    border-radius: 0.45rem;
+    background: var(--kef-color-primary, #c89a5a);
+    color: var(--kef-bg-card, #1b1710);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  kefine-instant-text {
+    display: grid;
+    gap: 0.05rem;
+    min-width: 0;
+    flex: 1;
+  }
+
+  lefine-text[data-part='instant-name'] {
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  lefine-text[data-part='instant-url'] {
+    color: var(--lefine-text-soft);
+    font-size: 0.82rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  kefine-instant-go {
+    flex-shrink: 0;
+    color: var(--kef-color-primary, #c89a5a);
+    font-size: 0.82rem;
+    font-weight: 600;
+    opacity: 0;
+    transition: opacity 0.12s ease;
+  }
+
+  kefine-instant-row[data-highlighted='true'] kefine-instant-go,
+  kefine-instant-row:hover kefine-instant-go {
+    opacity: 1;
   }
 
   kefine-composer-strip {
@@ -3575,6 +4255,7 @@ initialized = true;
 
   @media (min-width: 960px) {
     [data-kefine-create] {
+      --kef-task-pad-inline: 1rem;
       width: min(64rem, calc(100vw - 8rem));
     }
 
@@ -3597,13 +4278,11 @@ initialized = true;
       height: 4.5rem;
       font-size: clamp(1.2rem, 1.6vw, 1.75rem);
       line-height: 1.02;
-      padding-inline: 1rem;
       padding-top: calc((4.5rem - 1.02em) / 2);
       padding-bottom: calc((4.5rem - 1.02em) / 2);
     }
 
     kefine-task-placeholder {
-      padding-inline: 1rem;
       padding-top: calc((4.5rem - 1.02em) / 2);
       padding-bottom: calc((4.5rem - 1.02em) / 2);
     }
@@ -3617,6 +4296,7 @@ initialized = true;
 
   @media (max-width: 760px) {
     [data-kefine-create] {
+      --kef-task-pad-inline: 0.78rem;
       width: min(100%, calc(100vw - 2rem));
     }
 
@@ -3649,11 +4329,6 @@ initialized = true;
     kefine-task-placeholder[data-size='compact'] {
       font-size: 0.68rem;
       line-height: 1.08;
-    }
-
-    textarea[data-part='task-input'],
-    kefine-task-placeholder {
-      padding-inline: 0.78rem;
     }
 
     kefine-submit-popover {
