@@ -9,9 +9,12 @@
   import { detectProxyServerIntent } from '$lib/kefine/proxy-intent';
   import {
     findInstantAnswers,
+    faviconUrl,
+    INSTANT_ANSWERS_LIMIT,
     type InstantAnswer,
     type InstantAnswersData
   } from '$lib/kefine/instant-answers';
+  import { createQrMatrix, qrMatrixToSvgPath } from '$lib/kefine/qr-code';
   import { detectMusicExtractIntent } from '$lib/kefine/music-intent';
   import { buildActorOrderPath } from '$lib/components/kefine/kefine-workspace-helpers';
   import { defaultMetrics } from '$lib/kefine/solutions-data';
@@ -79,6 +82,13 @@
     tagPlaceholderLabel = 'tag',
     instantAnswersLabel = 'Quick answers',
     instantAnswerGoHint = 'Go',
+    instantPinLabel = 'Pin for next search',
+    instantUnpinLabel = 'Unpin',
+    instantMenuLabel = 'More actions',
+    instantQrLabel = 'Download QR code',
+    instantAgentLabel = 'View site with agent',
+    instantAddProjectLabel = 'Add to project',
+    instantQrDownloadLabel = 'Download',
     removeTagLabel = (tag: string) => `Remove ${tag} tag`,
     fileCountLabel,
     composerHints,
@@ -153,6 +163,13 @@
     tagPlaceholderLabel?: string;
     instantAnswersLabel?: string;
     instantAnswerGoHint?: string;
+    instantPinLabel?: string;
+    instantUnpinLabel?: string;
+    instantMenuLabel?: string;
+    instantQrLabel?: string;
+    instantAgentLabel?: string;
+    instantAddProjectLabel?: string;
+    instantQrDownloadLabel?: string;
     removeTagLabel?: (tag: string) => string;
     fileCountLabel: (count: number) => string;
     composerHints: string;
@@ -186,6 +203,16 @@
   let instantSites = $state<InstantAnswer[]>([]);
   let instantHighlight = $state(-1);
   let instantDismissed = $state(false);
+  // URLs whose favicon failed to load — fall back to the emoji icon for those.
+  let failedFavicons = $state<Set<string>>(new Set());
+  // Which row's "⋯" actions menu is currently open (by site url), if any.
+  let instantMenuOpen = $state<string | null>(null);
+  // Site whose QR-code card is currently shown, if any.
+  let qrSite = $state<InstantAnswer | null>(null);
+
+  const PINNED_INSTANT_KEY = 'kefine-pinned-instant-answers';
+  // URLs the user pinned so they resurface on the next search.
+  let pinnedUrls = $state<string[]>([]);
 
   onMount(() => {
     if (!browser) return;
@@ -199,12 +226,115 @@
       .catch(() => {
         // Autocomplete is a progressive enhancement; ignore load failures.
       });
+
+    try {
+      const raw = localStorage.getItem(PINNED_INSTANT_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          pinnedUrls = parsed.filter((url): url is string => typeof url === 'string');
+        }
+      }
+    } catch {
+      // Pinning is a progressive enhancement; ignore storage failures.
+    }
   });
 
-  const instantAnswers = $derived(
-    instantDismissed ? [] : findInstantAnswers(draft.description, instantSites)
-  );
+  const instantAnswers = $derived.by(() => {
+    if (instantDismissed) return [];
+    const matched = findInstantAnswers(draft.description, instantSites);
+    // Surface pinned sites at the top of the next search, even when they don't
+    // match the current query — that's what the pin button is for.
+    if (!draft.description.trim() || pinnedUrls.length === 0) {
+      return matched;
+    }
+    const pinnedSites = pinnedUrls
+      .map((url) => instantSites.find((site) => site.url === url))
+      .filter((site): site is InstantAnswer => Boolean(site));
+    const seen = new Set(pinnedSites.map((site) => site.url));
+    return [...pinnedSites, ...matched.filter((site) => !seen.has(site.url))].slice(
+      0,
+      INSTANT_ANSWERS_LIMIT
+    );
+  });
   const instantAnswersOpen = $derived(instantAnswers.length > 0);
+
+  function isPinned(url: string): boolean {
+    return pinnedUrls.includes(url);
+  }
+
+  function togglePin(url: string) {
+    const next = pinnedUrls.includes(url)
+      ? pinnedUrls.filter((entry) => entry !== url)
+      : [...pinnedUrls, url];
+    pinnedUrls = next;
+    if (browser) {
+      try {
+        localStorage.setItem(PINNED_INSTANT_KEY, JSON.stringify(next));
+      } catch {
+        // Ignore storage failures (private mode, quota, etc.).
+      }
+    }
+  }
+
+  function markFaviconFailed(url: string) {
+    if (failedFavicons.has(url)) return;
+    failedFavicons = new Set(failedFavicons).add(url);
+  }
+
+  function toggleInstantMenu(url: string) {
+    instantMenuOpen = instantMenuOpen === url ? null : url;
+  }
+
+  function openQrCard(site: InstantAnswer) {
+    qrSite = site;
+    instantMenuOpen = null;
+  }
+
+  function viewWithAgent(site: InstantAnswer) {
+    instantMenuOpen = null;
+    if (browser) {
+      window.open(site.url, '_blank', 'noopener,noreferrer');
+    }
+  }
+
+  function addToProject(site: InstantAnswer) {
+    instantMenuOpen = null;
+    const current = draft.description.trim();
+    const next = current ? `${current}\n${site.url}` : site.url;
+    onDescriptionChange?.(next);
+  }
+
+  // Render the QR code for the open card locally (no external request) using the
+  // dependency-free generator already shipped for the proxy widget.
+  const qrMatrix = $derived.by(() => {
+    if (!qrSite) return null;
+    try {
+      return createQrMatrix(qrSite.url, { errorCorrectionLevel: 'medium' });
+    } catch {
+      return null;
+    }
+  });
+  const qrPath = $derived(qrMatrix ? qrMatrixToSvgPath(qrMatrix) : '');
+  const qrViewBox = $derived(qrMatrix ? `-2 -2 ${qrMatrix.size + 4} ${qrMatrix.size + 4}` : '0 0 1 1');
+
+  function downloadQr() {
+    if (!browser || !qrSite || !qrMatrix) return;
+    const dimension = qrMatrix.size + 4;
+    const svg =
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-2 -2 ${dimension} ${dimension}" width="320" height="320">` +
+      `<rect x="-2" y="-2" width="${dimension}" height="${dimension}" fill="#ffffff"/>` +
+      `<path d="${qrPath}" fill="#000000"/></svg>`;
+    const blob = new Blob([svg], { type: 'image/svg+xml' });
+    const objectUrl = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = objectUrl;
+    anchor.download = `${qrSite.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')}-qr.svg`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(objectUrl);
+  }
 
   $effect(() => {
     // Reset the highlight whenever the visible suggestion set changes.
@@ -225,7 +355,37 @@
     }
     instantDismissed = true;
     instantHighlight = -1;
+    instantMenuOpen = null;
   }
+
+  $effect(() => {
+    if (!browser || (!instantMenuOpen && !qrSite)) {
+      return;
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest('[data-part="instant-actions"], [data-part="qr-card"]')) {
+        return;
+      }
+      instantMenuOpen = null;
+      qrSite = null;
+    };
+
+    const handleKeydown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        instantMenuOpen = null;
+        qrSite = null;
+      }
+    };
+
+    globalThis.addEventListener('pointerdown', handlePointerDown);
+    globalThis.addEventListener('keydown', handleKeydown);
+    return () => {
+      globalThis.removeEventListener('pointerdown', handlePointerDown);
+      globalThis.removeEventListener('keydown', handleKeydown);
+    };
+  });
   // Show the music player widget as soon as the draft reads like an
   // "extract music/audio from video" request — no submit required
   // (e.g. typing "Извлечь музыку из видео").
@@ -1258,7 +1418,13 @@ initialized = true;
       onpointerleave={handleSubmitPressEnd}
       onpointercancel={handleSubmitPressEnd}
     >
-      <kefine-exec-arrow aria-hidden="true">➵</kefine-exec-arrow>
+      <kefine-exec-arrow aria-hidden="true">
+        <svg viewBox="0 0 28 20" width="28" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 10h19" />
+          <path d="M16 4l6 6-6 6" />
+          <path d="M9 6.5l3.4 3.5L9 13.5" />
+        </svg>
+      </kefine-exec-arrow>
     </button>
     {#if queuePopoverOpen}
       <kefine-submit-popover data-part="queue-popover" role="dialog" aria-label={backgroundExecuteAria}>
@@ -1276,26 +1442,105 @@ initialized = true;
       aria-label={instantAnswersLabel}
     >
       {#each instantAnswers as site, index (site.url)}
-        <a
-          href={site.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          data-part="instant-answer"
+        <kefine-instant-row
+          data-part="instant-row"
           data-highlighted={index === instantHighlight}
-          role="option"
-          aria-selected={index === instantHighlight}
-          onclick={() => openInstantAnswer(site)}
-          onpointerenter={() => { instantHighlight = index; }}
         >
-          <kefine-instant-icon aria-hidden="true">{site.icon}</kefine-instant-icon>
-          <kefine-instant-text>
-            <lefine-text data-part="instant-name">{site.name}</lefine-text>
-            <lefine-text data-part="instant-url">{site.url}</lefine-text>
-          </kefine-instant-text>
-          <kefine-instant-go aria-hidden="true">{instantAnswerGoHint} ↗</kefine-instant-go>
-        </a>
+          <a
+            href={site.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            data-part="instant-answer"
+            role="option"
+            aria-selected={index === instantHighlight}
+            onclick={() => openInstantAnswer(site)}
+            onpointerenter={() => { instantHighlight = index; }}
+          >
+            <kefine-instant-icon aria-hidden="true">
+              {#if faviconUrl(site.url) && !failedFavicons.has(site.url)}
+                <img
+                  data-part="instant-favicon"
+                  src={faviconUrl(site.url)}
+                  alt=""
+                  width="20"
+                  height="20"
+                  loading="lazy"
+                  onerror={() => markFaviconFailed(site.url)}
+                />
+              {:else}
+                <kefine-instant-emoji>{site.icon}</kefine-instant-emoji>
+              {/if}
+            </kefine-instant-icon>
+            <kefine-instant-text>
+              <lefine-text data-part="instant-name">{site.name}</lefine-text>
+              <lefine-text data-part="instant-url">{site.url}</lefine-text>
+            </kefine-instant-text>
+            <kefine-instant-go aria-hidden="true">{instantAnswerGoHint} ↗</kefine-instant-go>
+          </a>
+          <kefine-instant-actions data-part="instant-actions">
+            <button
+              type="button"
+              data-part="instant-action"
+              data-pinned={isPinned(site.url)}
+              aria-pressed={isPinned(site.url)}
+              title={isPinned(site.url) ? instantUnpinLabel : instantPinLabel}
+              aria-label={isPinned(site.url) ? instantUnpinLabel : instantPinLabel}
+              onclick={() => togglePin(site.url)}
+            >
+              <svg viewBox="0 0 24 24" width="16" height="16" fill={isPinned(site.url) ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M9 4h6l-1 6 3 3v2H7v-2l3-3-1-6z" />
+                <path d="M12 15v5" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              data-part="instant-action"
+              aria-haspopup="menu"
+              aria-expanded={instantMenuOpen === site.url}
+              title={instantMenuLabel}
+              aria-label={instantMenuLabel}
+              onclick={() => toggleInstantMenu(site.url)}
+            >
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
+                <circle cx="5" cy="12" r="1.8" />
+                <circle cx="12" cy="12" r="1.8" />
+                <circle cx="19" cy="12" r="1.8" />
+              </svg>
+            </button>
+            {#if instantMenuOpen === site.url}
+              <kefine-instant-menu data-part="instant-menu" role="menu" aria-label={instantMenuLabel}>
+                <button type="button" data-part="instant-menu-item" role="menuitem" onclick={() => openQrCard(site)}>
+                  {instantQrLabel}
+                </button>
+                <button type="button" data-part="instant-menu-item" role="menuitem" onclick={() => viewWithAgent(site)}>
+                  {instantAgentLabel}
+                </button>
+                <button type="button" data-part="instant-menu-item" role="menuitem" onclick={() => addToProject(site)}>
+                  {instantAddProjectLabel}
+                </button>
+              </kefine-instant-menu>
+            {/if}
+          </kefine-instant-actions>
+        </kefine-instant-row>
       {/each}
     </kefine-instant-answers>
+  {/if}
+
+  {#if qrSite}
+    <kefine-qr-card data-part="qr-card" role="dialog" aria-label={qrSite.name}>
+      <lefine-text data-part="qr-name">{qrSite.name}</lefine-text>
+      <kefine-qr-frame data-part="qr-image">
+        {#if qrMatrix}
+          <svg viewBox={qrViewBox} role="img" aria-label={qrSite.name} preserveAspectRatio="xMidYMid meet">
+            <path d={qrPath} fill="currentColor" shape-rendering="crispEdges"></path>
+          </svg>
+        {/if}
+      </kefine-qr-frame>
+      <lefine-text data-part="qr-url">{qrSite.url}</lefine-text>
+      <button type="button" data-part="qr-download" onclick={downloadQr}>
+        {instantQrDownloadLabel}
+      </button>
+    </kefine-qr-card>
   {/if}
 
   {#if inputMetaOpen}
@@ -3439,10 +3684,12 @@ initialized = true;
     justify-content: center;
     width: 100%;
     height: 100%;
-    font-size: clamp(2.35rem, 8vw, 3.6rem);
-    font-weight: 400;
-    line-height: 1;
-    text-align: center;
+  }
+
+  kefine-exec-arrow svg {
+    width: clamp(1.5rem, 4.4vw, 2.05rem);
+    height: auto;
+    display: block;
   }
 
   @keyframes kefine-solver-search-spin {
@@ -3480,20 +3727,29 @@ initialized = true;
     box-shadow: 0 12px 24px color-mix(in oklab, var(--lefine-text) 14%, transparent);
   }
 
+  kefine-instant-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    border-radius: 0.5rem;
+  }
+
+  kefine-instant-row[data-highlighted='true'] {
+    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 12%, var(--kef-bg-card));
+  }
+
   a[data-part='instant-answer'] {
     display: flex;
     align-items: center;
     gap: 0.7rem;
+    flex: 1;
+    min-width: 0;
     padding: 0.55rem 0.7rem;
     border-radius: 0.5rem;
     color: var(--lefine-text);
     text-decoration: none;
     cursor: pointer;
-  }
-
-  a[data-part='instant-answer'][data-highlighted='true'],
-  a[data-part='instant-answer']:hover {
-    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 12%, var(--kef-bg-card));
   }
 
   kefine-instant-icon {
@@ -3505,6 +3761,142 @@ initialized = true;
     flex-shrink: 0;
     font-size: 1.1rem;
     line-height: 1;
+    border-radius: 50%;
+    overflow: hidden;
+    background: color-mix(in oklab, var(--lefine-text) 8%, transparent);
+  }
+
+  img[data-part='instant-favicon'] {
+    width: 1.15rem;
+    height: 1.15rem;
+    object-fit: contain;
+    display: block;
+  }
+
+  kefine-instant-emoji {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+
+  kefine-instant-actions {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.1rem;
+    flex-shrink: 0;
+    padding-right: 0.4rem;
+  }
+
+  button[data-part='instant-action'] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.85rem;
+    height: 1.85rem;
+    padding: 0;
+    border: none;
+    border-radius: 0.45rem;
+    background: transparent;
+    color: var(--lefine-text-soft);
+    cursor: pointer;
+    transition: background-color 0.12s ease, color 0.12s ease;
+  }
+
+  button[data-part='instant-action']:hover {
+    background: color-mix(in oklab, var(--lefine-text) 10%, transparent);
+    color: var(--lefine-text);
+  }
+
+  button[data-part='instant-action'][data-pinned='true'] {
+    color: var(--kef-color-primary, #c89a5a);
+  }
+
+  kefine-instant-menu {
+    position: absolute;
+    top: calc(100% + 0.25rem);
+    right: 0;
+    z-index: 5;
+    display: grid;
+    gap: 0.1rem;
+    min-width: 13rem;
+    padding: 0.3rem;
+    border-radius: 0.55rem;
+    border: 1px solid color-mix(in oklab, var(--kef-line-strong) 60%, transparent);
+    background: var(--kef-bg-card);
+    box-shadow: 0 14px 30px color-mix(in oklab, var(--lefine-text) 22%, transparent);
+  }
+
+  button[data-part='instant-menu-item'] {
+    display: block;
+    width: 100%;
+    padding: 0.45rem 0.6rem;
+    border: none;
+    border-radius: 0.4rem;
+    background: transparent;
+    color: var(--lefine-text);
+    font-size: 0.86rem;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  button[data-part='instant-menu-item']:hover {
+    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 14%, var(--kef-bg-card));
+  }
+
+  kefine-qr-card {
+    display: grid;
+    justify-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    margin-left: auto;
+    width: max-content;
+    padding: 1rem 1.2rem;
+    border-radius: 0.7rem;
+    border: 1px solid color-mix(in oklab, var(--kef-line-strong) 60%, transparent);
+    background: var(--kef-bg-card);
+    box-shadow: 0 14px 30px color-mix(in oklab, var(--lefine-text) 18%, transparent);
+  }
+
+  lefine-text[data-part='qr-name'] {
+    font-weight: 600;
+  }
+
+  kefine-qr-frame[data-part='qr-image'] {
+    display: block;
+    width: 11rem;
+    height: 11rem;
+    border-radius: 0.4rem;
+    background: white;
+    padding: 0.5rem;
+    color: #111;
+  }
+
+  kefine-qr-frame[data-part='qr-image'] svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  lefine-text[data-part='qr-url'] {
+    color: var(--lefine-text-soft);
+    font-size: 0.8rem;
+    max-width: 14rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  button[data-part='qr-download'] {
+    padding: 0.4rem 0.9rem;
+    border: none;
+    border-radius: 0.45rem;
+    background: var(--kef-color-primary, #c89a5a);
+    color: var(--kef-bg-card, #1b1710);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
   }
 
   kefine-instant-text {
@@ -3536,8 +3928,8 @@ initialized = true;
     transition: opacity 0.12s ease;
   }
 
-  a[data-part='instant-answer'][data-highlighted='true'] kefine-instant-go,
-  a[data-part='instant-answer']:hover kefine-instant-go {
+  kefine-instant-row[data-highlighted='true'] kefine-instant-go,
+  kefine-instant-row:hover kefine-instant-go {
     opacity: 1;
   }
 

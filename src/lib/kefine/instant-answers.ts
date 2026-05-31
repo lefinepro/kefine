@@ -14,6 +14,20 @@ export interface InstantAnswersData {
 /** Default cap for the number of suggestions returned. */
 export const INSTANT_ANSWERS_LIMIT = 6;
 
+/**
+ * Build a favicon image URL for a site by asking the site (via Google's public
+ * favicon service) for its real icon. Returns `null` when the URL can't be
+ * parsed so callers can fall back to the emoji icon.
+ */
+export function faviconUrl(siteUrl: string, size = 64): string | null {
+  try {
+    const { hostname } = new URL(siteUrl);
+    return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(hostname)}&sz=${size}`;
+  } catch {
+    return null;
+  }
+}
+
 /** Lower-case and strip all whitespace so "git hub" matches "github". */
 function normalize(value: string): string {
   return value.toLowerCase().replace(/\s+/g, '');

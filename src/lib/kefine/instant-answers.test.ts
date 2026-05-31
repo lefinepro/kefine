@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, it, expect } from 'vitest';
 import {
   findInstantAnswers,
+  faviconUrl,
   type InstantAnswer,
   type InstantAnswersData
 } from './instant-answers';
@@ -69,5 +70,21 @@ describe('findInstantAnswers', () => {
   it('caps the number of results', () => {
     const results = findInstantAnswers('а', sites, 3);
     expect(results.length).toBeLessThanOrEqual(3);
+  });
+});
+
+describe('faviconUrl', () => {
+  it('builds a favicon request for the site hostname', () => {
+    const url = faviconUrl('https://soundcloud.com/');
+    expect(url).toContain('soundcloud.com');
+    expect(url).toContain('https://www.google.com/s2/favicons');
+  });
+
+  it('honours the requested size', () => {
+    expect(faviconUrl('https://github.com/', 128)).toContain('sz=128');
+  });
+
+  it('returns null for an unparseable url', () => {
+    expect(faviconUrl('not a url')).toBeNull();
   });
 });
