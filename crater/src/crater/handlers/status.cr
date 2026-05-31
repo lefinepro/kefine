@@ -116,8 +116,8 @@ module Crater
           JSON.parse(%({"format":"markdown","content":""}))
         end
         activities = OrderQueue.activities_for_order(record.id, config)
-        existing_repository = RepositoryStore.find_by_order(record.id, config)
-        vcs_enabled = record.vcs_enabled || !existing_repository.nil?
+        existing_repository = config.repositories_enabled ? RepositoryStore.find_by_order(record.id, config) : nil
+        vcs_enabled = config.repositories_enabled && (record.vcs_enabled || !existing_repository.nil?)
         repository = if vcs_enabled
                        begin
                          existing_repository || RepositoryStore.ensure_for_order(record, config)
@@ -184,13 +184,15 @@ module Crater
           return({error: "Order not found", orderId: order_id}.to_json)
         end
 
-        begin
-          repository = RepositoryStore.find_by_order(record.id, config) || RepositoryStore.ensure_for_order(record, config)
-          content = JSON.parse(record.document_json || %({"format":"markdown","content":""})).as_h?.try(&.["content"]?).try(&.as_s?) || ""
-          actor = record.actor_handle || record.owner_username || config.actor_username
-          RepositoryStore.commit_plan_document(repository, actor, content, config) unless content.empty?
-        rescue ex
-          Log.error(exception: ex) { "[status] failed to persist PLAN.org for orderId=#{record.id}" }
+        if config.repositories_enabled
+          begin
+            repository = RepositoryStore.find_by_order(record.id, config) || RepositoryStore.ensure_for_order(record, config)
+            content = JSON.parse(record.document_json || %({"format":"markdown","content":""})).as_h?.try(&.["content"]?).try(&.as_s?) || ""
+            actor = record.actor_handle || record.owner_username || config.actor_username
+            RepositoryStore.commit_plan_document(repository, actor, content, config) unless content.empty?
+          rescue ex
+            Log.error(exception: ex) { "[status] failed to persist PLAN.org for orderId=#{record.id}" }
+          end
         end
 
         render_status(env, record.id, config)
@@ -205,17 +207,24 @@ module Crater
           return({error: "Invalid request body", reason: ex.message}.to_json)
         end
 
-        vcs_enabled = payload.as_h?.try(&.["vcsEnabled"]?).try(&.as_bool?)
+        requested_vcs_enabled = payload.as_h?.try(&.["vcsEnabled"]?).try(&.as_bool?)
+        vcs_enabled = if config.repositories_enabled
+                        requested_vcs_enabled
+                      elsif requested_vcs_enabled.nil?
+                        nil
+                      else
+                        false
+                      end
         is_public_task = payload.as_h?.try(&.["isPublicTask"]?).try(&.as_bool?)
-        git_settings_payload = payload.as_h?.try(&.["gitSettings"]?)
+        git_settings_payload = config.repositories_enabled ? payload.as_h?.try(&.["gitSettings"]?) : nil
         record = OrderQueue.update_settings(order_id, vcs_enabled, is_public_task, config)
         if record.nil?
           env.response.status_code = 404
           return({error: "Order not found", orderId: order_id}.to_json)
         end
 
-        repository = RepositoryStore.find_by_order(record.id, config)
-        if record.vcs_enabled
+        repository = config.repositories_enabled ? RepositoryStore.find_by_order(record.id, config) : nil
+        if config.repositories_enabled && record.vcs_enabled
           begin
             repository = RepositoryStore.ensure_for_order(record, config)
           rescue ex

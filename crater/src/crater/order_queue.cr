@@ -574,7 +574,7 @@ module Crater
       if !record.is_public_task && existing.is_public_task
         record.is_public_task = true
       end
-      if !record.vcs_enabled && existing.vcs_enabled
+      if config.repositories_enabled && !record.vcs_enabled && existing.vcs_enabled
         record.vcs_enabled = true
       end
       if record.labels.empty? && !existing.labels.empty?
@@ -701,7 +701,7 @@ module Crater
       is_vpn_order = vpn_service_payload?(title, description, ui_scenario, labels)
       labels = ensure_vpn_label(labels) if is_vpn_order
       is_public_task = to_bool(payload["isPublicTask"]?) || to_bool(source["isPublicTask"]?) || false
-      vcs_enabled = to_bool(payload["vcsEnabled"]?) || to_bool(source["vcsEnabled"]?) || false
+      vcs_enabled = config.repositories_enabled && (to_bool(payload["vcsEnabled"]?) || to_bool(source["vcsEnabled"]?) || false)
 
       explicit_solver_name = to_string(payload["solverName"]?) || to_string(source["solverName"]?) || to_string(payload["solver"]?) || to_string(source["solver"]?)
       explicit_solver_handle = to_string(payload["solverHandle"]?) || to_string(source["solverHandle"]?) || to_string(payload["performerHandle"]?) || to_string(source["performerHandle"]?)
@@ -788,6 +788,7 @@ module Crater
       attachments = combined_attachments(order, status, config)
       system_instruction = exchange_system_instruction(order)
       routed_comments = routed_comment_payloads(order)
+      vcs_enabled = config.repositories_enabled && order.vcs_enabled
       ticket_payload = {
         "@context" => [ActivityPub::CONTEXT, ForgeFed::CONTEXT],
         "id" => "#{object_id}/ticket",
@@ -814,7 +815,7 @@ module Crater
         "actorHandle" => order.actor_handle,
         "actorDid" => actor_did,
         "isPublicTask" => order.is_public_task,
-        "vcsEnabled" => order.vcs_enabled,
+        "vcsEnabled" => vcs_enabled,
         "document" => JSON.parse(order.document_json || build_default_document_json(order.title, order.description)),
         "attachment" => attachments
       }
@@ -854,7 +855,7 @@ module Crater
         "actorHandle" => order.actor_handle,
         "actorDid" => actor_did,
         "isPublicTask" => order.is_public_task,
-        "vcsEnabled" => order.vcs_enabled,
+        "vcsEnabled" => vcs_enabled,
         "document" => JSON.parse(order.document_json || build_default_document_json(order.title, order.description)),
         "attachment" => attachments
       }

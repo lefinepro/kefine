@@ -72,10 +72,14 @@ module Crater
     Handlers::EmailCodeAuth.register(config)
 
     # ForgeFed project endpoints
-    Handlers::Projects.register(config)
-    Handlers::GitHttp.register(config)
-    Handlers::ForgeFedResources.register(config)
-    Handlers::SshKeys.register(config)
+    if config.repositories_enabled
+      Handlers::Projects.register(config)
+      Handlers::GitHttp.register(config)
+      Handlers::ForgeFedResources.register(config)
+      Handlers::SshKeys.register(config)
+    else
+      puts "[crater] repositories feature disabled"
+    end
 
     get "/health" do |env|
       env.response.content_type = "application/json"
@@ -93,10 +97,18 @@ config = Crater::Utils::Config.load
 
 case ARGV.first?
 when "authorized-keys"
-  Crater::SshKeyStore.print_authorized_keys(STDOUT, config)
+  Crater::SshKeyStore.print_authorized_keys(STDOUT, config) if config.repositories_enabled
 when "ssh-shell"
+  unless config.repositories_enabled
+    STDERR.puts "Repositories feature is disabled."
+    exit(1)
+  end
   Crater::SshGitShell.run(config, ARGV[1..])
 when "git-receive-hook"
+  unless config.repositories_enabled
+    STDERR.puts "Repositories feature is disabled."
+    exit(1)
+  end
   Crater::GitReceiveHook.run(config, ARGV[1..])
 else
   Crater.run

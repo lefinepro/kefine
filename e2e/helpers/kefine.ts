@@ -116,6 +116,10 @@ export async function mockOrderApi(page: Page) {
   const orders = new Map<string, MockOrder>();
   let createDelayMs = 0;
 
+  await page.route('**/api/health', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' });
+  });
+
   await page.route('**/create', async (route) => {
     createCounter += 1;
     const postData = route.request().postDataJSON() as { title?: string; name?: string };
@@ -200,7 +204,7 @@ export async function mockOrderApi(page: Page) {
     });
   }
 
-  await page.route('**/order/**', handleOrderLookup);
+  await page.route('**/api/order/**', handleOrderLookup);
   await page.route('**/status/**', handleOrderLookup);
 
   return {
@@ -265,6 +269,28 @@ export async function submitTask(page: Page) {
 export async function createTask(page: Page, title: string) {
   await page.getByTestId('kefine-task-input').fill(title);
   await submitTask(page);
+  const routeId = await page.waitForFunction<string | null, string>((taskTitle) => {
+    const raw = window.localStorage.getItem('kefine-created-orders-v1');
+    if (!raw) {
+      return null;
+    }
+
+    try {
+      const orders = JSON.parse(raw) as Array<{ id?: string; shareId?: string; title?: string }>;
+      const order = orders.find((item) => {
+        const id = item.id ?? '';
+        return item.title === taskTitle && id && !id.startsWith('temp-') && !id.startsWith('local-');
+      });
+      return order ? (order.shareId || order.id) : null;
+    } catch {
+      return null;
+    }
+  }, title);
+  const routeValue = await routeId.jsonValue();
+  if (!routeValue) {
+    throw new Error(`Created task "${title}" was not written to local storage.`);
+  }
+  await page.goto(`/order/${encodeURIComponent(routeValue)}`);
 }
 
 export async function mockPrivateKeyAuth(page: Page) {

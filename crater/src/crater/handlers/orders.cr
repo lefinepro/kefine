@@ -69,7 +69,8 @@ module Crater
           "solver=#{record.solver_name || record.solver} actorHandle=#{record.actor_handle || "-"}"
         end
 
-        repository = if record.vcs_enabled
+        vcs_enabled = config.repositories_enabled && record.vcs_enabled
+        repository = if vcs_enabled
                        begin
                          RepositoryStore.ensure_for_order(record, config)
                        rescue ex
@@ -92,7 +93,7 @@ module Crater
           ownerDisplayName: record.owner_display_name,
           actorHandle: record.actor_handle,
           actorDid: record.actor_did,
-          vcsEnabled: record.vcs_enabled,
+          vcsEnabled: vcs_enabled,
           uiScenario: record.ui_scenario,
           projectId: repository.try(&.project_id),
           repository: repository ? RepositoryStore.to_json_payload(repository) : nil

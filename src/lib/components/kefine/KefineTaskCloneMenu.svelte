@@ -14,11 +14,13 @@
   let {
     order,
     canSaveLocally = false,
+    repositoriesEnabled = true,
     onExport,
     onSaveLocally
   }: {
     order: OrderView | null;
     canSaveLocally?: boolean;
+    repositoriesEnabled?: boolean;
     onExport: (format: TaskCloneFormat) => void;
     onSaveLocally?: (runLocally: boolean) => void;
   } = $props();
@@ -31,10 +33,10 @@
   const localeText = $derived($kefineLocaleText);
   const labels = $derived(localeText.solversView);
 
-  const repository = $derived(order ? getTaskRepository(order) : null);
-  const repositoryCloneTarget = $derived(order ? getTaskRepositoryCloneTarget(order) : null);
-  const repositoryLinkTarget = $derived(order ? getTaskRepositoryLinkTarget(order) : null);
-  const repositoryArchiveTargets = $derived(order ? getTaskRepositoryArchiveTargets(order) : null);
+  const repository = $derived(repositoriesEnabled && order ? getTaskRepository(order) : null);
+  const repositoryCloneTarget = $derived(repositoriesEnabled && order ? getTaskRepositoryCloneTarget(order) : null);
+  const repositoryLinkTarget = $derived(repositoriesEnabled && order ? getTaskRepositoryLinkTarget(order) : null);
+  const repositoryArchiveTargets = $derived(repositoriesEnabled && order ? getTaskRepositoryArchiveTargets(order) : null);
   const repositoryArchiveActions = $derived.by(() =>
     repositoryArchiveTargets
       ? [
