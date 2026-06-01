@@ -1,5 +1,6 @@
 require "kemal"
 require "json"
+require "../aptok"
 require "../utils/config"
 
 module Lepos
@@ -16,17 +17,7 @@ module Lepos
 
           env.response.content_type = "application/jrd+json"
 
-          {
-            subject: resource,
-            aliases: [config.actor_id, "#{config.crater_url}/actor/#{config.actor_username}"],
-            links:   [
-              {
-                rel:  "self",
-                type: "application/activity+json",
-                href: config.actor_id,
-              },
-            ],
-          }.to_json
+          AptokPayload.webfinger_jrd(resource, config).to_json
         end
       end
     end
