@@ -3,7 +3,7 @@ require "json"
 require "../ssh_key_store"
 require "../utils/config"
 
-module Crater
+module Lepos
   module Handlers
     module SshKeys
       def self.register(config : Utils::Config)

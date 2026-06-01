@@ -32,7 +32,6 @@ module Lepos
       getter maddy_smtp_password : String?
       getter maddy_from_email : String?
       getter maddy_from_name : String?
-      getter repositories_enabled : Bool
 
       def initialize(
         @port : Int32,
@@ -62,14 +61,12 @@ module Lepos
         @maddy_smtp_username : String?,
         @maddy_smtp_password : String?,
         @maddy_from_email : String?,
-        @maddy_from_name : String?,
-        @repositories_enabled : Bool
+        @maddy_from_name : String?
       )
       end
 
       def self.load : Config
         raw = load_json_config
-        features = raw["features"]?.try(&.as_h) || Hash(String, JSON::Any).new
         backend = raw["backend"]?.try(&.as_h) || Hash(String, JSON::Any).new
         origins = raw["origins"]?.try(&.as_h) || Hash(String, JSON::Any).new
         payment = raw["payment"]?.try(&.as_h) || Hash(String, JSON::Any).new
@@ -115,8 +112,7 @@ module Lepos
           maddy_smtp_username: read_env_or_optional_string("MADDY_SMTP_USERNAME", email_auth, "smtpUsername"),
           maddy_smtp_password: read_env_or_optional_string("MADDY_SMTP_PASSWORD", email_auth, "smtpPassword"),
           maddy_from_email: read_env_or_optional_string("MADDY_FROM_EMAIL", email_auth, "fromEmail"),
-          maddy_from_name: read_env_or_optional_string("MADDY_FROM_NAME", email_auth, "fromName"),
-          repositories_enabled: read_env_or_bool("KEFINE_FEATURE_REPOSITORIES", features, "repositories", true)
+          maddy_from_name: read_env_or_optional_string("MADDY_FROM_NAME", email_auth, "fromName")
         )
       end
 
@@ -172,33 +168,6 @@ module Lepos
         source[key]?.try(&.raw).try { |value| value.is_a?(Int64) ? value : value.is_a?(Int32) ? value.to_i64 : nil } || fallback
       end
 
-      private def self.read_env_or_bool(env_key : String, source : Hash(String, JSON::Any), key : String, fallback : Bool) : Bool
-        value = ENV[env_key]?.try(&.strip)
-        return parse_bool(value.not_nil!, fallback) unless value.nil? || value.empty?
-
-        raw = source[key]?.try(&.raw)
-        parse_bool(raw, fallback)
-      end
-
-      private def self.parse_bool(value, fallback : Bool) : Bool
-        case value
-        when Bool
-          value
-        when Int64
-          value != 0
-        when Float64
-          value != 0.0
-        when String
-          normalized = value.strip.downcase
-          return fallback if normalized.empty?
-          return true if {"true", "1", "yes", "on", "enabled"}.includes?(normalized)
-          return false if {"false", "0", "no", "off", "disabled"}.includes?(normalized)
-          fallback
-        else
-          fallback
-        end
-      end
-
       private def self.load_json_config : Hash(String, JSON::Any)
         config_path = find_config_path
         return Hash(String, JSON::Any).new unless config_path
@@ -251,15 +220,6 @@ module Lepos
 
       def resolved_actor_private_key_pem : String
         actor_private_key
-      end
-
-      def feature_enabled?(feature : String) : Bool
-        case feature
-        when "repositories"
-          repositories_enabled
-        else
-          true
-        end
       end
     end
   end

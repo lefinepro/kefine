@@ -5,7 +5,7 @@ require "../order_queue"
 require "../repository_store"
 require "../utils/config"
 
-module Crater
+module Lepos
   module Handlers
     module Status
       def self.register(config : Utils::Config = Utils::Config.load)
@@ -116,8 +116,8 @@ module Crater
           JSON.parse(%({"format":"markdown","content":""}))
         end
         activities = OrderQueue.activities_for_order(record.id, config)
-        existing_repository = config.repositories_enabled ? RepositoryStore.find_by_order(record.id, config) : nil
-        vcs_enabled = config.repositories_enabled && (record.vcs_enabled || !existing_repository.nil?)
+        existing_repository = RepositoryStore.find_by_order(record.id, config)
+        vcs_enabled = record.vcs_enabled || !existing_repository.nil?
         repository = if vcs_enabled
                        begin
                          existing_repository || RepositoryStore.ensure_for_order(record, config)
@@ -132,39 +132,39 @@ module Crater
         end
 
         {
-          orderId: record.id,
-          status: record.status,
-          solver: record.solver,
-          solverName: record.solver_name,
-          solverHandle: record.solver_handle,
-          solverProfileUrl: record.solver_profile_url,
-          title: record.title,
-          description: record.description || "",
-          estimatedCost: record.estimated_cost,
-          currency: record.currency,
-          executionEstimate: record.execution_estimate,
-          uiScenario: record.ui_scenario,
-          labels: record.labels,
-          templateId: record.template_id,
-          templateSlug: record.template_slug,
-          templateAuthorProfileId: record.template_author_profile_id,
-          templateAuthorUsername: record.template_author_username,
+          orderId:                   record.id,
+          status:                    record.status,
+          solver:                    record.solver,
+          solverName:                record.solver_name,
+          solverHandle:              record.solver_handle,
+          solverProfileUrl:          record.solver_profile_url,
+          title:                     record.title,
+          description:               record.description || "",
+          estimatedCost:             record.estimated_cost,
+          currency:                  record.currency,
+          executionEstimate:         record.execution_estimate,
+          uiScenario:                record.ui_scenario,
+          labels:                    record.labels,
+          templateId:                record.template_id,
+          templateSlug:              record.template_slug,
+          templateAuthorProfileId:   record.template_author_profile_id,
+          templateAuthorUsername:    record.template_author_username,
           templateAuthorDisplayName: record.template_author_display_name,
-          templatePricingMode: record.template_pricing_mode,
-          templatePricingValue: record.template_pricing_value,
-          ownerProfileId: record.owner_profile_id,
-          ownerUsername: record.owner_username,
-          ownerDisplayName: record.owner_display_name,
-          actorHandle: record.actor_handle,
-          actorDid: record.actor_did,
-          isPublicTask: record.is_public_task,
-          vcsEnabled: vcs_enabled,
-          document: document,
-          activities: activities,
-          projectId: repository.try(&.project_id),
-          repository: repository ? RepositoryStore.to_json_payload(repository) : nil,
-          createdAt: record.created_at,
-          updatedAt: record.updated_at
+          templatePricingMode:       record.template_pricing_mode,
+          templatePricingValue:      record.template_pricing_value,
+          ownerProfileId:            record.owner_profile_id,
+          ownerUsername:             record.owner_username,
+          ownerDisplayName:          record.owner_display_name,
+          actorHandle:               record.actor_handle,
+          actorDid:                  record.actor_did,
+          isPublicTask:              record.is_public_task,
+          vcsEnabled:                vcs_enabled,
+          document:                  document,
+          activities:                activities,
+          projectId:                 repository.try(&.project_id),
+          repository:                repository ? RepositoryStore.to_json_payload(repository) : nil,
+          createdAt:                 record.created_at,
+          updatedAt:                 record.updated_at,
         }.to_json
       end
 
@@ -184,15 +184,13 @@ module Crater
           return({error: "Order not found", orderId: order_id}.to_json)
         end
 
-        if config.repositories_enabled
-          begin
-            repository = RepositoryStore.find_by_order(record.id, config) || RepositoryStore.ensure_for_order(record, config)
-            content = JSON.parse(record.document_json || %({"format":"markdown","content":""})).as_h?.try(&.["content"]?).try(&.as_s?) || ""
-            actor = record.actor_handle || record.owner_username || config.actor_username
-            RepositoryStore.commit_plan_document(repository, actor, content, config) unless content.empty?
-          rescue ex
-            Log.error(exception: ex) { "[status] failed to persist PLAN.org for orderId=#{record.id}" }
-          end
+        begin
+          repository = RepositoryStore.find_by_order(record.id, config) || RepositoryStore.ensure_for_order(record, config)
+          content = JSON.parse(record.document_json || %({"format":"markdown","content":""})).as_h?.try(&.["content"]?).try(&.as_s?) || ""
+          actor = record.actor_handle || record.owner_username || config.actor_username
+          RepositoryStore.commit_plan_document(repository, actor, content, config) unless content.empty?
+        rescue ex
+          Log.error(exception: ex) { "[status] failed to persist PLAN.org for orderId=#{record.id}" }
         end
 
         render_status(env, record.id, config)
@@ -207,24 +205,17 @@ module Crater
           return({error: "Invalid request body", reason: ex.message}.to_json)
         end
 
-        requested_vcs_enabled = payload.as_h?.try(&.["vcsEnabled"]?).try(&.as_bool?)
-        vcs_enabled = if config.repositories_enabled
-                        requested_vcs_enabled
-                      elsif requested_vcs_enabled.nil?
-                        nil
-                      else
-                        false
-                      end
+        vcs_enabled = payload.as_h?.try(&.["vcsEnabled"]?).try(&.as_bool?)
         is_public_task = payload.as_h?.try(&.["isPublicTask"]?).try(&.as_bool?)
-        git_settings_payload = config.repositories_enabled ? payload.as_h?.try(&.["gitSettings"]?) : nil
+        git_settings_payload = payload.as_h?.try(&.["gitSettings"]?)
         record = OrderQueue.update_settings(order_id, vcs_enabled, is_public_task, config)
         if record.nil?
           env.response.status_code = 404
           return({error: "Order not found", orderId: order_id}.to_json)
         end
 
-        repository = config.repositories_enabled ? RepositoryStore.find_by_order(record.id, config) : nil
-        if config.repositories_enabled && record.vcs_enabled
+        repository = RepositoryStore.find_by_order(record.id, config)
+        if record.vcs_enabled
           begin
             repository = RepositoryStore.ensure_for_order(record, config)
           rescue ex
