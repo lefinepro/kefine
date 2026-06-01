@@ -27,7 +27,11 @@
   );
 
   const taskTitle = $derived(data.taskText || 'Solvers');
-  const repoName = $derived(data.orderId ? `kefine/${data.orderId}` : 'kefine/solvers');
+  const repoName = $derived(
+    data.taskText.toLowerCase().includes('rust')
+      ? '@example/rust-hello/release'
+      : '@example/proxy-on-go/release'
+  );
 
   function handleViewSolution(solutionId: string) {
     void goto(`/order/${encodeURIComponent(data.orderId)}/solver/${solutionId}`);
@@ -44,6 +48,7 @@
 
 <KefineSolversView
   {solutions}
+  repoLabel={repoName}
   taskTitle={taskTitle}
   onViewSolution={handleViewSolution}
   onApplySolution={handleApplySolution}
