@@ -8,6 +8,8 @@
     pending?: boolean;
   };
 
+  const labels = $derived($kefineLocaleText.solutionTask);
+
   let {
     title,
     description,
@@ -22,8 +24,6 @@
     onSubmitCorrection: (text: string) => void;
   } = $props();
 
-  const localeText = $derived($kefineLocaleText);
-  const labels = $derived(localeText.solutionView);
   let draftCorrection = $state('');
 
   function handleSubmit(event: Event) {

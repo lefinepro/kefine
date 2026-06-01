@@ -2,7 +2,7 @@
   import Icon from '@iconify/svelte';
   import type { OrderView } from '$lib/components/kefine/kefine-workflow';
   import type { Profile } from '$lib/types/user';
-  import { kefineLocaleText } from '$lib/constants/kefine-locale';
+  import { localizeKefineOrderStatus } from '$lib/components/kefine/kefine-order-formatters';
 
   let {
     open,
@@ -22,10 +22,12 @@
     openWorkspaceLabel,
     signOutLabel,
     openTaskLabel,
+    statusLabels,
     showPrivateKey,
     isAuthenticated,
     profile,
     recentTasks,
+    closeLabel,
     onClose,
     onBrowserWallet,
     onWalletConnect,
@@ -34,8 +36,6 @@
     onGithub,
     onPasskey,
     onPrivateKey,
-    onEmailCode,
-    emailTitle,
     onOpenProfile,
     onOpenTask,
     onSignOut
@@ -50,7 +50,6 @@
     githubTitle: string;
     passkeyTitle: string;
     privateKeyTitle: string;
-    emailTitle: string;
     connectedTitle: string;
     connectedDescription: string;
     latestTasksTitle: string;
@@ -58,10 +57,12 @@
     openWorkspaceLabel: string;
     signOutLabel: string;
     openTaskLabel: string;
+    statusLabels: Partial<Record<string, string>>;
     showPrivateKey: boolean;
     isAuthenticated: boolean;
     profile: Profile | null;
     recentTasks: OrderView[];
+    closeLabel: string;
     onClose: () => void;
     onBrowserWallet: () => void;
     onWalletConnect: () => void;
@@ -70,16 +71,10 @@
     onGithub: () => void;
     onPasskey: () => void;
     onPrivateKey: () => void;
-    onEmailCode: () => void;
     onOpenProfile: () => void;
     onOpenTask: (orderId: string) => void;
     onSignOut: () => void;
   } = $props();
-
-  const localeText = $derived($kefineLocaleText);
-  const providerDetails = $derived(localeText.auth.providerDetails);
-
-  let drawerEl: HTMLElement | undefined = $state();
 
   const profileHandle = $derived.by(() => {
     const handle = profile?.primaryHandle?.trim();
@@ -98,243 +93,184 @@
   function walletAliasFallback() {
     const address = profile?.walletAddress?.trim();
     if (!address) {
-      return localeText.profile.title;
+      return 'Workspace';
     }
 
     return address.length > 14 ? `${address.slice(0, 6)}...${address.slice(-4)}` : address;
   }
 
-  function truncate(text: string | null | undefined, maxLength = 25): string {
-    if (!text) return '';
-    const clean = text.trim();
-    if (clean.length <= maxLength) return clean;
-    return clean.slice(0, maxLength) + '...';
-  }
-
-  function handleWindowClick(e: MouseEvent) {
-    if (!open || !drawerEl) return;
-    if (e.target instanceof Node && !drawerEl.contains(e.target)) {
-      onClose();
-    }
-  }
-
-  $effect(() => {
-    if (open) {
-      window.addEventListener('click', handleWindowClick, true);
-      return () => window.removeEventListener('click', handleWindowClick, true);
-    }
-  });
-
 </script>
 
 <kefine-account-drawer
-  bind:this={drawerEl}
   data-open={open}
   data-authenticated={isAuthenticated}
   data-state={open ? 'open' : 'closed'}
   aria-hidden={!open}
-  onclick={(e: MouseEvent) => { if (e.target === e.currentTarget) onClose(); }}
 >
-  {#if !isAuthenticated}
-    <kefine-account-auth-grid>
-      <button
-        type="button"
-        class="kefine-account-auth-card"
-        data-kind="browser-wallet"
-        data-testid="kefine-browser-wallet-auth-tile"
-        onclick={onBrowserWallet}
-      >
-        <kefine-account-auth-card-icon class="kefine-account-auth-card__icon">
-          <Icon icon="mdi:wallet-outline" width="20" height="20" aria-hidden="true" />
-        </kefine-account-auth-card-icon>
-        <strong>{browserWalletTitle}</strong>
-        <small>{providerDetails.browserWallet}</small>
-      </button>
+  {#if open}
+    <button type="button" data-variant="close" aria-label={closeLabel} onclick={onClose}>
+      ✕
+    </button>
 
-      <button
-        type="button"
-        class="kefine-account-auth-card"
-        data-kind="walletconnect"
-        data-testid="kefine-walletconnect-auth-tile"
-        onclick={onWalletConnect}
-      >
-        <kefine-account-auth-card-icon class="kefine-account-auth-card__icon">
-          <Icon icon="simple-icons:walletconnect" width="20" height="20" aria-hidden="true" />
-        </kefine-account-auth-card-icon>
-        <strong>{walletConnectTitle}</strong>
-         <small>{providerDetails.walletConnect}</small>
-       </button>
-
-       <button
-         type="button"
-         class="kefine-account-auth-card"
-         data-kind="email"
-         data-testid="kefine-email-auth-tile"
-         onclick={onEmailCode}
-       >
-         <kefine-account-auth-card-icon class="kefine-account-auth-card__icon">
-           <Icon icon="mdi:email" width="20" height="20" aria-hidden="true" />
-         </kefine-account-auth-card-icon>
-         <strong>{emailTitle}</strong>
-         <small>{providerDetails.emailCode}</small>
-       </button>
-
-       {#if false}
-      <button
-        type="button"
-        class="kefine-account-auth-card"
-        data-kind="tonconnect"
-        data-testid="kefine-tonconnect-auth-tile"
-        onclick={onTonConnect}
-      >
-        <kefine-account-auth-card-icon class="kefine-account-auth-card__icon">
-          <Icon icon="simple-icons:ton" width="20" height="20" aria-hidden="true" />
-        </kefine-account-auth-card-icon>
-        <strong>{tonConnectTitle}</strong>
-        <small>{providerDetails.tonConnect}</small>
-      </button>
-      {/if}
-
-      {#if false}
-      <button
-        type="button"
-        class="kefine-account-auth-card"
-        data-kind="google"
-        data-testid="kefine-google-auth-tile"
-        onclick={onGoogle}
-      >
-        <kefine-account-auth-card-icon class="kefine-account-auth-card__icon">
-          <Icon icon="mdi:google" width="20" height="20" aria-hidden="true" />
-        </kefine-account-auth-card-icon>
-        <strong>{googleTitle}</strong>
-        <small>{providerDetails.crystal}</small>
-      </button>
-      {/if}
-
-      {#if false}
-      <button
-        type="button"
-        class="kefine-account-auth-card"
-        data-kind="github"
-        data-testid="kefine-github-auth-tile"
-        onclick={onGithub}
-      >
-        <kefine-account-auth-card-icon class="kefine-account-auth-card__icon">
-          <Icon icon="mdi:github" width="20" height="20" aria-hidden="true" />
-        </kefine-account-auth-card-icon>
-        <strong>{githubTitle}</strong>
-        <small>{providerDetails.github}</small>
-      </button>
-      {/if}
-
-      <button
-        type="button"
-        class="kefine-account-auth-card"
-        data-kind="passkey"
-        data-testid="kefine-passkey-auth-tile"
-        onclick={onPasskey}
-      >
-        <kefine-account-auth-card-icon class="kefine-account-auth-card__icon">
-          <Icon icon="mdi:fingerprint" width="20" height="20" aria-hidden="true" />
-        </kefine-account-auth-card-icon>
-        <strong>{passkeyTitle}</strong>
-        <small>{providerDetails.passkey}</small>
-      </button>
-
-      {#if showPrivateKey}
+    {#if !isAuthenticated}
+      <kefine-account-auth-grid>
         <button
           type="button"
           class="kefine-account-auth-card"
-          data-kind="privatekey"
-          data-testid="kefine-privatekey-auth-tile"
-          onclick={onPrivateKey}
+          data-kind="browser-wallet"
+          data-testid="kefine-browser-wallet-auth-tile"
+          onclick={onBrowserWallet}
         >
           <kefine-account-auth-card-icon class="kefine-account-auth-card__icon">
-            <Icon icon="mdi:key-variant" width="20" height="20" aria-hidden="true" />
+            <Icon icon="mdi:wallet-outline" width="20" height="20" aria-hidden="true" />
           </kefine-account-auth-card-icon>
-          <strong>{privateKeyTitle}</strong>
-          <small>{providerDetails.privateKey}</small>
+          <strong>{browserWalletTitle}</strong>
+          <small>Connect the injected wallet from this browser.</small>
         </button>
-      {/if}
-    </kefine-account-auth-grid>
-  {:else}
-    <kefine-account-profile-card class="kefine-account-surface">
-      <kefine-account-profile-head>
-        <kefine-account-avatar data-has-avatar={Boolean(profile?.avatarUrl)}>
-          {#if profile?.avatarUrl}
-            <img src={profile.avatarUrl} alt={profileName ?? connectedTitle} />
-          {:else}
-            <kefine-account-avatar-initial>{(profileName ?? connectedTitle).slice(0, 1).toUpperCase()}</kefine-account-avatar-initial>
-          {/if}
-        </kefine-account-avatar>
-         <lefine-box class="kefine-account-profile-copy">
-           <small>{connectedTitle}</small>
-           <strong title={profileName ?? connectedTitle}>{truncate(profileName ?? connectedTitle)}</strong>
-           {#if profileHandle}
-             <kefine-account-profile-handle title={profileHandle}>{truncate(profileHandle, 20)}</kefine-account-profile-handle>
-           {/if}
-          </lefine-box>
 
-            <button
-              type="button"
-              class="kefine-sign-out"
-              onclick={onSignOut}
-              aria-label={signOutLabel}
-              title={signOutLabel}
-            >
-              <kefine-door-scene class="door-scene">
-                <kefine-door-frame class="door-frame">
-                  <kefine-door class="door"></kefine-door>
-                </kefine-door-frame>
-              </kefine-door-scene>
-            </button>
+        <button
+          type="button"
+          class="kefine-account-auth-card"
+          data-kind="walletconnect"
+          data-testid="kefine-walletconnect-auth-tile"
+          onclick={onWalletConnect}
+        >
+          <kefine-account-auth-card-icon class="kefine-account-auth-card__icon">
+            <Icon icon="simple-icons:walletconnect" width="20" height="20" aria-hidden="true" />
+          </kefine-account-auth-card-icon>
+          <strong>{walletConnectTitle}</strong>
+          <small>Scan a WalletConnect QR code with your wallet app.</small>
+        </button>
+
+        <button
+          type="button"
+          class="kefine-account-auth-card"
+          data-kind="tonconnect"
+          data-testid="kefine-tonconnect-auth-tile"
+          onclick={onTonConnect}
+        >
+          <kefine-account-auth-card-icon class="kefine-account-auth-card__icon">
+            <Icon icon="simple-icons:ton" width="20" height="20" aria-hidden="true" />
+          </kefine-account-auth-card-icon>
+          <strong>{tonConnectTitle}</strong>
+          <small>Connect a TON wallet through TonConnect.</small>
+        </button>
+
+        <button
+          type="button"
+          class="kefine-account-auth-card"
+          data-kind="google"
+          data-testid="kefine-google-auth-tile"
+          onclick={onGoogle}
+        >
+          <kefine-account-auth-card-icon class="kefine-account-auth-card__icon">
+            <Icon icon="mdi:google" width="20" height="20" aria-hidden="true" />
+          </kefine-account-auth-card-icon>
+          <strong>{googleTitle}</strong>
+          <small>Continue through the Crystal OAuth callback.</small>
+        </button>
+
+        <button
+          type="button"
+          class="kefine-account-auth-card"
+          data-kind="github"
+          data-testid="kefine-github-auth-tile"
+          onclick={onGithub}
+        >
+          <kefine-account-auth-card-icon class="kefine-account-auth-card__icon">
+            <Icon icon="mdi:github" width="20" height="20" aria-hidden="true" />
+          </kefine-account-auth-card-icon>
+          <strong>{githubTitle}</strong>
+          <small>Sign in with the GitHub identity handled by Crystal.</small>
+        </button>
+
+        <button
+          type="button"
+          class="kefine-account-auth-card"
+          data-kind="passkey"
+          data-testid="kefine-passkey-auth-tile"
+          onclick={onPasskey}
+        >
+          <kefine-account-auth-card-icon class="kefine-account-auth-card__icon">
+            <Icon icon="mdi:fingerprint" width="20" height="20" aria-hidden="true" />
+          </kefine-account-auth-card-icon>
+          <strong>{passkeyTitle}</strong>
+          <small>Use a device-bound secure login.</small>
+        </button>
+
+        {#if showPrivateKey}
+          <button
+            type="button"
+            class="kefine-account-auth-card"
+            data-kind="privatekey"
+            data-testid="kefine-privatekey-auth-tile"
+            onclick={onPrivateKey}
+          >
+            <kefine-account-auth-card-icon class="kefine-account-auth-card__icon">
+              <Icon icon="mdi:key-variant" width="20" height="20" aria-hidden="true" />
+            </kefine-account-auth-card-icon>
+            <strong>{privateKeyTitle}</strong>
+            <small>Use the generated actor key directly.</small>
+          </button>
+        {/if}
+      </kefine-account-auth-grid>
+    {:else}
+      <kefine-account-profile-card class="kefine-account-surface">
+        <kefine-account-profile-head>
+          <kefine-account-avatar data-has-avatar={Boolean(profile?.avatarUrl)}>
+            {#if profile?.avatarUrl}
+              <img src={profile.avatarUrl} alt={profileName ?? connectedTitle} />
+            {:else}
+              <kefine-account-avatar-initial>{(profileName ?? connectedTitle).slice(0, 1).toUpperCase()}</kefine-account-avatar-initial>
+            {/if}
+          </kefine-account-avatar>
+          <lefine-box class="kefine-account-profile-copy">
+            <small>{connectedTitle}</small>
+            <strong>{profileName ?? connectedTitle}</strong>
+            {#if profileHandle}
+              <kefine-account-profile-handle>{profileHandle}</kefine-account-profile-handle>
+            {/if}
+          </lefine-box>
         </kefine-account-profile-head>
 
-       <p>{connectedDescription}</p>
+        <p>{connectedDescription}</p>
 
-       <kefine-account-stats>
-         <kefine-account-stat>
-           <small>{latestTasksTitle}</small>
-           <strong>{recentTasks.length}</strong>
-         </kefine-account-stat>
-       </kefine-account-stats>
+        <kefine-account-stats>
+          <kefine-account-stat>
+            <small>{latestTasksTitle}</small>
+            <strong>{recentTasks.length}</strong>
+          </kefine-account-stat>
+        </kefine-account-stats>
 
-       <kefine-account-profile-actions>
-         <button type="button" data-variant="primary" onclick={onOpenProfile}>{openWorkspaceLabel}</button>
-       </kefine-account-profile-actions>
-     </kefine-account-profile-card>
+        <kefine-account-profile-actions>
+          <button type="button" data-variant="primary" onclick={onOpenProfile}>{openWorkspaceLabel}</button>
+        </kefine-account-profile-actions>
+      </kefine-account-profile-card>
 
-     <section class="kefine-account-surface">
-       <kefine-account-section-head>
-         <strong>{latestTasksTitle}</strong>
-       </kefine-account-section-head>
+      <section class="kefine-account-surface">
+        <kefine-account-section-head>
+          <strong>{latestTasksTitle}</strong>
+          <button type="button" data-variant="ghost" onclick={onSignOut}>{signOutLabel}</button>
+        </kefine-account-section-head>
 
-       {#if recentTasks.length > 0}
-         <kefine-account-task-list>
-           {#each recentTasks as task (task.id)}
-             <button type="button" class="kefine-account-task" onclick={() => onOpenTask(task.id)}>
+        {#if recentTasks.length > 0}
+          <kefine-account-task-list>
+            {#each recentTasks as task (task.id)}
+              <button type="button" class="kefine-account-task" onclick={() => onOpenTask(task.id)}>
                 <lefine-box class="kefine-account-task__copy">
-                  <strong title={task.title}>{truncate(task.title)}</strong>
-                  <small>{task.status}</small>
+                  <strong>{task.title}</strong>
+                  <small>{localizeKefineOrderStatus(task.status, statusLabels)}</small>
                 </lefine-box>
-               <kefine-account-task-action>
-                 <lefine-text class="kefine-account-task-action__book" title={openTaskLabel}>
-                   <lefine-text class="kefine-icon-wrap kefine-icon-wrap--closed">
-                     <Icon icon="mdi:book-outline" width="16" height="16" aria-hidden="true" />
-                   </lefine-text>
-                   <lefine-text class="kefine-icon-wrap kefine-icon-wrap--open">
-                     <Icon icon="mdi:book-open-outline" width="16" height="16" aria-hidden="true" />
-                   </lefine-text>
-                 </lefine-text>
-               </kefine-account-task-action>
-             </button>
-           {/each}
-         </kefine-account-task-list>
-       {:else}
-         <p class="kefine-account-empty">{latestTasksEmptyLabel}</p>
-       {/if}
-     </section>
-   {/if}
+                <kefine-account-task-action>{openTaskLabel}</kefine-account-task-action>
+              </button>
+            {/each}
+          </kefine-account-task-list>
+        {:else}
+          <p class="kefine-account-empty">{latestTasksEmptyLabel}</p>
+        {/if}
+      </section>
+    {/if}
+  {/if}
 </kefine-account-drawer>
 
 <style>
@@ -351,23 +287,27 @@
     gap: 0.55rem;
     grid-template-rows: auto 1fr;
     min-height: calc(100vh - 1rem);
-    color: var(--lefine-text);
+    color: var(--kef-color-text, #2e2317);
     overflow: auto;
     padding: 0.9rem 1rem;
-    border-radius: var(--kef-radius-lg);
-    border: var(--kef-border-width-soft) solid var(--kef-line);
-    background: var(--kef-bg-soft);
-    transform: scale(0.92) translateY(-10px);
+    border-radius: 1.25rem 0 0 1.25rem;
+    border: 1px solid color-mix(in oklab, var(--kef-color-text, #2e2317) 12%, transparent);
+    background:
+      linear-gradient(
+        180deg,
+        color-mix(in oklab, var(--kef-color-bg-card, #f7ecd6) 96%, white 4%),
+        color-mix(in oklab, var(--kef-color-bg-soft, #eadcbc) 88%, var(--kef-color-bg-card, #f7ecd6) 12%)
+      );
+    transform: translateX(120%);
     opacity: 0;
-    transform-origin: top right;
     pointer-events: none;
     transition:
-      transform 380ms cubic-bezier(0.2, 0.85, 0.3, 1.05),
-      opacity 250ms ease;
+      transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
+      opacity 180ms ease;
   }
 
   kefine-account-drawer[data-state='open'] {
-    transform: scale(1) translateY(0);
+    transform: translateX(0);
     opacity: 1;
     pointer-events: auto;
   }
@@ -375,77 +315,30 @@
   .kefine-account-surface,
   .kefine-account-auth-card,
   .kefine-account-task,
-  kefine-account-stat,
-  kefine-account-profile-head,
-  kefine-account-profile-actions {
-    opacity: 0;
-    transform: translateY(14px) scale(0.97);
-    transition:
-      opacity 340ms ease,
-      transform 340ms ease;
-  }
-
-  kefine-account-drawer[data-state='open'] .kefine-account-surface,
-  kefine-account-drawer[data-state='open'] .kefine-account-auth-card,
-  kefine-account-drawer[data-state='open'] .kefine-account-task,
-  kefine-account-drawer[data-state='open'] kefine-account-stat,
-  kefine-account-drawer[data-state='open'] kefine-account-profile-head,
-  kefine-account-drawer[data-state='open'] kefine-account-profile-actions {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-
-  kefine-account-drawer[data-state='open'] .kefine-account-surface:nth-of-type(2) {
-    transition-delay: 0.04s;
-  }
-
-  kefine-account-drawer[data-state='open'] kefine-account-stat {
-    transition-delay: 0.08s;
-  }
-
-  kefine-account-drawer[data-state='open'] kefine-account-profile-actions {
-    transition-delay: 0.1s;
-  }
-
-  kefine-account-drawer[data-state='open'] .kefine-account-auth-card {
-    transition-delay: 0.02s;
-  }
-  kefine-account-drawer[data-state='open'] .kefine-account-auth-card:nth-child(2) {
-    transition-delay: 0.05s;
-  }
-  kefine-account-drawer[data-state='open'] .kefine-account-auth-card:nth-child(3) {
-    transition-delay: 0.08s;
-  }
-  kefine-account-drawer[data-state='open'] .kefine-account-auth-card:nth-child(4) {
-    transition-delay: 0.11s;
-  }
-  kefine-account-drawer[data-state='open'] .kefine-account-auth-card:nth-child(5) {
-    transition-delay: 0.14s;
-  }
-  kefine-account-drawer[data-state='open'] .kefine-account-auth-card:nth-child(6) {
-    transition-delay: 0.17s;
-  }
-
-  .kefine-account-surface,
-  .kefine-account-auth-card,
-  .kefine-account-task,
   kefine-account-stat {
-    border: var(--kef-border-width-soft) solid var(--kef-line);
-    background: var(--kef-bg-card);
-    box-shadow: var(--kef-shadow);
+    border: 1px solid color-mix(in oklab, var(--kef-color-text, #2e2317) 12%, transparent);
+    background:
+      linear-gradient(
+        180deg,
+        color-mix(in oklab, var(--kef-color-bg-card, #f7ecd6) 96%, white 4%),
+        color-mix(in oklab, var(--kef-color-bg-soft, #eadcbc) 88%, var(--kef-color-bg-card, #f7ecd6) 12%)
+      );
+    box-shadow:
+      inset 0 1px 0 color-mix(in oklab, white 28%, transparent),
+      0 16px 32px color-mix(in oklab, var(--kef-color-text, #2e2317) 12%, transparent);
   }
 
   .kefine-account-surface {
     display: grid;
-    gap: 0.5rem;
-    padding: 0.95rem;
-    border-radius: var(--kef-radius-lg);
+    gap: 0.7rem;
+    padding: 1.1rem;
+    border-radius: 1.25rem;
   }
 
   .kefine-account-profile-copy small,
   .kefine-account-task__copy small,
   .kefine-account-empty {
-    color: var(--lefine-text-soft);
+    color: color-mix(in oklab, var(--kef-color-text, #2e2317) 58%, transparent);
   }
 
   kefine-account-section-head,
@@ -456,12 +349,6 @@
     display: flex;
     align-items: center;
     gap: 0.75rem;
-  }
-
-  kefine-account-profile-actions button {
-    white-space: normal;
-    word-break: break-word;
-    overflow-wrap: anywhere;
   }
 
   kefine-account-section-head,
@@ -482,26 +369,60 @@
     gap: 0.34rem;
     min-height: 6.7rem;
     padding: 0.72rem 0.78rem;
-    border-radius: var(--kef-radius-ui);
+    border-radius: 0.95rem;
     color: inherit;
     text-align: left;
+    opacity: 0;
+    transform: translateY(0.5rem);
+    animation: kefine-auth-card-enter 260ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
     transition:
       transform 160ms ease,
       border-color 160ms ease,
+      background-color 160ms ease,
       box-shadow 160ms ease;
+  }
+
+  .kefine-account-auth-card:nth-child(2) {
+    animation-delay: 35ms;
+  }
+
+  .kefine-account-auth-card:nth-child(3) {
+    animation-delay: 70ms;
+  }
+
+  .kefine-account-auth-card:nth-child(4) {
+    animation-delay: 105ms;
+  }
+
+  .kefine-account-auth-card:nth-child(5) {
+    animation-delay: 140ms;
+  }
+
+  .kefine-account-auth-card:nth-child(6) {
+    animation-delay: 175ms;
+  }
+
+  .kefine-account-auth-card:nth-child(7) {
+    animation-delay: 210ms;
   }
 
   .kefine-account-auth-card[data-kind='browser-wallet'] {
     background:
-      radial-gradient(circle at top left, color-mix(in oklab, var(--kef-primary) 16%, transparent) 0, transparent 44%),
-      var(--kef-bg-card);
+      radial-gradient(circle at top left, color-mix(in oklab, var(--kef-color-primary, #7a4b2a) 16%, transparent) 0, transparent 44%),
+      linear-gradient(
+        180deg,
+        color-mix(in oklab, var(--kef-color-primary, #7a4b2a) 10%, var(--kef-color-bg-card, #f7ecd6)),
+        color-mix(in oklab, var(--kef-color-bg-soft, #eadcbc) 72%, var(--kef-color-bg-card, #f7ecd6) 28%)
+      );
   }
 
   .kefine-account-auth-card:hover,
   .kefine-account-task:hover {
     transform: translateY(-1px);
-    border-color: var(--kef-line-primary);
-    box-shadow: 0 18px 36px color-mix(in oklab, var(--lefine-text) 16%, transparent);
+    border-color: color-mix(in oklab, var(--kef-color-primary, #7a4b2a) 30%, transparent);
+    box-shadow:
+      inset 0 1px 0 color-mix(in oklab, white 34%, transparent),
+      0 18px 36px color-mix(in oklab, var(--kef-color-text, #2e2317) 16%, transparent);
   }
 
   .kefine-account-auth-card__icon,
@@ -511,9 +432,9 @@
     width: 2rem;
     height: 2rem;
     border-radius: 999px;
-    border: var(--kef-border-width-soft) solid var(--kef-line-primary);
-    background: color-mix(in oklab, var(--kef-primary) 12%, var(--kef-bg-card));
-    color: var(--kef-primary);
+    border: 1px solid color-mix(in oklab, var(--kef-color-primary, #7a4b2a) 18%, transparent);
+    background: color-mix(in oklab, var(--kef-color-primary, #7a4b2a) 12%, var(--kef-color-bg-card, #f7ecd6));
+    color: color-mix(in oklab, var(--kef-color-primary, #7a4b2a) 84%, var(--kef-color-text, #2e2317));
   }
 
   kefine-account-avatar {
@@ -538,9 +459,6 @@
   .kefine-account-task__copy strong {
     font-size: 1rem;
     line-height: 1.2;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   .kefine-account-auth-card strong {
@@ -552,109 +470,12 @@
   .kefine-account-auth-card small {
     font-size: 0.76rem;
     line-height: 1.24;
-    color: var(--lefine-text-soft);
+    color: color-mix(in oklab, var(--kef-color-text, #2e2317) 62%, transparent);
   }
 
   kefine-account-profile-handle {
-    color: var(--kef-primary);
+    color: color-mix(in oklab, var(--kef-color-primary, #7a4b2a) 76%, var(--kef-color-text, #2e2317));
     font-size: 0.92rem;
-  }
-
-  .kefine-sign-out {
-    position: relative;
-    margin-left: auto;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 26px;
-    height: 26px;
-    border-radius: 5px;
-    border: 1px solid var(--kef-line);
-    background: transparent;
-    cursor: pointer;
-    transition: border-color 160ms ease, background 160ms ease;
-    flex-shrink: 0;
-    padding: 0;
-  }
-
-  .kefine-sign-out:hover {
-    border-color: color-mix(in oklab, var(--kef-error, #ef4444) 45%, var(--kef-line));
-    background: color-mix(in oklab, var(--kef-error, #ef4444) 12%, var(--kef-bg-card));
-  }
-
-  /* === 3D Door (scaled down from reference, lefine style) === */
-  .kefine-sign-out .door-scene {
-    display: block;
-    width: 15px;
-    height: 20px;
-    perspective: 110px;
-    perspective-origin: 50% 50%;
-  }
-
-  .kefine-sign-out .door-frame {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    background: var(--kef-line);
-    border-radius: 3px;
-    box-shadow: inset 0 0 0 1px var(--kef-bg-card);
-    overflow: visible;
-  }
-
-  .kefine-sign-out .door {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: var(--kef-primary);
-    border-radius: 2px;
-    transform-origin: left center;
-    transition: transform 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1), background 0.25s ease;
-    box-shadow: 1px 0 4px rgba(0, 0, 0, 0.12);
-  }
-
-  /* subtle door panel line */
-  .kefine-sign-out .door::before {
-    content: "";
-    position: absolute;
-    top: 14%;
-    left: 24%;
-    width: 1px;
-    height: 72%;
-    background: rgba(0, 0, 0, 0.1);
-    border-radius: 1px;
-  }
-
-  /* door knob */
-  .kefine-sign-out .door::after {
-    content: "";
-    position: absolute;
-    right: 2px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 3px;
-    height: 3px;
-    background: var(--kef-on-primary);
-    border-radius: 50%;
-    box-shadow: 0 0.5px 1px rgba(0,0,0,0.2);
-  }
-
-  /* Hover: swing open + turn red (lefine error tone) */
-  .kefine-sign-out:hover .door {
-    transform: rotateY(-112deg);
-    background: var(--kef-error, #e63946);
-  }
-
-  .kefine-sign-out:hover .door::after {
-    background: #1a1b1e;
-    box-shadow: 0 0 0 1px rgba(255, 245, 200, 0.35);
-  }
-
-  .kefine-sign-out .door-frame,
-  .kefine-sign-out .door {
-    display: block;
-    backface-visibility: visible;
   }
 
   kefine-account-stats {
@@ -664,9 +485,9 @@
   kefine-account-stat {
     flex: 1 1 0;
     display: grid;
-    gap: 0.05rem;
-    padding: 0.2rem 0.55rem;
-    border-radius: var(--kef-radius-ui);
+    gap: 0.2rem;
+    padding: 0.85rem 0.9rem;
+    border-radius: 1rem;
   }
 
   kefine-account-task-list {
@@ -677,7 +498,7 @@
   .kefine-account-task {
     width: 100%;
     padding: 0.9rem 1rem;
-    border-radius: var(--kef-radius-ui);
+    border-radius: 1rem;
     color: inherit;
     text-align: left;
     transition:
@@ -701,106 +522,64 @@
   button[data-variant='primary'],
   button[data-variant='ghost'] {
     cursor: pointer;
-    border-radius: 0.3rem;
-    padding: 0.7rem 1rem;
+    border-radius: 999px;
+    padding: 0.7rem 0.95rem;
     font: inherit;
   }
 
-  button[data-variant='primary'] {
-    border: var(--kef-border-width-soft) solid var(--kef-line-on-primary);
-    background: var(--kef-primary);
-    color: var(--kef-on-primary);
-    font-weight: 650;
+  button[data-variant='close'] {
+    justify-self: end;
+    margin: 0;
   }
 
-  button[data-variant='primary']:hover {
-    background: color-mix(in oklab, var(--kef-primary) 92%, white);
+  button[data-variant='primary'] {
+    border: 0;
+    background: var(--kef-color-primary, #7a4b2a);
+    color: var(--kef-color-on-primary, #f7edd8);
+    font-weight: 700;
   }
 
   button[data-variant='ghost'] {
-    border: var(--kef-border-width-soft) solid var(--kef-line);
-    background: transparent;
-    color: var(--lefine-text);
-  }
-
-  button[data-variant='ghost']:hover {
-    border-color: var(--kef-line-primary);
-  }
-
-  kefine-account-task-action {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-  }
-
-  .kefine-account-task-action__book {
-    position: relative;
-    display: inline-grid;
-    place-items: center;
-    width: 1.85rem;
-    height: 1.85rem;
-    border-radius: 0.35rem;
-    border: 1px solid var(--kef-line);
-    background: transparent;
-    overflow: hidden;
-    perspective: 300px;
-    flex-shrink: 0;
-    transition:
-      border-color 160ms ease,
-      box-shadow 160ms ease,
-      background-color 160ms ease,
-      transform 160ms ease;
-  }
-
-  .kefine-account-task-action__book:hover {
-    border-color: var(--kef-line-primary);
-    background: color-mix(in oklab, var(--kef-primary) 8%, var(--kef-bg-card));
-    box-shadow: 0 4px 12px color-mix(in oklab, var(--lefine-text) 8%, transparent);
-    transform: translateY(-1px);
-  }
-
-  .kefine-icon-wrap {
-    position: absolute;
-    inset: 0;
-    display: grid;
-    place-items: center;
-    transition:
-      opacity 260ms ease,
-      transform 360ms var(--kef-ease-soft);
-  }
-
-  .kefine-icon-wrap--closed {
-    opacity: 1;
-    transform: rotateY(0deg) scale(1);
-  }
-
-  .kefine-icon-wrap--open {
-    opacity: 0;
-    transform: rotateY(-60deg) scale(0.6);
-  }
-
-  .kefine-account-task-action__book:hover .kefine-icon-wrap--closed {
-    opacity: 0;
-    transform: rotateY(60deg) scale(0.6);
-  }
-
-  .kefine-account-task-action__book:hover .kefine-icon-wrap--open {
-    opacity: 1;
-    transform: rotateY(0deg) scale(1);
+    border: 1px solid color-mix(in oklab, var(--kef-color-text, #2e2317) 14%, transparent);
+    background: color-mix(in oklab, var(--kef-color-bg-card, #f7ecd6) 86%, transparent);
+    color: inherit;
   }
 
   :global(:root[data-kefine-theme='dark']) .kefine-account-surface,
   :global(:root[data-kefine-theme='dark']) .kefine-account-auth-card,
   :global(:root[data-kefine-theme='dark']) .kefine-account-task,
   :global(:root[data-kefine-theme='dark']) kefine-account-stat {
-    background: var(--kef-bg-card);
-    box-shadow: 0 18px 36px color-mix(in oklab, black 26%, transparent);
+    background:
+      linear-gradient(
+        180deg,
+        color-mix(in oklab, var(--kef-color-bg-card, #1d1510) 90%, #2b1f16 10%),
+        color-mix(in oklab, var(--kef-color-bg-soft, #221912) 82%, var(--kef-color-bg-card, #1d1510) 18%)
+      );
+    box-shadow:
+      inset 0 1px 0 color-mix(in oklab, white 8%, transparent),
+      0 18px 36px color-mix(in oklab, black 26%, transparent);
   }
 
   :global(:root[data-kefine-theme='dark']) .kefine-account-auth-card[data-kind='browser-wallet'] {
     background:
-      radial-gradient(circle at top left, color-mix(in oklab, var(--kef-primary) 18%, transparent) 0, transparent 42%),
-      var(--kef-bg-card);
+      radial-gradient(circle at top left, color-mix(in oklab, var(--kef-color-primary, #c89a5a) 18%, transparent) 0, transparent 42%),
+      linear-gradient(
+        180deg,
+        color-mix(in oklab, var(--kef-color-primary, #c89a5a) 10%, var(--kef-color-bg-card, #1d1510)),
+        color-mix(in oklab, var(--kef-color-bg-soft, #221912) 78%, var(--kef-color-bg-card, #1d1510) 22%)
+      );
+  }
+
+  @keyframes kefine-auth-card-enter {
+    from {
+      opacity: 0;
+      transform: translateY(0.5rem);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   @media (max-width: 640px) {
@@ -810,14 +589,13 @@
       right: 0.5rem;
       left: 0.5rem;
       width: var(--account-drawer-width);
-      border-radius: var(--kef-radius-lg);
-      transform: scale(0.92) translateY(-10px);
-      transform-origin: top center;
+      border-radius: 1.25rem;
+      transform: translateX(120%);
       max-width: none;
     }
 
     kefine-account-drawer[data-state='open'] {
-      transform: scale(1) translateY(0);
+      transform: translateX(0);
     }
 
     kefine-account-auth-grid {

@@ -2,13 +2,12 @@
   import { browser } from '$app/environment';
   import { goto, replaceState } from '$app/navigation';
   import { page } from '$app/state';
-  import { isFeatureEnabled, resolvePublicRuntimeConfig } from '$lib/config/public-config';
+  import { resolvePublicRuntimeConfig } from '$lib/config/public-config';
   import { isSpecialRuntimeOrigin } from '$lib/config/special-runtime';
   import { resolveOrderProxyBasePath } from '$lib/order-proxy-path';
   import { onMount } from 'svelte';
   import { tick } from 'svelte';
   import { cubicOut } from 'svelte/easing';
-  import { scale } from 'svelte/transition';
   import type { TransitionConfig } from 'svelte/transition';
   import { authState, clearAuthState, hydrateAuthStateFromSession, replaceAuthState, updateAuthState } from '$lib/auth/auth-store.svelte.js';
   import {
@@ -95,6 +94,7 @@
   const THEME_STORAGE_KEY = 'kefine-theme';
   const BRAND_HOME_NAVIGATION_STORAGE_KEY = 'kefine-brand-home-navigation';
   const CLONE_DRAFT_STORAGE_KEY = 'kefine-clone-draft-v1';
+  const SOLVER_SEARCH_STATE_STORAGE_KEY = 'kefine-solver-search-state-v1';
 
   let {
     initialActorHandle,
@@ -105,7 +105,6 @@
   } = $props();
   const localeText = $derived($kefineLocaleText);
   const runtimeConfig = $derived(resolvePublicRuntimeConfig(page.data.publicConfig));
-  const repositoriesEnabled = $derived(isFeatureEnabled('repositories', runtimeConfig));
   const activeLocale = $derived(readLocaleFromPathname(page.url.pathname) ?? 'en');
 
   function getNormalizedInitialOrderId() {
@@ -201,6 +200,11 @@
     order: OrderView;
     runLocally: boolean;
   };
+  type SolverSearchState = {
+    text: string;
+    orderId: string | null;
+    completed: boolean;
+  };
 
   async function ensureFlowStepComponentsLoaded() {
     if (SubmittingStepComponent && ErrorStepComponent && PaymentStepComponent) {
@@ -240,6 +244,8 @@
   let draft = $state<DraftOrder>(createEmptyDraft());
   let solverSearchActive = $state(false);
   let solverSearchText = $state('');
+  let solverSearchOrderId = $state<string | null>(null);
+  let solverSearchCompleted = $state(false);
   let draftQueued = $state<DraftOrder | null>(null);
   let pendingCloneAction = $state<PendingCloneAction | null>(null);
   let currentOrder = $state<OrderView | null>(
@@ -517,33 +523,27 @@
         )
       : []
   );
-  const RECENT_ORDERS_LIMIT = 10;
-  const recentProfileOrders = $derived.by(() => {
-    const profile = currentProfile;
-    if (!profile) {
-      return [];
-    }
-
-    const owned = createdOrders.filter((order) => order.ownerProfileId === profile.id);
-    const query = (solverSearchActive ? solverSearchText : draft.description).trim().toLowerCase();
-    const matches = (order: OrderView) => {
-      if (!query) return false;
-      return [order.title, order.description, order.solver]
-        .filter((value): value is string => typeof value === 'string')
-        .some((value) => value.toLowerCase().includes(query));
-    };
-
-    const sorted = owned.slice().sort((left, right) => {
-      const leftMatches = matches(left);
-      const rightMatches = matches(right);
-      if (leftMatches !== rightMatches) {
-        return leftMatches ? -1 : 1;
-      }
-      return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
-    });
-
-    return sorted.slice(0, RECENT_ORDERS_LIMIT);
-  });
+  const recentProfileOrders = $derived(
+    currentProfile
+      ? [...createdOrders]
+          .filter((order) => order.ownerProfileId === currentProfile?.id)
+          .sort(
+            (left, right) =>
+              new Date(right.createdAt).getTime() -
+              new Date(left.createdAt).getTime()
+          )
+          .slice(0, 5)
+      : []
+  );
+  const recentCreatedOrders = $derived(
+    [...createdOrders]
+      .sort(
+        (left, right) =>
+          new Date(right.createdAt).getTime() -
+          new Date(left.createdAt).getTime()
+      )
+      .slice(0, 5)
+  );
   const TITLE_FONT_MAX = 2.0;
   const TITLE_FONT_MIN = 1.0;
   const TITLE_FONT_SHRINK_AT = 24;
@@ -752,14 +752,69 @@
     return normalizedProfile;
   }
 
+  function readSolverSearchState(): SolverSearchState | null {
+    if (!browser) return null;
+    try {
+      const raw = sessionStorage.getItem(SOLVER_SEARCH_STATE_STORAGE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as Partial<SolverSearchState>;
+      const text = typeof parsed.text === 'string' ? parsed.text.trim() : '';
+      if (!text) return null;
+      return {
+        text,
+        orderId: typeof parsed.orderId === 'string' && parsed.orderId.trim() ? parsed.orderId.trim() : null,
+        completed: parsed.completed === true
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  function writeSolverSearchState(patch: Partial<SolverSearchState>) {
+    if (!browser) return;
+    const previous = readSolverSearchState();
+    const next: SolverSearchState = {
+      text: patch.text ?? previous?.text ?? '',
+      orderId: patch.orderId !== undefined ? patch.orderId : previous?.orderId ?? null,
+      completed: patch.completed ?? previous?.completed ?? false
+    };
+
+    if (!next.text.trim()) {
+      sessionStorage.removeItem(SOLVER_SEARCH_STATE_STORAGE_KEY);
+      return;
+    }
+
+    sessionStorage.setItem(SOLVER_SEARCH_STATE_STORAGE_KEY, JSON.stringify(next));
+  }
+
+  function restoreSolverSearchState() {
+    const restored = readSolverSearchState();
+    if (!restored) return;
+    solverSearchText = restored.text;
+    solverSearchOrderId = restored.orderId;
+    solverSearchCompleted = restored.completed;
+    solverSearchActive = true;
+  }
+
+  function clearSolverSearchState() {
+    solverSearchActive = false;
+    solverSearchText = '';
+    solverSearchOrderId = null;
+    solverSearchCompleted = false;
+    if (browser) {
+      sessionStorage.removeItem(SOLVER_SEARCH_STATE_STORAGE_KEY);
+    }
+  }
+
   onMount(() => {
     if (!browser) return;
     void checkCraterHealth();
-    runWhenIdle(() => hydrateAuthStateFromSession());
-    runWhenIdle(() => loadPasskeySession());
+    hydrateAuthStateFromSession();
+    loadPasskeySession();
     const loadedOrders = loadCreatedOrders();
+    restoreSolverSearchState();
     isSpecialRuntime = isSpecialRuntimeOrigin(window.location.origin);
-    runWhenIdle(() => ensureTemporaryOrderProfile({ createIfMissing: false }));
+    void ensureTemporaryOrderProfile({ createIfMissing: false });
 
     if (!authState.isConnected) {
       void (async () => {
@@ -851,32 +906,14 @@
         return;
       }
 
-      let finalUserId = authState.userId;
-      let finalHandle = authState.handle;
-      let finalDisplayName = authState.displayName;
-      let finalEmail = snapshot.email ?? authState.email;
-
-      if (snapshot.isConnected && snapshot.authType === 'wallet' && snapshot.address) {
-        try {
-          const { loginWithBrowserWallet } = await loadAuthRoutes();
-          const walletSession = await loginWithBrowserWallet(snapshot.address, Number.isFinite(snapshot.chainId) ? snapshot.chainId : null);
-          finalUserId = walletSession.userId;
-          finalHandle = normalizeActorHandle(walletSession.handle);
-          finalDisplayName = walletSession.displayName;
-          finalEmail = walletSession.email ?? finalEmail;
-        } catch (e) {
-          console.error('[reown] loginWithBrowserWallet failed', e);
-        }
-      }
-
       replaceAuthState({
         isConnected: snapshot.isConnected,
         address: snapshot.address,
         chainId: snapshot.chainId,
-        email: finalEmail,
-        userId: finalUserId,
-        handle: finalHandle,
-        displayName: finalDisplayName,
+        email: snapshot.email,
+        userId: authState.userId,
+        handle: authState.handle,
+        displayName: authState.displayName,
         authType: snapshot.authType,
         status: snapshot.status
       });
@@ -1079,8 +1116,13 @@
       currentOrder?.actorHandle?.trim() ||
       getRouteActorHandleFallback();
 
-    if (orderRouteId && actorHandle) {
-      nextUrl.pathname = localizeAppPath(buildActorOrderPath(actorHandle, orderRouteId), activeLocale);
+    if (orderRouteId) {
+      nextUrl.pathname = localizeAppPath(
+        actorHandle
+          ? buildActorOrderPath(actorHandle, orderRouteId)
+          : `/order/${encodeURIComponent(orderRouteId)}`,
+        activeLocale
+      );
       nextUrl.search = '';
       nextUrl.hash =
         step === 'payment' && paymentStage === 'result-ready'
@@ -1331,23 +1373,11 @@
   }
 
   async function selectTopbarAuth() {
-    if (authDialogOpen) {
-      authDialogOpen = false;
-      return;
-    }
-
     authButtonLoading = true;
-    try {
-      await ensureDialogComponentsLoaded();
-      await tick();
-      await new Promise(r => requestAnimationFrame(r));
-      authDialogOpen = true;
-      await tick();
-    } catch (error) {
-      console.error('[auth] selectTopbarAuth failed', error);
-    } finally {
-      authButtonLoading = false;
-    }
+    await ensureDialogComponentsLoaded();
+    authDialogOpen = true;
+    await tick();
+    authButtonLoading = false;
   }
 
   async function openTopbarProfile() {
@@ -1634,11 +1664,60 @@
 
   function openOrder(order: OrderView) {
     showOrderFlow(order);
+
+    if (!browser) {
+      return;
+    }
+
+    const orderRouteId = order.shareId?.trim() || order.id;
+    const actorHandle = order.actorHandle?.trim() || getRouteActorHandleFallback();
+    const nextUrl = new URL(window.location.href);
+    nextUrl.pathname = localizeAppPath(
+      actorHandle
+        ? buildActorOrderPath(actorHandle, orderRouteId)
+        : `/order/${encodeURIComponent(orderRouteId)}`,
+      activeLocale
+    );
+    nextUrl.search = '';
+    nextUrl.hash = '';
+
+    if (window.location.href !== nextUrl.toString()) {
+      replaceState(nextUrl, page.state);
+    }
   }
 
-  function openSolution(solutionId: string) {
-    const orderId = currentOrder?.id || 'demo';
-    void goto(`/order/${orderId}/solver/${solutionId}`);
+  function getSolverListHref() {
+    const orderId = solverSearchOrderId || currentOrder?.id || 'demo';
+    const params = new URLSearchParams();
+    const task = solverSearchText.trim();
+    if (task) {
+      params.set('task', task);
+    }
+
+    const suffix = params.toString();
+    return `/order/${encodeURIComponent(orderId)}/solutions${suffix ? `?${suffix}` : ''}`;
+  }
+
+  function markSolverSearchComplete() {
+    if (!solverSearchText.trim()) {
+      return;
+    }
+
+    solverSearchCompleted = true;
+    writeSolverSearchState({
+      text: solverSearchText,
+      orderId: solverSearchOrderId,
+      completed: true
+    });
+  }
+
+  function shouldUseSolverSearchFlow(value: string) {
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) {
+      return false;
+    }
+
+    return /\b(go|golang|rust)\b/.test(normalized) || normalized.includes('proxy') || normalized.includes('прокси');
   }
 
   function downloadCloneFile(order: OrderView, format: TaskCloneFormat) {
@@ -2144,8 +2223,19 @@
     }
 
     const submittedSearchText = normalized.description.trim() || normalized.title.trim() || localeText.defaults.taskTitle;
+    const useSolverSearchFlow = shouldUseSolverSearchFlow(submittedSearchText);
+
+    if (!useSolverSearchFlow) {
+      clearSolverSearchState();
+      void submitDraft(normalized);
+      return;
+    }
+
     solverSearchText = submittedSearchText;
     solverSearchActive = true;
+    solverSearchOrderId = null;
+    solverSearchCompleted = false;
+    writeSolverSearchState({ text: submittedSearchText, orderId: null, completed: false });
     draft = createEmptyDraft();
 
     void submitDraft(normalized, { background: true }).then((created) => {
@@ -2155,9 +2245,14 @@
         }
 
         if (solverSearchText === submittedSearchText) {
-          solverSearchActive = false;
-          solverSearchText = '';
+          clearSolverSearchState();
         }
+        return;
+      }
+
+      if (solverSearchText === submittedSearchText) {
+        solverSearchOrderId = created.id;
+        writeSolverSearchState({ text: submittedSearchText, orderId: created.id });
       }
     });
   }
@@ -2177,8 +2272,7 @@
 
   function updateDescription(value: string) {
     if (value.trim()) {
-      solverSearchActive = false;
-      solverSearchText = '';
+      clearSolverSearchState();
     }
 
     draft.description = value;
@@ -2366,19 +2460,12 @@
   }
 
   async function handleUpdateTaskSettings(
-    rawPatch: Partial<Pick<OrderView, 'title' | 'description' | 'taskIcon' | 'shareId' | 'isPublicTask' | 'vcsEnabled' | 'repository'>> & {
+    patch: Partial<Pick<OrderView, 'title' | 'description' | 'taskIcon' | 'shareId' | 'isPublicTask' | 'vcsEnabled' | 'repository'>> & {
       gitSettings?: import('./kefine-workflow').RepositoryGitSettings;
     }
   ) {
     if (!currentOrder) {
       return;
-    }
-
-    const patch = { ...rawPatch };
-    if (!repositoriesEnabled) {
-      delete patch.vcsEnabled;
-      delete patch.gitSettings;
-      delete patch.repository;
     }
 
     updateProfileTask(currentOrder.id, patch);
@@ -2387,9 +2474,14 @@
       const nextShareId = patch.shareId?.trim() || currentOrder.id;
       const actorHandle = currentOrder.actorHandle?.trim() || getRouteActorHandleFallback();
 
-      if (actorHandle && nextShareId) {
+      if (nextShareId) {
         const nextUrl = new URL(window.location.href);
-        nextUrl.pathname = localizeAppPath(buildActorOrderPath(actorHandle, nextShareId), activeLocale);
+        nextUrl.pathname = localizeAppPath(
+          actorHandle
+            ? buildActorOrderPath(actorHandle, nextShareId)
+            : `/order/${encodeURIComponent(nextShareId)}`,
+          activeLocale
+        );
         nextUrl.search = '';
 
         if (window.location.href !== nextUrl.toString()) {
@@ -2416,10 +2508,13 @@
       return;
     }
 
+    const localOrderPatch = { ...patch };
+    delete localOrderPatch.gitSettings;
     const nextOrderWithActor = applyActorIdentityFallback(
       {
         ...currentOrder,
         ...updated,
+        ...localOrderPatch,
         id: currentOrder.id
       },
       currentOrder
@@ -2741,14 +2836,14 @@
   onAuth={selectTopbarAuth}
   onOpenProfile={openTopbarProfile}
   onSignOut={() => { void signOutProfileSession(); }}
-   onAuthDoubleClick={() => { void openTopbarProfileSetup(); }}
-   onLocale={selectTopbarLocale}
+  onAuthDoubleClick={() => { void openTopbarProfileSetup(); }}
+  onLocale={selectTopbarLocale}
 />
 
 <main data-sidebar-expanded={leftNavExpanded}>
   <kefine-layout data-mode={layoutMode} data-step={step}>
     <section class="kefine-window-grid">
-    {#if craterHealthState === 'failed'}
+    {#if craterHealthState === 'failed' && step === 'create'}
       <kefine-screen in:softScreenTransition out:softScreenTransition>
         <article class="kefine-card kefine-card--wide kefine-template-unavailable">
           <h2>{localeText.errors.backendUnavailableTitle}</h2>
@@ -2762,7 +2857,6 @@
           template={null}
           serviceSetup={null}
           title={localeText.create.title}
-          recentOrders={recentProfileOrders}
           pinnedServices={pinnedCreateServices}
           pinnedServicesTitle={localeText.profile.templates}
           pinnedServicesSubtitle={localeText.create.pinnedServicesSubtitle}
@@ -2783,48 +2877,37 @@
           backgroundExecuteAria={localeText.create.backgroundExecuteAria}
           solverSearchActive={solverSearchActive}
           solverSearchText={solverSearchText}
+          solverSearchCompleted={solverSearchCompleted}
+          solverListHref={getSolverListHref()}
           solverSearchLabel={localeText.create.solverSearchLabel}
-          solverSearchCompletedLabel={localeText.create.solverSearchCompleted}
           solverLabel={localeText.labels.solver}
           matchedOrders={matchedOrders}
+          recentOrders={recentCreatedOrders}
           isSearching={draft.description.trim().length > 0}
           matchedTasksLabel={localeText.create.matchedTasks}
           recentTasksLabel={localeText.labels.taskQueue}
           addFileLabel={localeText.create.addFile}
           addExecutionEstimateLabel={localeText.create.addExecutionEstimate}
-          addTagLabel={localeText.create.richEditorAddTag}
-          tagPlaceholderLabel={localeText.create.richEditorTagPlaceholder}
-          instantAnswersLabel={localeText.create.instantAnswersLabel}
-          instantAnswerGoHint={localeText.create.instantAnswerGoHint}
-          instantPinLabel={localeText.create.instantPinLabel}
-          instantUnpinLabel={localeText.create.instantUnpinLabel}
-          instantPinnedLabel={localeText.create.instantPinnedLabel}
-          instantMenuLabel={localeText.create.instantMenuLabel}
-          instantQrLabel={localeText.create.instantQrLabel}
-          instantAgentLabel={localeText.create.instantAgentLabel}
-          instantAddProjectLabel={localeText.create.instantAddProjectLabel}
-          instantQrDownloadLabel={localeText.create.instantQrDownloadLabel}
-          removeTagLabel={localeText.create.richEditorRemoveTag}
           fileCountLabel={localeText.create.fileCount}
           composerHints={localeText.create.composerHints}
           openTaskLabel={localeText.labels.openOrderLink}
           relatedItemsLabel={localeText.labels.relatedItems}
-          createServiceLabel={localeText.create.transformToService}
-          serviceVariablesLabel={localeText.create.serviceVariables}
           executionEstimateLabel={localeText.labels.executionEstimate}
+          stopTaskLabel={localeText.buttons.stopTask}
           deleteTaskLabel={localeText.buttons.delete}
           onSubmit={handleSubmit}
           onQueueTask={queueTaskBelow}
           onAttachFiles={attachFiles}
           onRemoveFile={removeAttachedFile}
           onDeleteOrder={handleDeleteOrder}
+          onStopOrder={handleStopOrder}
           onOpenOrder={openOrder}
           onCreateServiceFromOrder={() => {}}
           onDescriptionChange={updateDescription}
           onTemplateVariableChange={updateTemplateVariableValue}
           onTagsChange={updateTags}
           onExecutionEstimateChange={updateExecutionEstimate}
-          onOpenSolution={openSolution}
+          onSolverSearchComplete={markSolverSearchComplete}
         />
       </kefine-screen>
     {/if}
@@ -2871,11 +2954,9 @@
         <KefineExecutingStep
           currentOrder={currentOrder}
           queuedOrders={[]}
-          historyOrders={createdOrders}
           execution={executionPresentation}
           canSaveCloneLocally={canSaveCurrentOrderLocally}
           canManageTask={canManageCurrentOrder}
-          repositoriesEnabled={repositoriesEnabled}
           isHydratingTitle={isHydratingRoute && !currentOrder?.title.trim()}
           isConfirmingStep={confirmStepLoading}
           commentSubmittingStepId={stepCommentLoadingId}
@@ -2895,9 +2976,6 @@
             if (currentOrder) {
               resumeOrder(currentOrder);
             }
-          }}
-          onSelectHistoryOrder={(orderId) => {
-            void openOrderById(orderId);
           }}
           onWalletLogin={selectTopbarAuth}
           onPasskeyLogin={choosePasskeyMethod}
@@ -3069,7 +3147,6 @@
     githubTitle={localeText.auth.githubTitle}
     passkeyTitle={localeText.auth.passkeyTitle}
     privateKeyTitle={localeText.auth.privateKeyTitle}
-    emailTitle={localeText.auth.emailCodeTitle}
     connectedTitle={localeText.profile.title}
     connectedDescription={localeText.profile.authDrawerSubtitle}
     latestTasksTitle={localeText.profile.latestTasks}
@@ -3077,10 +3154,12 @@
     openWorkspaceLabel={localeText.profile.openPublicProfile}
     signOutLabel={localeText.profile.signOut}
     openTaskLabel={localeText.profile.openTask}
-    showPrivateKey={true}
+    statusLabels={localeText.orderStatus}
+    showPrivateKey={showPrivateKeyAuth}
     isAuthenticated={isAuthenticated}
     profile={currentProfile}
     recentTasks={recentProfileOrders}
+    closeLabel={localeText.buttons.closeDialog}
     onClose={() => { authDialogOpen = false; }}
     onBrowserWallet={chooseBrowserWalletMethod}
     onWalletConnect={chooseWalletConnectMethod}
@@ -3089,7 +3168,6 @@
     onGithub={() => { beginOAuthLogin('github'); }}
     onPasskey={choosePasskeyMethod}
     onPrivateKey={openPrivateKeyDialog}
-    onEmailCode={openEmailCodeDialog}
     onOpenProfile={() => { void openTopbarProfile(); }}
     onOpenTask={(orderId: string) => { void openOrderById(orderId); }}
     onSignOut={() => { void signOutProfileSession(); }}
@@ -3112,8 +3190,8 @@
     title={localeText.auth.privateKeyTitle}
     description={localeText.auth.privateKeyDescription}
     value={privateKeyInput}
-    placeholder={localeText.auth.privateKeyPlaceholder}
-    submitLabel={localeText.auth.privateKeySignLabel}
+    placeholder="pqsk_... or -----BEGIN PRIVATE KEY-----"
+    submitLabel="Sign"
     closeLabel={localeText.buttons.closeDialog}
     generateLabel={localeText.auth.privateKeyGenerateLabel}
     onClose={() => { privateKeyDialogOpen = false; }}
@@ -3164,7 +3242,6 @@
     min-height: calc(100vh - clamp(1.5rem, 4vw, 2.8rem));
     height: auto;
     display: grid;
-    contain: layout style;
     gap: 1rem;
     align-items: start;
     align-content: start;
@@ -3190,10 +3267,11 @@
   }
 
   .kefine-window-grid {
+    width: 100%;
     display: grid;
     gap: 1rem;
+    grid-template-columns: 1fr;
     align-items: start;
-    contain: layout style;
     justify-content: stretch;
   }
 

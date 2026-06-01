@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { gotoAndWaitForReady, mockPrivateKeyAuth, readActorPrivateKeyCompact, readActorPrivateKeyPem } from './helpers/kefine';
+import { gotoAndWaitForReady, mockPrivateKeyAuth, readActorPrivateKeyCompact } from './helpers/kefine';
 
 test.describe('Auth Flows', () => {
   test('privatekey login works with compact pqsk key and sends only local public key string to auth', async ({ page }) => {
@@ -32,22 +32,5 @@ line-2
 
     await page.getByTestId('kefine-privatekey-input').fill(pemKey);
     await expect(page.getByTestId('kefine-privatekey-input')).toHaveValue(pemKey);
-  });
-
-  test('sign in button recovers when the auth drawer lazy load fails', async ({ page }) => {
-    await gotoAndWaitForReady(page);
-
-    let blockedAuthDrawerModule = false;
-    await page.route(/\/src\/lib\/components\/kefine\/KefineAuthDialog\.svelte(?:\?|$)/, async (route) => {
-      blockedAuthDrawerModule = true;
-      await route.abort('failed');
-    });
-
-    const authButton = page.locator("button[data-part='auth']");
-    await authButton.click();
-
-    await expect.poll(() => blockedAuthDrawerModule).toBe(true);
-    await expect(authButton).toBeEnabled();
-    await expect(authButton).toHaveAttribute('data-loading', 'false');
   });
 });

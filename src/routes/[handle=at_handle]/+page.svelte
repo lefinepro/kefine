@@ -803,7 +803,7 @@
                 class="profile-identity-input"
                 bind:value={bio}
                 rows="6"
-                placeholder={localeText.profile.bioPlaceholder}
+                placeholder="Write a short profile note: what you do, what kind of tasks you complete, and what people should expect from your page."
                 onkeydown={blockStepSubmitOnEnter}
               ></textarea>
               <lefine-box class="profile-setup__footer profile-setup__footer--spread">
@@ -957,7 +957,7 @@
         <aside class="profile-side">
           <article class="profile-surface profile-tasks">
             <lefine-box class="profile-section__head">
-              <strong>{localeText.profile.repos}</strong>
+              <strong>{localeText.profile.lepos}</strong>
             </lefine-box>
             <lefine-box class="profile-task-list">
               {#each (isOwner ? ownerTasks : publicTasks) as order (order.id)}

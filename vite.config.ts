@@ -1,10 +1,9 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig, type UserConfig } from 'vite';
 import { resolve } from 'node:path';
-import compression from 'vite-plugin-compression2';
 
 const config: UserConfig & { test?: Record<string, unknown> } = {
-  plugins: [sveltekit(), compression({ algorithms: ['brotliCompress'], exclude: [/\.(br)$/, /\.(gz)$/], threshold: 512 })],
+  plugins: [sveltekit()],
   test: {
     include: ['src/**/*.{test,spec}.{js,ts}'],
     exclude: ['node_modules', 'e2e', 'crater', '.svelte-kit', 'build']

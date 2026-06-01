@@ -117,7 +117,11 @@ export async function mockOrderApi(page: Page) {
   let createDelayMs = 0;
 
   await page.route('**/api/health', async (route) => {
-    await route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' });
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ ok: true })
+    });
   });
 
   await page.route('**/create', async (route) => {
@@ -204,7 +208,6 @@ export async function mockOrderApi(page: Page) {
     });
   }
 
-  await page.route('**/api/order/**', handleOrderLookup);
   await page.route('**/status/**', handleOrderLookup);
 
   return {
@@ -269,28 +272,6 @@ export async function submitTask(page: Page) {
 export async function createTask(page: Page, title: string) {
   await page.getByTestId('kefine-task-input').fill(title);
   await submitTask(page);
-  const routeId = await page.waitForFunction<string | null, string>((taskTitle) => {
-    const raw = window.localStorage.getItem('kefine-created-orders-v1');
-    if (!raw) {
-      return null;
-    }
-
-    try {
-      const orders = JSON.parse(raw) as Array<{ id?: string; shareId?: string; title?: string }>;
-      const order = orders.find((item) => {
-        const id = item.id ?? '';
-        return item.title === taskTitle && id && !id.startsWith('temp-') && !id.startsWith('local-');
-      });
-      return order ? (order.shareId || order.id) : null;
-    } catch {
-      return null;
-    }
-  }, title);
-  const routeValue = await routeId.jsonValue();
-  if (!routeValue) {
-    throw new Error(`Created task "${title}" was not written to local storage.`);
-  }
-  await page.goto(`/order/${encodeURIComponent(routeValue)}`);
 }
 
 export async function mockPrivateKeyAuth(page: Page) {
@@ -317,7 +298,7 @@ export async function mockPrivateKeyAuth(page: Page) {
         handle: 'api',
         email: 'api@actor.local',
         publickey: {
-          key: 'pqpk_testpublickey_for_api',
+          key: expectedPublicKey,
           pem: ''
         },
         keyId: 'pq1_testactoraddress',
@@ -337,8 +318,25 @@ export async function mockPrivateKeyAuth(page: Page) {
   });
 }
 
+let fallbackPrivateKeyPem: string | null = null;
+
+function encodePem(label: string, bytes: Uint8Array) {
+  const base64 = Buffer.from(bytes).toString('base64');
+  const body = base64.match(/.{1,64}/g)?.join('\n') ?? '';
+  return [`-----BEGIN ${label}-----`, body, `-----END ${label}-----`].join('\n');
+}
+
 export function readActorPrivateKeyPem() {
-  return readFileSync(path.resolve(process.cwd(), 'actor-privatekey.pem'), 'utf8');
+  try {
+    return readFileSync(path.resolve(process.cwd(), 'actor-privatekey.pem'), 'utf8');
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      throw error;
+    }
+  }
+
+  fallbackPrivateKeyPem ??= encodePem('PRIVATE KEY', ml_dsa65.keygen().secretKey);
+  return fallbackPrivateKeyPem;
 }
 
 function pemToDer(pem: string) {
@@ -366,11 +364,5 @@ export async function deriveActorPublicKeyString() {
     ]),
     publicKey
   ]);
-  const publicKeyPem = [
-    '-----BEGIN PUBLIC KEY-----',
-    ...(publicKeyDer.toString('base64').match(/.{1,64}/g) ?? []),
-    '-----END PUBLIC KEY-----'
-  ].join('\n');
-
-  return encodeKeyString(publicKeyPem, 'pqpk_');
+  return publicKeyDer.toString('base64url');
 }

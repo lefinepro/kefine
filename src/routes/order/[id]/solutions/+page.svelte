@@ -1,99 +1,40 @@
 <script lang="ts">
-  import { page } from '$app/stores';
   import { goto } from '$app/navigation';
-  import { browser } from '$app/environment';
+  import KefineSolversView from '$lib/components/kefine/KefineSolversView.svelte';
   import { defaultSolutions, type Solution } from '$lib/kefine/solutions-data';
-  import KefineSolversView, {
-    type SolversHistoryTask,
-    type SolversSettingsState
-  } from '$lib/components/kefine/KefineSolversView.svelte';
-  import { kefineLocaleText } from '$lib/constants/kefine-locale';
 
-  const id = $page.params.id;
-  const taskQuery = $page.url.searchParams.get('task') || '';
+  let {
+    data
+  }: {
+    data: {
+      orderId: string;
+      taskText: string;
+    };
+  } = $props();
 
-  const solutions: Solution[] = defaultSolutions.filter(
-    (s) => s.project?.includes('go-proxy') || s.solver.includes('Proxy')
+  function filterSolutions(taskText: string): Solution[] {
+    const normalized = taskText.trim().toLowerCase();
+    if (normalized.includes('rust') || normalized.includes('hello world')) {
+      return defaultSolutions.filter((s) => s.solver.toLowerCase().includes('rust'));
+    }
+    return defaultSolutions.filter((s) => s.solver.toLowerCase().includes('proxy'));
+  }
+
+  let appliedOverrides = $state<Record<string, boolean>>({});
+  const baseSolutions = $derived(filterSolutions(data.taskText));
+  const solutions = $derived(
+    baseSolutions.map((s) => (s.id in appliedOverrides ? { ...s, rated: appliedOverrides[s.id] } : s))
   );
 
-  const repoName = 'kefine/go-proxy';
-  const COMPLETED_SEARCHES_KEY = 'kefine-completed-solver-searches';
-  const SETTINGS_KEY = `kefine-task-settings-${id}`;
+  const taskTitle = $derived(data.taskText || 'Solvers');
+  const repoName = $derived(data.orderId ? `kefine/${data.orderId}` : 'kefine/solvers');
 
-  function readCompletedSearches(): string[] {
-    if (!browser) return [];
-    try {
-      const raw = localStorage.getItem(COMPLETED_SEARCHES_KEY);
-      const list = raw ? JSON.parse(raw) : [];
-      return Array.isArray(list) ? list.filter((entry) => typeof entry === 'string') : [];
-    } catch {
-      return [];
-    }
+  function handleViewSolution(solutionId: string) {
+    void goto(`/order/${encodeURIComponent(data.orderId)}/solver/${solutionId}`);
   }
 
-  function readSettings(): SolversSettingsState {
-    const base: SolversSettingsState = { isPublic: true, vcsEnabled: true, defaultBranch: 'main' };
-    if (!browser) return base;
-    try {
-      const raw = localStorage.getItem(SETTINGS_KEY);
-      if (!raw) return base;
-      const parsed = JSON.parse(raw);
-      return {
-        isPublic: typeof parsed?.isPublic === 'boolean' ? parsed.isPublic : base.isPublic,
-        vcsEnabled: typeof parsed?.vcsEnabled === 'boolean' ? parsed.vcsEnabled : base.vcsEnabled,
-        defaultBranch:
-          typeof parsed?.defaultBranch === 'string' && parsed.defaultBranch.trim().length > 0
-            ? parsed.defaultBranch
-            : base.defaultBranch
-      };
-    } catch {
-      return base;
-    }
-  }
-
-  let settingsState = $state<SolversSettingsState>(readSettings());
-
-  function handleApplySettings(next: SolversSettingsState) {
-    settingsState = next;
-    if (!browser) return;
-    try {
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify(next));
-    } catch {
-      /* ignore quota errors */
-    }
-  }
-
-  const historyTasks = $derived.by<SolversHistoryTask[]>(() => {
-    const completed = readCompletedSearches();
-    const list: SolversHistoryTask[] = [
-      {
-        id: 'current',
-        title: repoName,
-        description: taskQuery || repoName,
-        isActive: true
-      }
-    ];
-    const seen = new Set<string>([taskQuery.trim().toLowerCase()]);
-    for (const entry of completed.slice(-9).reverse()) {
-      const trimmed = entry.trim();
-      if (!trimmed) continue;
-      const key = trimmed.toLowerCase();
-      if (seen.has(key)) continue;
-      seen.add(key);
-      list.push({
-        id: `history-${list.length}`,
-        title: trimmed.length > 60 ? `${trimmed.slice(0, 60)}…` : trimmed,
-        description: trimmed
-      });
-      if (list.length >= 10) break;
-    }
-    return list;
-  });
-
-  function handleSelectHistoryTask(historyId: string) {
-    const task = historyTasks.find((t) => t.id === historyId);
-    if (!task || task.isActive) return;
-    goto(`/?task=${encodeURIComponent(task.description ?? task.title)}`);
+  function handleApplySolution(solutionId: string) {
+    appliedOverrides = { ...appliedOverrides, [solutionId]: true };
   }
 </script>
 
@@ -103,11 +44,7 @@
 
 <KefineSolversView
   {solutions}
-  taskTitle={taskQuery}
-  repoName={repoName}
-  historyTasks={historyTasks}
-  settingsState={settingsState}
-  onApplySettings={handleApplySettings}
-  onSelectHistoryTask={handleSelectHistoryTask}
-  onViewSolution={(solutionId) => goto(`/order/${id}/solver/${solutionId}`)}
+  taskTitle={taskTitle}
+  onViewSolution={handleViewSolution}
+  onApplySolution={handleApplySolution}
 />

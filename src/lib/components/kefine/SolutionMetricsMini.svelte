@@ -1,8 +1,7 @@
 <script lang="ts">
   import type { SolutionMetric } from '$lib/kefine/solutions-data';
-  import { compactChartSize, timeSeries, priceSeries } from '$lib/kefine/solver-charts';
+  import { compactChartSize, timeSeries, weightSeries } from '$lib/kefine/solver-charts';
   import SolutionChartCard from './SolutionChartCard.svelte';
-  import { kefineLocaleText } from '$lib/constants/kefine-locale';
 
   let {
     metrics,
@@ -17,16 +16,14 @@
   } = $props();
 
   const time = $derived(timeSeries(metrics, activeSolverId));
-  const price = $derived(priceSeries(metrics, activeSolverId));
-
-  const localeText = $derived($kefineLocaleText);
+  const weight = $derived(weightSeries(metrics, activeSolverId));
 </script>
 
-<lef-metrics-mini aria-label={localeText.solversView.metricsAria}>
+<lef-metrics-mini aria-label="Solver metrics">
   <lef-metrics-mini-head>
-    <strong>{localeText.solversView.chartMetrics}</strong>
+    <strong>Metrics</strong>
     {#if project || slug}
-      <lef-metrics-mini-project aria-label={localeText.solversView.chartProjectAria}>
+      <lef-metrics-mini-project aria-label="Project and slug">
         {#if project}
           <lef-metrics-mini-project-name>
             <svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor" aria-hidden="true">
@@ -49,13 +46,13 @@
         {/if}
       </lef-metrics-mini-project>
     {:else}
-      <lefine-text>{localeText.solversView.chartFallback}</lefine-text>
+      <lefine-text>Time &amp; weight per solver</lefine-text>
     {/if}
   </lef-metrics-mini-head>
 
   <SolutionChartCard
-    title={localeText.solversView.chartExecutionTime}
-    unit={localeText.solversView.chartSeconds}
+    title="Execution time"
+    unit="seconds"
     series={time}
     metrics={metrics}
     size={compactChartSize}
@@ -65,14 +62,14 @@
   />
 
   <SolutionChartCard
-    title={localeText.solversView.chartPrice}
-    unit={localeText.solversView.chartUsd}
-    series={price}
+    title="Solution weight"
+    unit="kilobytes"
+    series={weight}
     metrics={metrics}
     size={compactChartSize}
     variant="alt"
-    valueFormatter={(v) => `$${v.toFixed(2)}`}
-    seriesValue={(m) => m.priceUsd}
+    valueFormatter={(v) => `${v.toFixed(1)}kb`}
+    seriesValue={(m) => m.solutionWeightKb}
   />
 </lef-metrics-mini>
 

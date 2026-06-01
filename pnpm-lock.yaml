@@ -81,9 +81,6 @@ importers:
       vite:
         specifier: '8'
         version: 8.0.13(@types/node@25.8.0)(esbuild@0.27.7)
-      vite-plugin-compression2:
-        specifier: ^2.5.3
-        version: 2.5.3(rollup@4.60.4)
       vitest:
         specifier: ^3.0.0
         version: 3.2.4(@types/node@25.8.0)(lightningcss@1.32.0)
@@ -2797,9 +2794,6 @@ packages:
     resolution: {integrity: sha512-yEFYrVhod+hdNyx7g5Bnkkb0G6si8HJurOoOEgC8B/O0uXLHlaey/65KRv6cuWBNhBgHKAROVpc7QyYqE5gFng==}
     engines: {node: '>=20'}
 
-  tar-mini@0.2.0:
-    resolution: {integrity: sha512-+qfUHz700DWnRutdUsxRRVZ38G1Qr27OetwaMYTdg8hcPxf46U0S1Zf76dQMWRBmusOt2ZCK5kbIaiLkoGO7WQ==}
-
   thread-stream@3.1.0:
     resolution: {integrity: sha512-OqyPZ9u96VohAyMfJykzmivOrY2wfMSf3C5TtFJVgN+Hm6aj+voFhlK+kZEIv2FBh1X6Xp3DlnCOfEQ3B2J86A==}
 
@@ -2983,9 +2977,6 @@ packages:
     resolution: {integrity: sha512-EbKSKh+bh1E1IFxeO0pg1n4dvoOTt0UDiXMd/qn++r98+jPO1xtJilvXldeuQ8giIB5IkpjCgMleHMNEsGH6pg==}
     engines: {node: ^18.0.0 || ^20.0.0 || >=22.0.0}
     hasBin: true
-
-  vite-plugin-compression2@2.5.3:
-    resolution: {integrity: sha512-ItPgqQWkcnBbVw7is9OKwiZ8v6+ju9rYROl5Lp6QfQDEx/d55AwJQb/KLpsQqsU9HoigYBsZ8tK6I02UwJNvEw==}
 
   vite@7.3.3:
     resolution: {integrity: sha512-/4XH147Ui7OGTjg3HbdWe5arnZQSbfuRzdr9Ec7TQi5I7R+ir0Rlc9GIvD4v0XZurELqA035KVXJXpR61xhiTA==}
@@ -6714,8 +6705,6 @@ snapshots:
 
   tagged-tag@1.0.0: {}
 
-  tar-mini@0.2.0: {}
-
   thread-stream@3.1.0:
     dependencies:
       real-require: 0.2.0
@@ -6880,13 +6869,6 @@ snapshots:
       - terser
       - tsx
       - yaml
-
-  vite-plugin-compression2@2.5.3(rollup@4.60.4):
-    dependencies:
-      '@rollup/pluginutils': 5.3.0(rollup@4.60.4)
-      tar-mini: 0.2.0
-    transitivePeerDependencies:
-      - rollup
 
   vite@7.3.3(@types/node@25.8.0)(lightningcss@1.32.0):
     dependencies:

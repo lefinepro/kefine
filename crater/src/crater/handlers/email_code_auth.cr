@@ -2,13 +2,13 @@ require "json"
 require "random/secure"
 require "../utils/maddy_mailer"
 
-module Crater
+module Lepos
   module Handlers
     module EmailCodeAuth
-      SESSION_TTL = 30.days
-      CODE_TTL = 10.minutes
+      SESSION_TTL   = 30.days
+      CODE_TTL      = 10.minutes
       EMAIL_PATTERN = /\A[^@\s]+@[^@\s]+\.[^@\s]+\z/
-      CODE_PATTERN = /\A\d{6}\z/
+      CODE_PATTERN  = /\A\d{6}\z/
 
       record PendingCode, code : String, expires_at : Time, attempts : Int32
 
@@ -73,8 +73,8 @@ module Crater
         end
 
         response = {
-          sent: true,
-          email: email,
+          sent:             true,
+          email:            email,
           expiresInSeconds: CODE_TTL.total_seconds.to_i,
         }
 
@@ -134,7 +134,7 @@ module Crater
           handle:      handle,
           email:       email,
           authType:    "email",
-          expiresAt:   (Time.utc + SESSION_TTL).to_rfc3339
+          expiresAt:   (Time.utc + SESSION_TTL).to_rfc3339,
         }.to_json
       end
 
@@ -161,7 +161,7 @@ module Crater
           "",
           "This code was requested for #{email} and expires in 10 minutes.",
           "",
-          "If you did not request it, you can ignore this email."
+          "If you did not request it, you can ignore this email.",
         ].join('\n')
       end
     end

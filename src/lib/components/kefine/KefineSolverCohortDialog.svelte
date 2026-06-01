@@ -1,15 +1,12 @@
 <script lang="ts">
-  import { kefineLocaleText } from '$lib/constants/kefine-locale';
   import KefineModal from '$lib/components/kefine/KefineModal.svelte';
-
-  type SolverNoteKey = 'routeScout' | 'infraForge' | 'rollbackKeeper' | 'pricingOracle';
 
   type SolverDirectoryItem = {
     id: string;
     name: string;
     handle: string;
     cohorts: string[];
-    noteKey: SolverNoteKey;
+    note: string;
     rate: string;
   };
 
@@ -19,7 +16,7 @@
       name: 'Route Scout',
       handle: '@route-scout',
       cohorts: ['vpn', 'wireguard', 'network'],
-      noteKey: 'routeScout',
+      note: 'Fast routing and region picking for private tunnels.',
       rate: '$12',
     },
     {
@@ -27,7 +24,7 @@
       name: 'Infra Forge',
       handle: '@infra-forge',
       cohorts: ['vpn', 'devops', 'infra'],
-      noteKey: 'infraForge',
+      note: 'Deploys access nodes and delivery packages.',
       rate: '$18',
     },
     {
@@ -35,7 +32,7 @@
       name: 'Rollback Keeper',
       handle: '@rollback-keeper',
       cohorts: ['ci', 'devops', 'kubernetes'],
-      noteKey: 'rollbackKeeper',
+      note: 'Cheap fixes for pipelines, releases, and rollback paths.',
       rate: '$9',
     },
     {
@@ -43,7 +40,7 @@
       name: 'Pricing Oracle',
       handle: '@pricing-oracle',
       cohorts: ['vpn', 'market', 'pricing'],
-      noteKey: 'pricingOracle',
+      note: 'Finds lower-cost solver routes inside a cohort.',
       rate: '$7',
     }
   ];
@@ -51,12 +48,11 @@
   let {
     open,
     onClose,
-    closeLabel,
-    title,
-    description,
-    searchLabel,
-    searchPlaceholder,
-    applyLabel,
+    closeLabel = 'Close',
+    title = 'Cheap solver cohort',
+    description = "Search a solver cohort like `vpn` and pick the people you want Lefine to prioritize.",
+    searchLabel = 'Cohort search',
+    searchPlaceholder = 'vpn, devops, wireguard...',
     cohortQuery = '',
     selectedSolverIds = [],
     onApply
@@ -68,20 +64,10 @@
     description?: string;
     searchLabel?: string;
     searchPlaceholder?: string;
-    applyLabel?: string;
     cohortQuery?: string;
     selectedSolverIds?: string[];
     onApply: (payload: { cohortQuery: string; solverIds: string[] }) => void;
   } = $props();
-
-  const localeText = $derived($kefineLocaleText);
-  const cohortText = $derived(localeText.solversView.cohortDialog);
-  const resolvedTitle = $derived(title ?? cohortText.title);
-  const resolvedDescription = $derived(description ?? cohortText.description);
-  const resolvedSearchLabel = $derived(searchLabel ?? cohortText.searchLabel);
-  const resolvedSearchPlaceholder = $derived(searchPlaceholder ?? cohortText.searchPlaceholder);
-  const resolvedApplyLabel = $derived(applyLabel ?? localeText.buttons.apply);
-  const resolvedCloseLabel = $derived(closeLabel ?? localeText.buttons.closeDialog);
 
   let localQuery = $state('');
   let localSelectedSolverIds = $state<string[]>([]);
@@ -102,7 +88,7 @@
     }
 
     return SOLVER_DIRECTORY.filter((solver) =>
-      [solver.name, solver.handle, cohortText.solverNotes[solver.noteKey], ...solver.cohorts].some((value) => value.toLowerCase().includes(query))
+      [solver.name, solver.handle, solver.note, ...solver.cohorts].some((value) => value.toLowerCase().includes(query))
     );
   });
 
@@ -120,18 +106,18 @@
   }
 </script>
 
-<KefineModal open={open} onClose={onClose} closeLabel={resolvedCloseLabel} width="wide" tone="dark">
+<KefineModal open={open} onClose={onClose} closeLabel={closeLabel} width="wide" tone="dark">
   <section class="kefine-solver-cohort-dialog">
     <header class="kefine-solver-cohort-dialog__header">
       <lefine-box>
-        <h2>{resolvedTitle}</h2>
-        <p>{resolvedDescription}</p>
+        <h2>{title}</h2>
+        <p>{description}</p>
       </lefine-box>
     </header>
 
     <label class="kefine-solver-cohort-dialog__search">
-      <lefine-text>{resolvedSearchLabel}</lefine-text>
-      <input bind:value={localQuery} placeholder={resolvedSearchPlaceholder} />
+      <lefine-text>{searchLabel}</lefine-text>
+      <input bind:value={localQuery} placeholder={searchPlaceholder} />
     </label>
 
     <kefine-solver-list class="kefine-solver-cohort-dialog__list">
@@ -148,7 +134,7 @@
           <kefine-solver-copy class="kefine-solver-cohort-dialog__copy">
             <strong>{solver.name}</strong>
             <lefine-text>{solver.handle}</lefine-text>
-            <p>{cohortText.solverNotes[solver.noteKey]}</p>
+            <p>{solver.note}</p>
             <kefine-solver-badges class="kefine-solver-cohort-dialog__badges">
               {#each solver.cohorts as cohort}
                 <lefine-text>{cohort}</lefine-text>
@@ -161,8 +147,8 @@
     </kefine-solver-list>
 
     <footer class="kefine-solver-cohort-dialog__actions">
-      <button type="button" data-variant="ghost" onclick={onClose}>{resolvedCloseLabel}</button>
-      <button type="button" data-variant="primary" onclick={applySelection}>{resolvedApplyLabel}</button>
+      <button type="button" data-variant="ghost" onclick={onClose}>{closeLabel}</button>
+      <button type="button" data-variant="primary" onclick={applySelection}>Apply</button>
     </footer>
   </section>
 </KefineModal>

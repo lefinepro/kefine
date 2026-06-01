@@ -2,7 +2,7 @@ require "./repository_store"
 require "./ssh_key_store"
 require "./utils/config"
 
-module Crater
+module Lepos
   module SshGitShell
     private def self.normalize_actor(value : String?) : String
       value.to_s.strip.downcase.gsub(/^@+/, "").gsub(/[^a-z0-9._-]+/, "-").gsub(/^[._-]+|[._-]+$/, "")
@@ -81,8 +81,6 @@ module Crater
     end
 
     def self.run(config : Utils::Config, args : Array(String)) : NoReturn
-      deny("Repositories feature is disabled.") unless config.repositories_enabled
-
       actor_handle = parse_actor(args)
       key = SshKeyStore.find_by_actor(actor_handle, config)
       deny("SSH key is not registered for @#{actor_handle}.") unless key

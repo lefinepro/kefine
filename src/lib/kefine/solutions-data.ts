@@ -1,19 +1,3 @@
-export interface QuickTest {
-  /** Short, runnable invocation shown monospace, e.g. `POST /` or `cargo run`. */
-  command: string;
-  /** What the test verifies, e.g. `Forwards a request`. */
-  title: string;
-  /** Expected outcome, e.g. `200 · proxy ready`. */
-  expected: string;
-  /** Whether running the test succeeds. Defaults to `true` when omitted. */
-  passes?: boolean;
-  /**
-   * Actual outcome reported after running the test. Defaults to `expected`
-   * when the test passes; set it to show a mismatch when `passes` is `false`.
-   */
-  actual?: string;
-}
-
 export interface Solution {
   id: string;
   solver: string;
@@ -21,11 +5,6 @@ export interface Solution {
   description: string;
   project?: string;
   slug?: string;
-  /**
-   * A single quick test the user can run to validate the solution right away,
-   * surfaced on the solution card instead of the list of changed files.
-   */
-  quickTest?: QuickTest;
   codeLines: Array<{
     text: string;
     type: 'added' | 'removed' | 'unchanged';
@@ -59,18 +38,13 @@ export interface SolutionMetric {
   solverId: string;
   solver: string;
   executionTimeSec: number;
-  priceUsd: number;
-  successRate: number;
+  solutionWeightKb: number;
 }
 
 export const defaultMetrics: SolutionMetric[] = [
-  { solverId: '1', solver: 'Basic Rust Dev', executionTimeSec: 0.7, priceUsd: 0.04, successRate: 78 },
-  { solverId: '2', solver: 'Commented Rust Expert', executionTimeSec: 1.1, priceUsd: 0.09, successRate: 84 },
-  { solverId: '3', solver: 'Interactive Rust', executionTimeSec: 1.6, priceUsd: 0.14, successRate: 87 },
-  { solverId: '4', solver: 'Modern Rust Patterns', executionTimeSec: 1.9, priceUsd: 0.18, successRate: 90 },
-  { solverId: '5', solver: 'Go Proxy Basic', executionTimeSec: 1.2, priceUsd: 0.08, successRate: 82 },
-  { solverId: '6', solver: 'Go Proxy Pro', executionTimeSec: 2.4, priceUsd: 0.21, successRate: 91 },
-  { solverId: '7', solver: 'Go Proxy Enterprise', executionTimeSec: 3.8, priceUsd: 0.59, successRate: 97 }
+  { solverId: '5', solver: 'Go Proxy Basic', executionTimeSec: 1.2, solutionWeightKb: 2.4 },
+  { solverId: '6', solver: 'Go Proxy Pro', executionTimeSec: 2.4, solutionWeightKb: 5.1 },
+  { solverId: '7', solver: 'Go Proxy Enterprise', executionTimeSec: 3.8, solutionWeightKb: 7.6 }
 ];
 
 export const defaultSolutions: Solution[] = [
@@ -79,11 +53,6 @@ export const defaultSolutions: Solution[] = [
     solver: 'Basic Rust Dev',
     title: 'Simple Hello World without comments',
     description: 'Minimal implementation with just the basics',
-    quickTest: {
-      command: 'cargo run',
-      title: 'Prints the greeting',
-      expected: 'Hello, world!'
-    },
     diffs: [
       { file: 'src/main.rs', added: 3, removed: 0 }
     ],
@@ -98,11 +67,6 @@ export const defaultSolutions: Solution[] = [
     solver: 'Commented Rust Expert',
     title: 'Hello World with detailed comments',
     description: 'Educational version with explanations for each line',
-    quickTest: {
-      command: 'cargo run',
-      title: 'Prints the greeting',
-      expected: 'Hello, world!'
-    },
     diffs: [
       { file: 'src/main.rs', added: 9, removed: 0 }
     ],
@@ -123,11 +87,6 @@ export const defaultSolutions: Solution[] = [
     solver: 'Interactive Rust',
     title: 'Interactive Hello World with user input',
     description: 'Reads user input and responds accordingly',
-    quickTest: {
-      command: 'echo "Ada" | cargo run',
-      title: 'Greets the entered name',
-      expected: 'Hello, Ada!'
-    },
     diffs: [
       { file: 'src/main.rs', added: 11, removed: 0 }
     ],
@@ -150,11 +109,6 @@ export const defaultSolutions: Solution[] = [
     solver: 'Modern Rust Patterns',
     title: 'Hello World using modern Rust patterns',
     description: 'Uses Result handling and modern syntax',
-    quickTest: {
-      command: 'echo "Ada" | cargo run',
-      title: 'Greets the entered name',
-      expected: 'Hello, Ada!'
-    },
     diffs: [
       { file: 'src/main.rs', added: 14, removed: 0 }
     ],
@@ -182,11 +136,6 @@ export const defaultSolutions: Solution[] = [
     description: 'Minimal HTTP proxy with forward functionality',
     project: 'kefine/go-proxy',
     slug: 'feat/basic-forward',
-    quickTest: {
-      command: 'POST /',
-      title: 'Forwards a request',
-      expected: '200 · proxy ready'
-    },
     diffs: [
       { file: 'main.go', added: 33, removed: 0 },
       { file: 'config.yaml', added: 7, removed: 0 },
@@ -385,11 +334,6 @@ export const defaultSolutions: Solution[] = [
     description: 'Proxy with request/response logging and error handling',
     project: 'kefine/go-proxy',
     slug: 'feat/structured-logging',
-    quickTest: {
-      command: 'GET /health',
-      title: 'Reports healthy status',
-      expected: '200 · status ok'
-    },
     diffs: [
       { file: 'main.go', added: 43, removed: 0 },
       { file: 'config.go', added: 16, removed: 0 },
@@ -532,11 +476,6 @@ export const defaultSolutions: Solution[] = [
     description: 'Enterprise features: rate limiting, caching, metrics',
     project: 'kefine/go-proxy',
     slug: 'feat/auth-rate-metrics',
-    quickTest: {
-      command: 'POST /proxy',
-      title: 'Forwards under the rate limit',
-      expected: '200 · forwarded'
-    },
     diffs: [
       { file: 'main.go', added: 34, removed: 0 },
       { file: 'ratelimit.go', added: 16, removed: 0 },

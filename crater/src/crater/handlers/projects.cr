@@ -1,5 +1,6 @@
 require "kemal"
 require "json"
+require "../aptok"
 require "../order_queue"
 require "../repository_store"
 require "../utils/config"
@@ -90,42 +91,42 @@ module Lepos
         order = OrderQueue.find_order(repository.order_id, config)
         return nil unless order
 
-        JSON.parse(
-          {
-            "@context" => [ActivityPub::CONTEXT, ForgeFed::CONTEXT],
-            "id" => repository.project_id,
-            "type" => "Project",
-            "name" => repository.name,
-            "summary" => order.description || order.title,
-            "description" => order.description || order.title,
-            "sourceRepository" => repository.public_clone_url || repository.ssh_clone_url || "",
-            "issueTracker" => "#{config.crater_url}/projects/#{repository.project_id}/tickets",
-            "administrators" => [order.owner_username || config.actor_username],
-            "createdAt" => repository.created_at,
-            "updatedAt" => repository.updated_at,
-            "repository" => JSON.parse(RepositoryStore.to_json_payload(repository).to_json)
-          }.to_json
+        payload = Aptok.forgefed_project(
+          repository.project_id,
+          repository.name,
+          summary: order.description || order.title,
+          context: config.crater_url
         )
+        payload["description"] = Aptok.json(order.description || order.title)
+        payload["sourceRepository"] = Aptok.json(repository.public_clone_url || repository.ssh_clone_url || "")
+        payload["issueTracker"] = Aptok.json("#{config.crater_url}/projects/#{repository.project_id}/tickets")
+        payload["administrators"] = Aptok.json([order.owner_username || config.actor_username])
+        payload["createdAt"] = Aptok.json(repository.created_at)
+        payload["updatedAt"] = Aptok.json(repository.updated_at)
+        payload["repository"] = Aptok.json(RepositoryStore.to_json_payload(repository))
+
+        JSON.parse(payload.to_json)
       end
 
       private def self.ticket_payload(order : OrderQueue::OrderRecord, repository : RepositoryStore::RepositoryRecord) : JSON::Any
-        JSON.parse(
-          {
-            "id" => "#{repository.project_id}/tickets/#{order.id}",
-            "type" => "Ticket",
-            "projectId" => repository.project_id,
-            "orderId" => order.id,
-            "name" => order.title,
-            "content" => order.description || "",
-            "status" => order.status,
-            "labels" => order.labels,
-            "estimatedCost" => order.estimated_cost,
-            "currency" => order.currency,
-            "createdAt" => order.created_at,
-            "updatedAt" => order.updated_at,
-            "repositoryId" => repository.id
-          }.to_json
+        payload = Aptok.forgefed_ticket(
+          "#{repository.project_id}/tickets/#{order.id}",
+          order.title,
+          order.description || "",
+          context: repository.project_id,
+          resolved: order.status == "completed"
         )
+        payload["projectId"] = Aptok.json(repository.project_id)
+        payload["orderId"] = Aptok.json(order.id)
+        payload["status"] = Aptok.json(order.status)
+        payload["labels"] = Aptok.json(order.labels)
+        payload["estimatedCost"] = Aptok.json(order.estimated_cost)
+        payload["currency"] = Aptok.json(order.currency)
+        payload["createdAt"] = Aptok.json(order.created_at)
+        payload["updatedAt"] = Aptok.json(order.updated_at)
+        payload["repositoryId"] = Aptok.json(repository.id)
+
+        JSON.parse(payload.to_json)
       end
     end
   end

@@ -13,7 +13,6 @@
     readPasskeySession,
     type PasskeySession
   } from '$lib/auth/passkey-session';
-  import { kefineLocaleText } from '$lib/constants/kefine-locale';
   import { raceWithDeadline } from '$lib/utils/helpers';
 
   interface Props {
@@ -24,16 +23,12 @@
   }
 
   let {
-    title,
-    description,
+    title = 'Passkey',
+    description = 'Enter your handle once and continue with an existing passkey or create a new one.',
     onSuccess,
     onError
   }: Props = $props();
 
-  const localeText = $derived($kefineLocaleText);
-  const passkeyLabels = $derived(localeText.auth.passkeyLogin);
-  const resolvedTitle = $derived(title ?? passkeyLabels.title);
-  const resolvedDescription = $derived(description ?? passkeyLabels.description);
   let status = $state<'idle' | 'loading' | 'success' | 'error'>('idle');
   let errorMessage = $state('');
   let username = $state('');
@@ -147,7 +142,7 @@
     });
 
     if (!window.PublicKeyCredential) {
-      throw new Error(passkeyLabels.unsupported);
+      throw new Error('Passkeys are not supported in this browser.');
     }
 
     await startWebAuthnRegistration({
@@ -190,12 +185,12 @@
       const { transactionId, response } = await raceWithDeadline(
         performAuthentication(normalizedHandle || undefined),
         PASSKEY_TIMEOUT_MS,
-        passkeyLabels.signInTimedOut
+        'Passkey sign in timed out.'
       );
       const result = await raceWithDeadline(
         finishAuthentication(transactionId, response),
         PASSKEY_TIMEOUT_MS,
-        passkeyLabels.signInTimedOut
+        'Passkey sign in timed out.'
       );
       console.info(`${PASSKEY_LOG_PREFIX} login:server-auth:success`, {
         username: result.username,
@@ -216,7 +211,7 @@
       }
 
       status = 'error';
-      errorMessage = err instanceof Error ? err.message : passkeyLabels.signInFailed;
+      errorMessage = err instanceof Error ? err.message : 'Passkey sign in failed.';
       onError?.(err instanceof Error ? err : new Error(errorMessage));
     }
   }
@@ -235,7 +230,7 @@
 
     try {
       if (!normalizedHandle) {
-        throw new Error(passkeyLabels.usernameRequired);
+        throw new Error('Username is required to create a passkey.');
       }
 
       const result = await createLocalPasskeyWithPrompt(normalizedHandle);
@@ -248,7 +243,7 @@
     } catch (err) {
       console.error(`${PASSKEY_LOG_PREFIX} register:error`, err);
       status = 'error';
-      errorMessage = err instanceof Error ? err.message : passkeyLabels.creationFailed;
+      errorMessage = err instanceof Error ? err.message : 'Passkey creation failed.';
       onError?.(err instanceof Error ? err : new Error(errorMessage));
     }
   }
@@ -256,20 +251,20 @@
 
 <lef-passkey-login>
   <lef-passkey-header>
-    <h2>{resolvedTitle}</h2>
-    <p>{resolvedDescription}</p>
+    <h2>{title}</h2>
+    <p>{description}</p>
   </lef-passkey-header>
 
   <lef-passkey-field>
     <label>
-    <lefine-text>{passkeyLabels.handleLabel}</lefine-text>
+    <lefine-text>Handle or username</lefine-text>
     <input
       type="text"
       bind:value={username}
       autocomplete="username webauthn"
       autocapitalize="off"
       spellcheck="false"
-      placeholder={passkeyLabels.handlePlaceholder}
+      placeholder="handle"
     />
     </label>
   </lef-passkey-field>
@@ -282,7 +277,7 @@
       disabled={status === 'loading'}
       aria-busy={status === 'loading'}
     >
-      {status === 'loading' ? passkeyLabels.checking : hasExistingPasskey ? passkeyLabels.useExisting : passkeyLabels.signIn}
+      {status === 'loading' ? 'Checking passkey...' : hasExistingPasskey ? 'Use existing passkey' : 'Sign in with passkey'}
     </button>
 
     <button
@@ -291,16 +286,16 @@
       onclick={handleRegister}
       disabled={status === 'loading'}
     >
-      {status === 'loading' ? passkeyLabels.creating : passkeyLabels.create}
+      {status === 'loading' ? 'Creating passkey...' : 'Create passkey'}
     </button>
   </lef-passkey-actions>
 
   {#if hasExistingPasskey && existingSession}
-    <lef-passkey-hint>{passkeyLabels.savedLocally(existingSession.username)}</lef-passkey-hint>
+    <lef-passkey-hint>Saved locally for @{existingSession.username}</lef-passkey-hint>
   {/if}
 
   {#if status === 'success'}
-    <lef-passkey-status role="status" aria-live="polite">{passkeyLabels.ready}</lef-passkey-status>
+    <lef-passkey-status role="status" aria-live="polite">Passkey ready.</lef-passkey-status>
   {/if}
 
   {#if errorMessage}

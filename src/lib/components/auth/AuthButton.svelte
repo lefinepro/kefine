@@ -1,9 +1,6 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
 	import { authState } from '$lib/auth/auth-store.svelte.js';
-	import { kefineLocaleText } from '$lib/constants/kefine-locale';
-
-	const localeText = $derived($kefineLocaleText);
 
 	function truncateAddress(address: string): string {
 		return `${address.slice(0, 6)}...${address.slice(-4)}`;
@@ -28,18 +25,17 @@
 	);
 
 	const label = $derived(() => {
-		const authButton = localeText.auth.authButton;
-		if (isLoading) return authButton.connecting;
-		if (!authState.isConnected) return authButton.connect;
+		if (isLoading) return 'Connecting…';
+		if (!authState.isConnected) return 'Connect';
 		if (authState.email) return authState.email;
 		if (authState.address) return truncateAddress(authState.address);
-		return authButton.connected;
+		return 'Connected';
 	});
 </script>
 
 {#if authState.isConnected}
 	<auth-account>
-		<auth-identity aria-label={localeText.auth.authButton.connectedAccount}>
+		<auth-identity aria-label="Connected account">
 			{#if authState.email}
 				<auth-email>{authState.email}</auth-email>
 			{:else if authState.address}
@@ -49,17 +45,17 @@
 		<button
 			type="button"
 			data-variant="muted"
-			aria-label={localeText.auth.authButton.disconnectWallet}
+			aria-label="Disconnect wallet"
 			onclick={handleDisconnect}
 		>
-			{localeText.auth.authButton.disconnect}
+			Disconnect
 		</button>
 	</auth-account>
 {:else}
 	<button
 		type="button"
 		data-variant="primary"
-		aria-label={localeText.auth.authButton.connectWalletOrEmail}
+		aria-label="Connect wallet or email"
 		aria-busy={isLoading}
 		disabled={isLoading}
 		onclick={handleConnect}

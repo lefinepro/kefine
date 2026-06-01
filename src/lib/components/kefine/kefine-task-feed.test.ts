@@ -238,6 +238,8 @@ describe('kefine task feed progression', () => {
     assert.equal(outdented.length, 1);
     assert.equal(outdented[0]?.children?.length, 2);
     assert.equal(outdented[0]?.children?.[0]?.id, 'node-2');
+    assert.equal(outdented[0]?.children?.[0]?.children?.length, 0);
+    assert.equal(outdented[0]?.children?.[1]?.id, 'node-2-child');
 
     const added = addTaskThreadNode(baseNodes, {
       id: 'node-3',

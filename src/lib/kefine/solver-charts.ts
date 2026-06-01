@@ -108,33 +108,8 @@ export function timeSeries(metrics: SolutionMetric[], activeSolverId: string): S
   };
 }
 
-export function priceSeries(metrics: SolutionMetric[], activeSolverId: string): SolverChartSeries {
-  const values = metrics.map((m) => m.priceUsd);
-  return {
-    values,
-    labels: metrics.map((m) => `#${m.solverId}`),
-    max: Math.max(...values, 0.01) * 1.2,
-    activeIndex: metrics.findIndex((m) => m.solverId === activeSolverId)
-  };
-}
-
-export function successRateSeries(metrics: SolutionMetric[], activeSolverId: string): SolverChartSeries {
-  const values = metrics.map((m) => m.successRate);
-  return {
-    values,
-    labels: metrics.map((m) => `#${m.solverId}`),
-    max: 100,
-    activeIndex: metrics.findIndex((m) => m.solverId === activeSolverId)
-  };
-}
-
-export function efficiencyValue(metric: SolutionMetric): number {
-  if (metric.priceUsd <= 0) return metric.successRate;
-  return metric.successRate / metric.priceUsd;
-}
-
-export function efficiencySeries(metrics: SolutionMetric[], activeSolverId: string): SolverChartSeries {
-  const values = metrics.map((m) => efficiencyValue(m));
+export function weightSeries(metrics: SolutionMetric[], activeSolverId: string): SolverChartSeries {
+  const values = metrics.map((m) => m.solutionWeightKb);
   return {
     values,
     labels: metrics.map((m) => `#${m.solverId}`),

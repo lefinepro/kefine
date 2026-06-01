@@ -1,7 +1,6 @@
 <script lang="ts">
   import { browser } from '$app/environment';
   import Icon from '@iconify/svelte';
-  import { kefineLocaleText } from '$lib/constants/kefine-locale';
   import type { OrderView } from './kefine-workflow';
   import {
     getTaskRepository,
@@ -14,13 +13,11 @@
   let {
     order,
     canSaveLocally = false,
-    repositoriesEnabled = true,
     onExport,
     onSaveLocally
   }: {
     order: OrderView | null;
     canSaveLocally?: boolean;
-    repositoriesEnabled?: boolean;
     onExport: (format: TaskCloneFormat) => void;
     onSaveLocally?: (runLocally: boolean) => void;
   } = $props();
@@ -30,13 +27,11 @@
   let rootElement = $state<HTMLElement | null>(null);
   let copiedValue = $state<string | null>(null);
   let copiedTimeout = $state<number | null>(null);
-  const localeText = $derived($kefineLocaleText);
-  const labels = $derived(localeText.solversView);
 
-  const repository = $derived(repositoriesEnabled && order ? getTaskRepository(order) : null);
-  const repositoryCloneTarget = $derived(repositoriesEnabled && order ? getTaskRepositoryCloneTarget(order) : null);
-  const repositoryLinkTarget = $derived(repositoriesEnabled && order ? getTaskRepositoryLinkTarget(order) : null);
-  const repositoryArchiveTargets = $derived(repositoriesEnabled && order ? getTaskRepositoryArchiveTargets(order) : null);
+  const repository = $derived(order ? getTaskRepository(order) : null);
+  const repositoryCloneTarget = $derived(order ? getTaskRepositoryCloneTarget(order) : null);
+  const repositoryLinkTarget = $derived(order ? getTaskRepositoryLinkTarget(order) : null);
+  const repositoryArchiveTargets = $derived(order ? getTaskRepositoryArchiveTargets(order) : null);
   const repositoryArchiveActions = $derived.by(() =>
     repositoryArchiveTargets
       ? [
@@ -139,8 +134,8 @@
     onclick={toggleMenu}
     aria-haspopup="menu"
     aria-expanded={menuOpen}
-    aria-label={labels.cloneTask}
-    title={labels.cloneTask}
+    aria-label="Clone task"
+    title="Clone task"
     disabled={!order}
   >
     <Icon
@@ -149,11 +144,11 @@
       height="16"
       aria-hidden="true"
     />
-    <lefine-text>{labels.clone}</lefine-text>
+    <lefine-text>Clone</lefine-text>
   </button>
 
   {#if menuOpen && order}
-    <kefine-clone-popover role="menu" aria-label={labels.cloneTask}>
+    <kefine-clone-popover role="menu" aria-label="Clone task">
       {#if repository}
         <kefine-clone-section>
           {#if repositoryCloneTarget}
@@ -167,8 +162,8 @@
                 type="button"
                 data-part="icon-copy"
                 onclick={() => copyText(repositoryCloneTarget.command)}
-                aria-label={labels.copyGitCloneCommand}
-                title={labels.copyGitCloneCommand}
+                aria-label="Copy git clone command"
+                title="Copy git clone command"
               >
                 <Icon
                   icon={copiedValue === repositoryCloneTarget.command ? 'mdi:check' : 'mdi:content-copy'}
@@ -188,8 +183,8 @@
                 type="button"
                 data-part="icon-copy"
                 onclick={() => copyText(repositoryLinkTarget.url)}
-                aria-label={labels.copyRepositoryLink}
-                title={labels.copyRepositoryLink}
+                aria-label="Copy repository link"
+                title="Copy repository link"
               >
                 <Icon
                   icon={copiedValue === repositoryLinkTarget.url ? 'mdi:check' : 'mdi:content-copy'}
@@ -205,7 +200,7 @@
 
       {#if repositoryArchiveActions.length > 0}
         <kefine-clone-section>
-          <strong>{labels.repositoryArchive}</strong>
+          <strong>Repository archive</strong>
           <kefine-clone-format-grid>
             {#each repositoryArchiveActions as action}
               <a href={action.href} rel="noreferrer">{action.label}</a>
@@ -215,7 +210,7 @@
       {/if}
 
       <kefine-clone-section>
-        <strong>{repository ? labels.taskExports : labels.downloadPackage}</strong>
+        <strong>{repository ? 'Task exports' : 'Download package'}</strong>
         <kefine-clone-format-grid>
           {#each taskExportActions as format}
             <button type="button" onclick={() => handleExport(format)}>{format}</button>
@@ -225,13 +220,13 @@
 
       {#if canSaveLocally && onSaveLocally}
         <kefine-clone-section>
-          <strong>{labels.saveToMyTasks}</strong>
+          <strong>Save to my tasks</strong>
           <label data-part="run-checkbox">
             <input bind:checked={runLocally} type="checkbox" />
-            <lefine-text>{labels.runLocally}</lefine-text>
+            <lefine-text>Run locally</lefine-text>
           </label>
           <button type="button" data-part="save-action" onclick={handleSave}>
-            {runLocally ? labels.saveAndRun : labels.save}
+            {runLocally ? 'Save and run' : 'Save'}
           </button>
         </kefine-clone-section>
       {/if}

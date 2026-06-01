@@ -1,7 +1,6 @@
 <script lang="ts">
- 	import '../app.css';
- 	import './+page.css';
- 	import { browser } from '$app/environment';
+	import './+page.css';
+	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
@@ -25,9 +24,7 @@
     '/[actor=actor_handle]/order/[id]',
     '/[actor=actor_handle]/orders/[id]',
     '/[handle=at_handle]',
-    '/[handle=at_handle]/[shareId]',
-    // OAuth consent / integration pages render their own full-screen clean UI (no shared topbar)
-    '/oauth/authorize'
+    '/[handle=at_handle]/[shareId]'
   ]);
 
 	interface Props {
@@ -291,22 +288,21 @@
     onLocale={handleSharedLocaleChange}
   />
 
-  <main>
+  <lef-layout-main>
     {@render children()}
-  </main>
+  </lef-layout-main>
 {:else}
   {@render children()}
 {/if}
 
 <style>
-  main {
+  lef-layout-main {
     display: block;
     padding-top: 4.5rem;
-    contain: layout style;
   }
 
   @media (max-width: 760px) {
-    main {
+    lef-layout-main {
       padding-top: 4.25rem;
     }
   }

@@ -4,16 +4,13 @@
   import '$lib/kefine/jetbrains-hljs.css';
   import { solutionsStore } from '$lib/kefine/solutions-store';
   import { defaultSolutions } from '$lib/kefine/solutions-data';
-  import { kefineLocaleText } from '$lib/constants/kefine-locale';
   import SolutionCodeEditor from '$lib/components/kefine/SolutionCodeEditor.svelte';
   import SolutionTopbar from '$lib/components/kefine/SolutionTopbar.svelte';
   import SolutionTaskPanel from '$lib/components/kefine/SolutionTaskPanel.svelte';
   import SolutionViewTabs from '$lib/components/kefine/SolutionViewTabs.svelte';
-  type SolutionView = 'source' | 'testing' | 'checkpoints';
+  type SolutionView = 'source' | 'testing';
   import SolutionTestingPanel from '$lib/components/kefine/SolutionTestingPanel.svelte';
   import SolutionFileOutline from '$lib/components/kefine/SolutionFileOutline.svelte';
-  import SolutionCheckpoints from '$lib/components/kefine/SolutionCheckpoints.svelte';
-  import type { CommitInfo } from './+page.server';
 
   let {
     data
@@ -21,9 +18,6 @@
     data: {
       orderId: string;
       solverId: string;
-      commits?: CommitInfo[];
-      currentBranch?: string;
-      branches?: string[];
     };
   } = $props();
 
@@ -40,8 +34,6 @@
   let isCorrectingTask = $state(false);
   let isMerged = $state(false);
   let correctionTimer: ReturnType<typeof setTimeout> | null = null;
-  const localeText = $derived($kefineLocaleText);
-  const labels = $derived(localeText.solutionView);
 
   onMount(() => {
     if (stored.length === 0) {
@@ -65,7 +57,7 @@
       ?? null
   );
 
-  const taskTitle = $derived(solution?.title ?? labels.fallbackTitle);
+  const taskTitle = $derived(solution?.title ?? 'Solution');
   const taskDescription = $derived(solution?.description ?? '');
 
   const hasCorrection = $derived(Boolean(solution?.correctedCodeLines));
@@ -114,11 +106,7 @@
 
   function goBack(event: MouseEvent) {
     event.preventDefault();
-    if (typeof window !== 'undefined' && window.history.length > 1) {
-      window.history.back();
-    } else {
-      goto(`/order/${data.orderId}`);
-    }
+    goto(`/order/${encodeURIComponent(data.orderId)}/solutions`);
   }
 
   function handleSubmitCorrection(text: string) {
@@ -152,7 +140,7 @@
 </script>
 
 <svelte:head>
-  <title>{solution ? `${solution.solver} | Lefine` : `${labels.fallbackTitle} | Lefine`}</title>
+  <title>{solution ? `${solution.solver} | Lefine` : 'Solution | Lefine'}</title>
 </svelte:head>
 
 <lef-solver-page>
@@ -162,7 +150,7 @@
       author={solution.solver}
       project={solution.project}
       slug={solution.slug}
-      backHref={`/order/${data.orderId}`}
+      backHref={`/order/${encodeURIComponent(data.orderId)}/solutions`}
       onBack={goBack}
       onMerge={handleMerge}
       isMerged={isMerged}
@@ -175,19 +163,19 @@
         {#if hasCorrection}
           <lef-correction-status data-active={isCorrectingTask} data-show-corrected={showCorrected}>
             {#if isCorrectingTask}
-              <lef-correction-arrow aria-label={labels.correctionApplying}>
+              <lef-correction-arrow aria-label="Applying correction">
                 <lef-arrow-track>
                   <lef-arrow-tip>➵</lef-arrow-tip>
                 </lef-arrow-track>
-                <lefine-text>{labels.correctionApplying}</lefine-text>
+                <lefine-text>Applying correction…</lefine-text>
               </lef-correction-arrow>
             {:else if showCorrected}
               <lef-correction-applied>
-                <lefine-text>{labels.correctionApplied}</lefine-text>
+                <lefine-text>Showing corrected code</lefine-text>
               </lef-correction-applied>
             {:else}
               <lef-correction-pending>
-                <lefine-text>{labels.correctionPending}</lefine-text>
+                <lefine-text>Original code (correction pending)</lefine-text>
               </lef-correction-pending>
             {/if}
           </lef-correction-status>
@@ -221,18 +209,6 @@
             />
           </lef-solver-main>
         </lef-solver-source>
-      {:else if activeView === 'checkpoints'}
-        <lef-solver-checkpoints>
-          <SolutionCheckpoints
-            commits={data.commits ?? []}
-            currentBranch={data.currentBranch ?? ''}
-            branches={data.branches ?? []}
-            solutionTitle={solution?.title}
-            solutionProject={solution?.project}
-            solutionSlug={solution?.slug}
-            solverName={solution?.solver}
-          />
-        </lef-solver-checkpoints>
       {:else}
         <lef-solver-testing>
           <SolutionTestingPanel
@@ -252,7 +228,7 @@
       {/if}
     </lef-solver-grid>
   {:else}
-    <lef-empty-state>{labels.emptyState}</lef-empty-state>
+    <lef-empty-state>Solution not found</lef-empty-state>
   {/if}
 </lef-solver-page>
 
@@ -309,12 +285,6 @@
     display: flex;
     flex-direction: column;
     gap: 0.6rem;
-    min-width: 0;
-    min-height: 420px;
-  }
-
-  lef-solver-checkpoints {
-    display: block;
     min-width: 0;
   }
 

@@ -1,30 +1,19 @@
 <script lang="ts">
   import Icon from '@iconify/svelte';
   import { browser } from '$app/environment';
-  import { kefineLocaleText } from '$lib/constants/kefine-locale';
   import type { Editor } from 'prosekit/core';
-  let createEditor: any, defineBasicExtension: any, defineMention: any, union: any;
-  let AutocompleteEmpty: any, AutocompleteItem: any, AutocompleteList: any, AutocompletePopover: any;
-  let prosekitLoaded = false;
-  async function loadProsekit() {
-    if (prosekitLoaded) return;
-    const core = await import('prosekit/core');
-    const basic = await import('prosekit/basic');
-    const mention = await import('prosekit/extensions/mention');
-    const svelteAuto = await import('prosekit/svelte/autocomplete');
-    createEditor = core.createEditor;
-    defineBasicExtension = basic.defineBasicExtension;
-    defineMention = mention.defineMention;
-    union = core.union;
-    AutocompleteEmpty = svelteAuto.AutocompleteEmpty;
-    AutocompleteItem = svelteAuto.AutocompleteItem;
-    AutocompleteList = svelteAuto.AutocompleteList;
-    AutocompletePopover = svelteAuto.AutocompletePopover;
-    await import('prosekit/basic/style.css');
-    await import('prosekit/basic/typography.css');
-    prosekitLoaded = true;
-  }
-  export { loadProsekit };
+  import { createEditor } from 'prosekit/core';
+  import { defineBasicExtension } from 'prosekit/basic';
+  import { defineMention } from 'prosekit/extensions/mention';
+  import { union } from 'prosekit/core';
+  import 'prosekit/basic/style.css';
+  import 'prosekit/basic/typography.css';
+  import {
+    AutocompleteEmpty,
+    AutocompleteItem,
+    AutocompleteList,
+    AutocompletePopover
+  } from 'prosekit/svelte/autocomplete';
 
   type EditorMode = 'visual' | 'source';
   type SlashCommand = {
@@ -89,8 +78,6 @@
     autoOpenTagEditor?: boolean;
     autoOpenFilePicker?: boolean;
   } = $props();
-
-  const localeText = $derived($kefineLocaleText);
 
   let editorHost: HTMLDivElement | null = $state(null);
   let editor: Editor | null = $state(null);
@@ -823,10 +810,10 @@
       {#if !compact}
         <kefine-rich-editor-modes>
           <button type="button" data-active={editorMode === 'visual'} onclick={() => setEditorMode('visual')}>
-            {localeText.create.richEditorVisual}
+            Visual
           </button>
           <button type="button" data-active={editorMode === 'source'} onclick={() => setEditorMode('source')}>
-            {localeText.create.richEditorSource}
+            Org
           </button>
         </kefine-rich-editor-modes>
       {/if}
@@ -835,25 +822,25 @@
       {/if}
       {#if enableMeta && !compact}
         <kefine-rich-editor-strip>
-          <button type="button" data-part="meta-action" aria-label={localeText.create.richEditorAddFile} onclick={() => fileInput?.click()}>
+          <button type="button" data-part="meta-action" aria-label="Add file" onclick={() => fileInput?.click()}>
             <Icon icon="mdi:paperclip" width="17" height="17" aria-hidden="true" />
-            <lefine-text>{localeText.create.richEditorAddFile}</lefine-text>
+            <lefine-text>Add file</lefine-text>
           </button>
           {#if tagEditorOpen}
             <input
               bind:this={tagInput}
               data-part="tag-input"
               value={tagInputValue}
-              placeholder={localeText.create.richEditorTagPlaceholder}
+              placeholder="tag"
               oninput={(event) => {
                 tagInputValue = (event.currentTarget as HTMLInputElement).value;
               }}
               onkeydown={handleTagKeydown}
             />
           {:else}
-            <button type="button" data-part="meta-action" aria-label={localeText.create.richEditorAddTag} onclick={() => { tagEditorOpen = true; }}>
+            <button type="button" data-part="meta-action" aria-label="Add tag" onclick={() => { tagEditorOpen = true; }}>
               <Icon icon="mdi:tag-plus-outline" width="17" height="17" aria-hidden="true" />
-              <lefine-text>{localeText.create.richEditorAddTag}</lefine-text>
+              <lefine-text>Add tag</lefine-text>
             </button>
           {/if}
           <input bind:this={fileInput} data-part="file-input" type="file" multiple onchange={handleFileChange} />
@@ -867,7 +854,7 @@
       {#if editorLoadError}
         <kefine-rich-editor-state data-state="error">{editorLoadError}</kefine-rich-editor-state>
       {:else if editorLoading && !editorReady}
-        <kefine-rich-editor-state data-state="loading">{localeText.create.richEditorLoading}</kefine-rich-editor-state>
+        <kefine-rich-editor-state data-state="loading">Loading editor...</kefine-rich-editor-state>
       {/if}
 
       {#if editorMode === 'visual'}
@@ -905,7 +892,7 @@
                   </AutocompleteItem>
                 {/each}
                 <AutocompleteEmpty>
-                  <kefine-slash-empty>{localeText.create.richEditorNoBlocks}</kefine-slash-empty>
+                  <kefine-slash-empty>No matching blocks</kefine-slash-empty>
                 </AutocompleteEmpty>
               </AutocompleteList>
             </kefine-slash-menu>
@@ -929,7 +916,7 @@
                     </AutocompleteItem>
                   {/each}
                   <AutocompleteEmpty>
-                    <kefine-slash-empty>{localeText.create.richEditorNoRecipients}</kefine-slash-empty>
+                    <kefine-slash-empty>No matching recipients</kefine-slash-empty>
                   </AutocompleteEmpty>
                 </AutocompleteList>
               </kefine-slash-menu>
@@ -953,7 +940,7 @@
         {#if tagDrafts.length > 0}
           <kefine-rich-editor-tag-strip>
             {#each tagDrafts as tag (`tag-${tag}`)}
-              <button type="button" data-part="tag-pill" onclick={() => removeTag(tag)} aria-label={localeText.create.richEditorRemoveTag(tag)}>
+              <button type="button" data-part="tag-pill" onclick={() => removeTag(tag)} aria-label={`Remove ${tag} tag`}>
                 <lefine-text>#{tag}</lefine-text>
                 <strong>×</strong>
               </button>
@@ -1088,7 +1075,7 @@
     border: 0;
     background: transparent;
     color: var(--lefine-text, #2e2317);
-    font: 0.95rem/1.6 'JetBrains Mono', monospace;
+    font: 0.95rem/1.6 'Fira Mono', monospace;
     resize: vertical;
     box-sizing: border-box;
   }

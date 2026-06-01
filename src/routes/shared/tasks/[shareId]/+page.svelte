@@ -4,7 +4,6 @@
   import { onMount } from 'svelte';
   import { authState, hydrateAuthStateFromSession } from '$lib/auth/auth-store.svelte.js';
   import { KEFINE_TEXT_EN } from '$lib/constants/kefine-locale-en';
-  import { KEFINE_TEXT_HY } from '$lib/constants/kefine-locale-hy';
   import { KEFINE_TEXT_RU } from '$lib/constants/kefine-locale-ru';
   import { parseStoredOrders } from '$lib/components/kefine/kefine-workflow';
   import type { OrderView, TaskAccessMode } from '$lib/components/kefine/kefine-workflow';
@@ -19,15 +18,16 @@
   } from '$lib/profile/profile-storage';
   import { localizeAppPath, readLocaleFromPathname } from '$lib/routing/kefine-locale-routing';
 
+  const localeText: KefineLocaleText =
+    (typeof document !== 'undefined' && document.documentElement.lang === 'ru' ? KEFINE_TEXT_RU : KEFINE_TEXT_EN) as
+      unknown as KefineLocaleText;
+
   let order = $state<OrderView | null>(null);
   let ownerProfile = $state<Profile | null>(null);
   let viewerProfile = $state<Profile | null>(null);
   let grantedKinds = $state<TaskAccessMode[]>([]);
   let unavailable = $state(false);
   const activeLocale = $derived(readLocaleFromPathname(page.url.pathname) ?? 'en');
-  const localeText = $derived(
-    (activeLocale === 'ru' ? KEFINE_TEXT_RU : activeLocale === 'hy' ? KEFINE_TEXT_HY : KEFINE_TEXT_EN) as unknown as KefineLocaleText
-  );
   const canSeeFullTask = $derived(
     order
       ? viewerProfile?.id === order.ownerProfileId ||
@@ -119,7 +119,7 @@
           <a href={localizeAppPath(buildProfilePath(ownerProfile.primaryHandle || ownerProfile.username), activeLocale)}>{ownerProfile.displayName}</a>
         {/if}
       </lef-shared-task-head>
-      <p>{canSeeFullTask ? order.description : localeText.profile.buyView}</p>
+      <p>{canSeeFullTask ? order.description : `${localeText.profile.buyView} to unlock the full task details.`}</p>
       <lef-shared-task-meta>
         <lefine-text>{order.solver}</lefine-text>
         <lefine-text>{order.status}</lefine-text>

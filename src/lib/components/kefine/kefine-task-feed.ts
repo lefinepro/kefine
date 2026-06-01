@@ -794,10 +794,6 @@ function blockNode(
   return { id, title, detail, state, mode: 'block', blocks, meta, ...options };
 }
 
-function loadingNode(id: string, title: string, detail: string): TaskThreadNode {
-  return { id, title, detail, state: 'active', mode: 'loading' };
-}
-
 function deriveSolverHandleFromUrl(value: string | undefined): string {
   const raw = value?.trim();
   if (!raw || !/^https?:\/\//i.test(raw)) {

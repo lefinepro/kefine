@@ -105,8 +105,7 @@ export function getSeoMeta(url: URL, sourceConfig: unknown = DEFAULT_PUBLIC_RUNT
     pathname.startsWith('/api/status/') ||
     pathname.startsWith('/passkeys/') ||
     pathname.startsWith('/api/passkeys/') ||
-    pathname.startsWith('/api/kefine/') ||
-    pathname.includes('/solver/');
+    pathname.startsWith('/api/kefine/');
 
   if (isTaskFlow) {
     return {

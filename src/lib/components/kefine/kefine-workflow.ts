@@ -414,7 +414,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
-function extractAttachmentResult(order: OrderView | null, localeText: KefineLocaleText): { title: string; summary: string; content: string } | null {
+function extractAttachmentResult(order: OrderView | null): { title: string; summary: string; content: string } | null {
   const attachments = Array.isArray(order?.activitypub?.attachment) ? order?.activitypub?.attachment : [];
 
   for (const item of attachments) {
@@ -438,16 +438,16 @@ function extractAttachmentResult(order: OrderView | null, localeText: KefineLoca
     const content = item.content;
     if (typeof content === 'string' && content.trim()) {
       return {
-        title: typeof item.name === 'string' && item.name.trim() ? item.name : localeText.result.taskResultTitle,
-        summary: typeof item.summary === 'string' && item.summary.trim() ? item.summary : localeText.result.serverPayloadSummary,
+        title: typeof item.name === 'string' && item.name.trim() ? item.name : 'Task result',
+        summary: typeof item.summary === 'string' && item.summary.trim() ? item.summary : 'Server-provided result payload.',
         content
       };
     }
 
     if (isRecord(content)) {
       return {
-        title: typeof item.name === 'string' && item.name.trim() ? item.name : localeText.result.taskResultTitle,
-        summary: typeof item.summary === 'string' && item.summary.trim() ? item.summary : localeText.result.serverPayloadSummary,
+        title: typeof item.name === 'string' && item.name.trim() ? item.name : 'Task result',
+        summary: typeof item.summary === 'string' && item.summary.trim() ? item.summary : 'Server-provided result payload.',
         content: JSON.stringify(content, null, 2)
       };
     }
@@ -517,7 +517,7 @@ function splitEstimate(value: string | undefined, localeText: KefineLocaleText) 
   const valuePart = digitMatch?.[1]?.replace(',', '.') ?? '1';
   const normalized = raw.toLowerCase();
 
-  if (normalized.includes('min') || normalized.includes('мин') || normalized.includes('րոպ')) {
+  if (normalized.includes('min') || normalized.includes('мин')) {
     return {
       value: valuePart,
       unit: localeText.labels.minutesUnit
@@ -557,13 +557,12 @@ export function resolveExecutionEstimate(
   }
 
   const isRussianLocale = localeText.meta.locale === 'ru';
-  const isArmenianLocale = localeText.meta.locale === 'hy';
   if (
     normalizedTitle.includes('optimize an algorithm') ||
     normalizedTitle.includes('algorithm optimization') ||
     normalizedTitle.includes('оптимизация алгоритма')
   ) {
-    return isRussianLocale ? 'около 2 часов' : isArmenianLocale ? 'մոտ 2 ժամ' : 'about 2 hours';
+    return isRussianLocale ? 'около 2 часов' : 'about 2 hours';
   }
 
   if (
@@ -571,7 +570,7 @@ export function resolveExecutionEstimate(
     normalizedTitle.includes('production app') ||
     normalizedTitle.includes('деплой')
   ) {
-    return isRussianLocale ? 'около 3 часов' : isArmenianLocale ? 'մոտ 3 ժամ' : 'about 3 hours';
+    return isRussianLocale ? 'около 3 часов' : 'about 3 hours';
   }
 
   if (
@@ -579,10 +578,10 @@ export function resolveExecutionEstimate(
     normalizedTitle.includes('access') ||
     normalizedTitle.includes('доступ')
   ) {
-    return isRussianLocale ? 'около 45 минут' : isArmenianLocale ? 'մոտ 45 րոպե' : 'about 45 minutes';
+    return isRussianLocale ? 'около 45 минут' : 'about 45 minutes';
   }
 
-  return isRussianLocale ? 'около 1 часа' : isArmenianLocale ? 'մոտ 1 ժամ' : 'about 1 hour';
+  return isRussianLocale ? 'около 1 часа' : 'about 1 hour';
 }
 
 export function deriveExecutionStage(
@@ -751,7 +750,7 @@ export function deriveResultSurface(
   localeText: KefineLocaleText,
   fallbackHref: string
 ): ResultSurface {
-  const attachmentResult = extractAttachmentResult(order, localeText);
+  const attachmentResult = extractAttachmentResult(order);
 
   if (isVpnOrder(order)) {
     const resultDocument = order?.resultDocument;
@@ -759,7 +758,7 @@ export function deriveResultSurface(
       return {
         type: 'json',
         title: resultDocument.name,
-        summary: resultDocument.summary || localeText.result.serverArticleSummary,
+        summary: resultDocument.summary || 'Server-generated ActivityStreams article.',
         content: JSON.stringify(resultDocument.raw, null, 2)
       };
     }
@@ -775,8 +774,8 @@ export function deriveResultSurface(
 
     return {
       type: 'json',
-      title: localeText.result.vpnMockTitle,
-      summary: localeText.result.vpnMockSummary,
+      title: 'VPN mock result',
+      summary: 'VPN guide is unavailable, showing fallback package payload.',
       content: JSON.stringify(
         {
           task: order?.title ?? localeText.defaults.taskTitle,

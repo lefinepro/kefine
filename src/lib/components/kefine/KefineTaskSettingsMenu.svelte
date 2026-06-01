@@ -1,17 +1,14 @@
 <script lang="ts">
   import { browser } from '$app/environment';
   import Icon from '@iconify/svelte';
-  import { kefineLocaleText } from '$lib/constants/kefine-locale';
   import { normalizeProfileResourceSlug } from '$lib/profile/profile-handles';
   import type { OrderRepository, OrderView, RepositoryGitAclRule, RepositoryGitSettings } from './kefine-workflow';
 
   let {
     order,
-    repositoriesEnabled = true,
     onApply
   }: {
     order: OrderView | null;
-    repositoriesEnabled?: boolean;
     onApply: (patch: Partial<Pick<OrderView, 'title' | 'description' | 'taskIcon' | 'shareId' | 'isPublicTask' | 'vcsEnabled' | 'repository'>> & {
       gitSettings?: RepositoryGitSettings;
     }) => void | Promise<void>;
@@ -26,8 +23,6 @@
   let vcsEnabledDraft = $state(false);
   let exchangeRunDefaultDraft = $state(true);
   let aclRulesDraft = $state<RepositoryGitAclRule[]>([]);
-  const localeText = $derived($kefineLocaleText);
-  const labels = $derived(localeText.solversView);
 
   const gitGroups = [
     { id: 'admin', label: 'Admin' },
@@ -211,7 +206,7 @@
     aria-haspopup="dialog"
     aria-expanded={menuOpen}
     disabled={!order}
-    title={labels.settingsHeading}
+    title="Task settings"
   >
     <Icon icon="mdi:cog-outline" width="18" height="18" aria-hidden="true" />
   </button>
@@ -219,30 +214,30 @@
   {#if menuOpen && order}
     <kefine-task-settings-dialog role="presentation">
       <kefine-task-settings-backdrop></kefine-task-settings-backdrop>
-      <kefine-task-settings-popover role="dialog" aria-modal="true" aria-label={labels.settingsHeading}>
+      <kefine-task-settings-popover role="dialog" aria-modal="true" aria-label="Task settings">
         <kefine-task-settings-section>
           <kefine-task-settings-head>
-            <strong>{labels.settings}</strong>
-            <button type="button" data-part="icon-close" onclick={closeMenu} aria-label={labels.closeSettings}>
+            <strong>Settings</strong>
+            <button type="button" data-part="icon-close" onclick={closeMenu} aria-label="Close settings">
               <Icon icon="mdi:close" width="18" height="18" aria-hidden="true" />
             </button>
           </kefine-task-settings-head>
-          {#if repositoriesEnabled && !vcsEnabledDraft && !order.repository}
+          {#if !vcsEnabledDraft && !order.repository}
             <button type="button" data-part="secondary" data-kind="create-repo" onclick={createGitRepo}>
               <Icon icon="mdi:source-repository" width="16" height="16" aria-hidden="true" />
-              <lefine-text>{labels.createGitRepo}</lefine-text>
+              <lefine-text>Create git repo</lefine-text>
             </button>
           {/if}
           <label data-part="field">
-            <lefine-text>{labels.name}</lefine-text>
-            <input bind:value={titleDraft} type="text" placeholder={labels.taskNamePlaceholder} />
+            <lefine-text>Name</lefine-text>
+            <input bind:value={titleDraft} type="text" placeholder="Task name" />
           </label>
           <label data-part="field">
-            <lefine-text>{labels.slug}</lefine-text>
+            <lefine-text>Slug</lefine-text>
             <input
               bind:value={slugDraft}
               type="text"
-              placeholder={labels.slugPlaceholder}
+              placeholder="task-name"
               autocapitalize="off"
               autocomplete="off"
               spellcheck="false"
@@ -250,42 +245,40 @@
           </label>
           <label data-part="toggle">
             <input bind:checked={isPublicDraft} type="checkbox" />
-            <lefine-text>{labels.makePublic}</lefine-text>
+            <lefine-text>Make public</lefine-text>
           </label>
-          {#if repositoriesEnabled}
-            <label data-part="toggle">
-              <input bind:checked={vcsEnabledDraft} type="checkbox" />
-              <lefine-text>{labels.enableVcs}</lefine-text>
-            </label>
-          {/if}
+          <label data-part="toggle">
+            <input bind:checked={vcsEnabledDraft} type="checkbox" />
+            <lefine-text>Enable VCS</lefine-text>
+          </label>
 
-          {#if repositoriesEnabled && vcsEnabledDraft}
+          {#if vcsEnabledDraft}
             <kefine-task-settings-git>
-              <strong>{labels.gitAccess}</strong>
+              <strong>Git access</strong>
               <label data-part="toggle">
                 <input bind:checked={exchangeRunDefaultDraft} type="checkbox" />
-                <lefine-text>{labels.pushRunsExchangeIssue}</lefine-text>
+                <lefine-text>Push runs exchange issue</lefine-text>
               </label>
 
               <kefine-task-settings-summary>
-                <lefine-text>{labels.accessRulesConfigured(aclRulesDraft.length)}</lefine-text>
-                <button type="button" data-part="secondary" onclick={openAclDialog}>{labels.editAccessRules}</button>
+                <lefine-text>{aclRulesDraft.length} access rules configured</lefine-text>
+                <button type="button" data-part="secondary" onclick={openAclDialog}>Edit access rules</button>
               </kefine-task-settings-summary>
             </kefine-task-settings-git>
           {/if}
 
-          <button type="button" data-part="apply" onclick={applySettings}>{labels.save}</button>
+          <button type="button" data-part="apply" onclick={applySettings}>Save</button>
         </kefine-task-settings-section>
       </kefine-task-settings-popover>
 
       {#if aclDialogOpen}
         <kefine-task-settings-dialog role="presentation" data-layer="nested">
           <kefine-task-settings-backdrop></kefine-task-settings-backdrop>
-          <kefine-task-settings-popover role="dialog" aria-modal="true" aria-label={labels.gitAccessRules}>
+          <kefine-task-settings-popover role="dialog" aria-modal="true" aria-label="Git access rules">
             <kefine-task-settings-section>
               <kefine-task-settings-head>
-                <strong>{labels.gitAccessRules}</strong>
-                <button type="button" data-part="icon-close" onclick={closeAclDialog} aria-label={labels.closeAccessRules}>
+                <strong>Git access rules</strong>
+                <button type="button" data-part="icon-close" onclick={closeAclDialog} aria-label="Close access rules">
                   <Icon icon="mdi:close" width="18" height="18" aria-hidden="true" />
                 </button>
               </kefine-task-settings-head>
@@ -294,11 +287,11 @@
                 {#each aclRulesDraft as rule}
                   <kefine-task-settings-acl-row>
                     <label data-part="field">
-                      <lefine-text>{labels.branch}</lefine-text>
+                      <lefine-text>Branch</lefine-text>
                       <input
                         value={rule.branchPattern}
                         type="text"
-                        placeholder={labels.branchPatternPlaceholder}
+                        placeholder="main or feature/*"
                         oninput={(event) => updateAclBranch(rule.id, (event.currentTarget as HTMLInputElement).value)}
                       />
                     </label>
@@ -316,10 +309,10 @@
                       {/each}
                     </kefine-task-settings-groups>
 
-                    <button type="button" data-part="secondary" onclick={() => removeAclRule(rule.id)}>{labels.remove}</button>
+                    <button type="button" data-part="secondary" onclick={() => removeAclRule(rule.id)}>Remove</button>
                   </kefine-task-settings-acl-row>
                 {/each}
-                <button type="button" data-part="secondary" onclick={addAclRule}>{labels.addRule}</button>
+                <button type="button" data-part="secondary" onclick={addAclRule}>Add rule</button>
               </kefine-task-settings-acl>
             </kefine-task-settings-section>
           </kefine-task-settings-popover>

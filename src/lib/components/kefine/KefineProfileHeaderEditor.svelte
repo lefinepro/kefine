@@ -74,7 +74,7 @@
             data-testid="kefine-profile-handle"
             bind:value={username}
             maxlength="48"
-            placeholder={usernameLabel}
+            placeholder="default"
             aria-label={usernameLabel}
             onkeydown={onFieldKeydown}
           />

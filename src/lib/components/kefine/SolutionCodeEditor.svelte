@@ -1,8 +1,6 @@
 <script lang="ts">
   import { highlightLines } from '$lib/kefine/solution-highlight';
-  import { kefineLocaleText } from '$lib/constants/kefine-locale';
   import SolutionCodeTabs from './SolutionCodeTabs.svelte';
-  import { fade } from 'svelte/transition';
 
   type CodeLine = {
     text: string;
@@ -40,8 +38,6 @@
     onSelect: (file: string) => void;
   } = $props();
 
-  const localeText = $derived($kefineLocaleText);
-  const labels = $derived(localeText.solutionView);
   const activeStats = $derived(files.find(f => f.file === activeFile));
 
   let leftHtmlLines = $state<string[]>([]);
@@ -122,16 +118,16 @@
   });
 
   function ariaLabelFor(type: SideRow['type']): string {
-    if (type === 'added') return labels.addedLine;
-    if (type === 'removed') return labels.removedLine;
-    if (type === 'empty') return labels.emptyLine;
-    return labels.unchangedLine;
+    if (type === 'added') return 'added line';
+    if (type === 'removed') return 'removed line';
+    if (type === 'empty') return 'no corresponding line';
+    return 'unchanged line';
   }
 </script>
 
 <lef-code-editor>
   {#if isLoading}
-    <lef-loading>{labels.highlightingCode}</lef-loading>
+    <lef-loading>Highlighting code...</lef-loading>
   {/if}
   <SolutionCodeTabs {files} {activeFile} {onSelect} />
 
@@ -151,51 +147,36 @@
     </lef-code-toolbar>
 
     <lef-code-headers aria-hidden="true">
-      <lef-code-header-cell>{labels.original}</lef-code-header-cell>
-      <lef-code-header-cell>{labels.modified}</lef-code-header-cell>
+      <lef-code-header-cell>Original</lef-code-header-cell>
+      <lef-code-header-cell>Modified</lef-code-header-cell>
     </lef-code-headers>
 
     <lef-code-scroll>
-      {#key activeFile}
-        <lefine-box transition:fade={{ duration: 160 }}>
-          <lef-code-split>
-            <lef-code-pane>
-              <lefine-box class="lef-row-group">
-              {#each rows as row, index (index)}
-                <lef-diff-row class:lef-diff-row--changed={row.band !== null}>
-                  <lef-side
-                    class="lef-side lef-side--left"
-                    class:lef-side--removed={row.left.type === 'removed'}
-                    class:lef-side--empty={row.left.type === 'empty'}
-                    aria-label={ariaLabelFor(row.left.type)}
-                  >
-                    <lef-line-number aria-hidden="true">{row.left.number ?? ''}</lef-line-number>
-                    <lef-line-text>{#if row.left.type === 'empty'}<lef-text-placeholder aria-hidden="true">&nbsp;</lef-text-placeholder>{:else}{@html row.left.html || '&nbsp;'}{/if}</lef-line-text>
-                  </lef-side>
-                </lef-diff-row>
-              {/each}
-              </lefine-box>
-            </lef-code-pane>
-            <lef-code-pane>
-              <lefine-box class="lef-row-group">
-              {#each rows as row, index (index)}
-                <lef-diff-row>
-                  <lef-side
-                    class="lef-side lef-side--right"
-                    class:lef-side--added={row.right.type === 'added'}
-                    class:lef-side--empty={row.right.type === 'empty'}
-                    aria-label={ariaLabelFor(row.right.type)}
-                  >
-                    <lef-line-number aria-hidden="true">{row.right.number ?? ''}</lef-line-number>
-                    <lef-line-text>{#if row.right.type === 'empty'}<lef-text-placeholder aria-hidden="true">&nbsp;</lef-text-placeholder>{:else}{@html row.right.html || '&nbsp;'}{/if}</lef-line-text>
-                  </lef-side>
-                </lef-diff-row>
-              {/each}
-              </lefine-box>
-            </lef-code-pane>
-          </lef-code-split>
-        </lefine-box>
-      {/key}
+      <lef-code-body>
+        {#each rows as row, index (index)}
+          <lef-diff-row class:lef-diff-row--changed={row.band !== null}>
+            <lef-side
+              class="lef-side lef-side--left"
+              class:lef-side--removed={row.left.type === 'removed'}
+              class:lef-side--empty={row.left.type === 'empty'}
+              aria-label={ariaLabelFor(row.left.type)}
+            >
+              <lef-line-number aria-hidden="true">{row.left.number ?? ''}</lef-line-number>
+              <lef-line-text>{#if row.left.type === 'empty'}<lef-text-placeholder aria-hidden="true">&nbsp;</lef-text-placeholder>{:else}{@html row.left.html || '&nbsp;'}{/if}</lef-line-text>
+            </lef-side>
+
+            <lef-side
+              class="lef-side lef-side--right"
+              class:lef-side--added={row.right.type === 'added'}
+              class:lef-side--empty={row.right.type === 'empty'}
+              aria-label={ariaLabelFor(row.right.type)}
+            >
+              <lef-line-number aria-hidden="true">{row.right.number ?? ''}</lef-line-number>
+              <lef-line-text>{#if row.right.type === 'empty'}<lef-text-placeholder aria-hidden="true">&nbsp;</lef-text-placeholder>{:else}{@html row.right.html || '&nbsp;'}{/if}</lef-line-text>
+            </lef-side>
+          </lef-diff-row>
+        {/each}
+      </lef-code-body>
     </lef-code-scroll>
   </lef-code-frame>
 </lef-code-editor>
@@ -206,7 +187,6 @@
     flex-direction: column;
     min-width: 0;
     min-height: 0;
-    overflow: hidden;
   }
 
   lef-loading {
@@ -233,11 +213,10 @@
     padding: 0.5rem 0.85rem;
     border-bottom: 1px solid var(--kef-line-soft);
     background: color-mix(in oklab, var(--kef-bg-soft) 70%, var(--kef-bg-card));
-    margin-top: -1px;
   }
 
   lef-code-path {
-    font-family: 'Synt', monospace;
+    font-family: 'Fira Mono', 'Fira Code', ui-monospace, monospace;
     font-size: 0.78rem;
     color: var(--lefine-text-soft);
   }
@@ -245,7 +224,7 @@
   lef-code-stats {
     display: inline-flex;
     gap: 0.5rem;
-    font-family: 'Synt', monospace;
+    font-family: 'Fira Mono', 'Fira Code', ui-monospace, monospace;
     font-size: 0.74rem;
     font-weight: 600;
   }
@@ -258,13 +237,12 @@
     grid-template-columns: 1fr 1fr;
     border-bottom: 1px solid var(--kef-line-soft);
     background: color-mix(in oklab, var(--kef-bg-soft) 50%, var(--kef-bg-card));
-    margin-top: -1px;
   }
 
   lef-code-header-cell {
     display: block;
     padding: 0.4rem 0.85rem;
-    font-family: 'Synt', monospace;
+    font-family: 'Fira Mono', 'Fira Code', ui-monospace, monospace;
     font-size: 0.72rem;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -276,95 +254,85 @@
   }
 
   lef-code-scroll {
-    overflow-y: auto;
-    overflow-x: hidden;
+    overflow: auto;
     background: var(--kef-bg-card);
   }
 
-  lef-code-split {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-  }
-
-  lef-code-pane {
-    overflow-x: auto;
-    min-width: 0;
-  }
-  lef-code-pane:first-child {
-    border-right: 1px solid var(--kef-line-soft);
+  lef-code-body {
+    display: block;
+    min-width: 100%;
+    padding: 0;
+    font-family: 'Fira Mono', 'Fira Code', ui-monospace, monospace;
+    font-size: 0.82rem;
+    line-height: 1.55;
+    color: var(--lefine-text);
   }
 
   lef-diff-row {
-    display: block;
-  }
-
-  .lef-row-group {
-    display: inline-block;
-    min-width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: stretch;
   }
 
   .lef-side {
-    display: flex;
-  }
-  .lef-side--left {
-    border-right: none;
+    display: grid;
+    grid-template-columns: 3rem 1fr;
+    align-items: stretch;
+    padding-right: 0.75rem;
+    border-right: 1px solid var(--kef-line-soft);
+    min-width: 0;
   }
   .lef-side--right {
     border-right: none;
   }
 
   .lef-side--added {
-    background: color-mix(in oklab, var(--kef-success) 22%, transparent);
+    background: color-mix(in oklab, var(--kef-success) 12%, transparent);
   }
   .lef-side--removed {
-    background: color-mix(in oklab, var(--kef-error) 22%, transparent);
+    background: color-mix(in oklab, var(--kef-error) 12%, transparent);
   }
   .lef-side--empty {
-    background: color-mix(in oklab, var(--lefine-text-soft) 8%, transparent);
+    background: color-mix(in oklab, var(--lefine-text-soft) 4%, transparent);
   }
 
   :global(:root[data-kefine-theme='dark']) .lef-side--added {
-    background: color-mix(in oklab, var(--kef-success) 28%, transparent);
+    background: color-mix(in oklab, var(--kef-success) 16%, transparent);
   }
   :global(:root[data-kefine-theme='dark']) .lef-side--removed {
-    background: color-mix(in oklab, var(--kef-error) 28%, transparent);
+    background: color-mix(in oklab, var(--kef-error) 16%, transparent);
   }
   :global(:root[data-kefine-theme='dark']) .lef-side--empty {
-    background: color-mix(in oklab, #ffffff 4%, transparent);
+    background: color-mix(in oklab, #ffffff 2%, transparent);
   }
 
   lef-line-number {
-    position: sticky;
-    left: 0;
-    z-index: 1;
-    flex: 0 0 3rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
     padding-right: 0.65rem;
     color: color-mix(in oklab, var(--lefine-text-soft) 70%, transparent);
     font-variant-numeric: tabular-nums;
     user-select: none;
     border-right: 1px solid var(--kef-line-soft);
-    background: var(--kef-bg-card);
-    text-align: right;
-    line-height: inherit;
+    background: color-mix(in oklab, var(--kef-bg-soft) 35%, transparent);
   }
 
   .lef-side--added lef-line-number {
     color: var(--kef-success);
-    background: color-mix(in oklab, var(--kef-success) 22%, var(--kef-bg-card));
+    background: color-mix(in oklab, var(--kef-success) 5%, var(--kef-bg-card));
   }
   .lef-side--removed lef-line-number {
     color: var(--kef-error);
-    background: color-mix(in oklab, var(--kef-error) 22%, var(--kef-bg-card));
-  }
-  .lef-side--empty lef-line-number {
-    background: color-mix(in oklab, var(--lefine-text-soft) 8%, var(--kef-bg-card));
+    background: color-mix(in oklab, var(--kef-error) 5%, var(--kef-bg-card));
   }
 
   lef-line-text {
-    flex: 1;
+    display: block;
+    min-width: 0;
     padding-left: 0.65rem;
     white-space: pre;
-    font-family: 'Synt', monospace;
+    overflow: visible;
   }
 
   lef-text-placeholder {
@@ -374,10 +342,10 @@
   }
 
   @media (max-width: 900px) {
-    lef-code-split {
+    lef-diff-row {
       grid-template-columns: 1fr;
     }
-    lef-code-pane:first-child {
+    .lef-side {
       border-right: none;
       border-bottom: 1px solid var(--kef-line-soft);
     }

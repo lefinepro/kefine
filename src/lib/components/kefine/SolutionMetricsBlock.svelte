@@ -1,21 +1,13 @@
 <script lang="ts">
   import type { SolutionMetric } from '$lib/kefine/solutions-data';
-  import {
-    defaultChartSize,
-    timeSeries,
-    priceSeries,
-    successRateSeries,
-    efficiencySeries,
-    efficiencyValue
-  } from '$lib/kefine/solver-charts';
+  import { defaultChartSize, timeSeries, weightSeries } from '$lib/kefine/solver-charts';
   import SolutionChartCard from './SolutionChartCard.svelte';
-  import { kefineLocaleText } from '$lib/constants/kefine-locale';
 
   let {
     metrics,
     activeSolverId,
     title = 'Solver metrics',
-    subtitle = 'Execution time, price & success rate per solver'
+    subtitle = 'Hardcoded execution time & solution weight per solver'
   }: {
     metrics: SolutionMetric[];
     activeSolverId: string;
@@ -24,14 +16,10 @@
   } = $props();
 
   const time = $derived(timeSeries(metrics, activeSolverId));
-  const price = $derived(priceSeries(metrics, activeSolverId));
-  const success = $derived(successRateSeries(metrics, activeSolverId));
-  const efficiency = $derived(efficiencySeries(metrics, activeSolverId));
-
-  const localeText = $derived($kefineLocaleText);
+  const weight = $derived(weightSeries(metrics, activeSolverId));
 </script>
 
-<lef-metrics-block aria-label={localeText.solversView.metricsAria}>
+<lef-metrics-block aria-label="Solver metrics">
   <lef-metrics-head>
     <strong>{title}</strong>
     <lefine-text>{subtitle}</lefine-text>
@@ -39,8 +27,8 @@
 
   <lef-metrics-grid>
     <SolutionChartCard
-      title={localeText.solversView.chartExecutionTime}
-      unit={localeText.solversView.chartSeconds}
+      title="Execution time"
+      unit="seconds"
       series={time}
       metrics={metrics}
       size={defaultChartSize}
@@ -50,36 +38,14 @@
     />
 
     <SolutionChartCard
-      title={localeText.solversView.chartPrice}
-      unit={localeText.solversView.chartUsd}
-      series={price}
+      title="Solution weight"
+      unit="kilobytes"
+      series={weight}
       metrics={metrics}
       size={defaultChartSize}
       variant="alt"
-      valueFormatter={(v) => `$${v.toFixed(2)}`}
-      seriesValue={(m) => m.priceUsd}
-    />
-
-    <SolutionChartCard
-      title={localeText.solversView.chartSuccessRate}
-      unit={localeText.solversView.chartPercent}
-      series={success}
-      metrics={metrics}
-      size={defaultChartSize}
-      variant="primary"
-      valueFormatter={(v) => `${v.toFixed(0)}%`}
-      seriesValue={(m) => m.successRate}
-    />
-
-    <SolutionChartCard
-      title={localeText.solversView.chartEfficiency}
-      unit={localeText.solversView.chartEfficiencyUnit}
-      series={efficiency}
-      metrics={metrics}
-      size={defaultChartSize}
-      variant="alt"
-      valueFormatter={(v) => v.toFixed(0)}
-      seriesValue={(m) => efficiencyValue(m)}
+      valueFormatter={(v) => `${v.toFixed(1)}kb`}
+      seriesValue={(m) => m.solutionWeightKb}
     />
   </lef-metrics-grid>
 </lef-metrics-block>

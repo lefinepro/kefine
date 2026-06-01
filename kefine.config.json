@@ -10,9 +10,6 @@
       "hy": "Մարտ 2026"
     }
   },
-  "features": {
-    "repositories": false
-  },
   "backend": {
     "craterBaseUrl": "http://127.0.0.1:3001",
     "exchangeBaseUrl": "https://problemsets.lefine.pro",
@@ -42,14 +39,6 @@
     "taxId": "",
     "soleProprietor": "",
     "legalDisclaimer": ""
-  },
-  "emailAuth": {
-    "smtpHost": "mail.lefine.pro",
-    "smtpPort": 587,
-    "smtpUsername": "app@lefine.pro",
-    "smtpPassword": "",
-    "fromEmail": "noreply@lefine.pro",
-    "fromName": "Lefine"
   },
   "defaultActor": {
     "handle": "staff",
