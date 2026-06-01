@@ -29,6 +29,12 @@ export const KEFINE_TEXT_EN = {
     githubLabel: 'Open GitHub',
     signIn: 'Sign in',
     signedIn: 'Signed in',
+    searchLabel: 'Search',
+    searchPlaceholder: 'Search lepos, pages, actions...',
+    searchResultsLabel: 'Results',
+    searchEmptyLabel: 'No matching results',
+    searchOpenLabel: 'Open',
+    searchHomeLabel: 'Home',
     socialLinks: {
       mastodon: {
         label: 'Open Mastodon',

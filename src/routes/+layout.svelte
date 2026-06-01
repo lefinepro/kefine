@@ -264,6 +264,13 @@
     languageEnglishLabel={localeText.topbar.languageEnglish}
     languageRussianLabel={localeText.topbar.languageRussian}
     languageArmenianLabel={localeText.topbar.languageArmenian}
+    searchLabel={localeText.topbar.searchLabel}
+    searchPlaceholder={localeText.topbar.searchPlaceholder}
+    searchResultsLabel={localeText.topbar.searchResultsLabel}
+    searchEmptyLabel={localeText.topbar.searchEmptyLabel}
+    searchOpenLabel={localeText.topbar.searchOpenLabel}
+    searchHomeLabel={localeText.topbar.searchHomeLabel}
+    searchHomeHref={buildLocaleHomePath(activeLocale)}
     socialLinks={sidebarSocialLinks}
     showSocialLinks={false}
     legalLinks={sidebarLegalLinks}

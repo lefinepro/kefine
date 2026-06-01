@@ -544,6 +544,36 @@
       )
       .slice(0, 5)
   );
+  const topbarSearchItems = $derived.by(() =>
+    recentCreatedOrders.map((order) => {
+      const orderRouteId = order.shareId?.trim() || order.id;
+      const actorHandle = order.actorHandle?.trim() || normalizedActorHandle;
+
+      return {
+        id: order.id,
+        title: order.title?.trim() || order.id,
+        subtitle: [order.solver, order.status, order.id].filter(Boolean).join(' · '),
+        category: localeText.labels.task.replace(/:$/, ''),
+        href: localizeAppPath(
+          actorHandle
+            ? buildActorOrderPath(actorHandle, orderRouteId)
+            : `/order/${encodeURIComponent(orderRouteId)}`,
+          activeLocale
+        ),
+        actionLabel: localeText.labels.openOrderLink,
+        icon: 'project' as const,
+        keywords: [
+          order.id,
+          order.shareId,
+          order.description,
+          order.solver,
+          order.status,
+          order.actorHandle,
+          order.ownerUsername
+        ].filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+      };
+    })
+  );
   const TITLE_FONT_MAX = 2.0;
   const TITLE_FONT_MIN = 1.0;
   const TITLE_FONT_SHRINK_AT = 24;
@@ -2822,6 +2852,14 @@
   languageEnglishLabel={localeText.topbar.languageEnglish}
   languageRussianLabel={localeText.topbar.languageRussian}
   languageArmenianLabel={localeText.topbar.languageArmenian}
+  searchLabel={localeText.topbar.searchLabel}
+  searchPlaceholder={localeText.topbar.searchPlaceholder}
+  searchResultsLabel={localeText.topbar.searchResultsLabel}
+  searchEmptyLabel={localeText.topbar.searchEmptyLabel}
+  searchOpenLabel={localeText.topbar.searchOpenLabel}
+  searchHomeLabel={localeText.topbar.searchHomeLabel}
+  searchHomeHref={buildLocaleHomePath(activeLocale)}
+  searchItems={topbarSearchItems}
   socialLinks={sidebarSocialLinks}
   showSocialLinks={false}
   legalLinks={sidebarLegalLinks}

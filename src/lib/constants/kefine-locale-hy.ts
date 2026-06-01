@@ -23,6 +23,12 @@ export const KEFINE_TEXT_HY = {
     githubLabel: 'Բացել GitHub-ը',
     signIn: 'Մուտք',
     signedIn: 'Մուտք գործած',
+    searchLabel: 'Որոնում',
+    searchPlaceholder: 'Որոնել lepos, էջեր, գործողություններ...',
+    searchResultsLabel: 'Արդյունքներ',
+    searchEmptyLabel: 'Համապատասխան արդյունք չկա',
+    searchOpenLabel: 'Բացել',
+    searchHomeLabel: 'Գլխավոր',
     theme: {
       auto: 'Ավտո',
       light: 'Բաց',

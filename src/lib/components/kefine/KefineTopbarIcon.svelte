@@ -8,6 +8,7 @@
     | 'theme-light'
     | 'theme-dark'
     | 'email'
+    | 'search'
     | 'menu'
     | 'project'
     | 'copy'
@@ -83,6 +84,9 @@
   {:else if name === 'email'}
     <rect x="4" y="6" width="16" height="12" rx="2.4" />
     <path d="m5.6 7.8 6.4 5 6.4-5" />
+  {:else if name === 'search'}
+    <circle cx="10.8" cy="10.8" r="5.8" />
+    <path d="m15.2 15.2 4 4" />
   {:else if name === 'menu'}
     <path d="M5 7h14" />
     <path d="M5 12h14" />
