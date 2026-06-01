@@ -1,4 +1,18 @@
 services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: kefine-caddy
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:80"
+      - "127.0.0.1:8443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - lefine-net
+
   postgres:
     container_name: kefine-postgres
     image: postgres:17-alpine
@@ -6,7 +20,7 @@ services:
     environment:
       POSTGRES_DB: kefine
       POSTGRES_USER: kefine
-      POSTGRES_PASSWORD: kefine
+      POSTGRES_PASSWORD: ${KEFINE_POSTGRES_PASSWORD:-kefine}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U kefine -d kefine"]
       interval: 5s
@@ -17,7 +31,7 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
     networks:
-      - kefine
+      - lefine-net
 
   crater:
     container_name: kefine-crater
@@ -29,9 +43,11 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://kefine:kefine@postgres:5432/kefine
+      PORT: "3001"
+      HOST: "0.0.0.0"
+      DATABASE_URL: postgresql://kefine:${KEFINE_POSTGRES_PASSWORD:-kefine}@postgres:5432/kefine
       KEFINE_PRIVATEKEY_DEFAULT: ${KEFINE_PRIVATEKEY_DEFAULT:-}
-      EXCHANGE_BASE_URL: ${EXCHANGE_BASE_URL:-https://problemsets.lefine.pro}
+      EXCHANGE_BASE_URL: ${EXCHANGE_BASE_URL:-http://fmatch:7277}
       MADDY_SMTP_HOST: ${MADDY_SMTP_HOST:-mail.lefine.pro}
       MADDY_SMTP_PORT: ${MADDY_SMTP_PORT:-587}
       MADDY_SMTP_USERNAME: ${MADDY_SMTP_USERNAME:-app@lefine.pro}
@@ -53,7 +69,9 @@ services:
     ports:
       - "3001:3001"
     networks:
-      - kefine
+      lefine-net:
+        aliases:
+          - kefine-crater
 
   frontend:
     container_name: kefine-frontend
@@ -65,17 +83,40 @@ services:
       crater:
         condition: service_healthy
     environment:
-      CRATER_BASE_URL: http://crater:3001
-      EXCHANGE_BASE_URL: ${EXCHANGE_BASE_URL:-https://problemsets.lefine.pro}
-      LEFINE_INTEGRATION_SECRET: dev-only-lefine-octra-shared-secret-change-me
+      CRATER_BASE_URL: http://kefine-crater:3001
+      EXCHANGE_BASE_URL: ${EXCHANGE_BASE_URL:-http://fmatch:7277}
+      LEFINE_INTEGRATION_SECRET: ${LEFINE_INTEGRATION_SECRET:-}
     ports:
       - "5173:5173"
     networks:
-      - kefine
+      - lefine-net
+
+  crater-openai:
+    container_name: crater-openai
+    build:
+      context: ../crater-openai
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      PORT: "3000"
+      HOST: "0.0.0.0"
+      CRATER_FORGEFED_INBOX: ${CRATER_FORGEFED_INBOX:-http://fmatch:7277/inbox/feed}
+      CRATER_FORGEFED_ACTOR: ${CRATER_FORGEFED_ACTOR:-https://lefine.pro/openai/actors/crater}
+      CRATER_FORGEFED_TARGET: ${CRATER_FORGEFED_TARGET:-}
+      CRATER_LOCAL_PRIVATE_KEY_PEM: ${CRATER_LOCAL_PRIVATE_KEY_PEM:-}
+      CRATER_LOCAL_KEY_ID: ${CRATER_LOCAL_KEY_ID:-}
+      CRATER_LOCAL_ACTOR: ${CRATER_LOCAL_ACTOR:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL:-}
+    networks:
+      - lefine-net
 
 volumes:
   postgres-data:
+  caddy-data:
+  caddy-config:
 
 networks:
-  kefine:
-    name: kefine
+  lefine-net:
+    name: lefine-net
+    external: true

@@ -1,13 +1,16 @@
 lefine.pro, www.lefine.pro {
+	# Exchange/fmatch под /exchange/
+	handle_path /exchange/* {
+		reverse_proxy fmatch:7277
+	}
+
+	# OpenAI API (crater-openai) под /openai/
+	handle_path /openai/* {
+		reverse_proxy crater-openai:3000
+	}
+
+	# Всё остальное → kefine frontend (он сам проксит /api/* в crater)
 	reverse_proxy kefine-frontend:5173
-}
-
-problemsets.lefine.pro {
-	reverse_proxy exchange:7277
-}
-
-exchange.lefine.pro {
-	redir https://problemsets.lefine.pro{uri} 301
 }
 
 source.lefine.pro {
