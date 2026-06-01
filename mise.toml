@@ -21,17 +21,16 @@ fi
 '''
 
 [tasks."backend:deps"]
-description = "Install Lepos dependencies with shards"
+description = "Install crater dependencies with shards"
 run = '''
-if [ ! -d crater/lib/kemal ] || [ ! -f crater/lib/rcl/src/rcl/document.cr ]; then
+if [ ! -d crater/lib/kemal ]; then
   cd crater && shards install
 fi
-./scripts/patch-rcl-crystal-merge.sh
 '''
 
 [tasks."backend:build"]
-description = "Build the Lepos dev container image"
-run = "./scripts/nerdctl-compose.sh build lepos"
+description = "Build the crater dev container image"
+run = "./scripts/nerdctl-compose.sh build crater"
 
 [tasks."db:up"]
 description = "Start local Postgres in nerdctl compose"
@@ -71,21 +70,21 @@ depends = ["frontend:build"]
 run = "pnpm preview --host 0.0.0.0"
 
 [tasks.backend]
-description = "Run the Lepos backend in a dev container without rebuilding"
+description = "Run the crater backend in a dev container without rebuilding"
 depends = ["db:wait"]
-run = "./scripts/nerdctl-compose.sh up lepos"
+run = "./scripts/nerdctl-compose.sh up crater"
 
 [tasks."backend:local"]
-description = "Run the Lepos backend directly with Crystal"
+description = "Run the crater backend directly with Crystal"
 depends = ["backend:deps", "db:wait"]
 run = "cd crater && crystal run src/crater.cr"
 
 [tasks."backend:down"]
-description = "Stop the Lepos backend container"
-run = "./scripts/nerdctl-compose.sh stop lepos"
+description = "Stop the crater backend container"
+run = "./scripts/nerdctl-compose.sh stop crater"
 
 [tasks.dev]
-description = "Start Postgres, Lepos, and the frontend"
+description = "Start Postgres, crater, and the frontend"
 depends = ["install"]
 run = "mise run backend ::: frontend"
 

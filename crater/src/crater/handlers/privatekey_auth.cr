@@ -2,7 +2,7 @@ require "json"
 require "../utils/config"
 require "../utils/actor_keys"
 
-module Lepos
+module Crater
   module Handlers
     module PrivatekeyAuth
       SESSION_TTL = 30.days
@@ -91,21 +91,21 @@ module Lepos
         end
 
         {
-          verified:    true,
-          token:       "publickey:#{compact_public_key}:#{Time.utc.to_unix_ms}",
-          userId:      "publickey:#{compact_public_key}",
-          username:    handle,
-          displayName: display_name,
-          handle:      handle,
-          email:       email,
-          publickey:   {
+          verified:     true,
+          token:        "publickey:#{compact_public_key}:#{Time.utc.to_unix_ms}",
+          userId:       "publickey:#{compact_public_key}",
+          username:     handle,
+          displayName:  display_name,
+          handle:       handle,
+          email:        email,
+          publickey:    {
             key: compact_public_key,
             pem: public_key_pem || "",
           },
           keyId:        actor_address,
           actorAddress: actor_address,
           authType:     "publickey",
-          expiresAt:    (Time.utc + SESSION_TTL).to_rfc3339,
+          expiresAt:    (Time.utc + SESSION_TTL).to_rfc3339
         }.to_json
       end
     end

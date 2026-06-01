@@ -36,19 +36,19 @@ module Lepos
     actor_private_key_string = Utils::ActorKeys.encode_private_key_string(actor_private_key)
     actor_public_key_string = Utils::ActorKeys.derive_public_key_string(actor_private_key)
     actor_key_source = if !ENV["KEFINE_PRIVATEKEY_DEFAULT"]?.try(&.strip).to_s.empty?
-                         "KEFINE_PRIVATEKEY_DEFAULT"
-                       elsif !config.actor_private_key.strip.empty?
-                         "kefine.config.json defaultActor.privateKey"
-                       else
-                         "unconfigured"
-                       end
+      "KEFINE_PRIVATEKEY_DEFAULT"
+    elsif !config.actor_private_key.strip.empty?
+      "kefine.config.json defaultActor.privateKey"
+    else
+      "unconfigured"
+    end
 
-    puts "[lepos] default actor: @#{config.actor_username}"
-    puts "[lepos] private key loaded: #{!actor_private_key.strip.empty?}"
-    puts "[lepos] private key source: #{actor_key_source}"
-    puts "[lepos] private key string: #{actor_private_key_string.empty? ? "unavailable" : actor_private_key_string}"
-    puts "[lepos] public key string: #{actor_public_key_string.empty? ? "unavailable" : actor_public_key_string}"
-    puts "[lepos] actor address: #{actor_address || "unavailable"}"
+    puts "[crater] default actor: @#{config.actor_username}"
+    puts "[crater] private key loaded: #{!actor_private_key.strip.empty?}"
+    puts "[crater] private key source: #{actor_key_source}"
+    puts "[crater] private key string: #{actor_private_key_string.empty? ? "unavailable" : actor_private_key_string}"
+    puts "[crater] public key string: #{actor_public_key_string.empty? ? "unavailable" : actor_public_key_string}"
+    puts "[crater] actor address: #{actor_address || "unavailable"}"
 
     # Middleware
     add_handler CorsHandler.new
@@ -70,15 +70,19 @@ module Lepos
     Handlers::OauthAuth.register(config)
     Handlers::EmailCodeAuth.register(config)
 
-    # Aptok-backed project endpoints
-    Handlers::Projects.register(config)
-    Handlers::GitHttp.register(config)
-    Handlers::ForgeFedResources.register(config)
-    Handlers::SshKeys.register(config)
+    # ForgeFed project endpoints
+    if config.repositories_enabled
+      Handlers::Projects.register(config)
+      Handlers::GitHttp.register(config)
+      Handlers::ForgeFedResources.register(config)
+      Handlers::SshKeys.register(config)
+    else
+      puts "[crater] repositories feature disabled"
+    end
 
     get "/health" do |env|
       env.response.content_type = "application/json"
-      %({"status":"ok","service":"lepos","version":"#{VERSION}"})
+      %({"status":"ok","service":"crater","version":"#{VERSION}"})
     end
 
     Kemal.config.port = config.port
@@ -88,15 +92,23 @@ module Lepos
   end
 end
 
-config = Lepos::Utils::Config.load
+config = Crater::Utils::Config.load
 
 case ARGV.first?
 when "authorized-keys"
-  Lepos::SshKeyStore.print_authorized_keys(STDOUT, config)
+  Crater::SshKeyStore.print_authorized_keys(STDOUT, config) if config.repositories_enabled
 when "ssh-shell"
-  Lepos::SshGitShell.run(config, ARGV[1..])
+  unless config.repositories_enabled
+    STDERR.puts "Repositories feature is disabled."
+    exit(1)
+  end
+  Crater::SshGitShell.run(config, ARGV[1..])
 when "git-receive-hook"
-  Lepos::GitReceiveHook.run(config, ARGV[1..])
+  unless config.repositories_enabled
+    STDERR.puts "Repositories feature is disabled."
+    exit(1)
+  end
+  Crater::GitReceiveHook.run(config, ARGV[1..])
 else
-  Lepos.run
+  Crater.run
 end

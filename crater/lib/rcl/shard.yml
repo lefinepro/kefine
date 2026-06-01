@@ -1,0 +1,16 @@
+name: rcl
+version: 1.0.0
+
+description: |
+  Lightweight RCL (Ruby Configuration Language) parser and formatter.
+
+authors:
+  - Kefine Contributors
+
+targets:
+  rcl:
+    main: src/rcl.cr
+
+crystal: ">= 1.10.0"
+
+license: MIT

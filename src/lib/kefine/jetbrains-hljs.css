@@ -8,18 +8,21 @@
 pre.shiki {
   display: block;
   background: transparent;
-  color: var(--kef-hljs-fg, #080808);
+  color: var(--kef-hljs-fg, #24292e);
   padding: 0;
   margin: 0;
   overflow-x: auto;
+  font-family: 'Synt', monospace;
 }
 
 code.shiki {
   background: transparent;
+  font-family: inherit;
 }
 
 .shiki span {
   color: inherit;
+  font-family: inherit;
 }
 
 /* Comments */
@@ -37,8 +40,7 @@ code.shiki {
 .shiki .kn,
 .shiki .kp,
 .shiki .kr {
-  color: var(--kef-hljs-keyword, #0033b3);
-  font-weight: 600;
+  color: var(--kef-hljs-keyword, #d73a49);
 }
 
 /* Strings */
@@ -65,16 +67,14 @@ code.shiki {
 .shiki .f,
 .shiki .fn,
 .shiki .fu {
-  color: var(--kef-hljs-function, #00627a);
-  font-weight: 600;
+  color: var(--kef-hljs-function, #6f42c1);
 }
 
 /* Types */
 .shiki .t,
 .shiki .ty,
 .shiki .tc {
-  color: var(--kef-hljs-type, #000080);
-  font-weight: 600;
+  color: var(--kef-hljs-type, #e36209);
 }
 
 /* Variables, params */
@@ -87,38 +87,52 @@ code.shiki {
 /* Tags */
 .shiki .ta,
 .shiki .me {
-  color: var(--kef-hljs-tag, #0033b3);
+  color: var(--kef-hljs-tag, #22863a);
 }
 
 /* Attributes */
 .shiki .at,
 .shiki .a {
-  color: var(--kef-hljs-attribute, #0033b3);
+  color: var(--kef-hljs-attribute, #6f42c1);
 }
 
 /* Operators, punctuation */
 .shiki .o,
 .shiki .p {
-  color: var(--kef-hljs-fg, #080808);
+  color: var(--kef-hljs-fg, #24292e);
 }
 
 /* Light theme tokens (default) */
 :root,
 :root[data-kefine-theme='light'] {
-  --kef-hljs-fg: #080808;
-  --kef-hljs-comment: #8c8c8c;
-  --kef-hljs-keyword: #0033b3;
-  --kef-hljs-string: #067d17;
-  --kef-hljs-number: #1750eb;
-  --kef-hljs-function: #00627a;
-  --kef-hljs-type: #000080;
-  --kef-hljs-variable: #871094;
-  --kef-hljs-tag: #0033b3;
-  --kef-hljs-attribute: #174ad4;
+  --kef-hljs-fg: #24292e;
+  --kef-hljs-comment: #6a737d;
+  --kef-hljs-keyword: #d73a49;
+  --kef-hljs-string: #032f62;
+  --kef-hljs-number: #005cc5;
+  --kef-hljs-function: #6f42c1;
+  --kef-hljs-type: #e36209;
+  --kef-hljs-variable: #24292e;
+  --kef-hljs-tag: #22863a;
+  --kef-hljs-attribute: #6f42c1;
+}
+
+/* Dark theme tokens */
+:root[data-kefine-theme='dark'] {
+  --kef-hljs-fg: #adbac7;
+  --kef-hljs-comment: #768390;
+  --kef-hljs-keyword: #f47067;
+  --kef-hljs-string: #96d0ff;
+  --kef-hljs-number: #6cb6ff;
+  --kef-hljs-function: #dcbdfb;
+  --kef-hljs-type: #f69d50;
+  --kef-hljs-variable: #adbac7;
+  --kef-hljs-tag: #8ddb8c;
+  --kef-hljs-attribute: #dcbdfb;
 }
 
 /* Darcula tokens */
-:root[data-kefine-theme='dark'] {
+:root[data-kefine-theme='darcula'] {
   --kef-hljs-fg: #a9b7c6;
   --kef-hljs-comment: #808080;
   --kef-hljs-keyword: #cc7832;

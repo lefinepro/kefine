@@ -1,4 +1,4 @@
-FROM crystallang/crystal:1.16.3
+FROM crystallang/crystal:1.11.2
 
 WORKDIR /app
 
@@ -7,9 +7,9 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 COPY crater/shard.yml crater/shard.lock* ./
-COPY scripts/patch-rcl-crystal-merge.sh /tmp/patch-rcl-crystal-merge.sh
-RUN shards install \
-  && /tmp/patch-rcl-crystal-merge.sh /app/lib/rcl/src/rcl/document.cr
+COPY crater/lib/rcl /tmp/kefine-rcl
+RUN sed -i 's|path: .*|path: /tmp/kefine-rcl|' shard.yml
+RUN shards install
 
 
 EXPOSE 3001

@@ -1,10 +1,10 @@
 require "json"
 
-module Lepos
+module Crater
   module Handlers
     module BrowserWalletAuth
-      SESSION_TTL         = 30.days
-      ADDRESS_PATTERN     = /\A0x[a-fA-F0-9]{40}\z/
+      SESSION_TTL = 30.days
+      ADDRESS_PATTERN = /\A0x[a-fA-F0-9]{40}\z/
       TON_ADDRESS_PATTERN = /\A(?:-?\d+):[0-9a-fA-F]{64}\z/
 
       def self.register(_config : Utils::Config)
@@ -63,7 +63,7 @@ module Lepos
           authType:    "wallet",
           address:     normalized_address,
           chainId:     chain_id_value,
-          expiresAt:   (Time.utc + SESSION_TTL).to_rfc3339,
+          expiresAt:   (Time.utc + SESSION_TTL).to_rfc3339
         }.to_json
       end
 
@@ -93,7 +93,7 @@ module Lepos
           authType:    "wallet",
           address:     address,
           chainId:     nil,
-          expiresAt:   (Time.utc + SESSION_TTL).to_rfc3339,
+          expiresAt:   (Time.utc + SESSION_TTL).to_rfc3339
         }.to_json
       end
 

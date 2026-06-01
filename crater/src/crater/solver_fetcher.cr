@@ -2,7 +2,7 @@ require "http/client"
 require "json"
 require "./utils/config"
 
-module Lepos
+module Crater
   module SolverFetcher
     struct SolverInfo
       include JSON::Serializable
@@ -22,14 +22,14 @@ module Lepos
       return nil if exchange_url.nil? || exchange_url.empty?
 
       url = "#{exchange_url.chomp('/')}/solver/available"
-
+      
       begin
         response = HTTP::Client.get(url, headers: HTTP::Headers{
-          "Accept" => "application/json",
+          "Accept" => "application/json"
         }, tls: tls_options(url))
-
+        
         return nil unless response.status_code == 200
-
+        
         solver = SolverInfo.from_json(response.body)
         solver
       rescue

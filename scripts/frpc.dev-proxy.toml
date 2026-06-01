@@ -6,7 +6,7 @@ method = "token"
 token = "{{ .Envs.FRP_TOKEN }}"
 
 [[proxies]]
-name = "kefine-dev-lepos"
+name = "kefine-dev-crater"
 type = "http"
 localIP = "127.0.0.1"
 localPort = 3001

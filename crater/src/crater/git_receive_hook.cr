@@ -3,7 +3,7 @@ require "./repository_store"
 require "./order_queue"
 require "./utils/config"
 
-module Lepos
+module Crater
   module GitReceiveHook
     struct RefUpdate
       getter old_revision : String
@@ -133,6 +133,8 @@ module Lepos
     end
 
     def self.run(config : Utils::Config, args : Array(String)) : NoReturn
+      deny("Repositories feature is disabled.") unless config.repositories_enabled
+
       stage = parse_stage(args)
       repository_id = parse_arg(args, "--repo-id")
       repository = RepositoryStore.find_by_id(repository_id, config)

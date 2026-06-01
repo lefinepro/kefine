@@ -3,7 +3,7 @@ require "pg"
 
 require "./utils/config"
 
-module Lepos
+module Crater
   module SshKeyStore
     class KeyRecord
       property actor_handle : String
@@ -88,7 +88,7 @@ module Lepos
       if configured && !configured.empty?
         "#{configured} --actor #{actor_handle}"
       else
-        executable = Process.executable_path || "lepos"
+        executable = Process.executable_path || "crater"
         "#{shell_quote(executable)} ssh-shell --actor #{shell_quote(actor_handle)}"
       end
     end
@@ -100,7 +100,7 @@ module Lepos
         "no-port-forwarding",
         "no-pty",
         "no-user-rc",
-        "no-X11-forwarding",
+        "no-X11-forwarding"
       ]
 
       "#{restrictions.join(",")} #{record.public_key}"
@@ -170,9 +170,9 @@ module Lepos
     def self.to_json_payload(record : KeyRecord) : Hash(String, JSON::Any)
       {
         "actorHandle" => JSON::Any.new(record.actor_handle),
-        "publicKey"   => JSON::Any.new(record.public_key),
-        "createdAt"   => JSON::Any.new(record.created_at),
-        "updatedAt"   => JSON::Any.new(record.updated_at),
+        "publicKey" => JSON::Any.new(record.public_key),
+        "createdAt" => JSON::Any.new(record.created_at),
+        "updatedAt" => JSON::Any.new(record.updated_at)
       }
     end
   end

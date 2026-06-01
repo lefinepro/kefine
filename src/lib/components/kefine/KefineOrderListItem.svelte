@@ -14,11 +14,11 @@
     openTestId,
     stopTestId,
     deleteTestId,
-    openByDefault = false,
     showStop = false,
     showDelete = false,
     showCreateService = false,
-    openOrder,
+    searchQuery = '',
+    onOpen,
     onCreateService,
     onOpenKeydown,
     onStop,
@@ -39,11 +39,11 @@
     openTestId: string;
     stopTestId?: string;
     deleteTestId?: string;
-    openByDefault?: boolean;
     showStop?: boolean;
     showDelete?: boolean;
     showCreateService?: boolean;
-    openOrder: () => void;
+    searchQuery?: string;
+    onOpen: () => void;
     onCreateService?: (event: MouseEvent) => void;
     onOpenKeydown: (event: KeyboardEvent) => void;
     onStop?: (event: MouseEvent) => void;
@@ -53,6 +53,13 @@
     onStopPointerLeave?: () => void;
     onStopPointerCancel?: () => void;
   } = $props();
+
+  function highlightText(text: string, query: string): string {
+    if (!query.trim()) return text;
+    const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(${escaped})`, 'gi');
+    return text.replace(regex, '<mark style="background:color-mix(in oklab, var(--kef-color-primary, #c89a5a) 35%, transparent); color:inherit; border-radius:2px; padding:0 1px;">$1</mark>');
+  }
 
   function formatTemplateVariableLabel(key: string): string {
     const normalized = key.trim().replace(/[_-]+/g, ' ');
@@ -67,44 +74,16 @@
   const hasServiceVariables = $derived((order.templateVariables?.length ?? 0) > 0);
   const hasExpandedSections = $derived(hasLabels || hasServiceVariables);
   const canMakeTemplate = $derived(order.status === 'completed' || order.status === 'done');
-  let openHandledOnPointerUp = false;
-
-  function triggerOpen(event: Event) {
-    event.preventDefault();
-    event.stopPropagation();
-    openOrder();
-  }
-
-  function handleOpenClick(event: MouseEvent) {
-    if (openHandledOnPointerUp) {
-      openHandledOnPointerUp = false;
-      event.preventDefault();
-      event.stopPropagation();
-      return;
-    }
-
-    triggerOpen(event);
-  }
-
-  function handleOpenPointerUp(event: PointerEvent) {
-    if (event.button !== 0) {
-      return;
-    }
-
-    openHandledOnPointerUp = true;
-    triggerOpen(event);
-  }
 </script>
 
 <li>
   <details
-    open={openByDefault}
     data-testid={itemTestId}
     data-order-id={order.id}
     data-status={order.status}
     data-has-sections={hasExpandedSections}
   >
-    <summary ondblclick={openOrder}>
+    <summary ondblclick={onOpen}>
       <kefine-order-row>
         <kefine-order-disclosure aria-hidden="true">
           <Icon icon="mdi:chevron-down" width="16" height="16" />
@@ -115,10 +94,7 @@
         </kefine-order-mark>
 
         <kefine-order-copy>
-          <kefine-order-title>{order.title}</kefine-order-title>
-          {#if order.executionEstimate}
-            <kefine-order-eta data-testid={`kefine-order-eta-${order.id}`}>{order.executionEstimate}</kefine-order-eta>
-          {/if}
+          <kefine-order-title>{@html highlightText(order.title ?? '', searchQuery)}</kefine-order-title>
         </kefine-order-copy>
       </kefine-order-row>
     </summary>
@@ -129,8 +105,7 @@
           type="button"
           data-part="open-task"
           data-testid={openTestId}
-          onpointerup={handleOpenPointerUp}
-          onclick={handleOpenClick}
+          onclick={onOpen}
           onkeydown={onOpenKeydown}
         >
           <Icon icon="mdi:arrow-top-right" width="15" height="15" aria-hidden="true" />
@@ -304,15 +279,6 @@
     overflow-wrap: anywhere;
   }
 
-  kefine-order-eta {
-    display: block;
-    min-width: 0;
-    color: color-mix(in oklab, var(--lefine-text-soft) 86%, transparent);
-    font-size: 0.78rem;
-    line-height: 1.25;
-    overflow-wrap: anywhere;
-  }
-
   kefine-order-disclosure {
     display: inline-grid;
     place-items: center;
@@ -380,11 +346,6 @@
 
   button[data-part='open-task'] {
     color: color-mix(in oklab, var(--lefine-text) 90%, #456c8e 10%);
-  }
-
-  button[data-part='open-task'] :global(svg),
-  button[data-part='open-task'] lefine-text {
-    pointer-events: none;
   }
 
   button[data-part='create-service'] {
