@@ -3,7 +3,7 @@ require "kemal"
 require "../repository_store"
 require "../utils/config"
 
-module Crater
+module Lepos
   module Handlers
     module GitHttp
       def self.register(config : Utils::Config)

@@ -22,7 +22,8 @@ dependencies:
     github: will/crystal-pg
     version: "~> 0.29.0"
   rcl:
-    path: ./lib/rcl
+    github: cogniframework/rcl.cr
+    branch: release
 
 crystal: ">= 1.10.0"
 
