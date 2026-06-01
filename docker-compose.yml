@@ -19,8 +19,8 @@ services:
     networks:
       - kefine
 
-  crater:
-    container_name: kefine-crater
+  lepos:
+    container_name: kefine-lepos
     build:
       context: .
       dockerfile: crater/Dockerfile
@@ -53,7 +53,9 @@ services:
     ports:
       - "3001:3001"
     networks:
-      - kefine
+      kefine:
+        aliases:
+          - crater
 
   frontend:
     container_name: kefine-frontend
@@ -62,10 +64,10 @@ services:
       dockerfile: Containerfile
     restart: unless-stopped
     depends_on:
-      crater:
+      lepos:
         condition: service_healthy
     environment:
-      CRATER_BASE_URL: http://crater:3001
+      CRATER_BASE_URL: http://lepos:3001
       EXCHANGE_BASE_URL: ${EXCHANGE_BASE_URL:-https://problemsets.lefine.pro}
       LEFINE_INTEGRATION_SECRET: dev-only-lefine-octra-shared-secret-change-me
     ports:
