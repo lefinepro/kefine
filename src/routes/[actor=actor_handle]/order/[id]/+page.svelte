@@ -1,14 +1,11 @@
 <script lang="ts">
-  import KefineWorkspace from '$lib/components/kefine/KefineWorkspace.svelte';
+  import type { Component } from 'svelte';
+  let Workspace: Component<{ initialActorHandle?: string; initialOrderId?: string }> | null = $state(null);
+  import('$lib/components/kefine/KefineWorkspace.svelte').then(m => Workspace = m.default);
 
-  let {
-    data
-  }: {
-    data: {
-      initialActorHandle: string;
-      initialOrderId: string;
-    };
-  } = $props();
+  let { data }: { data: { initialActorHandle?: string; initialOrderId: string } } = $props();
 </script>
 
-<KefineWorkspace initialActorHandle={data.initialActorHandle} initialOrderId={data.initialOrderId} />
+{#if Workspace}
+  <Workspace initialActorHandle={data.initialActorHandle} initialOrderId={data.initialOrderId} />
+{/if}

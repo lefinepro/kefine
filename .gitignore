@@ -47,6 +47,3 @@ playwright-report/
 
 # Local CI investigation logs
 ci-logs/
-
-# Crystal shards are installed locally by `shards install`.
-crater/lib/

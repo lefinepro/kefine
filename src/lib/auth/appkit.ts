@@ -7,7 +7,11 @@ const metadata = {
 	name: 'Lefine | From task to best-fit solution.',
 	description: 'Lefine helps you describe a technical task and get the best-fitting solution path.',
 	url: typeof window !== 'undefined' ? window.location.origin : 'https://lefine.pro',
-	icons: ['https://lefine.pro/favicon.png']
+	icons: [
+		typeof window !== 'undefined'
+			? `${window.location.origin}/photo_2026-05-23_19-35-02.jpg`
+			: 'https://lefine.pro/photo_2026-05-23_19-35-02.jpg'
+	]
 };
 
 const KEFINE_THEME_LIGHT = {
@@ -122,7 +126,7 @@ export async function ensureAppKit(): Promise<AppKitLike | undefined> {
 
 export async function openAppKit(): Promise<void> {
 	const instance = await ensureAppKit();
-	instance?.open({ view: 'ConnectingWalletConnectBasic' });
+	instance?.open({ view: 'ConnectingWalletConnect' });
 }
 
 export async function disconnectAppKit(): Promise<void> {

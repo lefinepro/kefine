@@ -1,12 +1,62 @@
 <script lang="ts">
   import { browser } from '$app/environment';
+  import { goto } from '$app/navigation';
   import type { DraftOrder, OrderView, TemplatePresentation } from './kefine-workflow';
   import { scheduleAfter } from '$lib/utils/helpers';
   import KefineOrderListItem from '$lib/components/kefine/KefineOrderListItem.svelte';
+  import KefineProxyConfigWidget from '$lib/components/kefine/KefineProxyConfigWidget.svelte';
+  import KefineMusicWidget from '$lib/components/kefine/KefineMusicWidget.svelte';
+  import KefineWeatherWidget from '$lib/components/kefine/KefineWeatherWidget.svelte';
+  import KefineTranslatorWidget from '$lib/components/kefine/KefineTranslatorWidget.svelte';
+  import SolutionMetricsMini from '$lib/components/kefine/SolutionMetricsMini.svelte';
+  import { detectProxyServerIntent } from '$lib/kefine/proxy-intent';
+  import {
+    findInstantAnswers,
+    faviconUrl,
+    type InstantAnswer,
+    type InstantAnswersData
+  } from '$lib/kefine/instant-answers';
+  import { createQrMatrix, qrMatrixToSvgPath } from '$lib/kefine/qr-code';
+  import { detectMusicExtractIntent } from '$lib/kefine/music-intent';
+  import { detectWeatherIntent } from '$lib/kefine/weather-intent';
+  import { detectTranslationIntent } from '$lib/kefine/translation-intent';
+  import { buildActorOrderPath } from '$lib/components/kefine/kefine-workspace-helpers';
+  import { defaultMetrics } from '$lib/kefine/solutions-data';
+  import { cubicOut } from 'svelte/easing';
+  import { onMount } from 'svelte';
   const PLACEHOLDER_TYPE_DELAY_MS = 58;
   const PLACEHOLDER_DELETE_DELAY_MS = 34;
   const PLACEHOLDER_PAUSE_MS = 1150;
   const PLACEHOLDER_NEXT_DELAY_MS = 250;
+
+  /** Curtain-drop / oversized → shrink entrance for task rows */
+  function taskDropIn(
+    node: HTMLElement,
+    { delay = 0, duration = 420 }: { delay?: number; duration?: number } = {}
+  ) {
+    return {
+      delay,
+      duration,
+      easing: cubicOut,
+      css: (t: number) => {
+        // Starts slightly larger + above, then settles to normal size
+        const scale = 1.085 - 0.085 * t; // ~1.085 → 1.0
+        const y = -14 * (1 - t);         // drops from -14px
+        const opacity = Math.min(1, t * 1.15);
+        return `opacity:${opacity}; transform:translateY(${y}px) scale(${scale.toFixed(4)});`;
+      }
+    };
+  }
+
+  let listEntranceDone = $state(false);
+
+  onMount(() => {
+    // Give enough time for the full staggered curtain animation even on long lists
+    const maxDelay = 78 * 25 + 600;
+    setTimeout(() => {
+      listEntranceDone = true;
+    }, maxDelay);
+  });
 
   let {
     draft,
@@ -24,23 +74,35 @@
     backgroundExecuteAria,
     solverSearchActive = false,
     solverSearchText = '',
-    solverSearchCompleted = false,
-    solverListHref = '#',
     solverSearchLabel,
+    solverSearchCompletedLabel = 'Completed',
     solverLabel,
     matchedOrders,
-    recentOrders = [],
     isSearching,
     matchedTasksLabel,
     recentTasksLabel,
     addFileLabel,
     addExecutionEstimateLabel,
+    addTagLabel = '+ tag',
+    tagPlaceholderLabel = 'tag',
+    instantAnswersLabel = 'Quick answers',
+    instantAnswerGoHint = 'Go',
+    instantPinLabel = 'Pin to prompt',
+    instantUnpinLabel = 'Unpin',
+    instantPinnedLabel = 'Pinned to prompt',
+    instantMenuLabel = 'More actions',
+    instantQrLabel = 'Download QR code',
+    instantAgentLabel = 'View site with agent',
+    instantAddProjectLabel = 'Add to project',
+    instantQrDownloadLabel = 'Download',
+    removeTagLabel = (tag: string) => `Remove ${tag} tag`,
     fileCountLabel,
     composerHints,
     openTaskLabel,
     relatedItemsLabel,
     createServiceLabel = 'Transform to service',
-    stopTaskLabel,
+    serviceVariablesLabel = 'Service variables',
+    stopTaskLabel = 'Stop repo',
     deleteTaskLabel,
     onSubmit,
     onQueueTask,
@@ -55,7 +117,8 @@
     onTagsChange,
     executionEstimateLabel,
     onExecutionEstimateChange,
-    onSolverSearchComplete
+    onOpenSolution,
+    recentOrders = []
   }: {
     draft: DraftOrder;
     template: TemplatePresentation | null;
@@ -95,9 +158,8 @@
     backgroundExecuteAria: string;
     solverSearchActive?: boolean;
     solverSearchText?: string;
-    solverSearchCompleted?: boolean;
-    solverListHref?: string;
     solverSearchLabel: string;
+    solverSearchCompletedLabel?: string;
     solverLabel: string;
     matchedOrders: OrderView[];
     recentOrders?: OrderView[];
@@ -106,19 +168,33 @@
     recentTasksLabel: string;
     addFileLabel: string;
     addExecutionEstimateLabel: string;
+    addTagLabel?: string;
+    tagPlaceholderLabel?: string;
+    instantAnswersLabel?: string;
+    instantAnswerGoHint?: string;
+    instantPinLabel?: string;
+    instantUnpinLabel?: string;
+    instantPinnedLabel?: string;
+    instantMenuLabel?: string;
+    instantQrLabel?: string;
+    instantAgentLabel?: string;
+    instantAddProjectLabel?: string;
+    instantQrDownloadLabel?: string;
+    removeTagLabel?: (tag: string) => string;
     fileCountLabel: (count: number) => string;
     composerHints: string;
     openTaskLabel: string;
     relatedItemsLabel: string;
     createServiceLabel?: string;
-    stopTaskLabel: string;
+    serviceVariablesLabel?: string;
+    stopTaskLabel?: string;
     deleteTaskLabel: string;
     onSubmit: () => void;
     onQueueTask: () => Promise<void> | void;
     onAttachFiles: (files: File[]) => void;
     onRemoveFile: (index: number) => void;
     onDeleteOrder: (order: OrderView, event: Event) => void;
-    onStopOrder: (order: OrderView, event: Event) => void;
+    onStopOrder?: (order: OrderView, event: Event) => void;
     onOpenOrder: (order: OrderView) => void;
     onCreateServiceFromOrder?: (order: OrderView, event: Event) => void;
     onDescriptionChange?: (value: string) => void;
@@ -126,13 +202,217 @@
     onTagsChange?: (tags: string[]) => void;
     executionEstimateLabel: string;
     onExecutionEstimateChange?: (value: string) => void;
-    onSolverSearchComplete?: () => void;
+    onOpenSolution?: (solutionId: string) => void;
   } = $props();
+
+  // Show the proxy configuration widget as soon as the draft reads like a proxy
+  // request — no submit required (e.g. typing "Нужен прокси сервер").
+  const proxyIntentActive = $derived(detectProxyServerIntent(draft.description));
+
+  // Weather instant answer, matching the proxy/music intent widgets: render the
+  // forecast card while the prompt is still being composed.
+  const weatherIntentActive = $derived(detectWeatherIntent(draft.description));
+
+  // Translation instant answer: render an empty translator surface for generic
+  // "Translate/Перевод" prompts and preselect languages when the pair is named.
+  const translationIntentActive = $derived(detectTranslationIntent(draft.description));
+
+  // Instant answers: a frontend-only autocomplete of known websites loaded from
+  // /instant-answers.json. As the user types, matching sites are surfaced as
+  // direct links (e.g. "sound cloud" -> https://soundcloud.com/).
+  let instantSites = $state<InstantAnswer[]>([]);
+  let instantHighlight = $state(-1);
+  let instantDismissed = $state(false);
+  // URLs whose favicon failed to load — fall back to the emoji icon for those.
+  let failedFavicons = $state<Set<string>>(new Set());
+  // Which row's "⋯" actions menu is currently open (by site url), if any.
+  let instantMenuOpen = $state<string | null>(null);
+  // Site whose QR-code card is currently shown, if any.
+  let qrSite = $state<InstantAnswer | null>(null);
+
+  const PINNED_INSTANT_KEY = 'kefine-pinned-instant-answers';
+  // URLs the user pinned to the prompt; their favicons stay attached to the
+  // search box (the "connecting prompt") so they remain handy across searches.
+  let pinnedUrls = $state<string[]>([]);
+
+  onMount(() => {
+    if (!browser) return;
+    fetch('/instant-answers.json')
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data: InstantAnswersData | null) => {
+        if (data && Array.isArray(data.sites)) {
+          instantSites = data.sites;
+        }
+      })
+      .catch(() => {
+        // Autocomplete is a progressive enhancement; ignore load failures.
+      });
+
+    try {
+      const raw = localStorage.getItem(PINNED_INSTANT_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          pinnedUrls = parsed.filter((url): url is string => typeof url === 'string');
+        }
+      }
+    } catch {
+      // Pinning is a progressive enhancement; ignore storage failures.
+    }
+  });
+
+  const instantAnswers = $derived.by(() => {
+    if (instantDismissed) return [];
+    return findInstantAnswers(draft.description, instantSites);
+  });
+  const instantAnswersOpen = $derived(instantAnswers.length > 0);
+
+  // Sites the user pinned to the prompt, rendered as favicon chips attached to
+  // the search box so they stay connected to the prompt across searches.
+  const pinnedAnswers = $derived(
+    pinnedUrls
+      .map((url) => instantSites.find((site) => site.url === url))
+      .filter((site): site is InstantAnswer => Boolean(site))
+  );
+
+  function isPinned(url: string): boolean {
+    return pinnedUrls.includes(url);
+  }
+
+  function togglePin(url: string) {
+    const next = pinnedUrls.includes(url)
+      ? pinnedUrls.filter((entry) => entry !== url)
+      : [...pinnedUrls, url];
+    pinnedUrls = next;
+    if (browser) {
+      try {
+        localStorage.setItem(PINNED_INSTANT_KEY, JSON.stringify(next));
+      } catch {
+        // Ignore storage failures (private mode, quota, etc.).
+      }
+    }
+  }
+
+  function markFaviconFailed(url: string) {
+    if (failedFavicons.has(url)) return;
+    failedFavicons = new Set(failedFavicons).add(url);
+  }
+
+  function toggleInstantMenu(url: string) {
+    instantMenuOpen = instantMenuOpen === url ? null : url;
+  }
+
+  function openQrCard(site: InstantAnswer) {
+    qrSite = site;
+    instantMenuOpen = null;
+  }
+
+  function viewWithAgent(site: InstantAnswer) {
+    instantMenuOpen = null;
+    if (browser) {
+      window.open(site.url, '_blank', 'noopener,noreferrer');
+    }
+  }
+
+  function addToProject(site: InstantAnswer) {
+    instantMenuOpen = null;
+    const current = draft.description.trim();
+    const next = current ? `${current}\n${site.url}` : site.url;
+    onDescriptionChange?.(next);
+  }
+
+  // Render the QR code for the open card locally (no external request) using the
+  // dependency-free generator already shipped for the proxy widget.
+  const qrMatrix = $derived.by(() => {
+    if (!qrSite) return null;
+    try {
+      return createQrMatrix(qrSite.url, { errorCorrectionLevel: 'medium' });
+    } catch {
+      return null;
+    }
+  });
+  const qrPath = $derived(qrMatrix ? qrMatrixToSvgPath(qrMatrix) : '');
+  const qrViewBox = $derived(qrMatrix ? `-2 -2 ${qrMatrix.size + 4} ${qrMatrix.size + 4}` : '0 0 1 1');
+
+  function downloadQr() {
+    if (!browser || !qrSite || !qrMatrix) return;
+    const dimension = qrMatrix.size + 4;
+    const svg =
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-2 -2 ${dimension} ${dimension}" width="320" height="320">` +
+      `<rect x="-2" y="-2" width="${dimension}" height="${dimension}" fill="#ffffff"/>` +
+      `<path d="${qrPath}" fill="#000000"/></svg>`;
+    const blob = new Blob([svg], { type: 'image/svg+xml' });
+    const objectUrl = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = objectUrl;
+    anchor.download = `${qrSite.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')}-qr.svg`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(objectUrl);
+  }
+
+  $effect(() => {
+    // Reset the highlight whenever the visible suggestion set changes.
+    void draft.description;
+    instantHighlight = -1;
+  });
+
+  $effect(() => {
+    // Re-enable suggestions once the user starts typing again after dismissing.
+    if (draft.description.trim() === '') {
+      instantDismissed = false;
+    }
+  });
+
+  function openInstantAnswer(site: InstantAnswer) {
+    if (browser) {
+      window.open(site.url, '_blank', 'noopener,noreferrer');
+    }
+    instantDismissed = true;
+    instantHighlight = -1;
+    instantMenuOpen = null;
+  }
+
+  $effect(() => {
+    if (!browser || (!instantMenuOpen && !qrSite)) {
+      return;
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest('[data-part="instant-actions"], [data-part="qr-card"]')) {
+        return;
+      }
+      instantMenuOpen = null;
+      qrSite = null;
+    };
+
+    const handleKeydown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        instantMenuOpen = null;
+        qrSite = null;
+      }
+    };
+
+    globalThis.addEventListener('pointerdown', handlePointerDown);
+    globalThis.addEventListener('keydown', handleKeydown);
+    return () => {
+      globalThis.removeEventListener('pointerdown', handlePointerDown);
+      globalThis.removeEventListener('keydown', handleKeydown);
+    };
+  });
+  // Show the music player widget as soon as the draft reads like an
+  // "extract music/audio from video" request — no submit required
+  // (e.g. typing "Извлечь музыку из видео").
+  const musicIntentActive = $derived(detectMusicExtractIntent(draft.description));
 
   let animatedPlaceholder = $state('');
   let placeholderVisible = $state(false);
   let placeholderFocused = $state(false);
   let inputMetaOpen = $state(false);
+  let searchRevealed = $state(false);
+  let articleRef = $state<HTMLElement | null>(null);
   let executionEditorOpen = $state(false);
   let tagEditorOpen = $state(false);
   let tagInputValue = $state('');
@@ -142,7 +422,6 @@
   let filePreviews = $state<Map<number, string>>(new Map());
   let queuePopoverOpen = $state(false);
   let queuePressTriggered = $state(false);
-  let cancelStopPress: (() => void) | null = null;
   let cancelPlaceholderTick: (() => void) | null = null;
   let cancelQueuePress: (() => void) | null = null;
   let placeholderVariantIndex = $state(0);
@@ -152,15 +431,57 @@
   let isFlying = $state(false);
   let initialized = $state(false);
 
+  function orderScore(query: string, order: OrderView): number {
+    const q = query.trim().toLowerCase();
+    if (!q) return 0;
+    const title = (order.title ?? '').toLowerCase();
+    if (title === q) return 100;
+    if (title.startsWith(q)) return 50;
+    if (title.includes(q)) return 25;
+    if ((order.solver ?? '').toLowerCase().includes(q)) return 10;
+    if ((order.id ?? '').toLowerCase().includes(q)) return 5;
+    return 0;
+  }
+
+  let sortedMatchedOrders = $derived(
+    draft.description.trim()
+      ? [...matchedOrders].sort(
+          (a, b) => orderScore(draft.description, b) - orderScore(draft.description, a)
+        )
+      : matchedOrders
+  );
+
   import { solutionsStore } from '$lib/kefine/solutions-store';
+  import { get } from 'svelte/store';
+
+  const COMPLETED_SEARCHES_KEY = 'kefine-completed-solver-searches';
+
+  function getCompletedSearches(): Set<string> {
+    if (!browser) return new Set();
+    try {
+      const raw = localStorage.getItem(COMPLETED_SEARCHES_KEY);
+      return raw ? new Set(JSON.parse(raw)) : new Set();
+    } catch {
+      return new Set();
+    }
+  }
+
+  function markSearchCompleted(text: string) {
+    if (!browser) return;
+    const set = getCompletedSearches();
+    set.add(text.trim().toLowerCase());
+    localStorage.setItem(COMPLETED_SEARCHES_KEY, JSON.stringify([...set]));
+  }
+
+  function isSearchCompleted(text: string): boolean {
+    return getCompletedSearches().has(text.trim().toLowerCase());
+  }
 
   interface Solution {
     id: string;
     solver: string;
     title: string;
     description: string;
-    project?: string;
-    slug?: string;
     diffs: Array<{ file: string; added: number; removed: number }>;
     codeLines: Array<{ text: string; type: 'added' | 'removed' | 'unchanged' }>;
     fileCodeLines?: Record<string, Array<{ text: string; type: 'added' | 'removed' | 'unchanged' }>>;
@@ -253,8 +574,6 @@
       solver: 'Go Proxy Basic',
       title: 'Simple HTTP Proxy',
       description: 'Minimal HTTP proxy with forward functionality',
-      project: 'kefine/go-proxy',
-      slug: 'feat/basic-forward',
       diffs: [
         { file: 'main.go', added: 28, removed: 0 },
         { file: 'config.yaml', added: 5, removed: 0 },
@@ -353,8 +672,6 @@
       solver: 'Go Proxy Pro',
       title: 'Production-ready Proxy with Logging',
       description: 'Proxy with request/response logging and error handling',
-      project: 'kefine/go-proxy',
-      slug: 'feat/logged-proxy',
       diffs: [
         { file: 'main.go', added: 48, removed: 0 },
         { file: 'config.go', added: 12, removed: 0 },
@@ -426,8 +743,6 @@
       solver: 'Go Reverse Proxy',
       title: 'Reverse Proxy with Path Rewrite',
       description: 'Reverse proxy that rewrites paths and handles routing',
-      project: 'kefine/go-proxy',
-      slug: 'feat/reverse-rewrite',
       diffs: [
         { file: 'main.go', added: 55, removed: 0 },
         { file: 'proxy.go', added: 15, removed: 0 },
@@ -483,110 +798,149 @@
     }
   ];
 
-  $effect(() => {
+$effect(() => {
     if (initialized) return;
-    initialized = true;
+initialized = true;
     const current = solutionsStore.getAll();
     if (current.length === 0) {
       solutionsStore.set([...defaultSolutions]);
     }
   });
 
-  let taskSearchText = $state('');
-  const isMultilineDraft = $derived(draft.description.includes('\n'));
-  const effectiveTaskCompleted = $derived(taskCompleted || solverSearchCompleted);
+  const crownAnimating = $state<Record<string, boolean>>({});
 
-  function solutionIdsForTaskText(value: string): string[] | null {
-    const text = value.trim().toLowerCase();
-    if (text.includes('мини прокси') && text.includes('go')) {
-      return ['5', '6', '7'];
-    }
-    if (text.includes('hello world') && text.includes('rust')) {
-      return ['1', '2', '3', '4'];
-    }
-    return null;
-  }
-
-  function filterSolutionsForTask(all: Solution[], value: string): Solution[] {
-    const ids = solutionIdsForTaskText(value);
-    if (!ids) {
-      return all;
-    }
-
-    return all.filter((solution) => ids.includes(solution.id));
-  }
-
-  function ensureSolutionsForTask(value: string) {
-    const ids = solutionIdsForTaskText(value);
-    if (!ids) {
-      return;
-    }
-
-    const current = solutionsStore.getAll();
-    const currentById = new Map(current.map((solution) => [solution.id, solution]));
-    const requiredSolutions = defaultSolutions.filter((solution) => ids.includes(solution.id));
-    let changed = false;
-
-    const merged = current.map((solution) => {
-      const fallback = requiredSolutions.find((candidate) => candidate.id === solution.id);
-      if (!fallback) {
-        return solution;
+  function handleCrownClick(solutionId: string) {
+    if (crownAnimating[solutionId]) return;
+    const idx = $solutionsStore.findIndex(s => s.id === solutionId);
+    if (idx === -1) return;
+    const sol = $solutionsStore[idx];
+    if (sol.rated) {
+      crownAnimating[solutionId] = true;
+      const btn = document.querySelector<HTMLElement>(`[data-crown-btn="${solutionId}"]`);
+      if (btn) {
+        requestAnimationFrame(() => {
+          btn.classList.remove('is-active');
+          crownAnimating[solutionId] = false;
+        });
       }
-
-      const next = {
-        ...fallback,
-        ...solution,
-        project: solution.project ?? fallback.project,
-        slug: solution.slug ?? fallback.slug
-      };
-      changed ||= next.project !== solution.project || next.slug !== solution.slug;
-      return next;
-    });
-
-    const additions = requiredSolutions.filter((solution) => !currentById.has(solution.id));
-    if (additions.length > 0) {
-      changed = true;
-    }
-
-    if (changed) {
-      solutionsStore.set([...merged, ...additions]);
+      solutionsStore.update(list => {
+        const newList = [...list];
+        newList[idx] = { ...newList[idx], rated: false };
+        return newList;
+      });
+    } else {
+      crownAnimating[solutionId] = true;
+      solutionsStore.update(list => {
+        const newList = [...list];
+        newList[idx] = { ...newList[idx], rated: true };
+        return newList;
+      });
+      setTimeout(() => {
+        crownAnimating[solutionId] = false;
+      }, 800);
     }
   }
 
+  const isMultilineDraft = $derived(draft.description.includes('\n'));
   const displayedSolutions = $derived.by(() => {
     const all = $solutionsStore;
-    const text = (taskSearchText || solverSearchText).trim();
+    const text = solverSearchText.trim().toLowerCase();
+    if (taskCompleted) {
+      const taskLower = taskSearchText.toLowerCase();
+      if (taskLower.includes('мини прокси') && taskLower.includes('go')) {
+        return all.filter(s => ['5', '6', '7'].includes(s.id));
+      }
+      if (taskLower.includes('hello world') && taskLower.includes('rust')) {
+        return all.filter(s => ['1', '2', '3', '4'].includes(s.id));
+      }
+      return all;
+    }
     if (!text) return all;
-    return filterSolutionsForTask(all, text);
+    if (text.includes('мини прокси') && text.includes('go')) {
+      return all.filter(s => ['5', '6', '7'].includes(s.id));
+    }
+    if (text.includes('hello world') && text.includes('rust')) {
+      return all.filter(s => ['1', '2', '3', '4'].includes(s.id));
+    }
+    return all;
   });
 
-  const searchTaskLabel = $derived((taskSearchText || solverSearchText).trim());
-  const searchRepositoryLabel = $derived.by(() => {
-    const primary = displayedSolutions[0];
-    if (primary?.project) {
-      return primary.project;
-    }
-    if (primary?.solver) {
-      return primary.solver;
-    }
-    return searchTaskLabel;
-  });
-  const searchPrimaryLabel = $derived(effectiveTaskCompleted ? searchRepositoryLabel : searchTaskLabel);
-  const searchSecondaryLabel = $derived.by(() => {
-    if (!effectiveTaskCompleted) {
-      return solverSearchLabel;
-    }
-
-    const primary = displayedSolutions[0];
-    if (primary?.project && primary?.solver) {
-      return `${primary.solver} · ${searchTaskLabel}`;
-    }
-    return searchTaskLabel;
-  });
-  const searchActionLabel = $derived(effectiveTaskCompleted ? 'Open solver list' : solverSearchLabel);
+  let taskSearchText = $state('');
 
   const afeIntroCard = $derived(afe.cards[0] ?? null);
   const afeStepCards = $derived(afe.cards.slice(1));
+
+  /**
+   * When the user submits a search whose text matches an existing recent order,
+   * we want to animate that existing row to the top and mark it completed — not
+   * render a second "in progress" placeholder row beneath it. This finds such a
+   * duplicate to suppress in the active-search placeholder rendering.
+   */
+  const activeSearchDuplicate = $derived.by(() => {
+    if (!solverSearchActive) return null;
+    const text = solverSearchText.trim().toLowerCase();
+    if (!text) return null;
+    return recentOrders.find((order) => order.title?.toLowerCase().includes(text)) ?? null;
+  });
+
+  const filteredRecentOrders = $derived(recentOrders);
+
+  const searchResultHref = $derived.by(() => {
+    const first = matchedOrders[0];
+    if (first?.actorHandle && (first.shareId ?? first.id)) {
+      return buildActorOrderPath(first.actorHandle, first.shareId ?? first.id);
+    }
+    return `/order/go-proxy/solutions?task=${encodeURIComponent(solverSearchText)}`;
+  });
+
+  function isGoProxySearch(text: string): boolean {
+    const normalized = text.trim().toLowerCase();
+    return normalized.includes('мини прокси') && normalized.includes('go');
+  }
+
+  function isRustHelloWorldSearch(text: string): boolean {
+    const normalized = text.trim().toLowerCase();
+    return normalized.includes('hello world') && normalized.includes('rust');
+  }
+
+  function solverRepositoryName(text: string): string {
+    if (isGoProxySearch(text)) {
+      return 'kefine/go-proxy';
+    }
+
+    if (isRustHelloWorldSearch(text)) {
+      return 'rust/hello-world';
+    }
+
+    return 'feat/basic-forward';
+  }
+
+  function completedBranchLabel(text: string, completed: boolean): string {
+    return completed ? solverRepositoryName(text) : 'feat/basic-forward';
+  }
+
+  function shouldShowSolverList(text: string, completed: boolean): boolean {
+    return completed && (isGoProxySearch(text) || isRustHelloWorldSearch(text));
+  }
+
+  function orderSolutionsHref(order: OrderView): string {
+    return `/order/${encodeURIComponent(order.id)}/solutions?task=${encodeURIComponent(order.title || solverSearchText)}`;
+  }
+
+  function orderTaskHref(order: OrderView): string {
+    return order.actorHandle || order.ownerUsername
+      ? buildActorOrderPath(order.actorHandle ?? order.ownerUsername!, order.shareId ?? order.id)
+      : `/order/${order.id}`;
+  }
+
+  function openSolverList(event: MouseEvent, href: string) {
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+      return;
+    }
+
+    event.preventDefault();
+    void goto(href);
+  }
 
   function formatTemplateVariableLabel(key: string): string {
     const normalized = key.trim().replace(/[_-]+/g, ' ');
@@ -629,8 +983,8 @@
       return;
     }
 
-    taskTextarea.style.height = '0px';
-    taskTextarea.style.height = `${Math.min(Math.max(taskTextarea.scrollHeight, 104), 288)}px`;
+    const scrollH = taskTextarea.scrollHeight;
+    taskTextarea.style.height = `${Math.min(Math.max(scrollH, 104), 288)}px`;
   }
 
   function stopPlaceholderAnimation({ hide = false }: { hide?: boolean } = {}) {
@@ -715,33 +1069,45 @@
   });
 
   $effect(() => {
-    const text = solverSearchText.trim();
-
-    if (!solverSearchActive || !text) {
-      taskSearchText = '';
-      taskCompleted = false;
-      isFlying = false;
-      return;
+    const text = solverSearchText.trim().toLowerCase();
+    if (solverSearchActive && text.includes('hello world') && text.includes('rust')) {
+      taskSearchText = solverSearchText.trim();
+      isFlying = true;
+      const timer = setTimeout(() => {
+        taskCompleted = true;
+        isFlying = false;
+        markSearchCompleted(solverSearchText);
+        const current = solutionsStore.getAll();
+        const rustSolutions = defaultSolutions.filter(s => ['1', '2', '3', '4'].includes(s.id));
+        const existingIds = current.map(s => s.id);
+        const newSolutions = rustSolutions.filter(s => !existingIds.includes(s.id));
+        if (newSolutions.length > 0) {
+          solutionsStore.set([...current, ...newSolutions]);
+        }
+      }, 4000);
+      return () => clearTimeout(timer);
     }
+  });
 
-    taskSearchText = text;
-    ensureSolutionsForTask(text);
-
-    if (solverSearchCompleted || taskCompleted) {
-      taskCompleted = true;
-      isFlying = false;
-      return;
+  $effect(() => {
+    const text = solverSearchText.trim().toLowerCase();
+    if (solverSearchActive && text.includes('мини прокси') && text.includes('go')) {
+      taskSearchText = solverSearchText.trim();
+      isFlying = true;
+      const timer = setTimeout(() => {
+        taskCompleted = true;
+        isFlying = false;
+        markSearchCompleted(solverSearchText);
+        const current = solutionsStore.getAll();
+        const goSolutions = defaultSolutions.filter(s => ['5', '6', '7'].includes(s.id));
+        const existingIds = current.map(s => s.id);
+        const newSolutions = goSolutions.filter(s => !existingIds.includes(s.id));
+        if (newSolutions.length > 0) {
+          solutionsStore.set([...current, ...newSolutions]);
+        }
+      }, 4000);
+      return () => clearTimeout(timer);
     }
-
-    isFlying = true;
-    const timer = setTimeout(() => {
-      taskCompleted = true;
-      isFlying = false;
-      ensureSolutionsForTask(text);
-      onSolverSearchComplete?.();
-    }, 4000);
-
-    return () => clearTimeout(timer);
   });
 
   $effect(() => {
@@ -750,12 +1116,39 @@
       cancelPlaceholderTick = null;
       cancelQueuePress?.();
       cancelQueuePress = null;
-      cancelStopPress?.();
-      cancelStopPress = null;
     };
   });
 
   function handleTaskInputKeydown(event: KeyboardEvent) {
+    // Instant-answers keyboard navigation takes priority while the dropdown is open.
+    if (instantAnswersOpen) {
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        instantHighlight = (instantHighlight + 1) % instantAnswers.length;
+        return;
+      }
+
+      if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        instantHighlight =
+          (instantHighlight - 1 + instantAnswers.length) % instantAnswers.length;
+        return;
+      }
+
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        instantDismissed = true;
+        instantHighlight = -1;
+        return;
+      }
+
+      if (event.key === 'Enter' && instantHighlight >= 0) {
+        event.preventDefault();
+        openInstantAnswer(instantAnswers[instantHighlight]);
+        return;
+      }
+    }
+
     if (event.key !== 'Enter') {
       return;
     }
@@ -802,11 +1195,13 @@
     }
 
     queuePopoverOpen = false;
+    searchRevealed = false;
     onSubmit();
   }
 
   function handleQueueTaskClick() {
     queuePopoverOpen = false;
+    searchRevealed = false;
     void onQueueTask();
   }
 
@@ -883,32 +1278,6 @@
     onDeleteOrder(order, event);
   }
 
-  function handleStopClick(order: OrderView, event: MouseEvent) {
-    event.preventDefault();
-    event.stopPropagation();
-    cancelStopPress?.();
-    cancelStopPress = null;
-    onStopOrder(order, event);
-  }
-
-  function handleStopPointerDown(order: OrderView, event: PointerEvent) {
-    if (event.button !== 0) {
-      return;
-    }
-
-    event.stopPropagation();
-    cancelStopPress?.();
-    cancelStopPress = scheduleAfter(600, () => {
-      cancelStopPress = null;
-      onStopOrder(order, event);
-    });
-  }
-
-  function clearStopPointerTimer() {
-    cancelStopPress?.();
-    cancelStopPress = null;
-  }
-
   function handleOpenOrderKeydown(order: OrderView, event: KeyboardEvent) {
     if (event.key !== 'Enter' && event.key !== ' ') {
       return;
@@ -920,6 +1289,7 @@
 
   function handleTaskInputFocus() {
     inputMetaOpen = true;
+    searchRevealed = true;
     placeholderFocused = true;
     stopPlaceholderAnimation({ hide: true });
   }
@@ -934,6 +1304,7 @@
 
   function handleTaskInputPointerDown() {
     inputMetaOpen = true;
+    searchRevealed = true;
     placeholderFocused = true;
     stopPlaceholderAnimation({ hide: true });
   }
@@ -944,8 +1315,29 @@
     queueMicrotask(() => {
       if (!currentTarget.contains(document.activeElement)) {
         inputMetaOpen = false;
+        instantHighlight = -1;
       }
     });
+  }
+
+  // Keep the composer menu open when its chips/pills are pressed: without this the
+  // mousedown blurs the task input, focus falls outside the card, and
+  // handleCreateFocusOut tears the whole menu down before the click can act.
+  function keepComposerFocus(event: MouseEvent) {
+    event.preventDefault();
+  }
+
+  // Same idea at the card level — prevents the task input from losing focus when
+  // clicking non-focusable areas of widgets (weather, translator, proxy, music, …).
+  // Interactive elements (inputs, buttons, links, tabindex) are allowed to receive
+  // focus naturally — handleCreateFocusOut won't close the menu because those
+  // elements are still inside the <article>.
+  function cardMouseDown(event: MouseEvent) {
+    const target = event.target as HTMLElement | null;
+    if (target?.closest?.('input, textarea, select, button, a[href], [contenteditable], [tabindex]:not([tabindex="-1"])')) {
+      return;
+    }
+    event.preventDefault();
   }
 
   function normalizeTag(value: string): string {
@@ -973,6 +1365,18 @@
     queueMicrotask(() => {
       tagInput?.focus();
     });
+  });
+
+  $effect(() => {
+    if (!searchRevealed || !articleRef) return;
+
+    function onDocumentMouseDown(e: MouseEvent) {
+      if (!articleRef!.contains(e.target as Node)) {
+        searchRevealed = false;
+      }
+    }
+    document.addEventListener('mousedown', onDocumentMouseDown);
+    return () => document.removeEventListener('mousedown', onDocumentMouseDown);
   });
 
   function removeTag(tag: string) {
@@ -1005,7 +1409,7 @@
   <p class="lefine-subtitle">{afeIntroCard.detail}</p>
 {/if}
 
-<article class="kefine-card kefine-card--wide" data-kefine-create onfocusout={handleCreateFocusOut}>
+<article bind:this={articleRef} class="kefine-card kefine-card--wide" data-kefine-create role="presentation" onfocusout={handleCreateFocusOut} onmousedown={cardMouseDown}>
   {#if template}
     <section data-part="template-banner">
       <lefine-box>
@@ -1060,7 +1464,7 @@
         aria-describedby="kefine-composer-hints"
         placeholder=""
         rows="1"
-        wrap="soft"
+        wrap={isMultilineDraft ? 'soft' : 'off'}
         onkeydown={handleTaskInputKeydown}
         oninput={(e) => {
           const target = e.currentTarget as HTMLTextAreaElement;
@@ -1106,10 +1510,162 @@
     {/if}
   </fieldset>
 
+  {#if pinnedAnswers.length > 0}
+    <kefine-pinned-strip data-part="pinned-strip" aria-label={instantPinnedLabel}>
+      {#each pinnedAnswers as site (site.url)}
+        <kefine-pinned-chip data-part="pinned-chip">
+          <a
+            href={site.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            data-part="pinned-chip-link"
+            title={site.url}
+          >
+            <kefine-instant-icon data-part="pinned-icon" aria-hidden="true">
+              {#if faviconUrl(site.url) && !failedFavicons.has(site.url)}
+                <img
+                  data-part="instant-favicon"
+                  src={faviconUrl(site.url)}
+                  alt=""
+                  width="18"
+                  height="18"
+                  loading="lazy"
+                  onerror={() => markFaviconFailed(site.url)}
+                />
+              {:else}
+                <kefine-instant-emoji>{site.icon}</kefine-instant-emoji>
+              {/if}
+            </kefine-instant-icon>
+            <lefine-text data-part="pinned-name">{site.name}</lefine-text>
+          </a>
+          <button
+            type="button"
+            data-part="pinned-remove"
+            title={instantUnpinLabel}
+            aria-label={instantUnpinLabel}
+            onclick={() => togglePin(site.url)}
+          >
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
+        </kefine-pinned-chip>
+      {/each}
+    </kefine-pinned-strip>
+  {/if}
+
+  {#if instantAnswersOpen}
+    <kefine-instant-answers
+      data-part="instant-answers"
+      role="listbox"
+      aria-label={instantAnswersLabel}
+    >
+      {#each instantAnswers as site, index (site.url)}
+        <kefine-instant-row
+          data-part="instant-row"
+          data-highlighted={index === instantHighlight}
+        >
+          <a
+            href={site.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            data-part="instant-answer"
+            role="option"
+            aria-selected={index === instantHighlight}
+            onclick={() => openInstantAnswer(site)}
+            onpointerenter={() => { instantHighlight = index; }}
+          >
+            <kefine-instant-icon aria-hidden="true">
+              {#if faviconUrl(site.url) && !failedFavicons.has(site.url)}
+                <img
+                  data-part="instant-favicon"
+                  src={faviconUrl(site.url)}
+                  alt=""
+                  width="20"
+                  height="20"
+                  loading="lazy"
+                  onerror={() => markFaviconFailed(site.url)}
+                />
+              {:else}
+                <kefine-instant-emoji>{site.icon}</kefine-instant-emoji>
+              {/if}
+            </kefine-instant-icon>
+            <kefine-instant-text>
+              <lefine-text data-part="instant-name">{site.name}</lefine-text>
+              <lefine-text data-part="instant-url">{site.url}</lefine-text>
+            </kefine-instant-text>
+            <kefine-instant-go aria-hidden="true">{instantAnswerGoHint} ↗</kefine-instant-go>
+          </a>
+          <kefine-instant-actions data-part="instant-actions">
+            <button
+              type="button"
+              data-part="instant-action"
+              data-pinned={isPinned(site.url)}
+              aria-pressed={isPinned(site.url)}
+              title={isPinned(site.url) ? instantUnpinLabel : instantPinLabel}
+              aria-label={isPinned(site.url) ? instantUnpinLabel : instantPinLabel}
+              onclick={() => togglePin(site.url)}
+            >
+              <svg viewBox="0 0 24 24" width="16" height="16" fill={isPinned(site.url) ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M9 4h6l-1 6 3 3v2H7v-2l3-3-1-6z" />
+                <path d="M12 15v5" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              data-part="instant-action"
+              aria-haspopup="menu"
+              aria-expanded={instantMenuOpen === site.url}
+              title={instantMenuLabel}
+              aria-label={instantMenuLabel}
+              onclick={() => toggleInstantMenu(site.url)}
+            >
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
+                <circle cx="5" cy="12" r="1.8" />
+                <circle cx="12" cy="12" r="1.8" />
+                <circle cx="19" cy="12" r="1.8" />
+              </svg>
+            </button>
+            {#if instantMenuOpen === site.url}
+              <kefine-instant-menu data-part="instant-menu" role="menu" aria-label={instantMenuLabel}>
+                <button type="button" data-part="instant-menu-item" role="menuitem" onclick={() => openQrCard(site)}>
+                  {instantQrLabel}
+                </button>
+                <button type="button" data-part="instant-menu-item" role="menuitem" onclick={() => viewWithAgent(site)}>
+                  {instantAgentLabel}
+                </button>
+                <button type="button" data-part="instant-menu-item" role="menuitem" onclick={() => addToProject(site)}>
+                  {instantAddProjectLabel}
+                </button>
+              </kefine-instant-menu>
+            {/if}
+          </kefine-instant-actions>
+        </kefine-instant-row>
+      {/each}
+    </kefine-instant-answers>
+  {/if}
+
+  {#if qrSite}
+    <kefine-qr-card data-part="qr-card" role="dialog" aria-label={qrSite.name}>
+      <lefine-text data-part="qr-name">{qrSite.name}</lefine-text>
+      <kefine-qr-frame data-part="qr-image">
+        {#if qrMatrix}
+          <svg viewBox={qrViewBox} role="img" aria-label={qrSite.name} preserveAspectRatio="xMidYMid meet">
+            <path d={qrPath} fill="currentColor" shape-rendering="crispEdges"></path>
+          </svg>
+        {/if}
+      </kefine-qr-frame>
+      <lefine-text data-part="qr-url">{qrSite.url}</lefine-text>
+      <button type="button" data-part="qr-download" onclick={downloadQr}>
+        {instantQrDownloadLabel}
+      </button>
+    </kefine-qr-card>
+  {/if}
+
   {#if inputMetaOpen}
     <kefine-input-meta data-part="input-meta">
       <kefine-composer-strip aria-label={composerHints}>
-        <button type="button" data-part="composer-chip" title={backgroundExecuteAria} onclick={() => fileInput?.click()}>
+        <button type="button" data-part="composer-chip" title={backgroundExecuteAria} onmousedown={keepComposerFocus} onclick={() => fileInput?.click()}>
           <lefine-text>{addFileLabel}</lefine-text>
           {#if draft.files.length > 0}
             <strong>{fileCountLabel(draft.files.length)}</strong>
@@ -1125,7 +1681,7 @@
             />
           </kefine-execution-editor>
         {:else}
-          <button type="button" data-part="composer-chip" onclick={() => { executionEditorOpen = true; }}>
+          <button type="button" data-part="composer-chip" onmousedown={keepComposerFocus} onclick={() => { executionEditorOpen = true; }}>
             <lefine-text>{addExecutionEstimateLabel}</lefine-text>
           </button>
         {/if}
@@ -1134,7 +1690,7 @@
             bind:this={tagInput}
             bind:value={tagInputValue}
             data-part="tag-input"
-            placeholder="tag"
+            placeholder={tagPlaceholderLabel}
             maxlength="32"
             onkeydown={handleTagInputKeydown}
             onblur={() => {
@@ -1147,8 +1703,8 @@
             }}
           />
         {:else}
-          <button type="button" data-part="composer-chip" data-part-tag="true" onclick={() => { tagEditorOpen = true; }}>
-            <lefine-text>+ tag</lefine-text>
+          <button type="button" data-part="composer-chip" data-part-tag="true" onmousedown={keepComposerFocus} onclick={() => { tagEditorOpen = true; }}>
+            <lefine-text>{addTagLabel}</lefine-text>
           </button>
         {/if}
       </kefine-composer-strip>
@@ -1156,7 +1712,7 @@
       {#if (draft.tags?.length ?? 0) > 0}
         <kefine-tag-strip data-has-tags="true">
           {#each draft.tags ?? [] as tag (`tag-${tag}`)}
-            <button type="button" data-part="tag-pill" onclick={() => removeTag(tag)} aria-label={`Remove ${tag} tag`}>
+            <button type="button" data-part="tag-pill" onmousedown={keepComposerFocus} onclick={() => removeTag(tag)} aria-label={removeTagLabel(tag)}>
               <lefine-text>#{tag}</lefine-text>
               <strong>×</strong>
             </button>
@@ -1178,7 +1734,7 @@
       {#if draft.files.length > 0}
         <kefine-file-list>
           {#each draft.files as file, index (`${file.name}-${file.size}-${index}`)}
-            <button type="button" data-part="file-pill" onclick={() => onRemoveFile(index)}>
+            <button type="button" data-part="file-pill" onmousedown={keepComposerFocus} onclick={() => onRemoveFile(index)}>
               {#if isImageFile(file) && filePreviews.has(index)}
                 <lefine-box data-part="file-preview-wrapper">
                   <img
@@ -1200,60 +1756,194 @@
   <input bind:this={fileInput} data-part="file-input" type="file" multiple onchange={handleFileChange} />
   <p id="kefine-composer-hints" data-part="composer-hints" hidden>{composerHints}</p>
 
-  {#if isSearching && matchedOrders.length > 0}
+  <!-- Proxy/VPN configuration preview — appears above the task history while typing -->
+  <KefineProxyConfigWidget active={proxyIntentActive} />
+
+  <!-- Weather instant answer — appears for prompts such as "Погода Гомель" -->
+  <KefineWeatherWidget active={weatherIntentActive} query={draft.description} />
+
+  <!-- Translator instant answer — appears for prompts such as "Перевод с китайского на английский" -->
+  <KefineTranslatorWidget active={translationIntentActive} query={draft.description} />
+
+  <!-- Extracted-music preview — appears when the draft reads like "extract audio from video" -->
+  <KefineMusicWidget active={musicIntentActive} />
+
+  <!-- Persistent task history on main page (same data as in profile) -->
+  {#if (solverSearchActive && solverSearchText?.trim()) || (searchRevealed && recentOrders.length > 0)}
+    <section data-part="tasks-list" data-entrance={!listEntranceDone}>
+      {#if solverSearchActive && solverSearchText?.trim() && !activeSearchDuplicate}
+        <kefine-task-history-item
+          data-testid="kefine-solver-search-row"
+          style="animation-delay: 0ms;"
+        >
+          <a
+            href={searchResultHref}
+            style="text-decoration:none; color:inherit; display:block;"
+          >
+            <kefine-solver-search-row aria-live="polite" data-state={taskCompleted ? 'completed' : 'in-progress'}>
+              <lefine-text>{solverSearchText}</lefine-text>
+              {#if taskCompleted}
+                <kefine-task-branch>
+                  <kefine-task-branch-name>{completedBranchLabel(solverSearchText, taskCompleted)}</kefine-task-branch-name>
+                  <lef-cp-branch-icon>
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <line x1="6" y1="3" x2="6" y2="15"></line>
+                      <circle cx="6" cy="18" r="3"></circle>
+                      <circle cx="18" cy="6" r="3"></circle>
+                      <path d="M18 9a9 9 0 0 1-9 9"></path>
+                    </svg>
+                  </lef-cp-branch-icon>
+                </kefine-task-branch>
+              {/if}
+              {#if isFlying}
+                <lef-arrow-wrapper>
+                  <lef-wind-flow>
+                    <lef-wind-line></lef-wind-line>
+                    <lef-wind-line></lef-wind-line>
+                  </lef-wind-flow>
+                  <lef-flying-arrow>➵</lef-flying-arrow>
+                </lef-arrow-wrapper>
+              {/if}
+
+              <kefine-solver-search-indicator aria-label={taskCompleted ? solverSearchCompletedLabel : solverSearchLabel} title={taskCompleted ? solverSearchCompletedLabel : solverSearchLabel} data-completed={taskCompleted}>
+                <kefine-solver-search-dot aria-hidden="true"></kefine-solver-search-dot>
+              </kefine-solver-search-indicator>
+            </kefine-solver-search-row>
+          </a>
+          {#if shouldShowSolverList(solverSearchText, taskCompleted)}
+            <kefine-task-history-actions>
+              <a
+                role="button"
+                data-part="open-solvers"
+                href={searchResultHref}
+                onmousedown={keepComposerFocus}
+                onclick={(event) => openSolverList(event, searchResultHref)}
+              >
+                Open solver list
+              </a>
+            </kefine-task-history-actions>
+          {/if}
+        </kefine-task-history-item>
+      {/if}
+      {#each filteredRecentOrders as order, i (order.id)}
+        {@const isDuplicate = activeSearchDuplicate?.id === order.id}
+        {@const inProgress = isDuplicate && solverSearchActive && !taskCompleted}
+        {@const orderHref = orderTaskHref(order)}
+        <kefine-task-history-item
+          data-testid={isDuplicate && !order.id.startsWith('temp-') ? 'kefine-solver-search-row' : null}
+          style="animation-delay: {i * 78}ms;"
+          data-order-id={order.id}
+          data-status={order.status}
+          data-active-task={isDuplicate ? 'true' : null}
+        >
+          <a
+            href={orderHref}
+            data-testid={`kefine-open-order-${order.id}`}
+            style="text-decoration:none; color:inherit; display:block;"
+            onmousedown={keepComposerFocus}
+            onclick={(event) => openSolverList(event, orderHref)}
+          >
+            <kefine-solver-search-row aria-live="polite" data-state={inProgress ? 'in-progress' : 'completed'}>
+              <lefine-text>{order.title}</lefine-text>
+
+              {#if order.executionEstimate}
+                <lefine-text data-part="task-estimate" data-testid={`kefine-order-eta-${order.id}`}>
+                  {order.executionEstimate}
+                </lefine-text>
+              {/if}
+
+              <kefine-task-branch>
+                  <kefine-task-branch-name>{completedBranchLabel(order.title, !inProgress)}</kefine-task-branch-name>
+                  <lef-cp-branch-icon>
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <line x1="6" y1="3" x2="6" y2="15"></line>
+                      <circle cx="6" cy="18" r="3"></circle>
+                      <circle cx="18" cy="6" r="3"></circle>
+                      <path d="M18 9a9 9 0 0 1-9 9"></path>
+                    </svg>
+                  </lef-cp-branch-icon>
+                </kefine-task-branch>
+
+              {#if inProgress && isFlying}
+                <lef-arrow-wrapper>
+                  <lef-wind-flow>
+                    <lef-wind-line></lef-wind-line>
+                    <lef-wind-line></lef-wind-line>
+                  </lef-wind-flow>
+                  <lef-flying-arrow>➵</lef-flying-arrow>
+                </lef-arrow-wrapper>
+              {/if}
+
+              <kefine-solver-search-indicator
+                aria-label={inProgress ? solverSearchLabel : solverSearchCompletedLabel}
+                title={inProgress ? solverSearchLabel : solverSearchCompletedLabel}
+                data-completed={!inProgress}
+              >
+                <kefine-solver-search-dot aria-hidden="true"></kefine-solver-search-dot>
+              </kefine-solver-search-indicator>
+            </kefine-solver-search-row>
+          </a>
+          <kefine-task-history-actions>
+            {#if shouldShowSolverList(order.title, !inProgress)}
+              <a
+                role="button"
+                data-part="open-solvers"
+                href={orderSolutionsHref(order)}
+                onmousedown={keepComposerFocus}
+                onclick={(event) => openSolverList(event, orderSolutionsHref(order))}
+              >
+                Open solver list
+              </a>
+            {/if}
+            {#if onStopOrder && order.status !== 'stopped' && order.status !== 'completed' && order.status !== 'done'}
+              <button
+                type="button"
+                data-part="stop-task"
+                data-testid={`kefine-stop-order-${order.id}`}
+                aria-label={`${stopTaskLabel}: ${order.title}`}
+                title={stopTaskLabel}
+                onmousedown={keepComposerFocus}
+                onclick={(event) => onStopOrder?.(order, event)}
+                onpointerup={(event) => {
+                  if (event.pointerType === 'touch') {
+                    onStopOrder?.(order, event);
+                  }
+                }}
+              >
+                <lefine-text aria-hidden="true"></lefine-text>
+              </button>
+            {/if}
+          </kefine-task-history-actions>
+        </kefine-task-history-item>
+      {/each}
+    </section>
+  {/if}
+
+  {#if isSearching && sortedMatchedOrders.length > 0}
     <section data-part="recent" aria-label={isSearching ? matchedTasksLabel : solverLabel}>
       <kefine-recent-title>{matchedTasksLabel}</kefine-recent-title>
       <ul data-part="recent-list" data-compact="true" data-testid="kefine-search-results">
-        {#each matchedOrders as order (order.id)}
-          <KefineOrderListItem
-            {order}
-            {openTaskLabel}
-            {relatedItemsLabel}
-            {createServiceLabel}
-            {deleteTaskLabel}
-            showCreateService={false}
-            showDelete={true}
-            itemTestId={`kefine-search-order-${order.id}`}
-            openTestId={`kefine-open-search-order-${order.id}`}
-            deleteTestId={`kefine-delete-search-order-${order.id}`}
-            openOrder={() => onOpenOrder(order)}
-            onCreateService={(event) => onCreateServiceFromOrder?.(order, event)}
-            onOpenKeydown={(event) => handleOpenOrderKeydown(order, event)}
-            onDelete={(event) => handleDeleteClick(order, event)}
-          />
-        {/each}
-      </ul>
-    </section>
-  {:else if !solverSearchActive && recentOrders.length > 0}
-    <section data-part="recent" aria-label={recentTasksLabel}>
-      <kefine-recent-title>{recentTasksLabel}</kefine-recent-title>
-      <ul data-part="recent-list" data-compact="true" data-testid="kefine-recent-orders">
-        {#each recentOrders as order (order.id)}
-          <KefineOrderListItem
-            {order}
-            {openTaskLabel}
-            {relatedItemsLabel}
-            {createServiceLabel}
-            {stopTaskLabel}
-            {deleteTaskLabel}
-            showCreateService={false}
-            showStop={order.status !== 'completed' && order.status !== 'done'}
-            showDelete={true}
-            openByDefault={true}
-            itemTestId={`kefine-recent-order-${order.id}`}
-            openTestId={`kefine-open-order-${order.id}`}
-            stopTestId={`kefine-stop-order-${order.id}`}
-            deleteTestId={`kefine-delete-order-${order.id}`}
-            openOrder={() => onOpenOrder(order)}
-            onCreateService={(event) => onCreateServiceFromOrder?.(order, event)}
-            onOpenKeydown={(event) => handleOpenOrderKeydown(order, event)}
-            onStop={(event) => handleStopClick(order, event)}
-            onDelete={(event) => handleDeleteClick(order, event)}
-            onStopPointerDown={(event) => handleStopPointerDown(order, event)}
-            onStopPointerUp={clearStopPointerTimer}
-            onStopPointerLeave={clearStopPointerTimer}
-            onStopPointerCancel={clearStopPointerTimer}
-          />
+        {#each sortedMatchedOrders as order, i (order.id)}
+          <li transition:taskDropIn={{ delay: i * 78 }} style="list-style:none;">
+            <KefineOrderListItem
+              {order}
+              {openTaskLabel}
+              {relatedItemsLabel}
+              {createServiceLabel}
+              {serviceVariablesLabel}
+              {deleteTaskLabel}
+              showCreateService={false}
+              showDelete={true}
+              searchQuery={draft.description}
+              itemTestId={`kefine-search-order-${order.id}`}
+              openTestId={`kefine-open-search-order-${order.id}`}
+              deleteTestId={`kefine-delete-search-order-${order.id}`}
+              onOpen={() => onOpenOrder(order)}
+              onCreateService={(event) => onCreateServiceFromOrder?.(order, event)}
+              onOpenKeydown={(event) => handleOpenOrderKeydown(order, event)}
+              onDelete={(event) => handleDeleteClick(order, event)}
+            />
+          </li>
         {/each}
       </ul>
     </section>
@@ -1289,52 +1979,7 @@
   </lef-services-showcase>
 {/if}
 
- {#if solverSearchActive && solverSearchText.trim()}
-   <section data-part="tasks-list">
-     <a
-       role="button"
-       href={effectiveTaskCompleted ? solverListHref : '#'}
-       class="kefine-solver-search-row"
-       data-testid="kefine-solver-search-row"
-       aria-label={searchActionLabel}
-       aria-disabled={!effectiveTaskCompleted}
-       tabindex={effectiveTaskCompleted ? 0 : -1}
-       title={searchTaskLabel}
-       aria-live="polite"
-       onpointerdown={(event) => {
-         if (effectiveTaskCompleted) {
-           event.preventDefault();
-         }
-       }}
-       onclick={(event) => {
-         event.preventDefault();
-         if (!browser) {
-           return;
-         }
-         globalThis.location.assign(solverListHref);
-       }}
-     >
-       <kefine-solver-search-copy>
-         <lefine-text data-part="repo-label">{searchPrimaryLabel}</lefine-text>
-         <lefine-text data-part="task-label">{searchSecondaryLabel}</lefine-text>
-       </kefine-solver-search-copy>
-       {#if isFlying}
-         <lef-arrow-wrapper aria-hidden="true">
-           <lef-wind-flow>
-             <lef-wind-line></lef-wind-line>
-             <lef-wind-line></lef-wind-line>
-           </lef-wind-flow>
-           <lef-flying-arrow>➵</lef-flying-arrow>
-         </lef-arrow-wrapper>
-       {/if}
-       <kefine-solver-search-indicator aria-label={effectiveTaskCompleted ? 'Completed' : solverSearchLabel} title={effectiveTaskCompleted ? 'Completed' : solverSearchLabel} data-completed={effectiveTaskCompleted}>
-         <kefine-solver-search-dot aria-hidden="true"></kefine-solver-search-dot>
-       </kefine-solver-search-indicator>
-     </a>
-   </section>
- {/if}
-
- {#if afeIntroCard}
+  {#if afeIntroCard}
    <lef-afe-showcase-heading>{afeIntroCard.title}</lef-afe-showcase-heading>
  {/if}
 
@@ -1409,7 +2054,21 @@
 </lef-afe-showcase>
 
 <style>
+  @keyframes kefine-task-drop-in {
+    0% {
+      opacity: 0;
+      transform: translateY(-14px) scale(1.085);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
   [data-kefine-create] {
+    /* Shared leading inset of the search-input text; mirrored at each breakpoint
+       so the pinned chips and instant-answer rows stay on the same left rail. */
+    --kef-task-pad-inline: clamp(0.72rem, 2.5vw, 0.92rem);
     grid-template-rows: auto auto auto minmax(0, auto);
     align-content: start;
     gap: 0.62rem;
@@ -2418,14 +3077,513 @@
     background: color-mix(in oklab, var(--kef-bg-card) 92%, white 8%);
     color: var(--lefine-text);
     flex: 0 0 auto;
+    cursor: pointer;
+    transition:
+      background-color 160ms ease,
+      transform 120ms ease;
+  }
+
+  button[data-part='tag-pill']:hover {
+    background: color-mix(in oklab, var(--kef-bg-card) 80%, var(--kef-color-primary) 20%);
+  }
+
+  button[data-part='tag-pill']:active {
+    transform: scale(0.97);
   }
 
   [data-part="tasks-list"] {
     width: min(100%, calc(100vw - 7rem));
-    max-width: 92rem;
+    max-width: 64rem;
     margin-inline: auto;
+    padding: 0.28rem;
     display: grid;
     gap: 1rem;
+  }
+
+  [data-part="tasks-list"][data-entrance] > kefine-task-history-item {
+    animation: kefine-task-drop-in 420ms cubic-bezier(0.23, 1, 0.32, 1) backwards;
+    transform-origin: 50% 0;
+    will-change: transform, opacity;
+  }
+
+  kefine-task-history-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+
+  kefine-task-history-item > a {
+    min-width: 0;
+  }
+
+  kefine-task-history-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.36rem;
+    min-width: max-content;
+  }
+
+  kefine-task-history-actions a[data-part='open-solvers'],
+  kefine-task-history-actions button[data-part='stop-task'] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2rem;
+    border-radius: 999px;
+    border: 1px solid color-mix(in oklab, var(--kef-line) 84%, transparent);
+    background: color-mix(in oklab, var(--kef-bg-card) 92%, var(--kef-color-primary) 8%);
+    color: var(--lefine-text);
+    font-size: 0.78rem;
+    font-weight: 650;
+    line-height: 1;
+    text-decoration: none;
+    cursor: pointer;
+    transition:
+      background-color var(--kef-motion-fast) var(--kef-ease-soft),
+      border-color var(--kef-motion-fast) var(--kef-ease-soft),
+      transform 120ms ease;
+  }
+
+  kefine-task-history-actions a[data-part='open-solvers'] {
+    padding: 0 0.78rem;
+  }
+
+  kefine-task-history-actions button[data-part='stop-task'] {
+    width: 2rem;
+    padding: 0;
+  }
+
+  kefine-task-history-actions button[data-part='stop-task'] lefine-text {
+    width: 0.52rem;
+    height: 0.52rem;
+    border-radius: 0.16rem;
+    background: currentColor;
+  }
+
+  kefine-task-history-actions a[data-part='open-solvers']:hover,
+  kefine-task-history-actions button[data-part='stop-task']:hover {
+    background: color-mix(in oklab, var(--kef-bg-card) 82%, var(--kef-color-primary) 18%);
+    border-color: color-mix(in oklab, var(--kef-color-primary) 38%, var(--kef-line));
+  }
+
+  kefine-task-history-actions a[data-part='open-solvers']:active,
+  kefine-task-history-actions button[data-part='stop-task']:active {
+    transform: scale(0.96);
+  }
+
+  lef-tasks-grid {
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) 38rem 320px;
+    gap: 1rem;
+    align-items: start;
+  }
+
+  lef-tasks-aside {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding: 0.85rem 0.85rem 0.95rem;
+    background: var(--kef-bg-card);
+    border: 1px solid var(--kef-line);
+    border-radius: 0.75rem;
+    position: sticky;
+    top: 1rem;
+  }
+
+  lef-tasks-aside-head {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--lefine-text-soft);
+    padding: 0.1rem 0.25rem 0.4rem;
+  }
+
+  lef-tasks-aside-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  lef-tasks-aside-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.6rem;
+    border-radius: 0.55rem;
+    border: 0;
+    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 8%, var(--kef-bg-card));
+    color: var(--lefine-text);
+    font-size: 0.85rem;
+  }
+
+  lef-tasks-aside-item[data-active='true'] {
+    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 14%, var(--kef-bg-card));
+  }
+
+  lef-tasks-aside-item lefine-text {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    white-space: normal;
+    line-height: 1.3;
+    color: var(--lefine-text);
+  }
+
+  lef-task-rail {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    position: sticky;
+    top: 1rem;
+  }
+
+  lef-task-rail-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 0.85rem 0.95rem 1rem;
+    background: var(--kef-bg-card);
+    border: 1px solid var(--kef-line);
+    border-radius: 0.75rem;
+  }
+
+  lef-task-rail-head {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--lefine-text-soft);
+  }
+
+  lef-task-rail-body {
+    display: block;
+    font-size: 0.95rem;
+    color: var(--lefine-text);
+    line-height: 1.4;
+    word-break: break-word;
+  }
+
+  lef-task-rail-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+
+  .task-rail-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 0.55rem 0.75rem;
+    border-radius: 0.55rem;
+    border: 1px solid var(--kef-line);
+    background: var(--kef-bg-card);
+    color: var(--lefine-text);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 160ms ease, border-color 160ms ease;
+  }
+
+  .task-rail-btn:hover {
+    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 8%, var(--kef-bg-card));
+    border-color: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 30%, var(--kef-line));
+  }
+
+  .task-rail-btn--primary {
+    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 14%, var(--kef-bg-card));
+    border-color: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 35%, var(--kef-line));
+  }
+
+  lef-task-rail-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.05rem;
+    height: 1.05rem;
+    font-size: 0.95rem;
+    line-height: 1;
+    color: var(--lefine-text);
+  }
+
+  @media (max-width: 1280px) {
+    lef-tasks-grid {
+      grid-template-columns: minmax(220px, 1fr) minmax(0, 38rem);
+    }
+    lef-task-rail {
+      grid-column: 1 / -1;
+      position: static;
+    }
+  }
+
+  @media (max-width: 1180px) {
+    lef-tasks-grid {
+      grid-template-columns: minmax(200px, 1fr) minmax(0, 38rem);
+    }
+  }
+
+  @media (max-width: 760px) {
+    lef-tasks-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    lef-tasks-aside,
+    lef-task-rail {
+      position: static;
+    }
+  }
+
+  lef-solutions-list {
+    display: grid;
+    gap: 0.7rem;
+    width: 100%;
+  }
+
+  .solution-card {
+    --card-i: 0;
+    display: grid;
+    gap: 0.5rem;
+    padding: 0.75rem 0.9rem;
+    background: var(--kef-bg-card);
+    border: 1px solid var(--kef-line);
+    border-radius: var(--kef-radius-ui, 0.75rem);
+    box-shadow: 0 1px 0 color-mix(in oklab, var(--kef-line) 60%, transparent);
+    box-sizing: border-box;
+    animation: solution-card-appear 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: calc(var(--card-i) * 70ms);
+    transform-origin: top center;
+    will-change: opacity, transform;
+  }
+
+  @keyframes solution-card-appear {
+    0% {
+      opacity: 0;
+      transform: translateY(8px) scale(0.97);
+      filter: blur(2px);
+    }
+    60% {
+      filter: blur(0);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      filter: blur(0);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .solution-card {
+      animation: none;
+    }
+  }
+
+  .solution-card-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  lef-solution-meta {
+    display: grid;
+    gap: 0.1rem;
+    min-width: 0;
+  }
+
+  lef-solution-meta strong {
+    color: var(--lefine-text);
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.25;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  lef-solution-meta lefine-text {
+    color: var(--lefine-text-soft);
+    font-size: 0.875rem;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .solution-description {
+    margin: 0;
+    color: var(--lefine-text-soft);
+    font-size: 0.92rem;
+    line-height: 1.45;
+  }
+
+  lef-file-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    font-family: 'Synt', monospace;
+    font-size: 0.78rem;
+  }
+
+  lef-file-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+
+  lef-file-name {
+    color: var(--lefine-text-soft);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  lef-file-changes {
+    display: inline-flex;
+    gap: 0.4rem;
+    font-weight: 600;
+    font-size: 0.78rem;
+    flex: 0 0 auto;
+  }
+
+  lef-file-added { color: var(--kef-success, #22c55e); }
+  lef-file-removed { color: var(--kef-error, #ef4444); }
+
+  lef-card-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .pin-button {
+    position: relative;
+    width: 28px;
+    height: 28px;
+    background: transparent;
+    border: 1px solid var(--kef-line);
+    border-radius: 0.4rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition:
+      border-color 200ms ease,
+      background-color 200ms ease,
+      color 200ms ease;
+    padding: 0;
+    outline: none;
+    flex-shrink: 0;
+    color: var(--lefine-text-soft);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .pin-button:hover {
+    border-color: color-mix(in oklab, var(--kef-color-primary) 40%, var(--kef-line));
+    color: var(--kef-color-primary);
+  }
+
+  .pin-button:active {
+    transform: scale(0.96);
+  }
+
+  .pin-svg {
+    width: 16px;
+    height: 16px;
+    transition: fill 200ms ease, stroke 200ms ease;
+  }
+
+  .pin-button.is-active {
+    border-color: color-mix(in oklab, var(--kef-color-primary) 55%, var(--kef-line));
+    background: color-mix(in oklab, var(--kef-color-primary) 14%, var(--kef-bg-card));
+    color: var(--kef-color-primary);
+  }
+
+  .pin-button.is-active .pin-svg {
+    fill: currentColor;
+    animation: pin-pop 320ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
+  @keyframes pin-pop {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.18); }
+    100% { transform: scale(1); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pin-button.is-active .pin-svg { animation: none; }
+  }
+
+  .view-solution-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 28px;
+    padding: 0;
+    background: transparent;
+    color: var(--lefine-text-soft);
+    border: 1px solid var(--kef-line);
+    border-radius: 0.4rem;
+    cursor: pointer;
+    transition:
+      background-color 160ms ease,
+      border-color 160ms ease,
+      color 160ms ease,
+      transform 120ms ease;
+  }
+
+  .view-solution-icon {
+    width: 14px;
+    height: 14px;
+  }
+
+  .view-solution-btn:hover {
+    background: color-mix(in oklab, var(--kef-color-primary) 10%, transparent);
+    border-color: color-mix(in oklab, var(--kef-color-primary) 40%, var(--kef-line));
+    color: var(--kef-color-primary);
+  }
+
+  .view-solution-btn:active {
+    transform: scale(0.97);
+  }
+
+  .solution-merge-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.28rem 0.6rem;
+    border-radius: 0.4rem;
+    border: 1px solid color-mix(in oklab, var(--kef-success, #16a34a) 35%, var(--kef-line));
+    background: color-mix(in oklab, var(--kef-success, #16a34a) 10%, var(--kef-bg-card));
+    color: var(--kef-success, #16a34a);
+    font-size: 0.74rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+      background-color 160ms ease,
+      border-color 160ms ease,
+      transform 120ms ease;
+  }
+
+  .solution-merge-btn:hover {
+    background: color-mix(in oklab, var(--kef-success, #16a34a) 18%, var(--kef-bg-card));
+    border-color: var(--kef-success, #16a34a);
+  }
+
+  .solution-merge-btn:active {
+    transform: scale(0.97);
+  }
+
+  .solution-merge-btn--merged {
+    background: color-mix(in oklab, var(--kef-success, #16a34a) 22%, var(--kef-bg-card));
+    border-color: var(--kef-success, #16a34a);
   }
 
   button[data-part='composer-chip'][data-part-tag='true'] {
@@ -2467,57 +3625,26 @@
     text-align: right;
   }
 
-  .kefine-solver-search-row {
-    appearance: none;
+  kefine-solver-search-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
     align-items: center;
     gap: 0.72rem;
-    min-height: 3.35rem;
-    padding: 0.42rem 0.5rem 0.42rem 0.78rem;
+    min-height: 2.85rem;
+    padding: 0.42rem 0.28rem 0.42rem 0.78rem;
     border-radius: 0.38rem;
-    border: 1px solid var(--kef-line-soft);
     background: color-mix(in oklab, var(--kef-bg-card) 96%, var(--kef-bg));
     box-shadow: none;
-    color: var(--lefine-text);
-    cursor: pointer;
-    text-decoration: none;
-    text-align: left;
-    transition:
-      background-color var(--kef-motion-fast) var(--kef-ease-soft),
-      border-color var(--kef-motion-fast) var(--kef-ease-soft);
   }
 
-  .kefine-solver-search-row[aria-disabled='true'] {
-    cursor: progress;
-    pointer-events: none;
-  }
-
-  .kefine-solver-search-row:hover:not([aria-disabled='true']) {
-    background: color-mix(in oklab, var(--kef-bg-card) 88%, var(--kef-color-primary, #c89a5a) 12%);
-    border-color: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 32%, var(--kef-line-soft));
-  }
-
-  .kefine-solver-search-row > * {
-    pointer-events: none;
-  }
-
-  .kefine-solver-search-row:has(lef-arrow-wrapper) {
-    grid-template-columns: minmax(0, 1fr) auto auto;
-  }
-
-  kefine-solver-search-copy {
-    display: grid;
-    gap: 0.2rem;
-    min-width: 0;
-    align-items: center;
+  kefine-solver-search-row:has(lef-arrow-wrapper) {
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
   }
 
   lef-arrow-wrapper {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    transform: translateY(0.13rem);
   }
 
   lef-flying-arrow {
@@ -2593,7 +3720,7 @@
     }
   }
 
-  .kefine-solver-search-row lefine-text {
+  kefine-solver-search-row lefine-text {
     min-width: 0;
     overflow: hidden;
     color: color-mix(in oklab, var(--lefine-text) 92%, transparent);
@@ -2605,18 +3732,55 @@
     white-space: nowrap;
   }
 
-  .kefine-solver-search-row lefine-text[data-part='task-label'] {
-    max-height: 0.9rem;
-    opacity: 0;
-    color: var(--lefine-text-soft);
-    font-size: 0.76rem;
-    font-weight: 560;
-    transition: opacity var(--kef-motion-fast) var(--kef-ease-soft);
+  kefine-solver-search-row lefine-text[data-part='task-estimate'] {
+    flex: 0 0 auto;
+    color: color-mix(in oklab, var(--lefine-text) 66%, transparent);
+    font-size: 0.78rem;
+    font-weight: 600;
   }
 
-  .kefine-solver-search-row:hover lefine-text[data-part='task-label'],
-  .kefine-solver-search-row:focus-visible lefine-text[data-part='task-label'] {
+  kefine-task-branch {
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    padding: 0.05rem 0.2rem;
+    border-radius: 999px;
+    background: transparent;
+    transition: background 120ms ease, padding 120ms ease;
+  }
+
+  kefine-task-branch:hover {
+    background: color-mix(in oklab, var(--kef-bg-card) 78%, transparent);
+    gap: 4px;
+    padding: 0.05rem 0.45rem 0.05rem 0.32rem;
+  }
+
+  lef-cp-branch-icon {
+    display: inline-flex;
+    color: var(--lefine-text-soft);
+    opacity: 0.85;
+    flex: 0 0 auto;
+  }
+
+  kefine-task-branch-name {
+    font-family: 'Synt', monospace;
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: var(--lefine-text);
+    line-height: 1;
+    letter-spacing: -0.01em;
+    opacity: 0;
+    max-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    transition: opacity 160ms ease, max-width 200ms cubic-bezier(0.23, 1, 0.32, 1);
+    margin-right: 0;
+  }
+
+  kefine-task-branch:hover kefine-task-branch-name {
     opacity: 1;
+    max-width: 160px;
+    margin-right: 3px;
   }
 
   kefine-solver-search-indicator {
@@ -2714,7 +3878,7 @@
     resize: none;
     overflow-x: hidden;
     overflow-y: hidden;
-    padding-inline: clamp(0.72rem, 2.5vw, 0.92rem);
+    padding-inline: var(--kef-task-pad-inline);
     padding-top: max(0.48rem, calc((clamp(3.3rem, 7vw, 4rem) - 1.04em) / 2));
     padding-bottom: max(0.48rem, calc((clamp(3.3rem, 7vw, 4rem) - 1.04em) / 2));
     overflow-wrap: anywhere;
@@ -2746,7 +3910,7 @@
     min-width: 0;
     max-width: 100%;
     min-height: clamp(3.3rem, 7vw, 4rem);
-    padding-inline: clamp(0.72rem, 2.5vw, 0.92rem);
+    padding-inline: var(--kef-task-pad-inline);
     padding-top: max(0.48rem, calc((clamp(3.3rem, 7vw, 4rem) - 1.04em) / 2));
     padding-bottom: max(0.48rem, calc((clamp(3.3rem, 7vw, 4rem) - 1.04em) / 2));
     color: color-mix(in oklab, var(--kef-on-primary) 78%, transparent);
@@ -2828,6 +3992,289 @@
     box-shadow: none;
   }
 
+  kefine-pinned-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.45rem;
+    /* Align the chip icon with the search-input text (tracks the same inset). */
+    padding-left: calc(var(--kef-task-pad-inline) - 0.05rem);
+  }
+
+  kefine-pinned-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.15rem;
+    padding: 0.2rem 0.3rem 0.2rem 0.2rem;
+    border-radius: 999px;
+    border: 1px solid color-mix(in oklab, var(--kef-color-primary, #c89a5a) 45%, transparent);
+    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 10%, var(--kef-bg-card));
+  }
+
+  a[data-part='pinned-chip-link'] {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    padding: 0.05rem 0.15rem;
+    color: var(--lefine-text);
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  kefine-instant-icon[data-part='pinned-icon'] {
+    width: 1.4rem;
+    height: 1.4rem;
+    font-size: 0.95rem;
+  }
+
+  lefine-text[data-part='pinned-name'] {
+    font-size: 0.82rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 9rem;
+  }
+
+  button[data-part='pinned-remove'] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--lefine-text-soft);
+    cursor: pointer;
+    transition: background-color 0.12s ease, color 0.12s ease;
+  }
+
+  button[data-part='pinned-remove']:hover {
+    background: color-mix(in oklab, var(--lefine-text) 12%, transparent);
+    color: var(--lefine-text);
+  }
+
+  kefine-instant-answers {
+    display: grid;
+    gap: 0.2rem;
+    margin-top: 0.4rem;
+    padding: 0.35rem;
+    border-radius: 0.7rem;
+    border: 1px solid color-mix(in oklab, var(--kef-line-strong) 60%, transparent);
+    background: color-mix(in oklab, var(--kef-bg-card) 96%, white 4%);
+    box-shadow: 0 12px 24px color-mix(in oklab, var(--lefine-text) 14%, transparent);
+  }
+
+  kefine-instant-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    border-radius: 0.5rem;
+  }
+
+  kefine-instant-row[data-highlighted='true'] {
+    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 12%, var(--kef-bg-card));
+  }
+
+  a[data-part='instant-answer'] {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1;
+    min-width: 0;
+    /* Align the leading icon with the search-input text (tracks the same inset). */
+    padding: 0.55rem 0.7rem 0.55rem calc(var(--kef-task-pad-inline) - 0.05rem);
+    border-radius: 0.5rem;
+    color: var(--lefine-text);
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  kefine-instant-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.4rem;
+    height: 1.4rem;
+    flex-shrink: 0;
+    font-size: 0.95rem;
+    line-height: 1;
+    border-radius: 50%;
+    overflow: hidden;
+    background: color-mix(in oklab, var(--lefine-text) 8%, transparent);
+  }
+
+  img[data-part='instant-favicon'] {
+    width: 1.15rem;
+    height: 1.15rem;
+    object-fit: contain;
+    display: block;
+  }
+
+  kefine-instant-emoji {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+
+  kefine-instant-actions {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.1rem;
+    flex-shrink: 0;
+    padding-right: 0.4rem;
+  }
+
+  button[data-part='instant-action'] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.85rem;
+    height: 1.85rem;
+    padding: 0;
+    border: none;
+    border-radius: 0.45rem;
+    background: transparent;
+    color: var(--lefine-text-soft);
+    cursor: pointer;
+    transition: background-color 0.12s ease, color 0.12s ease;
+  }
+
+  button[data-part='instant-action']:hover {
+    background: color-mix(in oklab, var(--lefine-text) 10%, transparent);
+    color: var(--lefine-text);
+  }
+
+  button[data-part='instant-action'][data-pinned='true'] {
+    color: var(--kef-color-primary, #c89a5a);
+  }
+
+  kefine-instant-menu {
+    position: absolute;
+    top: calc(100% + 0.25rem);
+    right: 0;
+    z-index: 5;
+    display: grid;
+    gap: 0.1rem;
+    min-width: 13rem;
+    padding: 0.3rem;
+    border-radius: 0.55rem;
+    border: 1px solid color-mix(in oklab, var(--kef-line-strong) 60%, transparent);
+    background: var(--kef-bg-card);
+    box-shadow: 0 14px 30px color-mix(in oklab, var(--lefine-text) 22%, transparent);
+  }
+
+  button[data-part='instant-menu-item'] {
+    display: block;
+    width: 100%;
+    padding: 0.45rem 0.6rem;
+    border: none;
+    border-radius: 0.4rem;
+    background: transparent;
+    color: var(--lefine-text);
+    font-size: 0.86rem;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  button[data-part='instant-menu-item']:hover {
+    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 14%, var(--kef-bg-card));
+  }
+
+  kefine-qr-card {
+    display: grid;
+    justify-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    margin-left: auto;
+    width: max-content;
+    padding: 1rem 1.2rem;
+    border-radius: 0.7rem;
+    border: 1px solid color-mix(in oklab, var(--kef-line-strong) 60%, transparent);
+    background: var(--kef-bg-card);
+    box-shadow: 0 14px 30px color-mix(in oklab, var(--lefine-text) 18%, transparent);
+  }
+
+  lefine-text[data-part='qr-name'] {
+    font-weight: 600;
+  }
+
+  kefine-qr-frame[data-part='qr-image'] {
+    display: block;
+    width: 11rem;
+    height: 11rem;
+    border-radius: 0.4rem;
+    background: white;
+    padding: 0.5rem;
+    color: #111;
+  }
+
+  kefine-qr-frame[data-part='qr-image'] svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  lefine-text[data-part='qr-url'] {
+    color: var(--lefine-text-soft);
+    font-size: 0.8rem;
+    max-width: 14rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  button[data-part='qr-download'] {
+    padding: 0.4rem 0.9rem;
+    border: none;
+    border-radius: 0.45rem;
+    background: var(--kef-color-primary, #c89a5a);
+    color: var(--kef-bg-card, #1b1710);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  kefine-instant-text {
+    display: grid;
+    gap: 0.05rem;
+    min-width: 0;
+    flex: 1;
+  }
+
+  lefine-text[data-part='instant-name'] {
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  lefine-text[data-part='instant-url'] {
+    color: var(--lefine-text-soft);
+    font-size: 0.82rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  kefine-instant-go {
+    flex-shrink: 0;
+    color: var(--kef-color-primary, #c89a5a);
+    font-size: 0.82rem;
+    font-weight: 600;
+    opacity: 0;
+    transition: opacity 0.12s ease;
+  }
+
+  kefine-instant-row[data-highlighted='true'] kefine-instant-go,
+  kefine-instant-row:hover kefine-instant-go {
+    opacity: 1;
+  }
+
   kefine-composer-strip {
     display: flex;
     flex-wrap: wrap;
@@ -2842,11 +4289,11 @@
     min-height: 2.35rem;
     padding: 0.5rem 0.95rem;
     border-radius: 999px;
-    border: 0;
-    background: color-mix(in oklab, var(--kef-bg-card) 90%, var(--kef-bg-soft) 10%);
+    border: var(--kef-border-width-soft) solid var(--kef-line);
+    background: color-mix(in oklab, var(--kef-bg-card) 68%, var(--kef-bg-soft) 32%);
     color: var(--lefine-text);
     font: inherit;
-    box-shadow: none;
+    box-shadow: 0 1px 2px color-mix(in oklab, var(--kef-primary) 14%, transparent);
   }
 
   button[data-part='composer-chip'] {
@@ -2854,6 +4301,35 @@
     align-items: center;
     gap: 0.4rem;
     letter-spacing: -0.01em;
+    font-weight: 500;
+    cursor: pointer;
+    transition:
+      background-color 160ms ease,
+      border-color 160ms ease,
+      box-shadow 160ms ease,
+      color 160ms ease,
+      transform 120ms ease;
+  }
+
+  button[data-part='composer-chip']:hover {
+    background: color-mix(in oklab, var(--kef-bg-card) 66%, var(--kef-primary) 34%);
+    border-color: var(--kef-line-primary);
+    box-shadow: 0 2px 6px color-mix(in oklab, var(--kef-primary) 22%, transparent);
+    color: var(--kef-primary);
+  }
+
+  button[data-part='composer-chip']:focus-visible {
+    outline: 2px solid color-mix(in oklab, var(--kef-primary) 60%, transparent);
+    outline-offset: 2px;
+  }
+
+  button[data-part='composer-chip']:active {
+    transform: scale(0.97);
+  }
+
+  button[data-part='composer-chip'][data-part-tag='true']:hover {
+    border-color: var(--kef-line-primary);
+    color: var(--kef-primary);
   }
 
   kefine-execution-editor {
@@ -2885,6 +4361,18 @@
     display: inline-flex;
     align-items: center;
     gap: 0.65rem;
+    cursor: pointer;
+    transition:
+      background-color 160ms ease,
+      transform 120ms ease;
+  }
+
+  button[data-part='file-pill']:hover {
+    background: color-mix(in oklab, var(--kef-bg-card) 80%, var(--kef-color-primary) 20%);
+  }
+
+  button[data-part='file-pill']:active {
+    transform: scale(0.97);
   }
 
   img[data-part='file-preview'] {
@@ -2988,6 +4476,7 @@
 
   @media (min-width: 960px) {
     [data-kefine-create] {
+      --kef-task-pad-inline: 1rem;
       width: min(64rem, calc(100vw - 8rem));
     }
 
@@ -3010,13 +4499,11 @@
       height: 4.5rem;
       font-size: clamp(1.2rem, 1.6vw, 1.75rem);
       line-height: 1.02;
-      padding-inline: 1rem;
       padding-top: calc((4.5rem - 1.02em) / 2);
       padding-bottom: calc((4.5rem - 1.02em) / 2);
     }
 
     kefine-task-placeholder {
-      padding-inline: 1rem;
       padding-top: calc((4.5rem - 1.02em) / 2);
       padding-bottom: calc((4.5rem - 1.02em) / 2);
     }
@@ -3030,6 +4517,7 @@
 
   @media (max-width: 760px) {
     [data-kefine-create] {
+      --kef-task-pad-inline: 0.78rem;
       width: min(100%, calc(100vw - 2rem));
     }
 
@@ -3062,11 +4550,6 @@
     kefine-task-placeholder[data-size='compact'] {
       font-size: 0.68rem;
       line-height: 1.08;
-    }
-
-    textarea[data-part='task-input'],
-    kefine-task-placeholder {
-      padding-inline: 0.78rem;
     }
 
     kefine-submit-popover {

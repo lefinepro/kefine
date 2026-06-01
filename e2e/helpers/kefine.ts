@@ -1,5 +1,5 @@
 import { expect, type Page, type Route } from '@playwright/test';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { ml_dsa65 } from '@noble/post-quantum/ml-dsa.js';
 
@@ -117,11 +117,7 @@ export async function mockOrderApi(page: Page) {
   let createDelayMs = 0;
 
   await page.route('**/api/health', async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ ok: true })
-    });
+    await route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' });
   });
 
   await page.route('**/create', async (route) => {
@@ -208,6 +204,7 @@ export async function mockOrderApi(page: Page) {
     });
   }
 
+  await page.route('**/api/order/**', handleOrderLookup);
   await page.route('**/status/**', handleOrderLookup);
 
   return {
@@ -272,6 +269,28 @@ export async function submitTask(page: Page) {
 export async function createTask(page: Page, title: string) {
   await page.getByTestId('kefine-task-input').fill(title);
   await submitTask(page);
+  const routeId = await page.waitForFunction<string | null, string>((taskTitle) => {
+    const raw = window.localStorage.getItem('kefine-created-orders-v1');
+    if (!raw) {
+      return null;
+    }
+
+    try {
+      const orders = JSON.parse(raw) as Array<{ id?: string; shareId?: string; title?: string }>;
+      const order = orders.find((item) => {
+        const id = item.id ?? '';
+        return item.title === taskTitle && id && !id.startsWith('temp-') && !id.startsWith('local-');
+      });
+      return order ? (order.shareId || order.id) : null;
+    } catch {
+      return null;
+    }
+  }, title);
+  const routeValue = await routeId.jsonValue();
+  if (!routeValue) {
+    throw new Error(`Created task "${title}" was not written to local storage.`);
+  }
+  await page.goto(`/order/${encodeURIComponent(routeValue)}`);
 }
 
 export async function mockPrivateKeyAuth(page: Page) {
@@ -298,7 +317,7 @@ export async function mockPrivateKeyAuth(page: Page) {
         handle: 'api',
         email: 'api@actor.local',
         publickey: {
-          key: expectedPublicKey,
+          key: 'pqpk_testpublickey_for_api',
           pem: ''
         },
         keyId: 'pq1_testactoraddress',
@@ -318,25 +337,31 @@ export async function mockPrivateKeyAuth(page: Page) {
   });
 }
 
-let fallbackPrivateKeyPem: string | null = null;
-
-function encodePem(label: string, bytes: Uint8Array) {
-  const base64 = Buffer.from(bytes).toString('base64');
-  const body = base64.match(/.{1,64}/g)?.join('\n') ?? '';
-  return [`-----BEGIN ${label}-----`, body, `-----END ${label}-----`].join('\n');
-}
-
 export function readActorPrivateKeyPem() {
-  try {
-    return readFileSync(path.resolve(process.cwd(), 'actor-privatekey.pem'), 'utf8');
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-      throw error;
-    }
+  const localFixturePath = path.resolve(process.cwd(), 'actor-privatekey.pem');
+  if (existsSync(localFixturePath)) {
+    return readFileSync(localFixturePath, 'utf8');
   }
 
-  fallbackPrivateKeyPem ??= encodePem('PRIVATE KEY', ml_dsa65.keygen().secretKey);
-  return fallbackPrivateKeyPem;
+  return generateActorPrivateKeyPem();
+}
+
+let generatedActorPrivateKeyPem: string | null = null;
+
+function generateActorPrivateKeyPem() {
+  if (generatedActorPrivateKeyPem) {
+    return generatedActorPrivateKeyPem;
+  }
+
+  const seed = new Uint8Array(Array.from({ length: 32 }, (_, index) => index + 1));
+  const { secretKey } = ml_dsa65.keygen(seed);
+  const base64 = Buffer.from(secretKey).toString('base64');
+  generatedActorPrivateKeyPem = [
+    '-----BEGIN PRIVATE KEY-----',
+    ...(base64.match(/.{1,64}/g) ?? []),
+    '-----END PRIVATE KEY-----'
+  ].join('\n');
+  return generatedActorPrivateKeyPem;
 }
 
 function pemToDer(pem: string) {
@@ -346,6 +371,10 @@ function pemToDer(pem: string) {
 
 function encodeKeyString(value: string, prefix: string) {
   return `${prefix}${Buffer.from(value, 'utf8').toString('base64url')}`;
+}
+
+function encodeCompactBytes(value: Uint8Array) {
+  return Buffer.from(value).toString('base64url');
 }
 
 export function readActorPrivateKeyCompact() {
@@ -364,5 +393,5 @@ export async function deriveActorPublicKeyString() {
     ]),
     publicKey
   ]);
-  return publicKeyDer.toString('base64url');
+  return encodeCompactBytes(publicKeyDer);
 }

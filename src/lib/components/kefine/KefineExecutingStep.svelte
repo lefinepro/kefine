@@ -1,22 +1,46 @@
 <script lang="ts">
   import { browser } from '$app/environment';
+  import { goto } from '$app/navigation';
   import Icon from '@iconify/svelte';
   import { cubicOut } from 'svelte/easing';
   import type { TransitionConfig } from 'svelte/transition';
+  import { kefineLocaleText } from '$lib/constants/kefine-locale';
   import KefineTaskCloneMenu from '$lib/components/kefine/KefineTaskCloneMenu.svelte';
   import KefineTaskSettingsMenu from '$lib/components/kefine/KefineTaskSettingsMenu.svelte';
   import type { AuthMethod, ExecutionPresentation, OrderView } from './kefine-workflow';
   import type { TaskCloneFormat } from './kefine-task-clone';
-  import { goto } from '$app/navigation';
   import { scheduleAfter } from '$lib/utils/helpers';
   import KefineWalletProviderGrid from '$lib/components/kefine/KefineWalletProviderGrid.svelte';
   import KefineTaskTreeFeed from '$lib/components/kefine/KefineTaskTreeFeed.svelte';
   import { KEFINE_AUTH_ICONS } from '$lib/components/kefine/kefine-auth-constants';
   import { defaultSolutions, type Solution } from '$lib/kefine/solutions-data';
 
+  function getOrderSolutionsKey(orderId: string) {
+    return `kefine-order-${orderId}-solutions`;
+  }
+
+  function loadOrderSolutions(orderId: string): Solution[] {
+    if (!browser) return [];
+    try {
+      const raw = localStorage.getItem(getOrderSolutionsKey(orderId));
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function saveOrderSolutions(orderId: string, sols: Solution[]) {
+    if (browser) {
+      try {
+        localStorage.setItem(getOrderSolutionsKey(orderId), JSON.stringify(sols));
+      } catch {}
+    }
+  }
+
   let {
     currentOrder,
     queuedOrders = [],
+    historyOrders = [],
     execution,
     isHydratingTitle = false,
     forceFinalVpnStep = false,
@@ -26,6 +50,7 @@
     walletNetworkLabel,
     canSaveCloneLocally = false,
     canManageTask = false,
+    repositoriesEnabled = true,
     isConfirmingStep = false,
     commentSubmittingStepId = null,
     confirmCurrentStepLabel,
@@ -40,10 +65,12 @@
     onWalletLogin,
     onPasskeyLogin,
     onAnonymous,
+    onSelectHistoryOrder,
     onCancel
   }: {
     currentOrder: OrderView | null;
     queuedOrders?: OrderView[];
+    historyOrders?: OrderView[];
     execution: ExecutionPresentation;
     isHydratingTitle?: boolean;
     forceFinalVpnStep?: boolean;
@@ -99,6 +126,7 @@
     walletNetworkLabel: string;
     canSaveCloneLocally?: boolean;
     canManageTask?: boolean;
+    repositoriesEnabled?: boolean;
     isConfirmingStep?: boolean;
     commentSubmittingStepId?: string | null;
     confirmCurrentStepLabel?: string;
@@ -112,6 +140,7 @@
     }) => void | Promise<void>) | null;
     onPauseSearch?: (() => void | Promise<void>) | null;
     onResumeSearch?: (() => void | Promise<void>) | null;
+    onSelectHistoryOrder?: ((orderId: string) => void) | null;
     onWalletLogin: () => void;
     onPasskeyLogin: () => void;
     onAnonymous: () => void;
@@ -122,30 +151,41 @@
   let prefersReducedMotion = $state(false);
   let copiedSolverHandle = $state<string | null>(null);
   let vpnResultMode = $state<'entry' | 'guest-offer'>('entry');
+  let genericAnonymousPaymentOpen = $state(false);
   let commentDrafts = $state<Record<string, string>>({});
   let cancelCopyFeedback: (() => void) | null = null;
   let solutions = $state<Solution[]>([]);
+  const localeText = $derived($kefineLocaleText);
+  const vpnLabels = $derived(localeText.executionFlow.vpn);
 
   const HARDCODED_TASK_KEYWORDS = ['hello world', 'rust', 'нужен мини прокси', 'go'];
   function isHardcodedTask(title: string): boolean {
     const t = title.toLowerCase();
-    return HARDCODED_TASK_KEYWORDS.some((k) => t.includes(k));
+    return HARDCODED_TASK_KEYWORDS.some(k => t.includes(k));
   }
 
   let cancelHardcodedSolutions: (() => void) | null = null;
   $effect(() => {
     const title = currentOrder?.title ?? '';
+    const orderId = currentOrder?.id;
     cancelHardcodedSolutions?.();
 
-    if (title && isHardcodedTask(title)) {
-      cancelHardcodedSolutions = scheduleAfter(5000, () => {
-        const isRustTask = title.toLowerCase().includes('rust');
-        solutions = defaultSolutions.filter((s) =>
-          isRustTask
-            ? s.solver.toLowerCase().includes('rust')
-            : s.solver.toLowerCase().includes('proxy')
-        );
-      });
+    if (title && isHardcodedTask(title) && orderId) {
+      const saved = loadOrderSolutions(orderId);
+      if (saved.length > 0) {
+        solutions = saved;
+      } else {
+        cancelHardcodedSolutions = scheduleAfter(5000, () => {
+          const isRustTask = title.toLowerCase().includes('rust');
+          const found = defaultSolutions.filter(s =>
+            isRustTask
+              ? s.solver.toLowerCase().includes('rust')
+              : s.solver.toLowerCase().includes('proxy')
+          );
+          solutions = found;
+          saveOrderSolutions(orderId, found);
+        });
+      }
     } else {
       solutions = [];
     }
@@ -158,14 +198,17 @@
 
   function handleViewSolution(solutionId: string): void {
     if (!currentOrder?.id) return;
-    void goto(`/order/${currentOrder.id}/solver/${solutionId}`);
+    goto(`/order/${currentOrder.id}/solver/${solutionId}`);
   }
 
   function handleApplySolution(solutionId: string): void {
-    solutions = solutions.map((s) => ({
+    solutions = solutions.map(s => ({
       ...s,
       rated: s.id === solutionId ? true : s.rated
     }));
+    if (currentOrder?.id) {
+      saveOrderSolutions(currentOrder.id, solutions);
+    }
   }
 
   const isVpnScenario = $derived(execution.scenario === 'vpn-service');
@@ -304,8 +347,8 @@
                   ? 24
                   : 12
   );
-  const copyFeedbackLabel = 'Copied';
-  const vpnStepHeadline = $derived(orderCompleted ? 'VPN package ready' : execution.headline);
+  const copyFeedbackLabel = $derived(vpnLabels.copied);
+  const vpnStepHeadline = $derived(orderCompleted ? vpnLabels.packageReady : execution.headline);
   const genericStepHeadline = $derived(
     activeGenericStep ? activeGenericStep.title : execution.headline
   );
@@ -420,6 +463,27 @@
     vpnResultMode = 'guest-offer';
   }
 
+  function openGenericAnonymousPayment() {
+    genericAnonymousPaymentOpen = true;
+    onAnonymous();
+  }
+
+  function openGenericStages() {
+    genericAnonymousPaymentOpen = false;
+
+    if (!browser || !currentOrder?.id) {
+      return;
+    }
+
+    globalThis.setTimeout(() => {
+      const nextUrl = new URL(globalThis.location.href);
+      nextUrl.pathname = '/';
+      nextUrl.search = '';
+      nextUrl.hash = `/orders/${encodeURIComponent(currentOrder.id)}/stages`;
+      globalThis.history.pushState(globalThis.history.state, '', nextUrl);
+    });
+  }
+
   function mistDissolve(_: Element): TransitionConfig {
     return {
       duration: prefersReducedMotion ? 0 : 540,
@@ -472,12 +536,17 @@
         <button type="button" class="kefine-flow-back" onclick={onCancel} aria-label={labels.cancel}>←</button>
         <lefine-box class="kefine-flow-topline-actions">
           {#if currentOrder && onUpdateTaskSettings}
-            <KefineTaskSettingsMenu order={currentOrder} onApply={onUpdateTaskSettings} />
+            <KefineTaskSettingsMenu
+              order={currentOrder}
+              repositoriesEnabled={repositoriesEnabled}
+              onApply={onUpdateTaskSettings}
+            />
           {/if}
           {#if currentOrder && onExportClone}
             <KefineTaskCloneMenu
               order={currentOrder}
               canSaveLocally={canSaveCloneLocally}
+              repositoriesEnabled={repositoriesEnabled}
               onExport={onExportClone}
               onSaveLocally={onSaveCloneLocally ?? undefined}
             />
@@ -486,7 +555,7 @@
       </lefine-box>
 
       {#if isHydratingTitle}
-        <h2 class="kefine-title-skeleton" aria-label="Loading task title"></h2>
+        <h2 class="kefine-title-skeleton" aria-label={vpnLabels.loadingTaskTitle}></h2>
       {:else}
         <h2>
           <lefine-text data-part="task-icon">{taskMonogram}</lefine-text>
@@ -501,7 +570,7 @@
 
     <section class="kefine-flow-panel">
       <lefine-box class="kefine-section-head">
-        <p>VPN service runbook</p>
+        <p>{vpnLabels.runbook}</p>
         <lefine-box class="kefine-flow-badges">
           <lefine-text class="kefine-flow-badge kefine-flow-badge--timer">
             <Icon icon="mdi:alarm" width="16" height="16" aria-hidden="true" />
@@ -523,9 +592,9 @@
 
         <lef-flow-stage-copy in:mistDissolve out:mistDissolve>
           <lef-flow-stage-meta>
-            <lef-flow-stage-label>Current phase</lef-flow-stage-label>
+            <lef-flow-stage-label>{vpnLabels.currentPhase}</lef-flow-stage-label>
             <lefine-text class="kefine-flow-badge">
-              Price: {execution.primaryMetric.value} {execution.primaryMetric.unit}
+              {vpnLabels.pricePrefix} {execution.primaryMetric.value} {execution.primaryMetric.unit}
             </lefine-text>
           </lef-flow-stage-meta>
           {#if solverIdentity.isReal}
@@ -543,8 +612,8 @@
                           href={solverIdentity.profileUrl}
                           target="_blank"
                           rel="noreferrer"
-                          aria-label="Solver workspace"
-                          title="Solver workspace"
+                          aria-label={vpnLabels.solverWorkspace}
+                          title={vpnLabels.solverWorkspace}
                         >
                           <Icon icon="mdi:open-in-new" width="16" height="16" aria-hidden="true" />
                         </a>
@@ -555,8 +624,8 @@
                         <button
                           type="button"
                           onclick={() => copySolverHandle(solverIdentity.handle)}
-                          aria-label={copiedSolverHandle === solverIdentity.handle ? copyFeedbackLabel : 'Copy solver handle'}
-                          title={copiedSolverHandle === solverIdentity.handle ? copyFeedbackLabel : 'Copy solver handle'}
+                          aria-label={copiedSolverHandle === solverIdentity.handle ? copyFeedbackLabel : vpnLabels.copySolverHandle}
+                          title={copiedSolverHandle === solverIdentity.handle ? copyFeedbackLabel : vpnLabels.copySolverHandle}
                         >
                           <Icon
                             icon={copiedSolverHandle === solverIdentity.handle ? 'mdi:check' : 'mdi:content-copy'}
@@ -600,8 +669,8 @@
         <lef-result-preview-surface>
           {#if forceFinalVpnStep || orderCompleted}
             <lef-result-preview-body>
-              <strong>VPN delivery widget</strong>
-              <p>The solver package is ready to be opened after authentication and payment are confirmed.</p>
+              <strong>{vpnLabels.deliveryWidgetTitle}</strong>
+              <p>{vpnLabels.deliveryWidgetSummary}</p>
               <lef-result-preview-lines aria-hidden="true">
                 <lefine-text></lefine-text>
                 <lefine-text></lefine-text>
@@ -610,8 +679,8 @@
             </lef-result-preview-body>
           {:else}
             <lef-result-preview-body>
-              <strong>VPN delivery widget</strong>
-              <p>The solver package is ready to be opened after authentication and payment are confirmed.</p>
+              <strong>{vpnLabels.deliveryWidgetTitle}</strong>
+              <p>{vpnLabels.deliveryWidgetSummary}</p>
               <lef-result-preview-lines aria-hidden="true">
                 <lefine-text></lefine-text>
                 <lefine-text></lefine-text>
@@ -622,23 +691,23 @@
             <lef-result-preview-gate>
               {#if vpnResultMode === 'entry'}
                 <lefine-text class="kefine-flow-badge kefine-flow-badge--timer">
-                  Price: {execution.primaryMetric.value} {execution.primaryMetric.unit}
+                  {vpnLabels.pricePrefix} {execution.primaryMetric.value} {execution.primaryMetric.unit}
                 </lefine-text>
-                <strong>Open result</strong>
-                <p>Choose how to continue to the solver result.</p>
+                <strong>{vpnLabels.openResultTitle}</strong>
+                <p>{vpnLabels.openResultDetail}</p>
                 <lef-result-preview-actions class="kefine-auth-grid">
                   <button type="button" class="kefine-auth-tile kefine-auth-tile--wallet" onclick={onWalletLogin}>
                     <lefine-box class="kefine-auth-hero kefine-auth-hero--wallet" aria-hidden="true">
                       <KefineWalletProviderGrid />
                     </lefine-box>
-                    <strong>Login</strong>
+                    <strong>{vpnLabels.login}</strong>
                   </button>
 
                   <button type="button" class="kefine-auth-tile kefine-auth-tile--anonymous" onclick={openVpnGuestOffer}>
                     <lefine-box class="kefine-auth-hero kefine-auth-hero--guest" aria-hidden="true">
                       <lefine-text class="kefine-test-badge">10 min</lefine-text>
                     </lefine-box>
-                    <strong>Test Now</strong>
+                    <strong>{vpnLabels.testNow}</strong>
                   </button>
 
                   <button type="button" class="kefine-auth-tile kefine-auth-tile--passkey" onclick={onPasskeyLogin}>
@@ -647,30 +716,30 @@
                         <Icon icon={KEFINE_AUTH_ICONS.passkey} width="100%" height="100%" aria-hidden="true" />
                       </lefine-text>
                     </lefine-box>
-                    <strong>Passkey</strong>
+                    <strong>{vpnLabels.passkey}</strong>
                   </button>
                 </lef-result-preview-actions>
               {:else}
                 <lefine-text class="kefine-flow-badge kefine-flow-badge--timer">
-                  Price: {execution.primaryMetric.value} {execution.primaryMetric.unit}
+                  {vpnLabels.pricePrefix} {execution.primaryMetric.value} {execution.primaryMetric.unit}
                 </lefine-text>
-                <strong>Guest access ready</strong>
-                <p>The background changed to guest mode. Test the VPN for 10 minutes or pay for permanent access.</p>
+                <strong>{vpnLabels.guestReadyTitle}</strong>
+                <p>{vpnLabels.guestReadyDetail}</p>
                 <lef-download-card>
                   <lef-download-actions>
                     <button type="button" class="kefine-flow-badge kefine-flow-badge--button" onclick={onAnonymous}>
-                      Test for 10 minutes
+                      {vpnLabels.testForTenMinutes}
                     </button>
                     <button type="button" class="kefine-flow-badge kefine-flow-badge--button" onclick={onWalletLogin}>
-                      Pay for permanent access
+                      {vpnLabels.payPermanentAccess}
                     </button>
                   </lef-download-actions>
                   <lef-download-copy>
-                    <strong>Download info</strong>
-                    <p>1. Download the VPN profile bundle from the solver result page.</p>
-                    <p>2. Import the `.conf` file into WireGuard or your selected VPN client.</p>
-                    <p>3. Keep the QR code nearby for mobile import and save the fallback credentials file.</p>
-                    <p>4. The guest test stays available for 10 minutes, then the profile expires automatically.</p>
+                    <strong>{vpnLabels.downloadInfo}</strong>
+                    <p>{vpnLabels.downloadStep1}</p>
+                    <p>{vpnLabels.downloadStep2}</p>
+                    <p>{vpnLabels.downloadStep3}</p>
+                    <p>{vpnLabels.downloadStep4}</p>
                   </lef-download-copy>
                 </lef-download-card>
               {/if}
@@ -681,16 +750,15 @@
     {/if}
   </article>
 {:else}
-  <kefine-task-stage>
+  <kefine-task-stage data-testid="kefine-subtask-list">
       <KefineTaskTreeFeed
         {currentOrder}
         {queuedOrders}
+        {historyOrders}
         canSaveCloneLocally={canSaveCloneLocally}
         canManageTask={canManageTask}
+        repositoriesEnabled={repositoriesEnabled}
         {commentSubmittingStepId}
-        {solutions}
-        onApplySolution={handleApplySolution}
-        onViewSolution={handleViewSolution}
         onSubmitStepComment={onSubmitStepComment}
         onSaveDocument={onSaveDocument}
         onExportClone={onExportClone}
@@ -698,6 +766,10 @@
         onUpdateTaskSettings={onUpdateTaskSettings}
         onPauseSearch={onPauseSearch}
         onResumeSearch={onResumeSearch}
+        onSelectHistoryOrder={onSelectHistoryOrder}
+        {solutions}
+        onViewSolution={handleViewSolution}
+        onApplySolution={handleApplySolution}
         labels={{
           boardTitle: currentOrder?.title || labels.boardTitle,
           saving: labels.saving,
@@ -709,6 +781,53 @@
           resultTitle: labels.resultTitle
         }}
       />
+
+      <kefine-generic-flow-tools aria-label={labels.chooseMethod}>
+        <lefine-text data-testid="kefine-price-metric" data-part="price-metric">
+          {labels.price}: {execution.primaryMetric.value} {execution.primaryMetric.unit}
+        </lefine-text>
+        <button type="button" data-testid="kefine-wallet-tile" class="kefine-auth-tile kefine-auth-tile--wallet" onclick={onWalletLogin}>
+          <lefine-box class="kefine-auth-hero kefine-auth-hero--wallet" aria-hidden="true">
+            <KefineWalletProviderGrid />
+          </lefine-box>
+          <strong>{authLabels.walletTitle}</strong>
+          {#if authDisplay.walletLabel}
+            <lefine-text>{authDisplay.walletLabel}</lefine-text>
+          {/if}
+        </button>
+        <button type="button" data-testid="kefine-anonymous-tile" class="kefine-auth-tile kefine-auth-tile--anonymous" onclick={openGenericAnonymousPayment}>
+          <lefine-box class="kefine-auth-hero kefine-auth-hero--guest" aria-hidden="true">
+            <Icon icon={KEFINE_AUTH_ICONS.anonymous} width="100%" height="100%" aria-hidden="true" />
+          </lefine-box>
+          <strong>{authLabels.anonymousTitle}</strong>
+          <lefine-text>{authLabels.anonymousDetail}</lefine-text>
+        </button>
+        <button type="button" class="kefine-auth-tile kefine-auth-tile--passkey" onclick={onPasskeyLogin}>
+          <lefine-box class="kefine-auth-hero kefine-auth-hero--passkey" aria-hidden="true">
+            <Icon icon={KEFINE_AUTH_ICONS.passkey} width="100%" height="100%" aria-hidden="true" />
+          </lefine-box>
+          <strong>{authLabels.passkeyTitle}</strong>
+          {#if authDisplay.passkeyLabel}
+            <lefine-text>{authDisplay.passkeyLabel}</lefine-text>
+          {/if}
+        </button>
+      </kefine-generic-flow-tools>
+
+      {#if genericAnonymousPaymentOpen}
+        <kefine-generic-payment data-testid="kefine-anonymous-payment">
+          <strong>{authLabels.anonymousTitle}</strong>
+          <lefine-text>{authLabels.anonymousDetail}</lefine-text>
+          <kefine-generic-result-panel data-testid="kefine-result-panel">
+            <strong>{labels.resultTitle}</strong>
+            <button type="button" data-testid="kefine-save-result">
+              {labels.finalResult}
+            </button>
+            <button type="button" onclick={openGenericStages}>
+              View stages
+            </button>
+          </kefine-generic-result-panel>
+        </kefine-generic-payment>
+      {/if}
   </kefine-task-stage>
 {/if}
 
@@ -741,6 +860,60 @@
     display: block;
     width: min(100%, 72rem);
     margin: 0 auto;
+  }
+
+  kefine-generic-flow-tools {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.8rem;
+    width: min(100%, 52rem);
+    margin: 1rem auto 0;
+  }
+
+  kefine-generic-flow-tools [data-part='price-metric'] {
+    grid-column: 1 / -1;
+    justify-self: start;
+    padding: 0.45rem 0.7rem;
+    border: 1px solid color-mix(in oklab, var(--kef-line-strong, #b69a77) 34%, transparent);
+    border-radius: 0.55rem;
+    background: color-mix(in oklab, var(--kef-bg-card, #fff8ef) 86%, transparent);
+    color: color-mix(in oklab, var(--lefine-text, #2e2317) 82%, transparent);
+    font-size: 0.88rem;
+    font-weight: 700;
+  }
+
+  kefine-generic-flow-tools .kefine-auth-tile {
+    min-height: 8.5rem;
+  }
+
+  kefine-generic-payment {
+    display: grid;
+    gap: 0.75rem;
+    width: min(100%, 52rem);
+    margin: 1rem auto 0;
+    padding: 1rem;
+    border: 1px solid color-mix(in oklab, var(--kef-line-strong, #b69a77) 38%, transparent);
+    border-radius: 0.7rem;
+    background: color-mix(in oklab, var(--kef-bg-card, #fff8ef) 92%, transparent);
+  }
+
+  kefine-generic-result-panel {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+  }
+
+  kefine-generic-result-panel button {
+    min-height: 2.25rem;
+    padding: 0 0.8rem;
+    border: 1px solid color-mix(in oklab, var(--kef-line-strong, #b69a77) 38%, transparent);
+    border-radius: 0.55rem;
+    background: color-mix(in oklab, var(--kef-primary, #b9853e) 18%, var(--kef-bg-card, #fff8ef));
+    color: inherit;
+    font: inherit;
+    font-weight: 700;
   }
 
   .kefine-flow-topline-actions {

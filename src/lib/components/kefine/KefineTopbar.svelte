@@ -403,11 +403,9 @@
 
   function handleLocaleButtonClick() {
     cancelLocaleClick?.();
-    cancelLocaleClick = scheduleAfter(220, () => {
-      localePickerOpen = !localePickerOpen;
-      themePickerOpen = false;
-      cancelLocaleClick = null;
-    });
+    cancelLocaleClick = null;
+    localePickerOpen = !localePickerOpen;
+    themePickerOpen = false;
   }
 
   function handleLocaleButtonDoubleClick() {
@@ -420,11 +418,15 @@
 
   function selectTheme(theme: 'light' | 'dark' | 'auto') {
     themePickerOpen = false;
+    localePickerOpen = false;
+    onExpandedChange(false);
     onThemeChange(theme);
   }
 
   function selectLocale(next: KefineLocale) {
     localePickerOpen = false;
+    themePickerOpen = false;
+    onExpandedChange(false);
     onLocale(next);
   }
 
@@ -1550,10 +1552,6 @@
       width: min(12rem, calc(100vw - 1.1rem));
       min-width: min(12rem, calc(100vw - 1.1rem));
       max-width: min(12rem, calc(100vw - 1.1rem));
-    }
-
-    kefine-sidebar-popover:popover-open {
-      inset: auto auto auto auto;
     }
 
     kefine-sidebar-stack {

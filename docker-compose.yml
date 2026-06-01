@@ -19,8 +19,8 @@ services:
     networks:
       - kefine
 
-  lepos:
-    container_name: kefine-lepos
+  crater:
+    container_name: kefine-crater
     build:
       context: .
       dockerfile: crater/Dockerfile
@@ -32,6 +32,12 @@ services:
       DATABASE_URL: postgresql://kefine:kefine@postgres:5432/kefine
       KEFINE_PRIVATEKEY_DEFAULT: ${KEFINE_PRIVATEKEY_DEFAULT:-}
       EXCHANGE_BASE_URL: ${EXCHANGE_BASE_URL:-https://problemsets.lefine.pro}
+      MADDY_SMTP_HOST: ${MADDY_SMTP_HOST:-mail.lefine.pro}
+      MADDY_SMTP_PORT: ${MADDY_SMTP_PORT:-587}
+      MADDY_SMTP_USERNAME: ${MADDY_SMTP_USERNAME:-app@lefine.pro}
+      MADDY_SMTP_PASSWORD: ${MADDY_SMTP_PASSWORD}
+      MADDY_FROM_EMAIL: ${MADDY_FROM_EMAIL:-noreply@lefine.pro}
+      MADDY_FROM_NAME: ${MADDY_FROM_NAME:-Lefine}
     working_dir: /app
     command: ["crystal", "run", "src/crater.cr"]
     volumes:
@@ -47,9 +53,7 @@ services:
     ports:
       - "3001:3001"
     networks:
-      kefine:
-        aliases:
-          - crater
+      - kefine
 
   frontend:
     container_name: kefine-frontend
@@ -58,11 +62,12 @@ services:
       dockerfile: Containerfile
     restart: unless-stopped
     depends_on:
-      lepos:
+      crater:
         condition: service_healthy
     environment:
-      CRATER_BASE_URL: http://lepos:3001
+      CRATER_BASE_URL: http://crater:3001
       EXCHANGE_BASE_URL: ${EXCHANGE_BASE_URL:-https://problemsets.lefine.pro}
+      LEFINE_INTEGRATION_SECRET: dev-only-lefine-octra-shared-secret-change-me
     ports:
       - "5173:5173"
     networks:

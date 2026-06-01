@@ -81,6 +81,9 @@ Main sections:
   "app": {
     "reownProjectId": "your_reown_project_id"
   },
+  "features": {
+    "repositories": false
+  },
   "origins": {
     "primary": "https://lefine.pro",
     "legal": "https://legal.lefine.pro",
@@ -101,14 +104,41 @@ Main sections:
 Notes:
 
 - `app.reownProjectId` is needed if you want wallet login/connect flows to work correctly.
-- `backend.craterBaseUrl` is the legacy config key for the Lepos base URL used by the SvelteKit proxy for order, payment, and passkey operations.
-- `backend.exchangeBaseUrl` is the exchange base URL Lepos uses for user IDs and payment links.
-- `backend.databaseUrl` is the Postgres connection string Lepos uses for orders, payment redemptions, passkey users, challenges, sessions, and outbox activity persistence.
+- `backend.craterBaseUrl` is the crater base URL used by the SvelteKit proxy for order, payment, and passkey operations.
+- `backend.exchangeBaseUrl` is the exchange base URL crater uses for user IDs and payment links.
+- `backend.databaseUrl` is the Postgres connection string crater uses for orders, payment redemptions, passkey users, challenges, sessions, and outbox activity persistence.
+- `features.repositories` controls the VCS/git repository feature.
 - `company.*` controls the new `/legal-information` company page. Empty optional fields are hidden automatically.
 
-### 2a. Repository defaults: `.lepos.rcl`
+### 2a. Feature flags: `features`
 
-When a task repository is created, Lepos now seeds it with `.lepos.rcl` in the repository root.
+Optional `features` section toggles whole features on or off. Every flag defaults to
+enabled, so omitting the section keeps the full experience. Set a flag to `false` to
+hide and disable that feature for the deployment:
+
+```json
+{
+  "features": {
+    "repositories": false
+  }
+}
+```
+
+Available flags:
+
+- `repositories` - controls the VCS/git repository feature. When disabled, the
+  "Create git repo", "Enable VCS", "Git access", repository clone/archive entries,
+  Crater project/git/ForgeFed/SSH-key routes, and API-side VCS creation are disabled.
+
+Each flag accepts booleans as well as common string/number forms (`true`/`false`,
+`1`/`0`, `yes`/`no`, `on`/`off`, `enabled`/`disabled`). A flag can also be overridden
+per process with an environment variable named `KEFINE_FEATURE_<ID>` (uppercased),
+for example `KEFINE_FEATURE_REPOSITORIES=true`. The environment variable wins over the
+value in `kefine.config.json`.
+
+### 2b. Repository defaults: `.lepos.rcl`
+
+When a task repository is created, crater now seeds it with `.lepos.rcl` in the repository root.
 You can use this config to control repository storage behavior:
 
 ```rcl
@@ -151,7 +181,7 @@ agent_system_prompt_path = "agents/system_prompt.md"
 
 If `reps.rcl` is missing, `reps.toml` is checked next.
 
-If `.lepos.rcl` is absent, Lepos uses default values and writes a new default `.lepos.rcl` on first seed.
+If `.lepos.rcl` is absent, crater uses default values and writes a new default `.lepos.rcl` on first seed.
 Both `/status/:id` and `/projects/:id/repository` now expose repository `.lepos.rcl` settings under `repository.leposConfig`, so clients can inspect `issueStorage` and path settings for repositories they receive.
 
 ### Git hooks and CI
@@ -265,7 +295,7 @@ This command:
 - ensures frontend dependencies are installed,
 - starts Postgres via `nerdctl compose`,
 - waits until the database is ready,
-- starts Lepos in a container on `http://localhost:3001`,
+- starts `crater` in a container on `http://localhost:3001`,
 - starts the SvelteKit frontend on `http://localhost:5173`.
 
 You can also run just `mise run`, because the default task maps to `dev`.
@@ -293,10 +323,10 @@ Server target:
 
 Client config template lives at [`scripts/frpc.dev-proxy.toml`](/home/kg/datastore/dev/lefine/kefine/scripts/frpc.dev-proxy.toml).
 
-The tunnel is configured so both the frontend and Lepos live behind the same public origin:
+The tunnel is configured so both the frontend and `crater` live behind the same public origin:
 
 - frontend traffic goes to local `127.0.0.1:5173`
-- Lepos paths on the same domain go to local `127.0.0.1:3001`
+- `crater` paths on the same domain go to local `127.0.0.1:3001`
 - app runtime config in [`kefine.config.json`](/home/kg/datastore/dev/lefine/kefine/kefine.config.json) points both `origins.*` and `backend.*BaseUrl` to `https://dev-proxy.col.pub`
 - TLS is terminated on the public server by Caddy running under `nerdctl compose`, which proxies to local FRP HTTP routing on port `8080`
 
@@ -326,7 +356,7 @@ If you do not want to use the one-command `mise` flow, you still have two practi
 Option A: run only the backend in a container
 
 ```bash
-nerdctl compose up --build lepos
+nerdctl compose up --build crater
 ```
 
 Option B: run the backend directly with Crystal

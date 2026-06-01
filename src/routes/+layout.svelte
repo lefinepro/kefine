@@ -1,4 +1,5 @@
 <script lang="ts">
+	import '../app.css';
 	import './+page.css';
 	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
@@ -24,7 +25,9 @@
     '/[actor=actor_handle]/order/[id]',
     '/[actor=actor_handle]/orders/[id]',
     '/[handle=at_handle]',
-    '/[handle=at_handle]/[shareId]'
+    '/[handle=at_handle]/[shareId]',
+    // OAuth consent / integration pages render their own full-screen clean UI (no shared topbar)
+    '/oauth/authorize'
   ]);
 
 	interface Props {
@@ -295,21 +298,22 @@
     onLocale={handleSharedLocaleChange}
   />
 
-  <lef-layout-main>
+  <main>
     {@render children()}
-  </lef-layout-main>
+  </main>
 {:else}
   {@render children()}
 {/if}
 
 <style>
-  lef-layout-main {
+  main {
     display: block;
     padding-top: 4.5rem;
+    contain: layout style;
   }
 
   @media (max-width: 760px) {
-    lef-layout-main {
+    main {
       padding-top: 4.25rem;
     }
   }
