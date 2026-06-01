@@ -1,7 +1,8 @@
 <script lang="ts">
-  import { tick } from 'svelte';
-  import { onDestroy } from 'svelte';
+  import { onDestroy, tick } from 'svelte';
   import KefineOrderListItem from '$lib/components/kefine/KefineOrderListItem.svelte';
+  import SolutionMetricsMini from '$lib/components/kefine/SolutionMetricsMini.svelte';
+  import { defaultMetrics } from '$lib/kefine/solutions-data';
   import type { DraftOrder, OrderView, TemplatePresentation } from './kefine-workflow';
   import { scheduleAfter } from '$lib/utils/helpers';
 
@@ -47,7 +48,6 @@
     solverSearchActive?: boolean;
     solverSearchText?: string;
     solverSearchCompleted?: boolean;
-    solverListHref?: string;
     solverSearchLabel: string;
     solverLabel: string;
     matchedOrders: OrderView[];
@@ -82,31 +82,30 @@
 
   const props: Props = $props();
   const REPO_URL = '@example/proxy-on-go/release';
-  const DEMO_VIDEO_SRC = '/assets/issue-114-example-task.webm';
   const exampleTasks = [
     'Make a go Proxy',
     'Make a go Proxy with tests',
     'Make a go Proxy ready for deploy'
   ];
 
-  let fileInput = $state<HTMLInputElement | null>(null);
-  let taskInput = $state<HTMLTextAreaElement | null>(null);
-  let tagInputValue = $state('');
-  let videoDialogOpen = $state(false);
+  let taskInput = $state<HTMLInputElement | null>(null);
+  let solverDialogOpen = $state(false);
   let stopPressCancel: (() => void) | null = null;
   let solverCompleteCancel: (() => void) | null = null;
 
   const solverSearchActive = $derived(Boolean(props.solverSearchActive));
   const solverSearchText = $derived(props.solverSearchText?.trim() ?? '');
   const solverSearchCompleted = $derived(Boolean(props.solverSearchCompleted));
-  const solverListHref = $derived(props.solverListHref || '#');
-  const exampleTaskReady = $derived(solverSearchActive && solverSearchCompleted && solverSearchText.length > 0);
-  const searchRowPrimary = $derived(
-    solverSearchCompleted ? `${REPO_URL}#${solverSearchText || 'Make a go Proxy'}` : solverSearchText
+  const solverReady = $derived(solverSearchActive && solverSearchCompleted && solverSearchText.length > 0);
+  const headerSearchValue = $derived(
+    solverSearchActive && solverSearchText ? `${REPO_URL}#${solverSearchText}` : props.draft.description
   );
-  const searchRowSecondary = $derived(
-    solverSearchCompleted ? '25m status ready' : props.solverSearchLabel
-  );
+  const activeTaskTitle = $derived(solverSearchText || props.draft.description.trim() || 'Make a go Proxy');
+  const createdTaskStatus = $derived(solverSearchCompleted ? '25m status ready' : props.solverSearchLabel);
+
+  function solverDisplayName(index: number) {
+    return index === 0 ? 'Dragon A' : index === 1 ? 'Dragon B' : 'Dragon C';
+  }
 
   function handleTaskInputKeydown(event: KeyboardEvent) {
     if (event.key !== 'Enter') {
@@ -123,43 +122,14 @@
     props.onSubmit();
   }
 
+  function handleTaskInput(event: Event) {
+    props.onDescriptionChange?.((event.currentTarget as HTMLInputElement).value);
+  }
+
   async function submitExampleTask(task: string) {
     props.onDescriptionChange?.(task);
     await tick();
     props.onSubmit();
-  }
-
-  function handleFileChange(event: Event) {
-    const input = event.currentTarget as HTMLInputElement;
-    const files = Array.from(input.files ?? []);
-
-    if (files.length > 0) {
-      props.onAttachFiles(files);
-    }
-
-    input.value = '';
-  }
-
-  function commitTag() {
-    const normalized = tagInputValue.trim().replace(/^#+/, '').toLowerCase();
-    if (!normalized) {
-      tagInputValue = '';
-      return;
-    }
-
-    props.onTagsChange?.(Array.from(new Set([...(props.draft.tags ?? []), normalized])));
-    tagInputValue = '';
-  }
-
-  function removeTag(tag: string) {
-    props.onTagsChange?.((props.draft.tags ?? []).filter((item) => item !== tag));
-  }
-
-  function handleTagInputKeydown(event: KeyboardEvent) {
-    if (event.key === 'Enter' || event.key === ',' || event.key === 'Tab') {
-      event.preventDefault();
-      commitTag();
-    }
   }
 
   function handleOpenOrderKeydown(order: OrderView, event: KeyboardEvent) {
@@ -184,23 +154,25 @@
     stopPressCancel = null;
   }
 
-  function openSolverList(event: MouseEvent) {
-    if (!solverSearchCompleted) {
-      event.preventDefault();
+  function openSolverDialog() {
+    if (!solverReady) {
+      return;
     }
+
+    solverDialogOpen = true;
   }
 
-  function closeVideoDialog() {
-    videoDialogOpen = false;
+  function closeSolverDialog() {
+    solverDialogOpen = false;
   }
 
-  function handleVideoDialogKeydown(event: KeyboardEvent) {
+  function handleSolverDialogKeydown(event: KeyboardEvent) {
     if (event.key !== 'Escape') {
       return;
     }
 
     event.preventDefault();
-    closeVideoDialog();
+    closeSolverDialog();
   }
 
   $effect(() => {
@@ -226,9 +198,19 @@
 <section class="kefine-command-center kefine-card" data-testid="kefine-command-center" aria-label="Lefine command center">
   <header class="repo-shell-header">
     <a class="repo-brand" href="/" aria-label="Lefine home">Lefine</a>
-    <label class="repo-url-control">
-      <lefine-text>Repository</lefine-text>
-      <input data-testid="kefine-repo-url" value={REPO_URL} readonly />
+    <label class="repo-search-control">
+      <lefine-text>Search</lefine-text>
+      <input
+        bind:this={taskInput}
+        data-testid="kefine-task-input"
+        data-search-active={solverSearchActive}
+        value={headerSearchValue}
+        readonly={solverSearchActive}
+        aria-label={props.title}
+        placeholder={`${REPO_URL}#Make a go Proxy`}
+        onkeydown={handleTaskInputKeydown}
+        oninput={handleTaskInput}
+      />
     </label>
     <button type="button" class="repo-clone-button">clone</button>
     <button type="button" class="repo-login-button">login</button>
@@ -242,202 +224,177 @@
   </nav>
 
   <section class="repo-workbench">
-    <aside class="repo-examples" aria-label="Example tasks">
-      {#each exampleTasks as task (task)}
-        <button type="button" onclick={() => { void submitExampleTask(task); }}>
-          {task}
-        </button>
-      {/each}
-    </aside>
+    <aside class="repo-task-rail" aria-label="Tasks">
+      <strong>Tasks</strong>
 
-    <section class="repo-task-panel" aria-label="Task composer">
-      <fieldset data-testid="kefine-create-form">
-        <label for="order-title">Test</label>
-        <textarea
-          id="order-title"
-          bind:this={taskInput}
-          value={props.draft.description}
-          data-testid="kefine-task-input"
-          aria-label={props.title}
-          placeholder={props.placeholder}
-          rows="4"
-          onkeydown={handleTaskInputKeydown}
-          oninput={(event) => props.onDescriptionChange?.((event.currentTarget as HTMLTextAreaElement).value)}
-        ></textarea>
+      {#if solverSearchActive && solverSearchText}
         <button
           type="button"
-          data-testid="kefine-submit-task"
-          aria-label={props.executeAria}
-          onclick={props.onSubmit}
+          class="kefine-solver-search-row"
+          data-testid="kefine-solver-search-row"
+          disabled={!solverSearchCompleted}
+          aria-label={solverSearchCompleted ? 'Created task ready' : props.solverSearchLabel}
+          onclick={openSolverDialog}
         >
-          Send
+          <lefine-text>{REPO_URL}</lefine-text>
+          <strong>{solverSearchText}</strong>
+          <lefine-meta>{createdTaskStatus}</lefine-meta>
         </button>
-      </fieldset>
-
-      <section class="repo-composer-tools" aria-label={props.composerHints}>
-        <button type="button" onclick={() => fileInput?.click()}>{props.addFileLabel}</button>
-        <label>
-          <lefine-text>{props.addExecutionEstimateLabel}</lefine-text>
-          <input
-            value={props.draft.executionEstimate}
-            placeholder={props.executionEstimateLabel}
-            oninput={(event) => props.onExecutionEstimateChange?.((event.currentTarget as HTMLInputElement).value)}
-          />
-        </label>
-        <label>
-          <lefine-text>tag</lefine-text>
-          <input
-            bind:value={tagInputValue}
-            placeholder="tag"
-            maxlength="32"
-            onkeydown={handleTagInputKeydown}
-            onblur={commitTag}
-          />
-        </label>
-      </section>
-
-      {#if props.draft.files.length > 0 || (props.draft.tags?.length ?? 0) > 0}
-        <section class="repo-attachment-strip" aria-label="Attached task context">
-          {#each props.draft.files as file, index (`${file.name}-${file.size}-${index}`)}
-            <button type="button" onclick={() => props.onRemoveFile(index)}>
-              <lefine-text>{file.name}</lefine-text>
-              <strong>{props.fileCountLabel(1)}</strong>
-            </button>
-          {/each}
-          {#each props.draft.tags ?? [] as tag (`tag-${tag}`)}
-            <button type="button" onclick={() => removeTag(tag)} aria-label={`Remove ${tag} tag`}>
-              #{tag} x
-            </button>
-          {/each}
-        </section>
       {/if}
 
-      <input bind:this={fileInput} class="repo-file-input" type="file" multiple onchange={handleFileChange} />
+      <section class="repo-example-list" aria-label="Example tasks">
+        {#each exampleTasks as task (task)}
+          <button type="button" class="repo-task-button" onclick={() => { void submitExampleTask(task); }}>
+            <lefine-text>{task}</lefine-text>
+            <lefine-meta>example</lefine-meta>
+          </button>
+        {/each}
+      </section>
+
+      {#if !solverSearchActive && props.isSearching && props.matchedOrders.length > 0}
+        <section class="repo-side-history" aria-label={props.matchedTasksLabel}>
+          <strong>{props.matchedTasksLabel}</strong>
+          <ul data-testid="kefine-search-results">
+            {#each props.matchedOrders as order (order.id)}
+              <KefineOrderListItem
+                {order}
+                openTaskLabel={props.openTaskLabel}
+                relatedItemsLabel={props.relatedItemsLabel}
+                createServiceLabel={props.createServiceLabel}
+                deleteTaskLabel={props.deleteTaskLabel}
+                showCreateService={false}
+                showDelete={true}
+                itemTestId={`kefine-search-order-${order.id}`}
+                openTestId={`kefine-open-search-order-${order.id}`}
+                deleteTestId={`kefine-delete-search-order-${order.id}`}
+                openOrder={() => props.onOpenOrder(order)}
+                onCreateService={(event) => props.onCreateServiceFromOrder?.(order, event)}
+                onOpenKeydown={(event) => handleOpenOrderKeydown(order, event)}
+                onDelete={(event) => props.onDeleteOrder(order, event)}
+              />
+            {/each}
+          </ul>
+        </section>
+      {:else if !solverSearchActive && (props.recentOrders?.length ?? 0) > 0}
+        <section class="repo-side-history" aria-label={props.recentTasksLabel}>
+          <strong>{props.recentTasksLabel}</strong>
+          <ul data-testid="kefine-recent-orders">
+            {#each props.recentOrders ?? [] as order (order.id)}
+              <KefineOrderListItem
+                {order}
+                openTaskLabel={props.openTaskLabel}
+                relatedItemsLabel={props.relatedItemsLabel}
+                createServiceLabel={props.createServiceLabel}
+                stopTaskLabel={props.stopTaskLabel}
+                deleteTaskLabel={props.deleteTaskLabel}
+                showCreateService={false}
+                showStop={order.status !== 'completed' && order.status !== 'done'}
+                showDelete={true}
+                openByDefault={true}
+                itemTestId={`kefine-recent-order-${order.id}`}
+                openTestId={`kefine-open-order-${order.id}`}
+                stopTestId={`kefine-stop-order-${order.id}`}
+                deleteTestId={`kefine-delete-order-${order.id}`}
+                openOrder={() => props.onOpenOrder(order)}
+                onCreateService={(event) => props.onCreateServiceFromOrder?.(order, event)}
+                onOpenKeydown={(event) => handleOpenOrderKeydown(order, event)}
+                onStop={(event) => props.onStopOrder(order, event)}
+                onDelete={(event) => props.onDeleteOrder(order, event)}
+                onStopPointerDown={(event) => handleStopPointerDown(order, event)}
+                onStopPointerUp={clearStopPointerTimer}
+                onStopPointerLeave={clearStopPointerTimer}
+                onStopPointerCancel={clearStopPointerTimer}
+              />
+            {/each}
+          </ul>
+        </section>
+      {/if}
+    </aside>
+
+    <section class="repo-test-block" data-testid="kefine-test-block" aria-label="Test">
+      <header>
+        <strong>Test</strong>
+        <lefine-text>{activeTaskTitle}</lefine-text>
+      </header>
+
+      <section class="repo-test-surface" aria-label="Proxy test details">
+        <section class="repo-test-summary">
+          <strong>POST /</strong>
+          <lefine-text>returns proxy ready</lefine-text>
+          <lefine-meta>{solverSearchActive ? createdTaskStatus : 'ready'}</lefine-meta>
+        </section>
+
+        <section class="repo-test-grid" aria-label="Request and response">
+          <article>
+            <strong>Request body</strong>
+            <dl>
+              <dt>ping</dt>
+              <dd>hello</dd>
+            </dl>
+          </article>
+          <article>
+            <strong>Response</strong>
+            <dl>
+              <dt>ok</dt>
+              <dd>true</dd>
+              <dt>message</dt>
+              <dd>proxy ready</dd>
+            </dl>
+          </article>
+        </section>
+      </section>
+
+      <footer>
+        <button
+          type="button"
+          class="repo-select-solver"
+          data-testid="kefine-solver-select-trigger"
+          disabled={!solverReady}
+          onclick={openSolverDialog}
+        >
+          Select solver
+        </button>
+      </footer>
     </section>
   </section>
-
-  {#if solverSearchActive && solverSearchText}
-    <section class="repo-search-panel" aria-label="Created tasks">
-      <label class="repo-search-field">
-        <lefine-text>Search</lefine-text>
-        <input value={`${REPO_URL}#${solverSearchText}`} readonly />
-      </label>
-      <section class="repo-search-actions" aria-label="Task filters">
-        <button type="button">add a file</button>
-        <button type="button">tag</button>
-      </section>
-      <a
-        role="button"
-        href={solverSearchCompleted ? solverListHref : '#'}
-        class="kefine-solver-search-row"
-        data-testid="kefine-solver-search-row"
-        aria-label={solverSearchCompleted ? 'Open solver list' : props.solverSearchLabel}
-        aria-disabled={!solverSearchCompleted}
-        tabindex={solverSearchCompleted ? 0 : -1}
-        onclick={openSolverList}
-      >
-        <strong>{searchRowPrimary}</strong>
-        <lefine-text>{searchRowSecondary}</lefine-text>
-      </a>
-      <button
-        type="button"
-        class="repo-video-trigger"
-        data-testid="kefine-demo-video-trigger"
-        disabled={!exampleTaskReady}
-        onclick={() => { videoDialogOpen = true; }}
-      >
-        Dragon A
-      </button>
-      <lefine-text class="repo-secondary-task">another repo#Another task 25m status</lefine-text>
-    </section>
-  {:else if props.isSearching && props.matchedOrders.length > 0}
-    <section class="repo-history-panel" aria-label={props.matchedTasksLabel}>
-      <strong>{props.matchedTasksLabel}</strong>
-      <ul data-testid="kefine-search-results">
-        {#each props.matchedOrders as order (order.id)}
-          <KefineOrderListItem
-            {order}
-            openTaskLabel={props.openTaskLabel}
-            relatedItemsLabel={props.relatedItemsLabel}
-            createServiceLabel={props.createServiceLabel}
-            deleteTaskLabel={props.deleteTaskLabel}
-            showCreateService={false}
-            showDelete={true}
-            itemTestId={`kefine-search-order-${order.id}`}
-            openTestId={`kefine-open-search-order-${order.id}`}
-            deleteTestId={`kefine-delete-search-order-${order.id}`}
-            openOrder={() => props.onOpenOrder(order)}
-            onCreateService={(event) => props.onCreateServiceFromOrder?.(order, event)}
-            onOpenKeydown={(event) => handleOpenOrderKeydown(order, event)}
-            onDelete={(event) => props.onDeleteOrder(order, event)}
-          />
-        {/each}
-      </ul>
-    </section>
-  {:else if (props.recentOrders?.length ?? 0) > 0}
-    <section class="repo-history-panel" aria-label={props.recentTasksLabel}>
-      <strong>{props.recentTasksLabel}</strong>
-      <ul data-testid="kefine-recent-orders">
-        {#each props.recentOrders ?? [] as order (order.id)}
-          <KefineOrderListItem
-            {order}
-            openTaskLabel={props.openTaskLabel}
-            relatedItemsLabel={props.relatedItemsLabel}
-            createServiceLabel={props.createServiceLabel}
-            stopTaskLabel={props.stopTaskLabel}
-            deleteTaskLabel={props.deleteTaskLabel}
-            showCreateService={false}
-            showStop={order.status !== 'completed' && order.status !== 'done'}
-            showDelete={true}
-            openByDefault={true}
-            itemTestId={`kefine-recent-order-${order.id}`}
-            openTestId={`kefine-open-order-${order.id}`}
-            stopTestId={`kefine-stop-order-${order.id}`}
-            deleteTestId={`kefine-delete-order-${order.id}`}
-            openOrder={() => props.onOpenOrder(order)}
-            onCreateService={(event) => props.onCreateServiceFromOrder?.(order, event)}
-            onOpenKeydown={(event) => handleOpenOrderKeydown(order, event)}
-            onStop={(event) => props.onStopOrder(order, event)}
-            onDelete={(event) => props.onDeleteOrder(order, event)}
-            onStopPointerDown={(event) => handleStopPointerDown(order, event)}
-            onStopPointerUp={clearStopPointerTimer}
-            onStopPointerLeave={clearStopPointerTimer}
-            onStopPointerCancel={clearStopPointerTimer}
-          />
-        {/each}
-      </ul>
-    </section>
-  {/if}
 </section>
 
-{#if videoDialogOpen}
-  <kefine-video-backdrop>
-    <button type="button" class="repo-video-scrim" aria-label="Close video" onclick={closeVideoDialog}></button>
+{#if solverDialogOpen}
+  <kefine-solver-backdrop>
+    <button type="button" class="repo-solver-scrim" aria-label="Close solver metrics" onclick={closeSolverDialog}></button>
     <dialog
       open
-      class="repo-video-dialog"
-      data-testid="kefine-demo-video-dialog"
-      aria-labelledby="kefine-demo-video-title"
-      onkeydown={handleVideoDialogKeydown}
+      class="repo-solver-dialog"
+      data-testid="kefine-solver-metrics-dialog"
+      aria-labelledby="kefine-solver-dialog-title"
+      onkeydown={handleSolverDialogKeydown}
     >
       <header>
-        <h2 id="kefine-demo-video-title">Metrics</h2>
-        <button type="button" aria-label="Close video" onclick={closeVideoDialog}>x</button>
+        <section>
+          <h2 id="kefine-solver-dialog-title">Select solver</h2>
+          <lefine-text>{REPO_URL}#{solverSearchText}</lefine-text>
+        </section>
+        <button type="button" aria-label="Close solver metrics" onclick={closeSolverDialog}>x</button>
       </header>
-      <section class="repo-metric-controls" aria-label="Metric filters">
-        <button type="button" data-active="true">Speed</button>
-        <button type="button">Price</button>
-      </section>
-      <ol class="repo-metric-list">
-        <li><strong>#1</strong> Dragon A</li>
-        <li><strong>#2</strong> Dragon B</li>
-        <li><strong>#3</strong> Dragon C</li>
+
+      <ol class="repo-solver-ranks" data-testid="kefine-solver-options" aria-label="Solver candidates">
+        {#each defaultMetrics as metric, index (`metric-${metric.solverId}`)}
+          <li data-active={index === 0}>
+            <strong>#{index + 1}</strong>
+            <lefine-text>{solverDisplayName(index)}</lefine-text>
+            <lefine-value>{metric.executionTimeSec.toFixed(1)}s</lefine-value>
+          </li>
+        {/each}
       </ol>
-      <video controls preload="metadata" aria-label="Example task video">
-        <source src={DEMO_VIDEO_SRC} type="video/webm" />
-      </video>
+
+      <SolutionMetricsMini
+        metrics={defaultMetrics}
+        activeSolverId={defaultMetrics[0]?.solverId ?? '5'}
+        project={REPO_URL}
+        slug={solverSearchText}
+      />
     </dialog>
-  </kefine-video-backdrop>
+  </kefine-solver-backdrop>
 {/if}
 
 <style>
@@ -462,9 +419,9 @@
   .repo-shell-header,
   .repo-tabs,
   .repo-workbench,
-  .repo-search-panel,
-  .repo-history-panel,
-  .repo-video-dialog {
+  .repo-task-rail,
+  .repo-test-block,
+  .repo-solver-dialog {
     border: 1px solid var(--kef-line);
     border-radius: 0.5rem;
     background: color-mix(in oklab, var(--kef-bg-card) 92%, var(--kef-bg));
@@ -473,7 +430,7 @@
 
   .repo-shell-header {
     display: grid;
-    grid-template-columns: auto minmax(12rem, 1fr) auto auto;
+    grid-template-columns: auto minmax(16rem, 1fr) auto auto;
     gap: 0.8rem;
     align-items: center;
     min-height: 3rem;
@@ -488,7 +445,7 @@
     text-decoration: none;
   }
 
-  .repo-url-control {
+  .repo-search-control {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
     gap: 0.5rem;
@@ -496,13 +453,12 @@
     min-width: 0;
   }
 
-  .repo-url-control lefine-text {
+  .repo-search-control lefine-text {
     color: var(--lefine-text-soft);
     font-size: 0.76rem;
   }
 
-  .repo-url-control input,
-  .repo-search-field input {
+  .repo-search-control input {
     width: 100%;
     min-height: 2rem;
     border: 1px solid var(--kef-line);
@@ -513,15 +469,17 @@
     font: inherit;
   }
 
+  .repo-search-control input[data-search-active='true'] {
+    font-weight: 650;
+  }
+
   .repo-clone-button,
   .repo-login-button,
   .repo-tabs button,
-  .repo-examples button,
-  .repo-composer-tools button,
-  .repo-composer-tools input,
-  .repo-search-actions button,
-  .repo-video-trigger,
-  .repo-video-dialog button {
+  .repo-task-button,
+  .kefine-solver-search-row,
+  .repo-select-solver,
+  .repo-solver-dialog button {
     min-height: 2rem;
     border: 1px solid var(--kef-line);
     border-radius: 0.35rem;
@@ -541,8 +499,8 @@
 
   .repo-tabs button[data-active='true'],
   .repo-apply,
-  .repo-video-trigger:not(:disabled),
-  .repo-video-dialog button[data-active='true'] {
+  .repo-select-solver:not(:disabled),
+  .repo-solver-dialog li[data-active='true'] {
     border-color: color-mix(in oklab, var(--kef-success) 34%, var(--kef-line));
     background: color-mix(in oklab, var(--kef-success) 12%, var(--kef-bg-card));
     color: color-mix(in oklab, var(--kef-success) 82%, var(--lefine-text));
@@ -551,167 +509,184 @@
 
   .repo-workbench {
     display: grid;
-    grid-template-columns: minmax(10rem, 13rem) minmax(0, 1fr);
+    grid-template-columns: minmax(13rem, 16rem) minmax(0, 1fr);
     gap: 1rem;
-    min-height: 14rem;
+    min-height: 27rem;
     padding: 1rem;
   }
 
-  .repo-examples {
+  .repo-task-rail {
     display: grid;
     align-content: start;
-    gap: 0.55rem;
-  }
-
-  .repo-examples button {
-    width: 100%;
-    min-height: 3rem;
-    text-align: left;
-    font-weight: 650;
-  }
-
-  .repo-task-panel {
-    display: grid;
-    gap: 0.75rem;
+    gap: 0.7rem;
+    padding: 0.85rem;
     min-width: 0;
   }
 
-  fieldset {
+  .repo-task-rail > strong,
+  .repo-side-history > strong,
+  .repo-test-block > header strong,
+  .repo-test-summary strong,
+  .repo-test-grid article > strong {
+    color: var(--lefine-text);
+    font-size: 0.92rem;
+    font-weight: 700;
+  }
+
+  .repo-example-list,
+  .repo-side-history,
+  .repo-side-history ul {
     display: grid;
-    gap: 0.5rem;
+    gap: 0.55rem;
+    min-width: 0;
+  }
+
+  .repo-side-history ul {
     margin: 0;
     padding: 0;
-    border: 0;
-    background: transparent;
+    list-style: none;
   }
 
-  fieldset label {
-    color: var(--lefine-text-soft);
-    font-size: 0.86rem;
-    font-weight: 650;
-  }
-
-  textarea[data-testid='kefine-task-input'] {
-    min-height: 7.5rem;
-    width: 100%;
-    resize: vertical;
-    border: 1px solid var(--kef-line);
-    border-radius: 0.55rem;
-    background: color-mix(in oklab, var(--kef-bg-card) 97%, white 3%);
-    color: var(--lefine-text);
-    padding: 0.8rem 0.9rem;
-    font: inherit;
-    line-height: 1.45;
-  }
-
-  button[data-testid='kefine-submit-task'] {
-    justify-self: end;
-    min-width: 5.5rem;
-    min-height: 2.2rem;
-    border: 1px solid color-mix(in oklab, var(--kef-success) 36%, var(--kef-line));
-    border-radius: 0.35rem;
-    background: var(--kef-success);
-    color: var(--kef-on-primary);
-    padding: 0.4rem 0.85rem;
-    font: inherit;
-    font-weight: 650;
-  }
-
-  .repo-composer-tools,
-  .repo-attachment-strip,
-  .repo-search-actions,
-  .repo-metric-controls {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.45rem;
-    align-items: center;
-  }
-
-  .repo-composer-tools label {
-    display: inline-flex;
-    gap: 0.4rem;
-    align-items: center;
-  }
-
-  .repo-composer-tools input {
-    width: 9rem;
-  }
-
-  .repo-file-input {
-    display: none;
-  }
-
-  .repo-search-panel,
-  .repo-history-panel {
-    display: grid;
-    gap: 0.65rem;
-    padding: 0.85rem 0.9rem;
-  }
-
-  .repo-search-field {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    gap: 0.55rem;
-    align-items: center;
-  }
-
-  .repo-search-field lefine-text {
-    color: var(--lefine-text-soft);
-    font-size: 0.76rem;
-  }
-
+  .repo-task-button,
   .kefine-solver-search-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 0.75rem;
-    align-items: center;
-    min-height: 2.7rem;
-    border: 1px solid var(--kef-line);
-    border-radius: 0.35rem;
-    background: color-mix(in oklab, var(--kef-bg-card) 96%, white 4%);
-    color: var(--lefine-text);
-    padding: 0.48rem 0.65rem;
-    text-decoration: none;
+    gap: 0.18rem;
+    width: 100%;
+    min-height: 3.05rem;
+    text-align: left;
   }
 
-  .kefine-solver-search-row[aria-disabled='true'] {
+  .kefine-solver-search-row:not(:disabled) {
+    background: color-mix(in oklab, var(--kef-success) 10%, var(--kef-bg-card));
+  }
+
+  .kefine-solver-search-row:disabled {
     cursor: progress;
     opacity: 0.76;
   }
 
+  .repo-task-button lefine-text,
+  .kefine-solver-search-row lefine-text,
   .kefine-solver-search-row strong,
-  .kefine-solver-search-row lefine-text {
+  .repo-task-button lefine-meta,
+  .kefine-solver-search-row lefine-meta,
+  .repo-test-block lefine-text,
+  .repo-test-block lefine-meta,
+  .repo-solver-dialog lefine-text {
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
+  .repo-task-button lefine-text,
+  .kefine-solver-search-row strong {
+    font-weight: 650;
+  }
+
+  .repo-task-button lefine-meta,
   .kefine-solver-search-row lefine-text,
-  .repo-secondary-task {
+  .kefine-solver-search-row lefine-meta,
+  .repo-test-block lefine-text,
+  .repo-test-block lefine-meta,
+  .repo-solver-dialog lefine-text {
     color: var(--lefine-text-soft);
     font-size: 0.82rem;
   }
 
-  .repo-video-trigger {
-    justify-self: end;
-    min-width: 8.5rem;
+  .repo-test-block {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    gap: 0.8rem;
+    min-width: 0;
+    min-height: 25rem;
+    padding: 0.95rem;
   }
 
-  .repo-video-trigger:disabled {
+  .repo-test-block > header,
+  .repo-test-block > footer {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    justify-content: space-between;
+    min-width: 0;
+  }
+
+  .repo-test-surface {
+    display: grid;
+    align-content: start;
+    gap: 0.85rem;
+    min-height: 17rem;
+    border: 1px solid var(--kef-line);
+    border-radius: 0.55rem;
+    background: color-mix(in oklab, var(--kef-bg-card) 97%, white 3%);
+    padding: 0.85rem;
+  }
+
+  .repo-test-summary {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 0.65rem;
+    align-items: center;
+    min-height: 2.35rem;
+    border-bottom: 1px solid var(--kef-line);
+    padding-bottom: 0.7rem;
+  }
+
+  .repo-test-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
+  .repo-test-grid article {
+    display: grid;
+    gap: 0.55rem;
+    min-width: 0;
+    border: 1px solid var(--kef-line);
+    border-radius: 0.45rem;
+    background: color-mix(in oklab, var(--kef-bg-card) 95%, var(--kef-bg-soft));
+    padding: 0.7rem;
+  }
+
+  .repo-test-grid dl {
+    display: grid;
+    grid-template-columns: minmax(4rem, 0.42fr) minmax(0, 1fr);
+    gap: 0.35rem 0.55rem;
+    margin: 0;
+  }
+
+  .repo-test-grid dt,
+  .repo-test-grid dd {
+    min-width: 0;
+    margin: 0;
+    border-radius: 0.3rem;
+    background: color-mix(in oklab, var(--kef-bg-card) 86%, white 4%);
+    padding: 0.36rem 0.5rem;
+    font-size: 0.82rem;
+  }
+
+  .repo-test-grid dt {
+    color: var(--lefine-text-soft);
+    font-weight: 650;
+  }
+
+  .repo-test-grid dd {
+    color: var(--lefine-text);
+    overflow-wrap: anywhere;
+  }
+
+  .repo-select-solver {
+    min-width: 9rem;
+    justify-self: end;
+  }
+
+  .repo-select-solver:disabled {
     cursor: progress;
     opacity: 0.58;
   }
 
-  .repo-history-panel ul {
-    display: grid;
-    gap: 0.45rem;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  kefine-video-backdrop {
+  kefine-solver-backdrop {
     position: fixed;
     inset: 0;
     z-index: 8;
@@ -722,7 +697,7 @@
     isolation: isolate;
   }
 
-  .repo-video-scrim {
+  .repo-solver-scrim {
     position: absolute;
     inset: 0;
     width: 100%;
@@ -735,31 +710,37 @@
     cursor: default;
   }
 
-  .repo-video-dialog {
+  .repo-solver-dialog {
     position: static;
     z-index: 1;
     display: grid;
-    gap: 0.75rem;
-    width: min(100%, 22rem);
-    max-height: min(90dvh, 42rem);
+    gap: 0.85rem;
+    width: min(100%, 42rem);
+    max-height: min(90dvh, 44rem);
     margin: 0;
     overflow: auto;
     padding: 1rem;
   }
 
-  .repo-video-dialog header {
+  .repo-solver-dialog > header {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 0.75rem;
-    align-items: center;
+    align-items: start;
   }
 
-  .repo-video-dialog h2 {
+  .repo-solver-dialog h2 {
     margin: 0;
     font-size: 1rem;
   }
 
-  .repo-metric-list {
+  .repo-solver-dialog header section {
+    display: grid;
+    gap: 0.18rem;
+    min-width: 0;
+  }
+
+  .repo-solver-ranks {
     display: grid;
     gap: 0.45rem;
     margin: 0;
@@ -767,11 +748,11 @@
     list-style: none;
   }
 
-  .repo-metric-list li {
+  .repo-solver-ranks li {
     display: grid;
-    grid-template-columns: 2.2rem minmax(0, 1fr);
+    grid-template-columns: 2.2rem minmax(0, 1fr) auto;
     gap: 0.5rem;
-    min-height: 2rem;
+    min-height: 2.1rem;
     align-items: center;
     border: 1px solid var(--kef-line);
     border-radius: 0.35rem;
@@ -779,12 +760,9 @@
     background: color-mix(in oklab, var(--kef-bg-card) 96%, white 4%);
   }
 
-  video {
-    width: 100%;
-    max-height: 18rem;
-    border: 1px solid var(--kef-line);
-    border-radius: 0.5rem;
-    background: #120f0c;
+  .repo-solver-ranks lefine-value {
+    font-family: 'Fira Mono', 'Fira Code', ui-monospace, monospace;
+    font-size: 0.82rem;
   }
 
   @media (max-width: 760px) {
@@ -795,19 +773,22 @@
 
     .repo-shell-header,
     .repo-workbench,
-    .repo-tabs {
-      grid-template-columns: 1fr;
-    }
-
-    .repo-url-control,
-    .repo-search-field,
-    .kefine-solver-search-row {
+    .repo-tabs,
+    .repo-search-control,
+    .repo-test-grid,
+    .repo-test-summary {
       grid-template-columns: 1fr;
     }
 
     .repo-tabs button,
-    .repo-video-trigger {
+    .repo-select-solver {
       width: 100%;
+    }
+
+    .repo-test-block > header,
+    .repo-test-block > footer {
+      align-items: stretch;
+      flex-direction: column;
     }
   }
 </style>

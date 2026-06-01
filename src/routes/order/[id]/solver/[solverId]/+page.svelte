@@ -106,7 +106,7 @@
 
   function goBack(event: MouseEvent) {
     event.preventDefault();
-    goto(`/order/${encodeURIComponent(data.orderId)}/solutions`);
+    goto(`/order/${encodeURIComponent(data.orderId)}`);
   }
 
   function handleSubmitCorrection(text: string) {
@@ -150,7 +150,7 @@
       author={solution.solver}
       project={solution.project}
       slug={solution.slug}
-      backHref={`/order/${encodeURIComponent(data.orderId)}/solutions`}
+      backHref={`/order/${encodeURIComponent(data.orderId)}`}
       onBack={goBack}
       onMerge={handleMerge}
       isMerged={isMerged}

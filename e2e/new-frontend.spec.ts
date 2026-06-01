@@ -5,31 +5,40 @@ import { gotoAndWaitForReady, mockOrderApi } from './helpers/kefine';
 const EXAMPLE_REPO = '@example/proxy-on-go/release';
 
 test.describe('New frontend task results', () => {
-  test('command center opens a demo video after creating the example proxy task', async ({ page }) => {
+  test('command center keeps search in the header and opens solver charts from the test block', async ({ page }) => {
     await mockOrderApi(page);
     await gotoAndWaitForReady(page);
 
     await expect(page.getByTestId('kefine-command-center')).toBeVisible();
-    await expect(page.getByTestId('kefine-repo-url')).toHaveValue(EXAMPLE_REPO);
+    await expect(page.getByTestId('kefine-task-input')).toHaveAttribute(
+      'placeholder',
+      `${EXAMPLE_REPO}#Make a go Proxy`
+    );
+    await expect(page.getByTestId('kefine-test-block').locator('input, textarea')).toHaveCount(0);
 
     await page.getByRole('button', { name: 'Make a go Proxy' }).first().click();
 
     const taskRow = page.getByTestId('kefine-solver-search-row');
     await expect(taskRow).toBeVisible();
-    await expect(taskRow).toContainText(`${EXAMPLE_REPO}#Make a go Proxy`);
+    await expect(taskRow).toContainText(EXAMPLE_REPO);
+    await expect(taskRow).toContainText('Make a go Proxy');
+    await expect(page.getByTestId('kefine-task-input')).toHaveValue(`${EXAMPLE_REPO}#Make a go Proxy`);
+    await expect(page.getByTestId('kefine-test-block').locator('input, textarea')).toHaveCount(0);
 
-    const demoVideo = page.getByTestId('kefine-demo-video-trigger');
-    await expect(demoVideo).toBeEnabled({ timeout: 6000 });
-    await demoVideo.click();
+    const selectSolver = page.getByTestId('kefine-solver-select-trigger');
+    await expect(selectSolver).toBeEnabled({ timeout: 6000 });
+    await selectSolver.click();
 
-    const dialog = page.getByTestId('kefine-demo-video-dialog');
+    const dialog = page.getByTestId('kefine-solver-metrics-dialog');
     await expect(dialog).toBeVisible();
-    await expect(dialog.getByRole('heading', { name: 'Metrics' })).toBeVisible();
-    await expect(dialog.locator('video')).toBeVisible();
-    await expect(dialog.locator('video source')).toHaveAttribute('src', /\/assets\/issue-114-example-task\.webm$/);
+    await expect(dialog.getByRole('heading', { name: 'Select solver' })).toBeVisible();
+    await expect(dialog.getByTestId('kefine-solver-options')).toContainText('Dragon A');
+    await expect(dialog.getByLabel('Execution time chart')).toBeVisible();
+    await expect(dialog.getByLabel('Solution weight chart')).toBeVisible();
+    await expect(dialog.locator('video')).toHaveCount(0);
   });
 
-  test('submitted Go proxy task opens solvers on a separate page with Apply actions', async ({ page }) => {
+  test('submitted Go proxy task stays in the command center and uses the solver modal', async ({ page }) => {
     await mockOrderApi(page);
     await gotoAndWaitForReady(page);
 
@@ -39,18 +48,15 @@ test.describe('New frontend task results', () => {
     const taskRow = page.getByTestId('kefine-solver-search-row');
     await expect(taskRow).toBeVisible();
     await expect(taskRow).toContainText('Нужен мини прокси на go');
-    await expect(taskRow).not.toContainText(EXAMPLE_REPO);
     await expect(page.getByTestId('kefine-inline-solver-list')).toHaveCount(0);
 
-    const openSolvers = page.getByRole('button', { name: 'Open solver list' });
-    await expect(openSolvers).toBeEnabled({ timeout: 6000 });
-    await expect(taskRow).toContainText(EXAMPLE_REPO);
-    await openSolvers.click();
+    const selectSolver = page.getByTestId('kefine-solver-select-trigger');
+    await expect(selectSolver).toBeEnabled({ timeout: 6000 });
+    await selectSolver.click();
 
-    await expect(page).toHaveURL(/\/order\/order-1\/solutions/);
-    await expect(page.getByTestId('solution-list-page')).toBeVisible();
-    await expect(page.getByTestId('solution-list-task-label')).toContainText(EXAMPLE_REPO);
-    await expect(page.getByRole('button', { name: 'Apply solution' }).first()).toBeVisible();
+    await expect(page).not.toHaveURL(/\/solutions/);
+    await expect(page.getByTestId('solution-list-page')).toHaveCount(0);
+    await expect(page.getByTestId('kefine-solver-metrics-dialog')).toBeVisible();
     await expect(page.getByRole('button', { name: /Merge/ })).toHaveCount(0);
   });
 

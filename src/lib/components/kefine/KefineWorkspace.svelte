@@ -1686,18 +1686,6 @@
     }
   }
 
-  function getSolverListHref() {
-    const orderId = solverSearchOrderId || currentOrder?.id || 'demo';
-    const params = new URLSearchParams();
-    const task = solverSearchText.trim();
-    if (task) {
-      params.set('task', task);
-    }
-
-    const suffix = params.toString();
-    return `/order/${encodeURIComponent(orderId)}/solutions${suffix ? `?${suffix}` : ''}`;
-  }
-
   function markSolverSearchComplete() {
     if (!solverSearchText.trim()) {
       return;
@@ -2878,7 +2866,6 @@
           solverSearchActive={solverSearchActive}
           solverSearchText={solverSearchText}
           solverSearchCompleted={solverSearchCompleted}
-          solverListHref={getSolverListHref()}
           solverSearchLabel={localeText.create.solverSearchLabel}
           solverLabel={localeText.labels.solver}
           matchedOrders={matchedOrders}
