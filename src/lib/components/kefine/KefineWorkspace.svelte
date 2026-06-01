@@ -1634,6 +1634,7 @@
 
   function openOrder(order: OrderView) {
     showOrderFlow(order);
+  }
 
   function openSolution(solutionId: string) {
     const orderId = currentOrder?.id || 'demo';
@@ -2786,7 +2787,6 @@
           solverSearchCompletedLabel={localeText.create.solverSearchCompleted}
           solverLabel={localeText.labels.solver}
           matchedOrders={matchedOrders}
-          recentOrders={recentCreatedOrders}
           isSearching={draft.description.trim().length > 0}
           matchedTasksLabel={localeText.create.matchedTasks}
           recentTasksLabel={localeText.labels.taskQueue}

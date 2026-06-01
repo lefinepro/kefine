@@ -77,7 +77,6 @@
     solverSearchCompletedLabel = 'Completed',
     solverLabel,
     matchedOrders,
-    recentOrders = [],
     isSearching,
     matchedTasksLabel,
     recentTasksLabel,

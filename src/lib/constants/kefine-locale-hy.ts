@@ -669,6 +669,35 @@ export const KEFINE_TEXT_HY = {
       action: 'Գործողություն'
     }
   },
+  orderStatus: {
+    ...KEFINE_TEXT_EN.orderStatus,
+    queued: 'Հերթում',
+    matching: 'Ընտրություն',
+    assigned: 'Նշանակված',
+    accepted: 'Ընդունված',
+    executing: 'Կատարվում է',
+    running: 'Կատարվում է',
+    review: 'Ստուգման մեջ',
+    completed: 'Ավարտված',
+    done: 'Ավարտված',
+    rejected: 'Մերժված',
+    stopped: 'Դադարեցված',
+    cancelled: 'Դադարեցված',
+    canceled: 'Դադարեցված',
+    failed: 'Ձախողված'
+  },
+  solutionTask: {
+    ...KEFINE_TEXT_EN.solutionTask,
+    task: 'Առաջադրանք',
+    comment: 'մեկնաբանություն',
+    comments: 'մեկնաբանություն',
+    applying: 'կիրառվում է…',
+    correctionInProgress: 'Ուղղումն ընթացքի մեջ է',
+    correctionBeingApplied: 'Ուղղումը կիրառվում է',
+    sendCorrection: 'Ուղարկել ուղղում…',
+    submitCorrection: 'Ուղարկել ուղղումը',
+    send: 'Ուղարկել'
+  },
   contact: {
     ...KEFINE_TEXT_EN.contact,
     title: 'Գրել Lefine-ին',
