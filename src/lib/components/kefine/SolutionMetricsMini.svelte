@@ -80,8 +80,8 @@
     gap: 0.6rem;
     padding: 0.85rem 0.9rem 0.95rem;
     background: var(--kef-bg-card);
-    border: 1px solid var(--kef-line);
-    border-radius: 0.75rem;
+    border: 1px solid var(--kef-line-soft);
+    border-radius: 0.25rem;
   }
 
   lef-metrics-mini-head {

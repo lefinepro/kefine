@@ -99,7 +99,7 @@
     padding: 0.85rem 0.85rem 0.95rem;
     background: color-mix(in oklab, var(--kef-bg-soft) 50%, var(--kef-bg-card));
     border: 1px solid var(--kef-line-soft);
-    border-radius: 0.6rem;
+    border-radius: 0.25rem;
     --chart-accent: var(--kef-color-primary, #3a7afe);
   }
 
@@ -220,7 +220,7 @@
     align-items: center;
     gap: 0.4rem;
     padding: 0.15rem 0.35rem;
-    border-radius: 0.35rem;
+    border-radius: 0.2rem;
     color: var(--lefine-text-soft);
   }
 

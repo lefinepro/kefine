@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onDestroy, tick } from 'svelte';
   import KefineOrderListItem from '$lib/components/kefine/KefineOrderListItem.svelte';
+  import KefineRepoSearch from '$lib/components/kefine/KefineRepoSearch.svelte';
   import SolutionMetricsMini from '$lib/components/kefine/SolutionMetricsMini.svelte';
   import { defaultMetrics } from '$lib/kefine/solutions-data';
   import type { DraftOrder, OrderView, TemplatePresentation } from './kefine-workflow';
@@ -88,7 +89,6 @@
     'Make a go Proxy ready for deploy'
   ];
 
-  let taskInput = $state<HTMLInputElement | null>(null);
   let solverDialogOpen = $state(false);
   let stopPressCancel: (() => void) | null = null;
   let solverCompleteCancel: (() => void) | null = null;
@@ -100,8 +100,9 @@
   const headerSearchValue = $derived(
     solverSearchActive && solverSearchText ? `${REPO_URL}#${solverSearchText}` : props.draft.description
   );
-  const activeTaskTitle = $derived(solverSearchText || props.draft.description.trim() || 'Make a go Proxy');
   const createdTaskStatus = $derived(solverSearchCompleted ? '25m status ready' : props.solverSearchLabel);
+  const headerSearchStatus = $derived(solverSearchActive ? createdTaskStatus : REPO_URL);
+  const activeTaskTitle = $derived(solverSearchText || props.draft.description.trim() || 'Make a go Proxy');
 
   function solverDisplayName(index: number) {
     return index === 0 ? 'Dragon A' : index === 1 ? 'Dragon B' : 'Dragon C';
@@ -198,20 +199,17 @@
 <section class="kefine-command-center kefine-card" data-testid="kefine-command-center" aria-label="Lefine command center">
   <header class="repo-shell-header">
     <a class="repo-brand" href="/" aria-label="Lefine home">Lefine</a>
-    <label class="repo-search-control">
-      <lefine-text>Search</lefine-text>
-      <input
-        bind:this={taskInput}
-        data-testid="kefine-task-input"
-        data-search-active={solverSearchActive}
-        value={headerSearchValue}
-        readonly={solverSearchActive}
-        aria-label={props.title}
-        placeholder={`${REPO_URL}#Make a go Proxy`}
-        onkeydown={handleTaskInputKeydown}
-        oninput={handleTaskInput}
-      />
-    </label>
+    <KefineRepoSearch
+      value={headerSearchValue}
+      placeholder={`${REPO_URL}#Make a go Proxy`}
+      ariaLabel={props.title}
+      status={headerSearchStatus}
+      active={solverSearchActive}
+      completed={solverSearchCompleted}
+      readonly={solverSearchActive}
+      onKeydown={handleTaskInputKeydown}
+      onInput={handleTaskInput}
+    />
     <button type="button" class="repo-clone-button">clone</button>
     <button type="button" class="repo-login-button">login</button>
   </header>
@@ -220,7 +218,7 @@
     <button type="button" data-active="true">Overview</button>
     <button type="button">Checkpoints</button>
     <button type="button">Source</button>
-    <button type="button" class="repo-apply">Apply</button>
+    <button type="button" class="repo-apply" data-testid="kefine-repo-apply" data-tone="success">Apply</button>
   </nav>
 
   <section class="repo-workbench">
@@ -399,6 +397,10 @@
 
 <style>
   .kefine-command-center {
+    --repo-radius: 0.25rem;
+    --repo-border: var(--kef-line-soft);
+    --repo-apply-green: #3f7a52;
+    --repo-apply-green-hover: #326643;
     display: grid;
     gap: 0.85rem;
     width: min(100%, calc(100vw - 7rem));
@@ -410,6 +412,7 @@
     box-shadow: none;
     padding: 0;
     color: var(--lefine-text);
+    animation: repo-command-enter 420ms var(--kef-ease-soft) both;
   }
 
   .kefine-command-center::after {
@@ -419,19 +422,17 @@
   .repo-shell-header,
   .repo-tabs,
   .repo-workbench,
-  .repo-task-rail,
-  .repo-test-block,
   .repo-solver-dialog {
-    border: 1px solid var(--kef-line);
-    border-radius: 0.5rem;
+    border: 1px solid var(--repo-border);
+    border-radius: var(--repo-radius);
     background: color-mix(in oklab, var(--kef-bg-card) 92%, var(--kef-bg));
     box-shadow: none;
   }
 
   .repo-shell-header {
     display: grid;
-    grid-template-columns: auto minmax(16rem, 1fr) auto auto;
-    gap: 0.8rem;
+    grid-template-columns: auto minmax(18rem, 1fr) auto auto;
+    gap: 0.65rem;
     align-items: center;
     min-height: 3rem;
     padding: 0.55rem 0.7rem;
@@ -445,34 +446,6 @@
     text-decoration: none;
   }
 
-  .repo-search-control {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    gap: 0.5rem;
-    align-items: center;
-    min-width: 0;
-  }
-
-  .repo-search-control lefine-text {
-    color: var(--lefine-text-soft);
-    font-size: 0.76rem;
-  }
-
-  .repo-search-control input {
-    width: 100%;
-    min-height: 2rem;
-    border: 1px solid var(--kef-line);
-    border-radius: 0.35rem;
-    background: color-mix(in oklab, var(--kef-bg-card) 96%, white 4%);
-    color: var(--lefine-text);
-    padding: 0.35rem 0.55rem;
-    font: inherit;
-  }
-
-  .repo-search-control input[data-search-active='true'] {
-    font-weight: 650;
-  }
-
   .repo-clone-button,
   .repo-login-button,
   .repo-tabs button,
@@ -481,13 +454,29 @@
   .repo-select-solver,
   .repo-solver-dialog button {
     min-height: 2rem;
-    border: 1px solid var(--kef-line);
-    border-radius: 0.35rem;
+    border: 1px solid var(--repo-border);
+    border-radius: var(--repo-radius);
     background: color-mix(in oklab, var(--kef-bg-card) 90%, var(--kef-bg-soft));
     color: var(--lefine-text);
     padding: 0.35rem 0.7rem;
     font: inherit;
     font-size: 0.86rem;
+    transition:
+      background-color var(--kef-motion-fast) var(--kef-ease-soft),
+      border-color var(--kef-motion-fast) var(--kef-ease-soft),
+      color var(--kef-motion-fast) var(--kef-ease-soft),
+      transform 120ms ease;
+  }
+
+  .repo-clone-button:hover,
+  .repo-login-button:hover,
+  .repo-tabs button:hover,
+  .repo-task-button:hover,
+  .kefine-solver-search-row:hover:not(:disabled),
+  .repo-select-solver:hover:not(:disabled),
+  .repo-solver-dialog button:hover {
+    border-color: var(--kef-line);
+    background: color-mix(in oklab, var(--kef-bg-card) 72%, var(--kef-bg-soft));
   }
 
   .repo-tabs {
@@ -497,14 +486,27 @@
     padding: 0.45rem;
   }
 
-  .repo-tabs button[data-active='true'],
-  .repo-apply,
+  .repo-tabs button[data-active='true'] {
+    border-color: color-mix(in oklab, var(--kef-primary) 28%, var(--repo-border));
+    background: color-mix(in oklab, var(--kef-primary) 10%, var(--kef-bg-card));
+    color: color-mix(in oklab, var(--kef-primary) 74%, var(--lefine-text));
+    font-weight: 650;
+  }
+
+  .repo-tabs .repo-apply,
   .repo-select-solver:not(:disabled),
   .repo-solver-dialog li[data-active='true'] {
-    border-color: color-mix(in oklab, var(--kef-success) 34%, var(--kef-line));
-    background: color-mix(in oklab, var(--kef-success) 12%, var(--kef-bg-card));
-    color: color-mix(in oklab, var(--kef-success) 82%, var(--lefine-text));
+    border-color: var(--repo-apply-green, #3f7a52);
+    background: var(--repo-apply-green, #3f7a52);
+    color: var(--kef-on-primary);
     font-weight: 650;
+  }
+
+  .repo-tabs .repo-apply:hover,
+  .repo-select-solver:hover:not(:disabled) {
+    border-color: var(--repo-apply-green-hover, #326643);
+    background: var(--repo-apply-green-hover, #326643);
+    color: var(--kef-on-primary);
   }
 
   .repo-workbench {
@@ -521,6 +523,7 @@
     gap: 0.7rem;
     padding: 0.85rem;
     min-width: 0;
+    border-right: 1px solid var(--repo-border);
   }
 
   .repo-task-rail > strong,
@@ -549,15 +552,28 @@
 
   .repo-task-button,
   .kefine-solver-search-row {
+    position: relative;
     display: grid;
     gap: 0.18rem;
     width: 100%;
     min-height: 3.05rem;
+    overflow: hidden;
     text-align: left;
+    animation: repo-surface-enter 360ms var(--kef-ease-soft) both;
   }
 
   .kefine-solver-search-row:not(:disabled) {
     background: color-mix(in oklab, var(--kef-success) 10%, var(--kef-bg-card));
+  }
+
+  .kefine-solver-search-row:not(:disabled)::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 1px solid color-mix(in oklab, var(--kef-success) 42%, transparent);
+    border-radius: inherit;
+    pointer-events: none;
+    animation: repo-ready-ring 1.6s var(--kef-ease-soft) infinite;
   }
 
   .kefine-solver-search-row:disabled {
@@ -601,6 +617,7 @@
     min-width: 0;
     min-height: 25rem;
     padding: 0.95rem;
+    animation: repo-surface-enter 440ms var(--kef-ease-soft) 80ms both;
   }
 
   .repo-test-block > header,
@@ -617,8 +634,8 @@
     align-content: start;
     gap: 0.85rem;
     min-height: 17rem;
-    border: 1px solid var(--kef-line);
-    border-radius: 0.55rem;
+    border: 1px solid var(--repo-border);
+    border-radius: var(--repo-radius);
     background: color-mix(in oklab, var(--kef-bg-card) 97%, white 3%);
     padding: 0.85rem;
   }
@@ -629,7 +646,7 @@
     gap: 0.65rem;
     align-items: center;
     min-height: 2.35rem;
-    border-bottom: 1px solid var(--kef-line);
+    border-bottom: 1px solid var(--repo-border);
     padding-bottom: 0.7rem;
   }
 
@@ -643,9 +660,9 @@
     display: grid;
     gap: 0.55rem;
     min-width: 0;
-    border: 1px solid var(--kef-line);
-    border-radius: 0.45rem;
-    background: color-mix(in oklab, var(--kef-bg-card) 95%, var(--kef-bg-soft));
+    border: 0;
+    border-radius: var(--repo-radius);
+    background: color-mix(in oklab, var(--kef-bg-soft) 52%, var(--kef-bg-card));
     padding: 0.7rem;
   }
 
@@ -660,7 +677,7 @@
   .repo-test-grid dd {
     min-width: 0;
     margin: 0;
-    border-radius: 0.3rem;
+    border-radius: 0.18rem;
     background: color-mix(in oklab, var(--kef-bg-card) 86%, white 4%);
     padding: 0.36rem 0.5rem;
     font-size: 0.82rem;
@@ -720,6 +737,7 @@
     margin: 0;
     overflow: auto;
     padding: 1rem;
+    animation: repo-dialog-enter 220ms var(--kef-ease-soft) both;
   }
 
   .repo-solver-dialog > header {
@@ -754,8 +772,8 @@
     gap: 0.5rem;
     min-height: 2.1rem;
     align-items: center;
-    border: 1px solid var(--kef-line);
-    border-radius: 0.35rem;
+    border: 1px solid var(--repo-border);
+    border-radius: var(--repo-radius);
     padding: 0.35rem 0.55rem;
     background: color-mix(in oklab, var(--kef-bg-card) 96%, white 4%);
   }
@@ -763,6 +781,55 @@
   .repo-solver-ranks lefine-value {
     font-family: 'Fira Mono', 'Fira Code', ui-monospace, monospace;
     font-size: 0.82rem;
+  }
+
+  @keyframes repo-command-enter {
+    from {
+      opacity: 0;
+      transform: translateY(0.65rem);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes repo-surface-enter {
+    from {
+      opacity: 0;
+      transform: translateY(0.35rem);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes repo-dialog-enter {
+    from {
+      opacity: 0;
+      transform: translateY(0.35rem) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes repo-ready-ring {
+    0%, 100% { opacity: 0.35; }
+    50% { opacity: 0.9; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .kefine-command-center,
+    .repo-task-button,
+    .kefine-solver-search-row,
+    .repo-test-block,
+    .repo-solver-dialog,
+    .kefine-solver-search-row:not(:disabled)::after {
+      animation: none;
+    }
   }
 
   @media (max-width: 760px) {
@@ -774,10 +841,14 @@
     .repo-shell-header,
     .repo-workbench,
     .repo-tabs,
-    .repo-search-control,
     .repo-test-grid,
     .repo-test-summary {
       grid-template-columns: 1fr;
+    }
+
+    .repo-task-rail {
+      border-right: 0;
+      border-bottom: 1px solid var(--repo-border);
     }
 
     .repo-tabs button,

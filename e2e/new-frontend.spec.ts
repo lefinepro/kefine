@@ -10,11 +10,24 @@ test.describe('New frontend task results', () => {
     await gotoAndWaitForReady(page);
 
     await expect(page.getByTestId('kefine-command-center')).toBeVisible();
+    await expect(page.getByTestId('kefine-command-center')).toHaveCSS('animation-name', /repo-command-enter/);
+    await expect(page.getByTestId('kefine-header-search')).toBeVisible();
+    await expect(page.getByTestId('kefine-header-search')).toHaveAttribute('data-search-active', 'false');
     await expect(page.getByTestId('kefine-task-input')).toHaveAttribute(
       'placeholder',
       `${EXAMPLE_REPO}#Make a go Proxy`
     );
+    await expect(page.getByTestId('kefine-header-search-status')).toContainText(EXAMPLE_REPO);
     await expect(page.getByTestId('kefine-test-block').locator('input, textarea')).toHaveCount(0);
+
+    const repoApply = page.getByTestId('kefine-repo-apply');
+    await expect(repoApply).toHaveAttribute('data-tone', 'success');
+    const applyBackground = await repoApply.evaluate((element) => getComputedStyle(element).backgroundColor);
+    const applyRgb = applyBackground.match(/\d+(\.\d+)?/g)?.map(Number) ?? [];
+    expect(applyRgb[1]).toBeGreaterThan(applyRgb[0]);
+    expect(applyRgb[1]).toBeGreaterThan(applyRgb[2]);
+    const tabsRadius = await page.locator('.repo-tabs').evaluate((element) => parseFloat(getComputedStyle(element).borderRadius));
+    expect(tabsRadius).toBeLessThanOrEqual(4);
 
     await page.getByRole('button', { name: 'Make a go Proxy' }).first().click();
 
@@ -22,6 +35,10 @@ test.describe('New frontend task results', () => {
     await expect(taskRow).toBeVisible();
     await expect(taskRow).toContainText(EXAMPLE_REPO);
     await expect(taskRow).toContainText('Make a go Proxy');
+    await expect(page.getByTestId('kefine-header-search')).toHaveAttribute('data-search-active', 'true');
+    await expect(page.getByTestId('kefine-header-search')).toHaveAttribute('data-search-completed', 'true', {
+      timeout: 6000
+    });
     await expect(page.getByTestId('kefine-task-input')).toHaveValue(`${EXAMPLE_REPO}#Make a go Proxy`);
     await expect(page.getByTestId('kefine-test-block').locator('input, textarea')).toHaveCount(0);
 

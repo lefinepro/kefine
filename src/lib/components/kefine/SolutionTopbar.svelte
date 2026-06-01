@@ -199,10 +199,10 @@
     align-items: center;
     gap: 0.35rem;
     padding: 0.35rem 0.85rem;
-    border-radius: 0.4rem;
-    border: 1px solid color-mix(in oklab, var(--kef-success, #16a34a) 45%, var(--kef-line));
-    background: color-mix(in oklab, var(--kef-success, #16a34a) 12%, var(--kef-bg-card));
-    color: var(--kef-success, #16a34a);
+    border-radius: 0.25rem;
+    border: 1px solid #3f7a52;
+    background: #3f7a52;
+    color: var(--kef-on-primary, #ffffff);
     font-size: 0.8rem;
     font-weight: 600;
     cursor: pointer;
@@ -214,8 +214,8 @@
   }
 
   .lef-merge-btn:hover:not(:disabled) {
-    background: color-mix(in oklab, var(--kef-success, #16a34a) 22%, var(--kef-bg-card));
-    border-color: var(--kef-success, #16a34a);
+    background: #326643;
+    border-color: #326643;
   }
 
   .lef-merge-btn:active:not(:disabled) {
@@ -228,8 +228,8 @@
   }
 
   .lef-merge-btn--merged {
-    background: color-mix(in oklab, var(--kef-success, #16a34a) 22%, var(--kef-bg-card));
-    border-color: var(--kef-success, #16a34a);
+    background: #3f7a52;
+    border-color: #3f7a52;
   }
 
   @media (max-width: 900px) {
