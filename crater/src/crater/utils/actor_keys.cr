@@ -2,16 +2,16 @@ require "base64"
 require "digest/sha256"
 require "uuid"
 
-module Lepos
+module Crater
   module Utils
     module ActorKeys
       extend self
 
-      PRIVATE_KEY_PREFIX        = "pqsk_"
-      PUBLIC_KEY_PREFIX         = "pqpk_"
-      ADDRESS_PREFIX            = "pq1_"
+      PRIVATE_KEY_PREFIX = "pqsk_"
+      PUBLIC_KEY_PREFIX = "pqpk_"
+      ADDRESS_PREFIX = "pq1_"
       COMPACT_PUBLIC_KEY_LENGTH = 30
-      COMPACT_ADDRESS_LENGTH    = 30
+      COMPACT_ADDRESS_LENGTH = 30
 
       def normalize_private_key(value : String) : String
         stripped_value = value.strip

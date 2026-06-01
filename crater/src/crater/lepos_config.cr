@@ -1,6 +1,6 @@
 require "rcl"
 
-module Lepos
+module Crater
   module LeposConfig
     DEFAULT_BRANCH = "main"
 
@@ -27,9 +27,9 @@ module Lepos
       def payload : JSON::Any
         JSON.parse(
           {
-            "repositories"          => repositories,
-            "repositoryConfigPath"  => repository_config_path,
-            "agentSystemPromptPath" => agent_system_prompt_path,
+            "repositories" => repositories,
+            "repositoryConfigPath" => repository_config_path,
+            "agentSystemPromptPath" => agent_system_prompt_path
           }.to_json
         )
       end
@@ -139,20 +139,20 @@ module Lepos
       def payload : JSON::Any
         JSON.parse(
           {
-            "issueStorage"          => issue_storage,
-            "issueRoot"             => issue_root,
-            "issueReadmeName"       => issue_readme_name,
-            "issueFileName"         => issue_file_name,
-            "issueAttachmentsDir"   => issue_attachments_dir,
-            "mainReadmePath"        => main_readme_path,
-            "planDocumentPath"      => plan_document_path,
-            "repositoryReadme"      => repository_readme,
-            "repositoryIcon"        => repository_icon,
-            "defaultBranch"         => default_branch,
-            "acceptPullIssues"      => accept_pull_issues,
-            "acceptPullPatches"     => accept_pull_patches,
-            "repsConfigPaths"       => reps_config_paths,
-            "agentSystemPromptPath" => agent_system_prompt_path,
+            "issueStorage" => issue_storage,
+            "issueRoot" => issue_root,
+            "issueReadmeName" => issue_readme_name,
+            "issueFileName" => issue_file_name,
+            "issueAttachmentsDir" => issue_attachments_dir,
+            "mainReadmePath" => main_readme_path,
+            "planDocumentPath" => plan_document_path,
+            "repositoryReadme" => repository_readme,
+            "repositoryIcon" => repository_icon,
+            "defaultBranch" => default_branch,
+            "acceptPullIssues" => accept_pull_issues,
+            "acceptPullPatches" => accept_pull_patches,
+            "repsConfigPaths" => reps_config_paths,
+            "agentSystemPromptPath" => agent_system_prompt_path
           }.to_json
         )
       end
@@ -191,7 +191,7 @@ module Lepos
           "  agent_system_prompt_path = \"#{LeposConfig.escape_rcl_value(agent_system_prompt_path || "")}\"",
           "",
           "  # Optional per-repository sets are read from reps.rcl/reps.toml in repo root",
-          "end",
+          "end"
         ].join('\n')
       end
 

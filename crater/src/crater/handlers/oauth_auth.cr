@@ -4,11 +4,11 @@ require "json"
 require "uri"
 require "uuid"
 
-module Lepos
+module Crater
   module Handlers
     module OauthAuth
       SESSION_TTL = 30.days
-      USER_AGENT  = "kefine-lepos-oauth"
+      USER_AGENT = "kefine-crater-oauth"
 
       record ProviderConfig, client_id : String, client_secret : String
       record ProviderProfile, email : String, display_name : String, handle : String
@@ -119,15 +119,15 @@ module Lepos
           URI.parse("https://oauth2.googleapis.com/token"),
           headers: HTTP::Headers{
             "Content-Type" => "application/x-www-form-urlencoded",
-            "Accept"       => "application/json",
-            "User-Agent"   => USER_AGENT,
+            "Accept" => "application/json",
+            "User-Agent" => USER_AGENT
           },
           body: URI::Params.encode({
-            "client_id"     => credentials.client_id,
+            "client_id" => credentials.client_id,
             "client_secret" => credentials.client_secret,
-            "code"          => code,
-            "grant_type"    => "authorization_code",
-            "redirect_uri"  => redirect_uri,
+            "code" => code,
+            "grant_type" => "authorization_code",
+            "redirect_uri" => redirect_uri
           })
         )
 
@@ -139,8 +139,8 @@ module Lepos
           URI.parse("https://openidconnect.googleapis.com/v1/userinfo"),
           headers: HTTP::Headers{
             "Authorization" => "Bearer #{access_token}",
-            "Accept"        => "application/json",
-            "User-Agent"    => USER_AGENT,
+            "Accept" => "application/json",
+            "User-Agent" => USER_AGENT
           }
         )
 
@@ -164,14 +164,14 @@ module Lepos
           URI.parse("https://github.com/login/oauth/access_token"),
           headers: HTTP::Headers{
             "Content-Type" => "application/x-www-form-urlencoded",
-            "Accept"       => "application/json",
-            "User-Agent"   => USER_AGENT,
+            "Accept" => "application/json",
+            "User-Agent" => USER_AGENT
           },
           body: URI::Params.encode({
-            "client_id"     => credentials.client_id,
+            "client_id" => credentials.client_id,
             "client_secret" => credentials.client_secret,
-            "code"          => code,
-            "redirect_uri"  => redirect_uri,
+            "code" => code,
+            "redirect_uri" => redirect_uri
           })
         )
 
@@ -183,8 +183,8 @@ module Lepos
           URI.parse("https://api.github.com/user"),
           headers: HTTP::Headers{
             "Authorization" => "Bearer #{access_token}",
-            "Accept"        => "application/vnd.github+json",
-            "User-Agent"    => USER_AGENT,
+            "Accept" => "application/vnd.github+json",
+            "User-Agent" => USER_AGENT
           }
         )
 
@@ -196,8 +196,8 @@ module Lepos
             URI.parse("https://api.github.com/user/emails"),
             headers: HTTP::Headers{
               "Authorization" => "Bearer #{access_token}",
-              "Accept"        => "application/vnd.github+json",
-              "User-Agent"    => USER_AGENT,
+              "Accept" => "application/vnd.github+json",
+              "User-Agent" => USER_AGENT
             }
           )
 
@@ -274,8 +274,8 @@ module Lepos
 
       private def self.encode_state(return_to : String) : String
         payload = {
-          "nonce"    => UUID.random.to_s,
-          "returnTo" => return_to,
+          "nonce" => UUID.random.to_s,
+          "returnTo" => return_to
         }.to_json
 
         Base64.urlsafe_encode(payload, padding: false)

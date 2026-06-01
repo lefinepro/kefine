@@ -2,9 +2,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {
   DEFAULT_PUBLIC_RUNTIME_CONFIG,
+  KEFINE_FEATURE_FLAG_IDS,
+  normalizeFeatureFlags,
   normalizeText,
   resolvePublicRuntimeConfig,
   type KefineDefaultActorPublicConfig,
+  type KefineFeatureFlags,
   type KefinePinnedServiceConfig,
   type KefinePublicRuntimeConfig
 } from '$lib/config/public-config';
@@ -15,6 +18,7 @@ type KefineFullConfig = {
   defaultActor: KefineDefaultActorPublicConfig & {
     privateKey: string;
   };
+  features: KefineFeatureFlags;
   backend: {
     craterBaseUrl: string;
     exchangeBaseUrl: string;
@@ -40,6 +44,7 @@ const DEFAULT_CONFIG: KefineFullConfig = {
     ...DEFAULT_PUBLIC_RUNTIME_CONFIG.defaultActor,
     privateKey: ''
   },
+  features: DEFAULT_PUBLIC_RUNTIME_CONFIG.features,
   backend: {
     craterBaseUrl: 'http://localhost:3001',
     exchangeBaseUrl: 'http://localhost:3001',
@@ -81,6 +86,17 @@ function readEnvironmentOverride(name: string): string {
   return normalizeText(process.env[name]);
 }
 
+function applyFeatureFlagEnvOverrides(base: KefineFeatureFlags): KefineFeatureFlags {
+  const resolved = { ...base };
+  for (const id of KEFINE_FEATURE_FLAG_IDS) {
+    const override = readEnvironmentOverride(`KEFINE_FEATURE_${id.toUpperCase()}`);
+    if (override) {
+      resolved[id] = normalizeFeatureFlags({ [id]: override })[id];
+    }
+  }
+  return resolved;
+}
+
 export function getKefineConfig(): KefineFullConfig {
   if (cachedConfig) {
     return cachedConfig;
@@ -91,7 +107,8 @@ export function getKefineConfig(): KefineFullConfig {
   const publicConfig = resolvePublicRuntimeConfig({
     app: objectSource.app,
     services: objectSource.services,
-    defaultActor: objectSource.defaultActor
+    defaultActor: objectSource.defaultActor,
+    features: objectSource.features
   });
   const defaultActor = (objectSource.defaultActor ?? {}) as Record<string, unknown>;
   const backend = (objectSource.backend ?? {}) as Record<string, unknown>;
@@ -100,6 +117,7 @@ export function getKefineConfig(): KefineFullConfig {
   cachedConfig = {
     app: publicConfig.app,
     services: publicConfig.services,
+    features: applyFeatureFlagEnvOverrides(publicConfig.features),
     defaultActor: {
       handle: publicConfig.defaultActor.handle,
       displayName: publicConfig.defaultActor.displayName,
@@ -150,6 +168,7 @@ export function getPublicRuntimeConfig(): KefinePublicRuntimeConfig {
       handle: config.defaultActor.handle,
       displayName: config.defaultActor.displayName
     },
+    features: config.features,
     backend: {
       craterBaseUrl: config.backend.craterBaseUrl
     }

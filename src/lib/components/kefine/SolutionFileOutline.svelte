@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { kefineLocaleText } from '$lib/constants/kefine-locale';
+
   type FileEntry = {
     file: string;
     added: number;
@@ -15,6 +17,9 @@
     onSelect: (file: string) => void;
   } = $props();
 
+  const localeText = $derived($kefineLocaleText);
+  const labels = $derived(localeText.solutionView);
+
   function iconFor(filename: string): 'go' | 'yaml' | 'rust' | 'mod' | 'doc' {
     const lower = filename.toLowerCase();
     if (lower.endsWith('go.mod')) return 'mod';
@@ -25,9 +30,9 @@
   }
 </script>
 
-<lef-file-outline aria-label="Modified files outline">
+<lef-file-outline aria-label={labels.modifiedFilesOutline}>
   <lef-file-outline-head>
-    <strong>Files</strong>
+    <strong>{labels.files}</strong>
     <lefine-text>{files.length}</lefine-text>
   </lef-file-outline-head>
   <lef-file-outline-list role="list">
@@ -138,7 +143,7 @@
   lef-file-outline-glyph[data-kind='doc'] { background: color-mix(in oklab, var(--lefine-text-soft) 55%, transparent); }
 
   lef-file-outline-name {
-    font-family: 'Fira Mono', 'Fira Code', ui-monospace, monospace;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
     font-size: 0.78rem;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -149,7 +154,7 @@
   lef-file-outline-stats {
     display: inline-flex;
     gap: 0.35rem;
-    font-family: 'Fira Mono', 'Fira Code', ui-monospace, monospace;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
     font-size: 0.7rem;
     font-weight: 700;
   }

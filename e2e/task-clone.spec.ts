@@ -26,7 +26,7 @@ test.describe('Task Clone', () => {
 
     await page.reload();
     await expect(page).toHaveURL(/\/order-1$/);
-    await expect(page.getByRole('heading', { name: 'Repository creation flow' })).toBeVisible();
+    await expect(page.locator('strong').filter({ hasText: 'Repository creation flow' })).toBeVisible();
 
     await page.getByRole('button', { name: 'Clone task' }).click();
 

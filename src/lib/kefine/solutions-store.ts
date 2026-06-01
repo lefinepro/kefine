@@ -21,15 +21,7 @@ function createSolutionsStore() {
       }
       store.set(solutions);
     },
-    update: (updater: (solutions: Solution[]) => Solution[]) => {
-      store.update((current) => {
-        const next = updater(current);
-        if (browser) {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-        }
-        return next;
-      });
-    },
+    update: store.update,
     getAll: () => get(store)
   };
 }

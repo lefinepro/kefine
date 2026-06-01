@@ -1,6 +1,6 @@
 require "kemal"
 require "json"
-require "../aptok"
+require "../activitypub/types"
 require "../order_queue"
 require "../utils/config"
 
@@ -34,7 +34,7 @@ module Lepos
         body = env.request.body.try(&.gets_to_end) || ""
 
         activity = begin
-          AptokPayload.activity_from_json(body)
+          ActivityPub::Activity.from_json(body)
         rescue JSON::ParseException
           env.response.status_code = 400
           return({error: "Invalid JSON body"}.to_json)
@@ -54,28 +54,27 @@ module Lepos
 
         env.response.status_code = 202
         {
-          accepted:   true,
-          orderId:    order.id,
-          status:     order.status,
-          solver:     order.solver,
-          uiScenario: order.ui_scenario,
+          accepted: true,
+          orderId: order.id,
+          status: order.status,
+          solver: order.solver,
+          uiScenario: order.ui_scenario
         }.to_json
       end
 
-      def self.accept_activity(activity : Aptok::Vocab::Activity, config : Utils::Config) : OrderQueue::OrderRecord
-        activity_type = activity.type || ""
-        unless ACCEPTED_TYPES.includes?(activity_type)
-          raise OrderQueue::Error::InvalidActivity.new("Unknown activity type: #{activity_type}")
+      def self.accept_activity(activity : ActivityPub::Activity, config : Utils::Config) : OrderQueue::OrderRecord
+        unless ACCEPTED_TYPES.includes?(activity.type)
+          raise OrderQueue::Error::InvalidActivity.new("Unknown activity type: #{activity.type}")
         end
 
         # TODO: Verify HTTP Signature before processing
-        case activity_type
+        case activity.type
         when "Create"
           OrderQueue.receive_create(activity, config)
         when "Update"
           OrderQueue.submit_update(activity, config)
         else
-          raise OrderQueue::Error::InvalidActivity.new("Unknown activity type: #{activity_type}")
+          raise OrderQueue::Error::InvalidActivity.new("Unknown activity type: #{activity.type}")
         end
       end
     end

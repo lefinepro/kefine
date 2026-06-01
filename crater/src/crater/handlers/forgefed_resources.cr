@@ -1,11 +1,11 @@
 require "kemal"
 require "json"
-require "../aptok"
+require "../activitypub/types"
 require "../forgefed_store"
 require "../repository_store"
 require "../utils/config"
 
-module Lepos
+module Crater
   module Handlers
     module ForgeFedResources
       def self.register(config : Utils::Config)
@@ -33,12 +33,14 @@ module Lepos
           branches = ForgeFedStore.list_branches(repository.id, config).map do |branch|
             JSON.parse(ForgeFedStore.branch_json(branch, config).to_json)
           end
-          collection = Aptok.ordered_collection(
-            "#{config.crater_url}/repositories/#{repository.slug}/branches",
-            branches.compact_map(&.as_h?)
-          )
 
-          collection.to_json
+          {
+            "@context" => ActivityPub::CONTEXT,
+            "id" => "#{config.crater_url}/repositories/#{repository.slug}/branches",
+            "type" => "OrderedCollection",
+            "totalItems" => branches.size,
+            "orderedItems" => branches,
+          }.to_json
         end
 
         get "/repositories/:slug/outbox" do |env|
@@ -99,7 +101,13 @@ module Lepos
           tickets = ForgeFedStore.list_merge_requests_for_patch_tracker(tracker.id, config).map do |mr|
             JSON.parse(ForgeFedStore.merge_request_json(mr, config).to_json)
           end
-          Aptok.ordered_collection("#{tracker.actor_uri}/tickets", tickets.compact_map(&.as_h?)).to_json
+          {
+            "@context" => ActivityPub::CONTEXT,
+            "id" => "#{tracker.actor_uri}/tickets",
+            "type" => "OrderedCollection",
+            "totalItems" => tickets.size,
+            "orderedItems" => tickets,
+          }.to_json
         end
 
         get "/patch-trackers/:id/outbox" do |env|
@@ -197,15 +205,16 @@ module Lepos
         page = env.params.query["page"]?.try(&.to_i?) || 1
         total = ForgeFedStore.activity_total(actor_uri, config)
         activities = ForgeFedStore.list_activities(actor_uri, page, config)
-        page_payload = Aptok.ordered_collection_page(
-          "#{actor_uri}/outbox?page=#{page}",
-          "#{actor_uri}/outbox",
-          activities.compact_map(&.as_h?),
-          (page * ForgeFedStore::OUTBOX_PAGE_SIZE) < total ? "#{actor_uri}/outbox?page=#{page + 1}" : nil
-        )
-        page_payload["totalItems"] = Aptok.json(total)
-        page_payload["first"] = Aptok.json("#{actor_uri}/outbox?page=1") if total > 0
-        page_payload.to_json
+        {
+          "@context" => ActivityPub::CONTEXT,
+          "id" => "#{actor_uri}/outbox?page=#{page}",
+          "type" => "OrderedCollectionPage",
+          "partOf" => "#{actor_uri}/outbox",
+          "orderedItems" => activities,
+          "totalItems" => total,
+          "first" => total > 0 ? "#{actor_uri}/outbox?page=1" : nil,
+          "next" => (page * ForgeFedStore::OUTBOX_PAGE_SIZE) < total ? "#{actor_uri}/outbox?page=#{page + 1}" : nil,
+        }.to_json
       end
     end
   end

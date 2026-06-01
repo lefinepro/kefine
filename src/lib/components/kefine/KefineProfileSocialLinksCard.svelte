@@ -1,5 +1,6 @@
 <script lang="ts">
   import Icon from '@iconify/svelte';
+  import { kefineLocaleText } from '$lib/constants/kefine-locale';
   import { resolveProfileAccountPresentation } from '$lib/profile/profile-accounts';
   import type { ProfileSocialLink } from '$lib/types/user';
 
@@ -18,6 +19,7 @@
   } = $props();
 
   let failedFavicons = $state<Record<string, boolean>>({});
+  const localeText = $derived($kefineLocaleText);
 
   function handleRemove(id: string) {
     links = links.filter((link) => link.id !== id);
@@ -49,7 +51,7 @@
         </lef-profile-social-leading>
         <input bind:value={link.value} placeholder={valuePlaceholder} aria-label={valuePlaceholder} />
         {#if isOwner}
-          <button type="button" data-variant="ghost" aria-label="Remove social link" onclick={() => handleRemove(link.id)}>×</button>
+          <button type="button" data-variant="ghost" aria-label={localeText.profile.removeSocialLink} onclick={() => handleRemove(link.id)}>×</button>
         {/if}
       </lef-profile-social-row>
     {/each}

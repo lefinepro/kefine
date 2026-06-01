@@ -1,7 +1,7 @@
 require "base64"
 require "socket"
 
-module Lepos
+module Crater
   module Utils
     module MaddyMailer
       class DeliveryError < Exception
@@ -120,7 +120,7 @@ module Lepos
           "MIME-Version: 1.0",
           "Content-Type: text/plain; charset=UTF-8",
           "",
-          normalized_body,
+          normalized_body
         ].join("\r\n")
       end
     end
