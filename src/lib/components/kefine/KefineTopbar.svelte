@@ -86,6 +86,7 @@
     searchWidgetBackLabel = 'Back to results',
     socialLinks,
     showSocialLinks = false,
+    showDockControls = true,
     showEmailButton = true,
     showAuthButton = true,
     legalLinks,
@@ -147,6 +148,7 @@
     searchWidgetBackLabel?: string;
     socialLinks: SocialLink[];
     showSocialLinks?: boolean;
+    showDockControls?: boolean;
     showEmailButton?: boolean;
     showAuthButton?: boolean;
     legalLinks: LegalLink[];
@@ -713,43 +715,45 @@
             {/each}
           </kefine-sidebar-nav>
 
-          <kefine-sidebar-toolbar aria-label={dockLabel}>
-            <button
-              type="button"
-              data-part="icon"
-              data-role="theme"
-              data-testid="kefine-topbar-theme-toggle"
-              aria-label={themeLabel}
-              title={themeLabel}
-              onclick={handleThemeButtonClick}
-              ondblclick={handleThemeButtonDoubleClick}
-            >
-              <KefineTopbarIcon name={isDarkTheme ? 'theme-light' : 'theme-dark'} size={20} />
-            </button>
-            <button
-              type="button"
-              data-part="icon"
-              data-role="locale"
-              data-testid="kefine-topbar-locale-toggle"
-              aria-label={localeLabel}
-              title={localeLabel}
-              onclick={handleLocaleButtonClick}
-              ondblclick={handleLocaleButtonDoubleClick}
-            >
-              <KefineTopbarIcon name={currentLocaleFlagIcon} size={20} />
-            </button>
-            {#if showEmailButton}
+          {#if showDockControls}
+            <kefine-sidebar-toolbar aria-label={dockLabel}>
               <button
                 type="button"
                 data-part="icon"
-                aria-label={mailLabel}
-                title={mailLabel}
-                onclick={handleEmailClick}
+                data-role="theme"
+                data-testid="kefine-topbar-theme-toggle"
+                aria-label={themeLabel}
+                title={themeLabel}
+                onclick={handleThemeButtonClick}
+                ondblclick={handleThemeButtonDoubleClick}
               >
-                <KefineTopbarIcon name="email" size={20} />
+                <KefineTopbarIcon name={isDarkTheme ? 'theme-light' : 'theme-dark'} size={20} />
               </button>
-            {/if}
-          </kefine-sidebar-toolbar>
+              <button
+                type="button"
+                data-part="icon"
+                data-role="locale"
+                data-testid="kefine-topbar-locale-toggle"
+                aria-label={localeLabel}
+                title={localeLabel}
+                onclick={handleLocaleButtonClick}
+                ondblclick={handleLocaleButtonDoubleClick}
+              >
+                <KefineTopbarIcon name={currentLocaleFlagIcon} size={20} />
+              </button>
+              {#if showEmailButton}
+                <button
+                  type="button"
+                  data-part="icon"
+                  aria-label={mailLabel}
+                  title={mailLabel}
+                  onclick={handleEmailClick}
+                >
+                  <KefineTopbarIcon name="email" size={20} />
+                </button>
+              {/if}
+            </kefine-sidebar-toolbar>
+          {/if}
         </kefine-sidebar-stack>
       </kefine-sidebar-popover>
       <kefine-picker-popover

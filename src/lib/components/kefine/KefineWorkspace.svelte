@@ -2840,6 +2840,7 @@
   initialWidget={initialWidget}
   socialLinks={sidebarSocialLinks}
   showSocialLinks={false}
+  showDockControls={step !== 'create'}
   legalLinks={sidebarLegalLinks}
   onExpandedChange={(expanded) => { leftNavExpanded = expanded; }}
   onBrandClick={handleTopbarBrandClick}
