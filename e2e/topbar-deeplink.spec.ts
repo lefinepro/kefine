@@ -9,7 +9,6 @@ async function gotoDeepLink(page: import('@playwright/test').Page, path: string)
     window.localStorage.clear();
   });
   await page.goto(path);
-  await expect(page.getByTestId('kefine-topbar-search-trigger')).toBeVisible();
 }
 
 test.describe('Search deep links', () => {
@@ -24,6 +23,7 @@ test.describe('Search deep links', () => {
       'data-mode',
       'anonymous'
     );
+    await expect(page.getByTestId('kefine-topbar-search-trigger')).toHaveCount(0);
     await expect(page.getByTestId('kefine-topbar-search-dialog')).not.toBeVisible();
   });
 

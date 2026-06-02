@@ -10,6 +10,11 @@
   import type { KefineLocale } from '$lib/constants/kefine-locale';
   import type { KefineTopbarIconName } from '$lib/components/kefine/KefineTopbarIcon.svelte';
   import type { KefineSearchWidgetId } from '$lib/kefine/search-widgets';
+  import type {
+    TopbarSearchAction,
+    TopbarSearchItem,
+    TopbarSearchRequest
+  } from '$lib/kefine/topbar-search-context';
 
   /** Built-in widgets the command palette can surface inline on any page. */
   export type { KefineSearchWidgetId };
@@ -27,18 +32,7 @@
     href: string;
   };
 
-  export type KefineTopbarSearchItem = {
-    id: string;
-    title: string;
-    subtitle?: string;
-    category?: string;
-    href?: string;
-    actionLabel?: string;
-    icon?: KefineTopbarIconName;
-    keywords?: string[];
-    /** When set, activating the item opens this widget inline instead of navigating. */
-    widget?: KefineSearchWidgetId;
-  };
+  export type KefineTopbarSearchItem = TopbarSearchItem;
 
   let {
     brandLabel,
@@ -77,6 +71,8 @@
     searchHomeLabel = 'Home',
     searchHomeHref = '/',
     searchItems = [],
+    searchActions = [],
+    searchRequest = null,
     initialSearchQuery = '',
     searchDefaultQuery = '',
     initialWidget = null,
@@ -88,6 +84,7 @@
     searchWidgetBackLabel = 'Back to results',
     socialLinks,
     showSocialLinks = false,
+    showDockControls = true,
     showEmailButton = true,
     showAuthButton = true,
     legalLinks,
@@ -139,6 +136,8 @@
     searchHomeLabel?: string;
     searchHomeHref?: string;
     searchItems?: KefineTopbarSearchItem[];
+    searchActions?: TopbarSearchAction[];
+    searchRequest?: TopbarSearchRequest | null;
     /** Deep-link query that seeds the palette on non-search routes. */
     initialSearchQuery?: string;
     /** Query to prefill when opening the palette manually on saved-search routes. */
@@ -153,6 +152,7 @@
     searchWidgetBackLabel?: string;
     socialLinks: SocialLink[];
     showSocialLinks?: boolean;
+    showDockControls?: boolean;
     showEmailButton?: boolean;
     showAuthButton?: boolean;
     legalLinks: LegalLink[];
@@ -199,6 +199,12 @@
   let searchFocusRequest = $state(0);
   let activeSearchWidget = $state<KefineSearchWidgetId | null>(null);
   const searchShortcutLabel = 'Ctrl K';
+  const contextualSearchPlaceholder = $derived(
+    searchPlaceholder.trim().startsWith('@') ? searchPlaceholder.trim() : ''
+  );
+  const visibleSearchPlaceholder = $derived(
+    contextualSearchPlaceholder ? searchLabel : searchPlaceholder
+  );
   const widgetSearchItems = $derived.by((): KefineTopbarSearchItem[] => {
     if (!showSearchWidgets) {
       return [];
@@ -288,11 +294,15 @@
   const normalizedSearchQuery = $derived(normalizeSearchValue(searchQuery));
   const filteredSearchItems = $derived.by(() => {
     if (!normalizedSearchQuery) {
-      return allSearchItems.slice(0, 9);
+      return allSearchItems.filter((item) => !item.hideWhenEmpty).slice(0, 9);
     }
 
     return allSearchItems
-      .filter((item) => getSearchHaystack(item).includes(normalizedSearchQuery))
+      .filter(
+        (item) =>
+          getSearchHaystack(item).includes(normalizedSearchQuery) ||
+          item.showForQuery?.(searchQuery) === true
+      )
       .slice(0, 9);
   });
 
@@ -317,6 +327,7 @@
   // We track the applied signature so the dialog opens once per distinct link
   // instead of re-opening on every reactive pass.
   let appliedDeepLink = $state<string | null>(null);
+  let appliedSearchRequestId = $state(0);
   $effect(() => {
     if (!showSearch) {
       return;
@@ -337,6 +348,18 @@
 
     appliedDeepLink = signature;
     void openSearchDialog({ query: initialSearchQuery ?? '', widget });
+  });
+
+  $effect(() => {
+    if (!showSearch || !searchRequest || appliedSearchRequestId === searchRequest.id) {
+      return;
+    }
+
+    appliedSearchRequestId = searchRequest.id;
+    void openSearchDialog({
+      query: searchRequest.query ?? '',
+      widget: searchRequest.widget ?? null
+    });
   });
 
   function handleBrandClick() {
@@ -405,6 +428,14 @@
 
   function getSearchItemTestId(item: KefineTopbarSearchItem) {
     return `kefine-topbar-search-result-${item.id.replace(/[^a-zA-Z0-9_-]+/g, '-')}`;
+  }
+
+  function getSearchItemSubtitle(item: KefineTopbarSearchItem) {
+    return item.subtitleFromQuery?.(searchQuery) || item.subtitle || item.category || item.href || searchOpenLabel;
+  }
+
+  function getSearchItemHref(item: KefineTopbarSearchItem) {
+    return item.hrefFromQuery?.(searchQuery.trim()) || item.href || '';
   }
 
   async function openSearchDialog(options?: { query?: string; widget?: KefineSearchWidgetId | null }) {
@@ -542,9 +573,9 @@
       return;
     }
 
+    const href = getSearchItemHref(item).trim();
     closeSearchDialog();
 
-    const href = item.href?.trim();
     if (href && typeof window !== 'undefined') {
       window.location.assign(href);
     }
@@ -728,43 +759,45 @@
             {/each}
           </kefine-sidebar-nav>
 
-          <kefine-sidebar-toolbar aria-label={dockLabel}>
-            <button
-              type="button"
-              data-part="icon"
-              data-role="theme"
-              data-testid="kefine-topbar-theme-toggle"
-              aria-label={themeLabel}
-              title={themeLabel}
-              onclick={handleThemeButtonClick}
-              ondblclick={handleThemeButtonDoubleClick}
-            >
-              <KefineTopbarIcon name={isDarkTheme ? 'theme-light' : 'theme-dark'} size={20} />
-            </button>
-            <button
-              type="button"
-              data-part="icon"
-              data-role="locale"
-              data-testid="kefine-topbar-locale-toggle"
-              aria-label={localeLabel}
-              title={localeLabel}
-              onclick={handleLocaleButtonClick}
-              ondblclick={handleLocaleButtonDoubleClick}
-            >
-              <KefineTopbarIcon name={currentLocaleFlagIcon} size={20} />
-            </button>
-            {#if showEmailButton}
+          {#if showDockControls}
+            <kefine-sidebar-toolbar aria-label={dockLabel}>
               <button
                 type="button"
                 data-part="icon"
-                aria-label={mailLabel}
-                title={mailLabel}
-                onclick={handleEmailClick}
+                data-role="theme"
+                data-testid="kefine-topbar-theme-toggle"
+                aria-label={themeLabel}
+                title={themeLabel}
+                onclick={handleThemeButtonClick}
+                ondblclick={handleThemeButtonDoubleClick}
               >
-                <KefineTopbarIcon name="email" size={20} />
+                <KefineTopbarIcon name={isDarkTheme ? 'theme-light' : 'theme-dark'} size={20} />
               </button>
-            {/if}
-          </kefine-sidebar-toolbar>
+              <button
+                type="button"
+                data-part="icon"
+                data-role="locale"
+                data-testid="kefine-topbar-locale-toggle"
+                aria-label={localeLabel}
+                title={localeLabel}
+                onclick={handleLocaleButtonClick}
+                ondblclick={handleLocaleButtonDoubleClick}
+              >
+                <KefineTopbarIcon name={currentLocaleFlagIcon} size={20} />
+              </button>
+              {#if showEmailButton}
+                <button
+                  type="button"
+                  data-part="icon"
+                  aria-label={mailLabel}
+                  title={mailLabel}
+                  onclick={handleEmailClick}
+                >
+                  <KefineTopbarIcon name="email" size={20} />
+                </button>
+              {/if}
+            </kefine-sidebar-toolbar>
+          {/if}
         </kefine-sidebar-stack>
       </kefine-sidebar-popover>
       <kefine-picker-popover
@@ -854,16 +887,40 @@
           type="button"
           data-part="search-trigger"
           data-testid="kefine-topbar-search-trigger"
+          data-context={contextualSearchPlaceholder ? 'project' : 'search'}
           aria-label={searchLabel}
           aria-haspopup="dialog"
           aria-expanded={searchOpen}
           title={`${searchLabel} (${searchShortcutLabel})`}
           onclick={() => void openSearchDialog()}
         >
-          <KefineTopbarIcon name="search" size={18} />
-          <lefine-text data-part="search-placeholder">{searchPlaceholder}</lefine-text>
+          {#if contextualSearchPlaceholder}
+            <lefine-text data-part="search-context" data-testid="kefine-topbar-search-context">
+              {contextualSearchPlaceholder}
+            </lefine-text>
+          {:else}
+            <KefineTopbarIcon name="search" size={18} />
+          {/if}
+          <lefine-text data-part="search-placeholder">{visibleSearchPlaceholder}</lefine-text>
           <lefine-kbd data-part="search-shortcut">{searchShortcutLabel}</lefine-kbd>
         </button>
+        {#if searchActions.length > 0}
+          <kefine-topbar-search-actions>
+            {#each searchActions as action (action.id)}
+              <button
+                type="button"
+                data-part="search-action"
+                data-testid={action.testId}
+                data-icon={action.icon}
+                aria-label={action.label}
+                title={action.label}
+                onclick={() => void action.onClick()}
+              >
+                <KefineTopbarIcon name={action.icon} size={18} />
+              </button>
+            {/each}
+          </kefine-topbar-search-actions>
+        {/if}
       </kefine-topbar-search-shell>
 
       <dialog
@@ -929,7 +986,7 @@
                   <kefine-search-result-copy>
                     <lefine-text data-part="search-result-title">{item.title}</lefine-text>
                     <lefine-text data-part="search-result-subtitle">
-                      {item.subtitle || item.category || item.href || searchOpenLabel}
+                      {getSearchItemSubtitle(item)}
                     </lefine-text>
                   </kefine-search-result-copy>
                   <kefine-search-result-meta>
@@ -1025,6 +1082,8 @@
 
   kefine-topbar-search-shell {
     display: flex;
+    align-items: center;
+    gap: 0.4rem;
     justify-content: center;
     flex: 1 1 min(28rem, 48vw);
     min-width: 2.55rem;
@@ -1066,6 +1125,67 @@
     box-shadow: 0 10px 22px color-mix(in oklab, var(--lefine-text) 6%, transparent);
   }
 
+  button[data-part='search-trigger'][data-context='project'] {
+    grid-template-columns: minmax(0, max-content) minmax(5rem, 1fr) auto;
+  }
+
+  kefine-topbar-search-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex: 0 0 auto;
+  }
+
+  button[data-part='search-action'] {
+    display: inline-grid;
+    place-items: center;
+    width: 2.5rem;
+    min-width: 2.5rem;
+    height: 2.5rem;
+    padding: 0;
+    border: var(--kef-border-width-soft) solid color-mix(in oklab, var(--kef-border) 68%, transparent);
+    border-radius: calc(var(--kef-radius-ui) - 0.04rem);
+    background: color-mix(in oklab, var(--kef-bg-card) 90%, var(--kef-bg));
+    color: color-mix(in oklab, var(--lefine-text) 82%, transparent);
+    cursor: pointer;
+    box-shadow: 0 8px 18px color-mix(in oklab, #544536 5%, transparent);
+    transition:
+      background-color var(--kef-motion-fast) var(--kef-ease-soft),
+      border-color var(--kef-motion-fast) var(--kef-ease-soft),
+      color var(--kef-motion-fast) var(--kef-ease-soft),
+      box-shadow var(--kef-motion-fast) var(--kef-ease-soft);
+  }
+
+  kefine-topbar[data-scrolled='true'] button[data-part='search-action'] {
+    background: transparent;
+    box-shadow: none;
+  }
+
+  button[data-part='search-action']:hover {
+    border-color: color-mix(in oklab, var(--kef-primary) 34%, var(--kef-border));
+    background: color-mix(in oklab, var(--kef-primary) 8%, var(--kef-bg-card));
+    color: color-mix(in oklab, var(--kef-primary) 92%, #4f3d30);
+    box-shadow: 0 10px 22px color-mix(in oklab, var(--lefine-text) 6%, transparent);
+  }
+
+  button[data-part='search-trigger'] [data-part='search-context'] {
+    display: inline-flex;
+    align-items: center;
+    min-width: 0;
+    max-width: 14rem;
+    padding: 0.24rem 0.48rem;
+    border-radius: calc(var(--kef-radius-sm) + 0.08rem);
+    background: color-mix(in oklab, var(--kef-primary) 18%, var(--kef-bg-card));
+    color: color-mix(in oklab, var(--kef-primary) 82%, var(--lefine-text));
+    font-size: 0.83rem;
+    font-weight: 760;
+    line-height: 1;
+    letter-spacing: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   button[data-part='search-trigger'] [data-part='search-placeholder'] {
     min-width: 0;
     overflow: hidden;
@@ -1077,6 +1197,10 @@
     letter-spacing: 0;
     text-align: left;
     color: color-mix(in oklab, currentColor 84%, transparent);
+  }
+
+  button[data-part='search-trigger'][data-context='project'] [data-part='search-placeholder'] {
+    color: color-mix(in oklab, var(--lefine-text-soft) 74%, transparent);
   }
 
   lefine-kbd {
@@ -1624,9 +1748,20 @@
     }
 
     kefine-topbar-search-shell {
-      flex: 0 0 2.55rem;
-      width: 2.55rem;
       margin-left: auto;
+      flex: 0 0 auto;
+      width: auto;
+      gap: 0.32rem;
+    }
+
+    kefine-topbar-search-actions {
+      gap: 0.28rem;
+    }
+
+    button[data-part='search-action'] {
+      width: 2.25rem;
+      min-width: 2.25rem;
+      height: 2.55rem;
     }
 
     button[data-part='search-trigger'] {
@@ -1636,6 +1771,17 @@
       min-width: 2.55rem;
       padding: 0;
       gap: 0;
+    }
+
+    button[data-part='search-trigger'][data-context='project'] {
+      width: clamp(5.8rem, 30vw, 9.5rem);
+      min-width: 0;
+      padding: 0 0.45rem;
+    }
+
+    button[data-part='search-trigger'][data-context='project'] [data-part='search-context'] {
+      max-width: 100%;
+      padding-inline: 0.4rem;
     }
 
     button[data-part='search-trigger'] [data-part='search-placeholder'],

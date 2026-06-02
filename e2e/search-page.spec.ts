@@ -54,11 +54,8 @@ test.describe('Search page URLs', () => {
     await expect(page.getByTestId('kefine-search-order-order-redis')).toContainText('Redis backup script');
     await expect(page.getByTestId('kefine-order-snippet-order-redis')).toContainText('Automate Redis snapshots');
     await expect(page.getByTestId('kefine-search-save-link')).toBeVisible();
-    await expect(page.getByTestId('kefine-topbar-search-dialog')).not.toBeVisible();
-
-    await page.getByTestId('kefine-topbar-search-trigger').click();
-    await expect(page.getByTestId('kefine-topbar-search-dialog')).not.toBeVisible();
-    await expect(page.getByTestId('kefine-search-page-input')).toBeFocused();
+    await expect(page.getByTestId('kefine-topbar-search-trigger')).toHaveCount(0);
+    await expect(page.getByTestId('kefine-topbar-search-dialog')).toHaveCount(0);
 
     await page.getByTestId('kefine-search-page-input').fill('postgres restore');
     await expect(page).toHaveURL(/\/\?q=postgres\+restore$/);
@@ -89,28 +86,25 @@ test.describe('Search page URLs', () => {
     await gotoSearchPage(page, '/?q=git%20hub');
 
     await expect(page.getByTestId('kefine-search-page-input')).toBeVisible();
+    await expect(page.getByTestId('kefine-topbar-search-trigger')).toHaveCount(0);
     await expect(page.getByTestId('kefine-task-input')).toHaveCount(0);
     await expect(page.getByTestId('kefine-instant-description-github')).toBeVisible();
     await expect(page.getByTestId('kefine-search-results-empty')).toBeVisible();
 
     await gotoSearchPage(page, '/?q=translate%20from%20english%20to%20russian');
     await expect(page.getByTestId('kefine-search-page-input')).toBeVisible();
+    await expect(page.getByTestId('kefine-topbar-search-trigger')).toHaveCount(0);
     await expect(page.getByTestId('kefine-task-input')).toHaveCount(0);
     await expect(page.getByTestId('kefine-translator-widget')).toBeVisible();
   });
 
-  test('places the mobile search trigger next to the sign-in button', async ({ page }) => {
+  test('does not render a mobile header search trigger on anonymous search pages', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await mockOrderApi(page);
-    await page.goto('/');
-    await expect(page.getByTestId('kefine-topbar-search-trigger')).toBeVisible();
+    await gotoSearchPage(page, '/?q=redis%20backup');
 
-    const searchBox = await page.getByTestId('kefine-topbar-search-trigger').boundingBox();
-    const authBox = await page.locator("button[data-part='auth']").boundingBox();
-
-    expect(searchBox).not.toBeNull();
-    expect(authBox).not.toBeNull();
-    expect(searchBox!.x).toBeLessThan(authBox!.x);
-    expect(authBox!.x - (searchBox!.x + searchBox!.width)).toBeLessThanOrEqual(10);
+    await expect(page.getByTestId('kefine-search-page-input')).toBeVisible();
+    await expect(page.getByTestId('kefine-topbar-search-trigger')).toHaveCount(0);
+    await expect(page.locator("button[data-part='auth']")).toBeVisible();
   });
 });

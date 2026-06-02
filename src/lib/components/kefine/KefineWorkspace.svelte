@@ -355,6 +355,26 @@
   let appliedSearchPageDraftQuery = $state('');
   let hasAppliedSearchPageDraftQuery = $state(false);
   let searchInputFocusRequest = $state(0);
+  let appliedDeepLinkTask = $state('');
+
+  $effect(() => {
+    if (!browser) return;
+
+    const task = page.url.searchParams.get('task')?.trim() ?? '';
+    if (!task || appliedDeepLinkTask === task) {
+      return;
+    }
+
+    appliedDeepLinkTask = task;
+
+    if (step !== 'create' || currentOrder) {
+      newOrder();
+    }
+
+    draft.description = task;
+    solverSearchActive = false;
+    solverSearchText = '';
+  });
 
   const passkeySession = $derived($passkeySessionStore);
   const isPasskeyActive = $derived(passkeySession ? passkeySession.expiresAt.getTime() > Date.now() : false);
@@ -601,6 +621,7 @@
   const inlineHomeSearchActive = $derived(
     step === 'create' && !getNormalizedInitialActorHandle() && !getNormalizedInitialOrderId() && !initialWidget
   );
+  const showTopbarSearch = $derived(!inlineHomeSearchActive);
   const searchPageMatchedOrders = $derived.by(() => {
     if (!searchPageMode) {
       return [];
@@ -1704,7 +1725,10 @@
   function selectTopbarLocale(locale: KefineLocale) {
     setKefineLocale(locale);
     if (!browser) {
-      void goto(buildLocaleHomePath(locale));
+      return;
+    }
+
+    if (!readLocaleFromPathname(window.location.pathname)) {
       return;
     }
 
@@ -3004,12 +3028,14 @@
   searchMusicLabel={localeText.topbar.searchMusicLabel}
   searchWidgetBackLabel={localeText.topbar.searchWidgetBackLabel}
   searchHomeHref={buildLocaleHomePath(activeLocale)}
+  showSearch={showTopbarSearch}
   searchItems={topbarSearchItems}
   initialSearchQuery={latchedSearchPageQuery ? '' : latchedDeepLinkSearchQuery}
   searchDefaultQuery={searchPageMode ? searchPageQuery : ''}
   initialWidget={initialWidget}
   socialLinks={sidebarSocialLinks}
   showSocialLinks={false}
+  showDockControls={step !== 'create'}
   legalLinks={sidebarLegalLinks}
   onExpandedChange={(expanded) => { leftNavExpanded = expanded; }}
   onBrandClick={handleTopbarBrandClick}

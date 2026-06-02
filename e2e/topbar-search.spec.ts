@@ -3,7 +3,18 @@ import { expect, test } from '@playwright/test';
 import { createTask, gotoAndWaitForReady, mockOrderApi } from './helpers/kefine';
 
 test.describe('Topbar search', () => {
-  test('opens from a repo page and finds a queued lepo', async ({ page }) => {
+  test('home screen keeps the sidebar focused on brand and legal links', async ({ page }) => {
+    await mockOrderApi(page);
+    await gotoAndWaitForReady(page);
+
+    await page.getByTestId('kefine-brand-mark').click();
+
+    await expect(page.locator('kefine-sidebar-popover kefine-sidebar-nav')).toBeVisible();
+    await expect(page.getByTestId('kefine-topbar-theme-toggle')).toHaveCount(0);
+    await expect(page.getByTestId('kefine-topbar-locale-toggle')).toHaveCount(0);
+  });
+
+  test('opens from the header and finds a queued lepo', async ({ page }) => {
     await mockOrderApi(page);
     await gotoAndWaitForReady(page);
 
