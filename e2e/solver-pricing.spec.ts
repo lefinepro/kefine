@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 import { mockOrderApi } from './helpers/kefine';
 
 test.describe('Solver Pricing', () => {
-  test('rust solver workspace cards show pricing metrics', async ({ page }) => {
+  test('rust solver task variants show pricing metrics', async ({ page }) => {
     await mockOrderApi(page);
 
     await page.addInitScript(() => {
@@ -73,11 +73,11 @@ test.describe('Solver Pricing', () => {
 
     await page.goto('/@api/order-rust');
 
-    const rustCards = page.locator('lef-solutions-list .solution-card');
-    await expect(rustCards).toHaveCount(4);
-    await expect(rustCards.locator('lef-price-row')).toHaveCount(4);
-    await expect(rustCards.nth(0)).toContainText('From');
-    await expect(rustCards.nth(0)).toContainText('$0.04');
-    await expect(rustCards.nth(3)).toContainText('$0.18');
+    await expect(page.locator('lef-solutions-list')).toHaveCount(0);
+    const variants = page.getByTestId('task-solver-variants').locator('[data-variant]');
+    await expect(variants).toHaveCount(4);
+    await expect(variants.nth(0)).toContainText('$0.04');
+    await expect(variants.nth(0)).toContainText('0.7s');
+    await expect(variants.nth(3)).toContainText('$0.18');
   });
 });

@@ -905,11 +905,11 @@ initialized = true;
 
   function solverRepositoryName(text: string): string {
     if (isGoProxySearch(text)) {
-      return 'kefine/go-proxy';
+      return '@kefine/go-proxy';
     }
 
     if (isRustHelloWorldSearch(text)) {
-      return 'rust/hello-world';
+      return '@rust/hello-world';
     }
 
     return 'feat/basic-forward';

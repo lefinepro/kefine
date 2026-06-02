@@ -4,10 +4,10 @@
   import { browser } from '$app/environment';
   import { defaultSolutions, type Solution } from '$lib/kefine/solutions-data';
   import KefineSolversView, {
-    type SolversHistoryTask,
-    type SolversSettingsState
+    type SolversHistoryTask
   } from '$lib/components/kefine/KefineSolversView.svelte';
-  import { kefineLocaleText } from '$lib/constants/kefine-locale';
+  import { topbarSearchPlaceholderOverride } from '$lib/kefine/topbar-search-context';
+  import { repoReadme, repoTodos } from '$lib/kefine/repo-docs';
 
   const id = $page.params.id;
   const taskQuery = $page.url.searchParams.get('task') || '';
@@ -16,9 +16,8 @@
     (s) => s.project?.includes('go-proxy') || s.solver.includes('Proxy')
   );
 
-  const repoName = 'kefine/go-proxy';
+  const repoName = '@kefine/go-proxy';
   const COMPLETED_SEARCHES_KEY = 'kefine-completed-solver-searches';
-  const SETTINGS_KEY = `kefine-task-settings-${id}`;
 
   function readCompletedSearches(): string[] {
     if (!browser) return [];
@@ -28,38 +27,6 @@
       return Array.isArray(list) ? list.filter((entry) => typeof entry === 'string') : [];
     } catch {
       return [];
-    }
-  }
-
-  function readSettings(): SolversSettingsState {
-    const base: SolversSettingsState = { isPublic: true, vcsEnabled: true, defaultBranch: 'main' };
-    if (!browser) return base;
-    try {
-      const raw = localStorage.getItem(SETTINGS_KEY);
-      if (!raw) return base;
-      const parsed = JSON.parse(raw);
-      return {
-        isPublic: typeof parsed?.isPublic === 'boolean' ? parsed.isPublic : base.isPublic,
-        vcsEnabled: typeof parsed?.vcsEnabled === 'boolean' ? parsed.vcsEnabled : base.vcsEnabled,
-        defaultBranch:
-          typeof parsed?.defaultBranch === 'string' && parsed.defaultBranch.trim().length > 0
-            ? parsed.defaultBranch
-            : base.defaultBranch
-      };
-    } catch {
-      return base;
-    }
-  }
-
-  let settingsState = $state<SolversSettingsState>(readSettings());
-
-  function handleApplySettings(next: SolversSettingsState) {
-    settingsState = next;
-    if (!browser) return;
-    try {
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify(next));
-    } catch {
-      /* ignore quota errors */
     }
   }
 
@@ -95,6 +62,13 @@
     if (!task || task.isActive) return;
     goto(`/?task=${encodeURIComponent(task.description ?? task.title)}`);
   }
+
+  // Surface the active repository name in the shared header search bar while
+  // this screen is mounted, then restore the default placeholder on leave.
+  $effect(() => {
+    topbarSearchPlaceholderOverride.set(repoName);
+    return () => topbarSearchPlaceholderOverride.set(null);
+  });
 </script>
 
 <svelte:head>
@@ -105,9 +79,9 @@
   {solutions}
   taskTitle={taskQuery}
   repoName={repoName}
+  readme={repoReadme}
+  todos={repoTodos}
   historyTasks={historyTasks}
-  settingsState={settingsState}
-  onApplySettings={handleApplySettings}
   onSelectHistoryTask={handleSelectHistoryTask}
   onViewSolution={(solutionId) => goto(`/order/${id}/solver/${solutionId}`)}
 />
