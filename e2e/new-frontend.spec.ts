@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 import { gotoAndWaitForReady, mockOrderApi } from './helpers/kefine';
 
 test.describe('New frontend task results', () => {
-  test('submitted Go proxy task opens solvers on a separate page with Apply actions', async ({ page }) => {
+  test('submitted Go proxy task opens solvers as a task list with variants', async ({ page }) => {
     await mockOrderApi(page);
     await gotoAndWaitForReady(page);
 
@@ -24,7 +24,11 @@ test.describe('New frontend task results', () => {
     await expect(page).toHaveURL(/\/order\/order-1\/solutions/);
     await expect(page.getByTestId('solution-list-page')).toBeVisible();
     await expect(page.getByTestId('solution-list-task-label')).toContainText('kefine/go-proxy');
-    await expect(page.getByRole('button', { name: 'Apply solution' }).first()).toBeVisible();
+    await expect(page.getByTestId('solver-task-list')).toBeVisible();
+    await expect(page.locator('lef-solutions-list')).toHaveCount(0);
+    await expect(page.getByTestId('task-solver-variants')).toBeVisible();
+    await expect(page.getByTestId('task-solver-variants').locator('[data-variant]')).toHaveCount(3);
+    await expect(page.getByRole('button', { name: 'Apply solution' })).toHaveCount(0);
     await expect(page.getByRole('button', { name: /Merge/ })).toHaveCount(0);
   });
 
@@ -41,6 +45,7 @@ test.describe('New frontend task results', () => {
     await page.goto('/order/order-1/solutions?task=Build%20a%20Go%20mini%20proxy');
 
     await expect(page.getByTestId('solution-list-page')).toBeVisible();
+    await expect(page.locator('lef-tasks-aside')).toHaveCount(0);
 
     // The active task starts expanded with its solver variants visible.
     const variants = page.getByTestId('task-solver-variants');

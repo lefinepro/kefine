@@ -189,14 +189,15 @@ test.describe('Task Lifecycle', () => {
 
     await page.goto('/@api/order-2');
 
-    await expect(page.locator('lef-solutions-list').getByText('Go Proxy Basic')).toBeVisible();
-    const tasksAside = page.getByLabel('Tasks');
-    await expect(tasksAside).toContainText('api/current-proxy');
-    await expect(tasksAside).toContainText('Нужен мини прокси на go');
-    await expect(tasksAside).toContainText('api/legacy-tooling');
-    await expect(tasksAside).toContainText('Previous parser task');
+    await expect(page.locator('lef-solutions-list')).toHaveCount(0);
+    const taskList = page.getByLabel('Tasks');
+    await expect(taskList).toContainText('api/current-proxy');
+    await expect(taskList).toContainText('Нужен мини прокси на go');
+    await expect(taskList).toContainText('api/legacy-tooling');
+    await expect(taskList).toContainText('Previous parser task');
+    await expect(taskList.getByText('Go Proxy Basic')).toBeVisible();
 
-    await tasksAside.getByRole('button', { name: /api\/legacy-tooling/ }).click();
+    await taskList.getByRole('button', { name: /api\/legacy-tooling/ }).click();
     await expect(page).toHaveURL(/\/@api\/order-1$/);
     await expect(page.locator('kefine-thread-title').getByText('Previous parser task')).toBeVisible();
   });
