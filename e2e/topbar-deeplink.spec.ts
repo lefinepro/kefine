@@ -17,8 +17,9 @@ test.describe('Search deep links', () => {
     await mockOrderApi(page);
     await gotoDeepLink(page, '/?q=redis');
 
-    await expect(page.getByTestId('kefine-task-input')).toBeVisible();
-    await expect(page.getByTestId('kefine-task-input')).toHaveValue('redis');
+    await expect(page.getByTestId('kefine-search-page-input')).toBeVisible();
+    await expect(page.getByTestId('kefine-search-page-input')).toHaveValue('redis');
+    await expect(page.getByTestId('kefine-task-input')).toHaveCount(0);
     await expect(page.getByTestId('kefine-search-page-results')).toHaveAttribute(
       'data-mode',
       'anonymous'

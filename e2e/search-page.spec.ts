@@ -44,8 +44,9 @@ test.describe('Search page URLs', () => {
     await mockOrderApi(page);
     await gotoSearchPage(page, '/?q=redis%20backup');
 
-    await expect(page.getByTestId('kefine-task-input')).toBeVisible();
-    await expect(page.getByTestId('kefine-task-input')).toHaveValue('redis backup');
+    await expect(page.getByTestId('kefine-search-page-input')).toBeVisible();
+    await expect(page.getByTestId('kefine-search-page-input')).toHaveValue('redis backup');
+    await expect(page.getByTestId('kefine-task-input')).toHaveCount(0);
     await expect(page.getByTestId('kefine-search-page-results')).toHaveAttribute(
       'data-mode',
       'anonymous'
@@ -57,9 +58,9 @@ test.describe('Search page URLs', () => {
 
     await page.getByTestId('kefine-topbar-search-trigger').click();
     await expect(page.getByTestId('kefine-topbar-search-dialog')).not.toBeVisible();
-    await expect(page.getByTestId('kefine-task-input')).toBeFocused();
+    await expect(page.getByTestId('kefine-search-page-input')).toBeFocused();
 
-    await page.getByTestId('kefine-task-input').fill('postgres restore');
+    await page.getByTestId('kefine-search-page-input').fill('postgres restore');
     await expect(page).toHaveURL(/\/\?q=postgres\+restore$/);
     await expect(page.getByTestId('kefine-search-order-order-redis')).toHaveCount(0);
     await expect(page.getByTestId('kefine-search-results-empty')).toBeVisible();
@@ -87,12 +88,14 @@ test.describe('Search page URLs', () => {
     await mockOrderApi(page);
     await gotoSearchPage(page, '/?q=git%20hub');
 
-    await expect(page.getByTestId('kefine-task-input')).toBeVisible();
+    await expect(page.getByTestId('kefine-search-page-input')).toBeVisible();
+    await expect(page.getByTestId('kefine-task-input')).toHaveCount(0);
     await expect(page.getByTestId('kefine-instant-description-github')).toBeVisible();
     await expect(page.getByTestId('kefine-search-results-empty')).toBeVisible();
 
     await gotoSearchPage(page, '/?q=translate%20from%20english%20to%20russian');
-    await expect(page.getByTestId('kefine-task-input')).toBeVisible();
+    await expect(page.getByTestId('kefine-search-page-input')).toBeVisible();
+    await expect(page.getByTestId('kefine-task-input')).toHaveCount(0);
     await expect(page.getByTestId('kefine-translator-widget')).toBeVisible();
   });
 

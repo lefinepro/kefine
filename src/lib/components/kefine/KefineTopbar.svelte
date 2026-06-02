@@ -3,6 +3,7 @@
   import KefineWeatherWidget from '$lib/components/kefine/KefineWeatherWidget.svelte';
   import KefineTranslatorWidget from '$lib/components/kefine/KefineTranslatorWidget.svelte';
   import KefineMusicWidget from '$lib/components/kefine/KefineMusicWidget.svelte';
+  import KefineSearchInput from '$lib/components/kefine/KefineSearchInput.svelte';
   import { onMount, tick } from 'svelte';
   import { detectWeatherIntent } from '$lib/kefine/weather-intent';
   import { scheduleAfter } from '$lib/utils/helpers';
@@ -192,10 +193,10 @@
   let localePickerOpen = $state(false);
   let cancelAuthClick: (() => void) | null = null;
   let searchDialog: HTMLDialogElement | null = $state(null);
-  let searchInputElement: HTMLInputElement | null = $state(null);
   let searchQuery = $state('');
   let selectedSearchIndex = $state(0);
   let searchOpen = $state(false);
+  let searchFocusRequest = $state(0);
   let activeSearchWidget = $state<KefineSearchWidgetId | null>(null);
   const searchShortcutLabel = 'Ctrl K';
   const widgetSearchItems = $derived.by((): KefineTopbarSearchItem[] => {
@@ -432,7 +433,7 @@
     }
 
     await tick();
-    searchInputElement?.focus();
+    searchFocusRequest += 1;
   }
 
   function closeSearchDialog() {
@@ -458,7 +459,7 @@
     searchQuery = '';
     selectedSearchIndex = 0;
     await tick();
-    searchInputElement?.focus();
+    searchFocusRequest += 1;
   }
 
   function handleSearchDialogClick(event: MouseEvent) {
@@ -476,8 +477,7 @@
     void openSearchDialog();
   }
 
-  function handleSearchInput(event: Event) {
-    const nextQuery = (event.currentTarget as HTMLInputElement).value;
+  function handleSearchInput(nextQuery: string) {
     searchQuery = nextQuery;
     selectedSearchIndex = 0;
     onSearchQueryChange?.(nextQuery);
@@ -552,7 +552,7 @@
 
   async function focusSearchInput() {
     await tick();
-    searchInputElement?.focus();
+    searchFocusRequest += 1;
   }
 
   function handleThemeButtonClick() {
@@ -875,34 +875,20 @@
         onclick={handleSearchDialogClick}
       >
         <kefine-search-panel>
-          <kefine-search-input-row>
-            {#if activeSearchWidget}
-              <button
-                type="button"
-                data-part="search-widget-back"
-                data-testid="kefine-topbar-search-widget-back"
-                aria-label={searchWidgetBackLabel}
-                title={searchWidgetBackLabel}
-                onclick={() => void closeSearchWidget()}
-              >
-                <KefineTopbarIcon name="open" size={18} />
-              </button>
-            {:else}
-              <KefineTopbarIcon name="search" size={21} />
-            {/if}
-            <input
-              bind:this={searchInputElement}
-              value={searchQuery}
-              data-testid="kefine-topbar-search-input"
-              aria-label={searchLabel}
-              placeholder={searchPlaceholder}
-              autocomplete="off"
-              spellcheck="false"
-              oninput={handleSearchInput}
-              onkeydown={handleSearchKeydown}
-            />
-            <lefine-kbd>{searchShortcutLabel}</lefine-kbd>
-          </kefine-search-input-row>
+          <KefineSearchInput
+            value={searchQuery}
+            label={searchLabel}
+            placeholder={searchPlaceholder}
+            inputTestId="kefine-topbar-search-input"
+            rowTestId="kefine-topbar-search-input-row"
+            shortcutLabel={searchShortcutLabel}
+            showBack={Boolean(activeSearchWidget)}
+            backLabel={searchWidgetBackLabel}
+            focusRequest={searchFocusRequest}
+            onInput={handleSearchInput}
+            onKeydown={handleSearchKeydown}
+            onBack={closeSearchWidget}
+          />
           {#if activeSearchWidget}
             <kefine-search-results-header>
               <lefine-text>{activeWidgetTitle}</lefine-text>
@@ -1142,43 +1128,6 @@
     max-height: min(72dvh, 42rem);
   }
 
-  kefine-search-input-row {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 0.75rem;
-    min-height: 4.45rem;
-    padding: 0.78rem 1rem;
-    border-bottom: var(--kef-border-width-soft) solid color-mix(in oklab, var(--kef-border) 46%, transparent);
-    color: color-mix(in oklab, var(--lefine-text) 84%, transparent);
-  }
-
-  dialog[data-part='search-dialog'] input[data-testid='kefine-topbar-search-input'] {
-    appearance: none;
-    min-width: 0;
-    width: 100%;
-    border: 0;
-    border-radius: 0;
-    outline: 0;
-    background: transparent;
-    box-shadow: none;
-    color: var(--lefine-text);
-    font: inherit;
-    font-size: 1.15rem;
-    font-weight: 640;
-    line-height: 1.2;
-    letter-spacing: 0;
-    padding: 0;
-  }
-
-  dialog[data-part='search-dialog'] input[data-testid='kefine-topbar-search-input']:focus {
-    box-shadow: none;
-  }
-
-  dialog[data-part='search-dialog'] input[data-testid='kefine-topbar-search-input']::placeholder {
-    color: color-mix(in oklab, var(--lefine-text-soft) 62%, transparent);
-  }
-
   kefine-search-results-header {
     display: flex;
     align-items: center;
@@ -1289,29 +1238,6 @@
     font-size: 0.95rem;
     font-weight: 600;
     text-align: center;
-  }
-
-  button[data-part='search-widget-back'] {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 2.2rem;
-    height: 2.2rem;
-    padding: 0;
-    border: var(--kef-border-width-soft) solid color-mix(in oklab, var(--kef-border) 52%, transparent);
-    border-radius: var(--kef-radius-md);
-    background: color-mix(in oklab, var(--kef-bg-soft) 72%, transparent);
-    color: color-mix(in oklab, var(--lefine-text) 82%, transparent);
-    cursor: pointer;
-    transition:
-      background-color var(--kef-motion-fast) var(--kef-ease-soft),
-      border-color var(--kef-motion-fast) var(--kef-ease-soft),
-      color var(--kef-motion-fast) var(--kef-ease-soft);
-  }
-
-  button[data-part='search-widget-back']:hover {
-    border-color: color-mix(in oklab, var(--kef-primary) 30%, var(--kef-line));
-    color: color-mix(in oklab, var(--kef-primary) 92%, #4f3d30);
   }
 
   kefine-search-widget {
@@ -1725,16 +1651,6 @@
 
     kefine-search-panel {
       max-height: calc(100dvh - 5rem);
-    }
-
-    kefine-search-input-row {
-      min-height: 4rem;
-      padding: 0.68rem 0.78rem;
-      gap: 0.58rem;
-    }
-
-    dialog[data-part='search-dialog'] input[data-testid='kefine-topbar-search-input'] {
-      font-size: 1rem;
     }
 
     kefine-search-result-meta > lefine-text {

@@ -8,6 +8,7 @@
   import KefineMusicWidget from '$lib/components/kefine/KefineMusicWidget.svelte';
   import KefineWeatherWidget from '$lib/components/kefine/KefineWeatherWidget.svelte';
   import KefineTranslatorWidget from '$lib/components/kefine/KefineTranslatorWidget.svelte';
+  import KefineSearchInput from '$lib/components/kefine/KefineSearchInput.svelte';
   import SolutionMetricsMini from '$lib/components/kefine/SolutionMetricsMini.svelte';
   import { detectProxyServerIntent } from '$lib/kefine/proxy-intent';
   import {
@@ -229,7 +230,8 @@
     onOpenSolution?: (solutionId: string) => void;
   } = $props();
 
-  const showSearchComposer = $derived(!searchResultsOnly);
+  const showTaskComposer = $derived(!searchMode && !searchResultsOnly);
+  const showSearchPageInput = $derived(searchMode === 'anonymous');
   const showHomeContent = $derived(!searchMode && !searchResultsOnly);
   const showTaskHistory = $derived(!searchMode && !searchResultsOnly);
 
@@ -461,7 +463,7 @@
 
   $effect(() => {
     const request = searchFocusRequest;
-    if (!browser || !request || !showSearchComposer) {
+    if (!browser || !request || !showTaskComposer) {
       return;
     }
 
@@ -474,6 +476,15 @@
       taskTextarea?.setSelectionRange(draft.description.length, draft.description.length);
     });
   });
+
+  function handleSearchPageInput(value: string) {
+    if (onDescriptionChange) {
+      onDescriptionChange(value);
+      return;
+    }
+
+    draft.description = value;
+  }
 
   function orderScore(query: string, order: OrderView): number {
     const q = query.trim().toLowerCase();
@@ -1491,7 +1502,7 @@ initialized = true;
 
 
 
-  {#if showSearchComposer}
+  {#if showTaskComposer}
   <fieldset data-part="exec-row" data-testid="kefine-create-form">
     <kefine-task-shell>
       <label data-part="sr-only" for="order-title">{title}</label>
@@ -1554,6 +1565,22 @@ initialized = true;
       </kefine-submit-popover>
     {/if}
   </fieldset>
+  {/if}
+
+  {#if showSearchPageInput}
+    <kefine-search-page-input-shell>
+      <KefineSearchInput
+        value={draft.description}
+        label={title}
+        placeholder={placeholder}
+        inputTestId="kefine-search-page-input"
+        rowTestId="kefine-search-page-input-row"
+        variant="page"
+        showShortcut={false}
+        focusRequest={searchFocusRequest}
+        onInput={handleSearchPageInput}
+      />
+    </kefine-search-page-input-shell>
   {/if}
 
   {#if searchMode}
@@ -1738,7 +1765,7 @@ initialized = true;
     </kefine-qr-card>
   {/if}
 
-  {#if showSearchComposer}
+  {#if showTaskComposer}
     {#if inputMetaOpen}
       <kefine-input-meta data-part="input-meta">
         <kefine-composer-strip aria-label={composerHints}>
@@ -3937,6 +3964,12 @@ initialized = true;
 
   fieldset[data-part='exec-row']:focus-within {
     box-shadow: none;
+  }
+
+  kefine-search-page-input-shell {
+    display: block;
+    min-width: 0;
+    width: 100%;
   }
 
   kefine-search-mode-strip {
