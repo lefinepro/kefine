@@ -883,6 +883,8 @@ export const KEFINE_TEXT_EN = {
     briefHeading: 'Brief',
     todoHeading: 'TODO',
     todoAria: 'Repository TODO list',
+    checklistAria: 'Repository checklist',
+    todoOpen: 'Open',
     todoDone: 'Done',
     todoCount: (count: number) => `${count} ${count === 1 ? 'task' : 'tasks'}`,
     solvers: 'Solvers',

@@ -885,6 +885,8 @@ export const KEFINE_TEXT_RU = {
     briefHeading: 'Кратко',
     todoHeading: 'TODO',
     todoAria: 'Список TODO репозитория',
+    checklistAria: 'Чеклист репозитория',
+    todoOpen: 'Открыто',
     todoDone: 'Готово',
     todoCount: (count: number) =>
       `${count} ${count === 1 ? 'задача' : count >= 2 && count <= 4 ? 'задачи' : 'задач'}`,

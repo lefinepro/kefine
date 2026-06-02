@@ -1,9 +1,9 @@
-#+TITLE: kefine/go-proxy
+#+TITLE: @kefine/go-proxy
 
 * Brief
   Minimal, production-friendly HTTP proxy written in Go. It forwards requests
   with optional logging, rate limiting and caching depending on the solver you
-  pick. Start from the brief, then work through the TODO list below.
+  pick. Start from the brief, then work through the checklist below.
 
 * Settings
   - Default branch :: main

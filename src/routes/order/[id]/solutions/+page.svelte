@@ -16,7 +16,7 @@
     (s) => s.project?.includes('go-proxy') || s.solver.includes('Proxy')
   );
 
-  const repoName = 'kefine/go-proxy';
+  const repoName = '@kefine/go-proxy';
   const COMPLETED_SEARCHES_KEY = 'kefine-completed-solver-searches';
 
   function readCompletedSearches(): string[] {

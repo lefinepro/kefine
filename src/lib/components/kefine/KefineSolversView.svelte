@@ -39,14 +39,32 @@
   const readmeSettingsSection = $derived(
     (readme?.sections ?? []).find((section) => section.id === 'settings') ?? null
   );
+  const readmeDemonstrationSection = $derived(
+    (readme?.sections ?? []).find((section) => section.id === 'demonstration') ?? null
+  );
 
   // README sections visible in the main flow. Settings move to the right-rail
-  // modal and Folder layout is intentionally omitted per review feedback.
+  // modal, Demonstration renders as its own lower block, and Folder layout is
+  // intentionally omitted per review feedback.
   const readmeVisibleSections = $derived(
     (readme?.sections ?? []).filter(
-      (section) => !['brief', 'settings', 'folder-layout'].includes(section.id)
+      (section) => !['brief', 'settings', 'folder-layout', 'demonstration'].includes(section.id)
     )
   );
+  const hasRepoDocs = $derived(Boolean(readme) || todos.length > 0);
+  const completedTodo = $derived(todos.find((todo) => todo.done) ?? null);
+  const showRailSolvers = $derived(hasRepoDocs && Boolean(completedTodo) && solutions.length > 0);
+
+  function normalizeProjectPath(value: string): string {
+    return value.trim().replace(/^@+/, '').replace(/^\/+/, '').replace(/\.git$/i, '');
+  }
+
+  function displayProjectPath(value: string): string {
+    const normalized = normalizeProjectPath(value);
+    return normalized ? `@${normalized}` : '';
+  }
+
+  const displayRepoName = $derived(displayProjectPath(readme?.title || repoName || 'kefine/go-proxy'));
 
   let cloneTestPending = $state(false);
   let cloneTestResult = $state<{ ok: boolean; message: string } | null>(null);
@@ -55,7 +73,7 @@
 
   const resolvedCloneUrl = $derived.by(() => {
     if (cloneUrl) return cloneUrl;
-    const slug = repoName ? repoName.replace(/^\/+/, '').replace(/\.git$/i, '') : 'kefine/go-proxy';
+    const slug = repoName ? normalizeProjectPath(repoName) : 'kefine/go-proxy';
     return `git clone https://kefine.pro/${slug}.git`;
   });
 
@@ -118,7 +136,7 @@
   const fallbackHistoryTasks = $derived<SolversHistoryTask[]>([
     {
       id: 'current',
-      title: repoName || localeText.solversView.solvers,
+      title: displayRepoName || localeText.solversView.solvers,
       description: taskTitle,
       isActive: true
     }
@@ -159,7 +177,7 @@
         {#if readme}
           <lef-repo-readme aria-label={localeText.solversView.readmeAria} data-testid="repo-readme">
             <lef-repo-readme-head>
-              <h2 data-testid="repo-readme-title">{readme.title || repoName}</h2>
+              <h2 data-testid="repo-readme-title">{displayRepoName}</h2>
             </lef-repo-readme-head>
             {#if readme.brief}
               <lef-repo-brief data-testid="repo-brief">
@@ -200,6 +218,56 @@
           </lef-repo-readme>
         {/if}
 
+        {#if todos.length > 0}
+          <lef-repo-checklist
+            aria-label={localeText.solversView.checklistAria}
+            data-testid="repo-checklist"
+          >
+            {#each todos as todo (todo.id)}
+              <lef-repo-checklist-item
+                data-done={todo.done ? 'true' : 'false'}
+                data-testid="repo-checklist-item"
+              >
+                <lef-repo-todo-check data-done={todo.done ? 'true' : 'false'} aria-hidden="true">
+                  {#if todo.done}
+                    <Icon icon="lucide:check" width="12" height="12" aria-hidden="true" />
+                  {/if}
+                </lef-repo-todo-check>
+                <lefine-text>{todo.title}</lefine-text>
+                <lef-repo-todo-status
+                  data-state={todo.done ? 'done' : 'open'}
+                  data-testid="repo-checklist-status"
+                >
+                  {todo.done ? localeText.solversView.todoDone : localeText.solversView.todoOpen}
+                </lef-repo-todo-status>
+              </lef-repo-checklist-item>
+            {/each}
+          </lef-repo-checklist>
+        {/if}
+
+        {#if readmeDemonstrationSection}
+          <lef-repo-demonstration data-testid="repo-demonstration">
+            <h3>{readmeDemonstrationSection.title}</h3>
+            {#each readmeDemonstrationSection.text as line (line)}
+              <p>{line}</p>
+            {/each}
+            {#if readmeDemonstrationSection.links.length > 0}
+              <lef-repo-links>
+                {#each readmeDemonstrationSection.links as link (link.url)}
+                  <a href={link.url} target="_blank" rel="noopener noreferrer">{link.label}</a>
+                {/each}
+              </lef-repo-links>
+            {:else if readmeDemonstrationSection.items.length > 0}
+              <ul>
+                {#each readmeDemonstrationSection.items as item (item)}
+                  <li>{item}</li>
+                {/each}
+              </ul>
+            {/if}
+          </lef-repo-demonstration>
+        {/if}
+
+        {#if !hasRepoDocs}
         <lef-main-task-list>
           {#each displayedHistoryTasks as task (task.id)}
             {@const isExpanded = expandedTaskId === task.id}
@@ -315,37 +383,6 @@
             </lef-task-card>
           {/each}
         </lef-main-task-list>
-
-        {#if todos.length > 0}
-          <lef-repo-todo aria-label={localeText.solversView.todoAria} data-testid="repo-todo">
-            <lef-repo-todo-head>
-              <lefine-text>{localeText.solversView.todoHeading}</lefine-text>
-              <small>{localeText.solversView.todoCount(todos.length)}</small>
-            </lef-repo-todo-head>
-            <lef-main-task-list data-part="repo-todos">
-              {#each todos as todo (todo.id)}
-                <lef-task-card
-                  data-kind="todo"
-                  data-done={todo.done ? 'true' : 'false'}
-                  data-testid="repo-todo-task-card"
-                >
-                  <lef-task-static class="main-task-toggle repo-todo-toggle">
-                    <lef-repo-todo-check data-done={todo.done ? 'true' : 'false'} aria-hidden="true">
-                      {#if todo.done}
-                        <Icon icon="lucide:check" width="12" height="12" aria-hidden="true" />
-                      {/if}
-                    </lef-repo-todo-check>
-                    <lef-task-toggle-main>
-                      <lefine-text>{todo.title}</lefine-text>
-                      {#if todo.done}
-                        <small>{localeText.solversView.todoDone}</small>
-                      {/if}
-                    </lef-task-toggle-main>
-                  </lef-task-static>
-                </lef-task-card>
-              {/each}
-            </lef-main-task-list>
-          </lef-repo-todo>
         {/if}
       </lef-main-tasks>
 
@@ -395,6 +432,50 @@
             </lef-task-rail-status>
           {/if}
         </lef-task-rail-panel>
+        {#if showRailSolvers}
+          <lef-task-rail-panel data-kind="solvers" data-testid="todo-solvers-block">
+            <lef-task-rail-head>{localeText.solversView.solvers}</lef-task-rail-head>
+            {#if completedTodo}
+              <lef-rail-solver-source data-testid="completed-todo-source">
+                <Icon icon="lucide:check-circle-2" width="15" height="15" aria-hidden="true" />
+                <lef-rail-solver-source-title>{completedTodo.title}</lef-rail-solver-source-title>
+              </lef-rail-solver-source>
+            {/if}
+            <lef-task-variants
+              class="rail-solver-variants"
+              data-testid="task-solver-variants"
+              aria-label={localeText.solversView.solverVariants}
+            >
+              {#each solutions as solution (solution.id)}
+                {@const variantMetric = metricsById.get(solution.id)}
+                <button
+                  type="button"
+                  class="task-variant"
+                  data-variant={solution.id}
+                  onclick={() => onViewSolution?.(solution.id)}
+                >
+                  <lef-solver-avatar
+                    style="--avatar-color: {solverAvatarColor(solution.solver)}"
+                    aria-hidden="true"
+                  >{solverInitials(solution.solver)}</lef-solver-avatar>
+                  <lef-task-variant-meta>
+                    <strong>{solution.solver}</strong>
+                    <small>{solution.title}</small>
+                  </lef-task-variant-meta>
+                  {#if variantMetric}
+                    <lef-task-variant-stats>
+                      <strong>{formatPrice(variantMetric.priceUsd)}</strong>
+                      <small>
+                        {formatSeconds(variantMetric.executionTimeSec)}
+                        / {formatPercent(variantMetric.successRate)}
+                      </small>
+                    </lef-task-variant-stats>
+                  {/if}
+                </button>
+              {/each}
+            </lef-task-variants>
+          </lef-task-rail-panel>
+        {/if}
       </lef-task-rail>
   </lef-tasks-grid>
 </lefine-box>
@@ -410,7 +491,7 @@
     <lef-repo-settings-dialog data-testid="repo-settings-dialog">
       <lef-repo-settings-head>
         <h2>{localeText.solversView.repositorySettingsHeading}</h2>
-        <p>{readme?.title || repoName}</p>
+        <p>{displayRepoName}</p>
       </lef-repo-settings-head>
       <dl>
         {#each readmeSettingsSection.settings as setting (setting.key)}
@@ -477,18 +558,29 @@
     color: var(--lefine-text-soft);
   }
 
-  lef-repo-section {
+  lef-repo-section,
+  lef-repo-demonstration {
     display: block;
   }
 
-  lef-repo-section h3 {
+  lef-repo-demonstration {
+    margin-top: 0.7rem;
+    padding: 0.8rem 0.9rem;
+    border: 1px solid var(--kef-line);
+    border-radius: 8px;
+    background: var(--kef-bg-card);
+  }
+
+  lef-repo-section h3,
+  lef-repo-demonstration h3 {
     margin: 0 0 0.35rem;
     font-size: 0.82rem;
     font-weight: 700;
     color: var(--lefine-text);
   }
 
-  lef-repo-section p {
+  lef-repo-section p,
+  lef-repo-demonstration p {
     margin: 0 0 0.3rem;
     font-size: 0.85rem;
     line-height: 1.4;
@@ -520,12 +612,14 @@
     overflow-wrap: anywhere;
   }
 
-  lef-repo-section ul {
+  lef-repo-section ul,
+  lef-repo-demonstration ul {
     margin: 0;
     padding-left: 1.1rem;
   }
 
-  lef-repo-section li {
+  lef-repo-section li,
+  lef-repo-demonstration li {
     font-size: 0.82rem;
     color: var(--lefine-text-soft);
   }
@@ -553,36 +647,11 @@
     background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 16%, var(--kef-bg-card));
   }
 
-  lef-repo-todo {
+  lef-repo-checklist {
     display: flex;
     flex-direction: column;
-    gap: 0.45rem;
-    margin-top: 0.7rem;
-    padding-top: 0.6rem;
-    border-top: 1px solid var(--kef-line);
-  }
-
-  lef-repo-todo-head {
-    display: flex;
-    align-items: baseline;
-    gap: 0.5rem;
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--lefine-text-soft);
-  }
-
-  lef-repo-todo-head small {
-    font-weight: 600;
-    letter-spacing: 0.02em;
-    text-transform: none;
-    color: var(--lefine-text-soft);
-  }
-
-  lef-main-task-list[data-part='repo-todos'] {
-    padding: 0;
     gap: 0.35rem;
+    margin: 0.7rem 0 0;
   }
 
   lef-repo-todo-check {
@@ -599,6 +668,51 @@
   lef-repo-todo-check[data-done='true'] {
     border-color: color-mix(in oklab, var(--kef-success, #16a34a) 70%, var(--kef-line));
     background: color-mix(in oklab, var(--kef-success, #16a34a) 80%, transparent);
+  }
+
+  lef-repo-checklist-item {
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.6rem;
+    min-height: 2.7rem;
+    padding: 0.5rem 0.65rem;
+    border: 1px solid color-mix(in oklab, var(--kef-line) 55%, transparent);
+    border-radius: 8px;
+    background: color-mix(in oklab, var(--kef-bg-card) 82%, transparent);
+    color: var(--lefine-text);
+  }
+
+  lef-repo-checklist-item lefine-text {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-size: 0.9rem;
+    line-height: 1.3;
+  }
+
+  lef-repo-checklist-item[data-done='true'] lefine-text {
+    color: var(--lefine-text-soft);
+  }
+
+  lef-repo-todo-status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 4.6rem;
+    padding: 0.22rem 0.45rem;
+    border-radius: 999px;
+    border: 1px solid var(--kef-line);
+    font-size: 0.68rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--lefine-text-soft);
+    white-space: nowrap;
+  }
+
+  lef-repo-todo-status[data-state='done'] {
+    border-color: color-mix(in oklab, var(--kef-success, #16a34a) 35%, var(--kef-line));
+    background: color-mix(in oklab, var(--kef-success, #16a34a) 10%, transparent);
+    color: var(--kef-success, #16a34a);
   }
 
   lef-main-task-list {
@@ -625,25 +739,6 @@
   lef-task-card[data-expanded='true'] {
     border-color: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 24%, var(--kef-line));
     background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 6%, var(--kef-bg-card));
-  }
-
-  lef-task-card[data-kind='todo'] {
-    border-color: color-mix(in oklab, var(--kef-line) 55%, transparent);
-    background: color-mix(in oklab, var(--kef-bg-card) 82%, transparent);
-  }
-
-  lef-task-card[data-kind='todo']:hover {
-    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 6%, transparent);
-  }
-
-  lef-task-card[data-kind='todo'][data-done='true'] lef-task-toggle-main lefine-text {
-    color: var(--lefine-text-soft);
-    text-decoration: line-through;
-  }
-
-  .repo-todo-toggle {
-    min-height: 2.75rem;
-    cursor: default;
   }
 
   .task-toggle {
@@ -938,6 +1033,45 @@
     transform-origin: top center;
   }
 
+  lef-rail-solver-source {
+    display: grid;
+    grid-template-columns: 15px minmax(0, 1fr);
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.45rem 0.5rem;
+    border-radius: 0.5rem;
+    background: color-mix(in oklab, var(--kef-success, #16a34a) 8%, transparent);
+    color: var(--lefine-text);
+    font-size: 0.76rem;
+    line-height: 1.25;
+  }
+
+  lef-rail-solver-source svg {
+    color: var(--kef-success, #16a34a);
+  }
+
+  lef-rail-solver-source-title {
+    display: block;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  lef-task-variants.rail-solver-variants {
+    gap: 0.4rem;
+    padding: 0;
+    animation: none;
+  }
+
+  lef-task-variants.rail-solver-variants .task-variant {
+    grid-template-columns: 1.45rem minmax(0, 1fr);
+    padding: 0.45rem 0.5rem;
+  }
+
+  lef-task-variants.rail-solver-variants lef-task-variant-stats {
+    grid-column: 2;
+    justify-items: start;
+  }
+
   @keyframes task-rail-panel-appear {
     from { opacity: 0; transform: translateY(-4px) scale(0.98); }
     to { opacity: 1; transform: translateY(0) scale(1); }
@@ -1083,6 +1217,19 @@
     lef-task-variant-stats {
       grid-column: 2;
       justify-items: start;
+    }
+
+    lef-task-variants.rail-solver-variants {
+      padding: 0;
+    }
+
+    lef-repo-checklist-item {
+      grid-template-columns: 18px minmax(0, 1fr);
+    }
+
+    lef-repo-todo-status {
+      grid-column: 2;
+      justify-self: start;
     }
   }
 </style>

@@ -858,6 +858,8 @@ export const KEFINE_TEXT_HY = {
     briefHeading: 'Համառոտ',
     todoHeading: 'TODO',
     todoAria: 'Repository-ի TODO ցուցակ',
+    checklistAria: 'Repository-ի checklist',
+    todoOpen: 'Բաց',
     todoDone: 'Կատարված',
     todoCount: (count: number) => `${count} ${count === 1 ? 'առաջադրանք' : 'առաջադրանք'}`,
     solvers: 'Solver-ներ',

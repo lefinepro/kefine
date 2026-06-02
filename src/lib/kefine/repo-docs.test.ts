@@ -23,7 +23,7 @@ describe('parseOrgLinks', () => {
 
 describe('parseOrgReadme', () => {
   const src = [
-    '#+TITLE: kefine/go-proxy',
+    '#+TITLE: @kefine/go-proxy',
     '',
     '* Brief',
     '  Minimal HTTP proxy in Go.',
@@ -38,7 +38,7 @@ describe('parseOrgReadme', () => {
   ].join('\n');
 
   test('reads the title', () => {
-    expect(parseOrgReadme(src).title).toBe('kefine/go-proxy');
+    expect(parseOrgReadme(src).title).toBe('@kefine/go-proxy');
   });
 
   test('collapses the Brief section into prose', () => {

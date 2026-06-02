@@ -1,4 +1,4 @@
-#+TITLE: kefine/go-proxy TODO
+#+TITLE: @kefine/go-proxy checklist
 
 * TODO Minimal HTTP proxy with forward functionality
 * TODO Add request/response logging
