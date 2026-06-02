@@ -1,6 +1,6 @@
 <script lang="ts">
   import { browser } from '$app/environment';
-  import { afterNavigate, goto, replaceState } from '$app/navigation';
+  import { goto, replaceState } from '$app/navigation';
   import { page } from '$app/state';
   import { isFeatureEnabled, resolvePublicRuntimeConfig } from '$lib/config/public-config';
   import { isSpecialRuntimeOrigin } from '$lib/config/special-runtime';
@@ -122,13 +122,18 @@
 
   // `replaceState` throws ("before router is initialized") if called during the
   // initial hydration flush. The URL-sync effect below rewrites the address bar
-  // (e.g. stripping a `?q=` deep link), so gate it until the first navigation has
-  // settled — otherwise the thrown error aborts the whole effect batch and unrelated
-  // UI (such as the command palette input) silently fails to update.
-  let routerReady = $state(false);
-  afterNavigate(() => {
-    routerReady = true;
-  });
+  // (e.g. stripping a `?q=` deep link), and an error thrown mid-flush aborts the
+  // whole effect batch — so unrelated UI (such as the command palette input)
+  // silently fails to update. Swallow that specific pre-init failure: the rewrite
+  // is purely cosmetic (the deep-link query is already latched) and a later
+  // navigation re-runs the effect once the router is live.
+  function safeReplaceState(url: URL, state: Parameters<typeof replaceState>[1]) {
+    try {
+      replaceState(url, state);
+    } catch {
+      // Router not initialised yet (initial hydration flush) — skip the rewrite.
+    }
+  }
   const runtimeConfig = $derived(resolvePublicRuntimeConfig(page.data.publicConfig));
   const repositoriesEnabled = $derived(isFeatureEnabled('repositories', runtimeConfig));
   const activeLocale = $derived(readLocaleFromPathname(page.url.pathname) ?? 'en');
@@ -1127,7 +1132,6 @@
 
   $effect(() => {
     if (!browser) return;
-    if (!routerReady) return;
     if (isHydratingRoute) return;
 
     const nextUrl = new URL(window.location.href);
@@ -1150,7 +1154,7 @@
             : '';
 
       if (window.location.href !== nextUrl.toString()) {
-        replaceState(nextUrl, page.state);
+        safeReplaceState(nextUrl, page.state);
       }
       return;
     }
@@ -1165,7 +1169,7 @@
     nextUrl.hash = '';
 
     if (window.location.href !== nextUrl.toString()) {
-      replaceState(nextUrl, page.state);
+      safeReplaceState(nextUrl, page.state);
     }
   });
 
