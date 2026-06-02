@@ -1532,6 +1532,7 @@ initialized = true;
       </kefine-submit-popover>
     {/if}
   </fieldset>
+  {/if}
 
   {#if searchMode}
     <kefine-search-mode-strip
@@ -1641,6 +1642,11 @@ initialized = true;
             <kefine-instant-text>
               <lefine-text data-part="instant-name">{site.name}</lefine-text>
               <lefine-text data-part="instant-url">{site.url}</lefine-text>
+              {#if site.description}
+                <lefine-text data-part="instant-description" data-testid={`kefine-instant-description-${site.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}>
+                  {site.description}
+                </lefine-text>
+              {/if}
             </kefine-instant-text>
             <kefine-instant-go aria-hidden="true">{instantAnswerGoHint} ↗</kefine-instant-go>
           </a>
@@ -1710,99 +1716,101 @@ initialized = true;
     </kefine-qr-card>
   {/if}
 
-  {#if inputMetaOpen}
-    <kefine-input-meta data-part="input-meta">
-      <kefine-composer-strip aria-label={composerHints}>
-        <button type="button" data-part="composer-chip" title={backgroundExecuteAria} onmousedown={keepComposerFocus} onclick={() => fileInput?.click()}>
-          <lefine-text>{addFileLabel}</lefine-text>
-          {#if draft.files.length > 0}
-            <strong>{fileCountLabel(draft.files.length)}</strong>
+  {#if !searchResultsOnly}
+    {#if inputMetaOpen}
+      <kefine-input-meta data-part="input-meta">
+        <kefine-composer-strip aria-label={composerHints}>
+          <button type="button" data-part="composer-chip" title={backgroundExecuteAria} onmousedown={keepComposerFocus} onclick={() => fileInput?.click()}>
+            <lefine-text>{addFileLabel}</lefine-text>
+            {#if draft.files.length > 0}
+              <strong>{fileCountLabel(draft.files.length)}</strong>
+            {/if}
+          </button>
+          {#if executionEditorOpen}
+            <kefine-execution-editor>
+              <input
+                value={draft.executionEstimate}
+                data-part="execution-estimate-input"
+                placeholder={executionEstimateLabel}
+                oninput={(e) => onExecutionEstimateChange?.((e.currentTarget as HTMLInputElement).value)}
+              />
+            </kefine-execution-editor>
+          {:else}
+            <button type="button" data-part="composer-chip" onmousedown={keepComposerFocus} onclick={() => { executionEditorOpen = true; }}>
+              <lefine-text>{addExecutionEstimateLabel}</lefine-text>
+            </button>
           {/if}
-        </button>
-        {#if executionEditorOpen}
-          <kefine-execution-editor>
+          {#if tagEditorOpen}
             <input
-              value={draft.executionEstimate}
-              data-part="execution-estimate-input"
-              placeholder={executionEstimateLabel}
-              oninput={(e) => onExecutionEstimateChange?.((e.currentTarget as HTMLInputElement).value)}
+              bind:this={tagInput}
+              bind:value={tagInputValue}
+              data-part="tag-input"
+              placeholder={tagPlaceholderLabel}
+              maxlength="32"
+              onkeydown={handleTagInputKeydown}
+              onblur={() => {
+                if (tagInputValue.trim()) {
+                  commitTag(tagInputValue);
+                  return;
+                }
+
+                tagEditorOpen = false;
+              }}
             />
-          </kefine-execution-editor>
-        {:else}
-          <button type="button" data-part="composer-chip" onmousedown={keepComposerFocus} onclick={() => { executionEditorOpen = true; }}>
-            <lefine-text>{addExecutionEstimateLabel}</lefine-text>
-          </button>
-        {/if}
-        {#if tagEditorOpen}
-          <input
-            bind:this={tagInput}
-            bind:value={tagInputValue}
-            data-part="tag-input"
-            placeholder={tagPlaceholderLabel}
-            maxlength="32"
-            onkeydown={handleTagInputKeydown}
-            onblur={() => {
-              if (tagInputValue.trim()) {
-                commitTag(tagInputValue);
-                return;
-              }
-
-              tagEditorOpen = false;
-            }}
-          />
-        {:else}
-          <button type="button" data-part="composer-chip" data-part-tag="true" onmousedown={keepComposerFocus} onclick={() => { tagEditorOpen = true; }}>
-            <lefine-text>{addTagLabel}</lefine-text>
-          </button>
-        {/if}
-      </kefine-composer-strip>
-
-      {#if (draft.tags?.length ?? 0) > 0}
-        <kefine-tag-strip data-has-tags="true">
-          {#each draft.tags ?? [] as tag (`tag-${tag}`)}
-            <button type="button" data-part="tag-pill" onmousedown={keepComposerFocus} onclick={() => removeTag(tag)} aria-label={removeTagLabel(tag)}>
-              <lefine-text>#{tag}</lefine-text>
-              <strong>×</strong>
+          {:else}
+            <button type="button" data-part="composer-chip" data-part-tag="true" onmousedown={keepComposerFocus} onclick={() => { tagEditorOpen = true; }}>
+              <lefine-text>{addTagLabel}</lefine-text>
             </button>
-          {/each}
-        </kefine-tag-strip>
-      {/if}
+          {/if}
+        </kefine-composer-strip>
 
-      {#if (draft.templateFiles?.length ?? 0) > 0}
-        <kefine-file-list data-template-files="true">
-          {#each draft.templateFiles ?? [] as file (`template-${file.id}`)}
-            <lefine-box data-part="template-file-pill">
-              <lefine-text>{file.name}</lefine-text>
-              <strong>{Math.max(1, Math.round((file.size ?? 1024) / 1024))} KB</strong>
-            </lefine-box>
-          {/each}
-        </kefine-file-list>
-      {/if}
+        {#if (draft.tags?.length ?? 0) > 0}
+          <kefine-tag-strip data-has-tags="true">
+            {#each draft.tags ?? [] as tag (`tag-${tag}`)}
+              <button type="button" data-part="tag-pill" onmousedown={keepComposerFocus} onclick={() => removeTag(tag)} aria-label={removeTagLabel(tag)}>
+                <lefine-text>#{tag}</lefine-text>
+                <strong>×</strong>
+              </button>
+            {/each}
+          </kefine-tag-strip>
+        {/if}
 
-      {#if draft.files.length > 0}
-        <kefine-file-list>
-          {#each draft.files as file, index (`${file.name}-${file.size}-${index}`)}
-            <button type="button" data-part="file-pill" onmousedown={keepComposerFocus} onclick={() => onRemoveFile(index)}>
-              {#if isImageFile(file) && filePreviews.has(index)}
-                <lefine-box data-part="file-preview-wrapper">
-                  <img
-                    src={filePreviews.get(index)}
-                    alt={file.name}
-                    data-part="file-preview"
-                  />
-                </lefine-box>
-              {/if}
-              <lefine-text>{file.name}</lefine-text>
-              <strong>{Math.max(1, Math.round(file.size / 1024))} KB</strong>
-            </button>
-          {/each}
-        </kefine-file-list>
-      {/if}
-    </kefine-input-meta>
+        {#if (draft.templateFiles?.length ?? 0) > 0}
+          <kefine-file-list data-template-files="true">
+            {#each draft.templateFiles ?? [] as file (`template-${file.id}`)}
+              <lefine-box data-part="template-file-pill">
+                <lefine-text>{file.name}</lefine-text>
+                <strong>{Math.max(1, Math.round((file.size ?? 1024) / 1024))} KB</strong>
+              </lefine-box>
+            {/each}
+          </kefine-file-list>
+        {/if}
+
+        {#if draft.files.length > 0}
+          <kefine-file-list>
+            {#each draft.files as file, index (`${file.name}-${file.size}-${index}`)}
+              <button type="button" data-part="file-pill" onmousedown={keepComposerFocus} onclick={() => onRemoveFile(index)}>
+                {#if isImageFile(file) && filePreviews.has(index)}
+                  <lefine-box data-part="file-preview-wrapper">
+                    <img
+                      src={filePreviews.get(index)}
+                      alt={file.name}
+                      data-part="file-preview"
+                    />
+                  </lefine-box>
+                {/if}
+                <lefine-text>{file.name}</lefine-text>
+                <strong>{Math.max(1, Math.round(file.size / 1024))} KB</strong>
+              </button>
+            {/each}
+          </kefine-file-list>
+        {/if}
+      </kefine-input-meta>
+    {/if}
+
+    <input bind:this={fileInput} data-part="file-input" type="file" multiple onchange={handleFileChange} />
+    <p id="kefine-composer-hints" data-part="composer-hints" hidden>{composerHints}</p>
   {/if}
-
-  <input bind:this={fileInput} data-part="file-input" type="file" multiple onchange={handleFileChange} />
-  <p id="kefine-composer-hints" data-part="composer-hints" hidden>{composerHints}</p>
 
   <!-- Proxy/VPN configuration preview — appears above the task history while typing -->
   <KefineProxyConfigWidget active={proxyIntentActive} />
@@ -1816,9 +1824,10 @@ initialized = true;
   <!-- Extracted-music preview — appears when the draft reads like "extract audio from video" -->
   <KefineMusicWidget active={musicIntentActive} />
 
-  <!-- Persistent task history on main page (same data as in profile) -->
-  {#if (solverSearchActive && solverSearchText?.trim()) || (searchRevealed && recentOrders.length > 0)}
-    <section data-part="tasks-list" data-entrance={!listEntranceDone}>
+  {#if !searchResultsOnly}
+    <!-- Persistent task history on main page (same data as in profile) -->
+    {#if (solverSearchActive && solverSearchText?.trim()) || (searchRevealed && recentOrders.length > 0)}
+      <section data-part="tasks-list" data-entrance={!listEntranceDone}>
       {#if solverSearchActive && solverSearchText?.trim() && !activeSearchDuplicate}
         <kefine-task-history-item
           data-testid="kefine-solver-search-row"
@@ -1964,8 +1973,8 @@ initialized = true;
           </kefine-task-history-actions>
         </kefine-task-history-item>
       {/each}
-    </section>
-  {/if}
+      </section>
+    {/if}
   {/if}
 
   {#if isSearching && (sortedMatchedOrders.length > 0 || searchResultsOnly)}
@@ -4366,12 +4375,21 @@ initialized = true;
 
   lefine-text[data-part='instant-name'] {
     font-weight: 600;
-    letter-spacing: -0.01em;
+    letter-spacing: 0;
   }
 
   lefine-text[data-part='instant-url'] {
     color: var(--lefine-text-soft);
     font-size: 0.82rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  lefine-text[data-part='instant-description'] {
+    color: color-mix(in oklab, var(--lefine-text) 66%, transparent);
+    font-size: 0.78rem;
+    line-height: 1.32;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

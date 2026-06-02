@@ -54,11 +54,25 @@
     onStopPointerCancel?: () => void;
   } = $props();
 
+  function escapeHtml(text: string): string {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   function highlightText(text: string, query: string): string {
-    if (!query.trim()) return text;
+    const escapedText = escapeHtml(text);
+    if (!query.trim()) return escapedText;
     const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const regex = new RegExp(`(${escaped})`, 'gi');
-    return text.replace(regex, '<mark style="background:color-mix(in oklab, var(--kef-color-primary, #c89a5a) 35%, transparent); color:inherit; border-radius:2px; padding:0 1px;">$1</mark>');
+    return escapedText.replace(regex, '<mark style="background:color-mix(in oklab, var(--kef-color-primary, #c89a5a) 35%, transparent); color:inherit; border-radius:2px; padding:0 1px;">$1</mark>');
+  }
+
+  function normalizeSnippet(text: string | undefined): string {
+    return (text ?? '').replace(/\s+/g, ' ').trim();
   }
 
   function formatTemplateVariableLabel(key: string): string {
@@ -74,6 +88,7 @@
   const hasServiceVariables = $derived((order.templateVariables?.length ?? 0) > 0);
   const hasExpandedSections = $derived(hasLabels || hasServiceVariables);
   const canMakeTemplate = $derived(order.status === 'completed' || order.status === 'done');
+  const orderSnippet = $derived(normalizeSnippet(order.description));
 </script>
 
 <li>
@@ -95,6 +110,11 @@
 
         <kefine-order-copy>
           <kefine-order-title>{@html highlightText(order.title ?? '', searchQuery)}</kefine-order-title>
+          {#if orderSnippet}
+            <kefine-order-snippet data-testid={`kefine-order-snippet-${order.id}`}>
+              {@html highlightText(orderSnippet, searchQuery)}
+            </kefine-order-snippet>
+          {/if}
         </kefine-order-copy>
       </kefine-order-row>
     </summary>
@@ -277,6 +297,18 @@
     line-height: 1.25;
     color: var(--lefine-text);
     overflow-wrap: anywhere;
+  }
+
+  kefine-order-snippet {
+    display: -webkit-box;
+    color: color-mix(in oklab, var(--lefine-text) 66%, transparent);
+    font-size: 0.86rem;
+    line-height: 1.35;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    line-clamp: 2;
+    -webkit-line-clamp: 2;
   }
 
   kefine-order-disclosure {

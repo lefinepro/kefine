@@ -38,7 +38,7 @@ async function prepare(page) {
   });
 }
 
-async function capture({ path, routePath, viewport }) {
+async function capture({ path, routePath, viewport, waitForTestId }) {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport });
   await page.addInitScript((orders) => {
@@ -49,6 +49,9 @@ async function capture({ path, routePath, viewport }) {
   await prepare(page);
   await page.goto(new URL(routePath, baseURL).toString(), { waitUntil: 'networkidle' });
   await page.getByTestId('kefine-search-page-results').waitFor({ state: 'visible' });
+  if (waitForTestId) {
+    await page.getByTestId(waitForTestId).waitFor({ state: 'visible' });
+  }
   await page.waitForTimeout(500);
   await page.screenshot({ path, fullPage: false });
   await browser.close();
@@ -64,4 +67,18 @@ await capture({
   path: 'docs/screenshots/issue-124-search-page-mobile.png',
   routePath: '/@staff?q=ci%20rollback',
   viewport: { width: 390, height: 844 }
+});
+
+await capture({
+  path: 'docs/screenshots/issue-124-search-page-sites.png',
+  routePath: '/?q=git%20hub',
+  viewport: { width: 1440, height: 900 },
+  waitForTestId: 'kefine-instant-description-github'
+});
+
+await capture({
+  path: 'docs/screenshots/issue-124-search-page-widget.png',
+  routePath: '/?q=translate%20from%20english%20to%20russian',
+  viewport: { width: 1440, height: 900 },
+  waitForTestId: 'kefine-translator-widget'
 });
