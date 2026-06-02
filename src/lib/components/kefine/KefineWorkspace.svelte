@@ -327,6 +327,26 @@
   let PasskeyDialogComponent = $state<LazyComponent | null>(null);
   let PrivateKeyDialogComponent = $state<LazyComponent | null>(null);
   let EmailCodeDialogComponent = $state<LazyComponent | null>(null);
+  let appliedDeepLinkTask = $state('');
+
+  $effect(() => {
+    if (!browser) return;
+
+    const task = page.url.searchParams.get('task')?.trim() ?? '';
+    if (!task || appliedDeepLinkTask === task) {
+      return;
+    }
+
+    appliedDeepLinkTask = task;
+
+    if (step !== 'create' || currentOrder) {
+      newOrder();
+    }
+
+    draft.description = task;
+    solverSearchActive = false;
+    solverSearchText = '';
+  });
 
   const passkeySession = $derived($passkeySessionStore);
   const isPasskeyActive = $derived(passkeySession ? passkeySession.expiresAt.getTime() > Date.now() : false);

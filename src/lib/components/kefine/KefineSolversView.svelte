@@ -9,7 +9,13 @@
     solverAvatarColor,
     solverInitials
   } from '$lib/kefine/solver-avatars';
-  import { topbarSearchActions, type TopbarSearchAction } from '$lib/kefine/topbar-search-context';
+  import {
+    requestTopbarSearch,
+    topbarSearchActions,
+    topbarSearchItems,
+    type TopbarSearchAction,
+    type TopbarSearchItem
+  } from '$lib/kefine/topbar-search-context';
   import type { SolverHistoryTask } from '$lib/components/kefine/kefine-solver-history';
   import type { OrgReadme, OrgTodo, OrgTodoState } from '$lib/kefine/repo-docs';
 
@@ -113,6 +119,48 @@
     return () => topbarSearchActions.set([]);
   });
 
+  function createTaskHref(query: string) {
+    const task = query.trim();
+    const params = new URLSearchParams();
+    if (task) {
+      params.set('task', task);
+    }
+
+    const project = normalizeProjectPath(displayRepoName || repoName);
+    if (project) {
+      params.set('project', project);
+    }
+
+    const search = params.toString();
+    return search ? `/?${search}` : '/';
+  }
+
+  $effect(() => {
+    const items: TopbarSearchItem[] = [
+      {
+        id: 'create-task',
+        title: localeText.solversView.createTaskSearchTitle,
+        category: localeText.solversView.tasksAside,
+        actionLabel: localeText.solversView.createTaskSearchAction,
+        icon: 'project' as const,
+        keywords: [
+          localeText.solversView.createTaskSearchTitle,
+          localeText.solversView.newTaskPlaceholder,
+          displayRepoName,
+          'create task',
+          'new task'
+        ],
+        hideWhenEmpty: true,
+        showForQuery: (query) => query.trim().length > 0,
+        subtitleFromQuery: (query) => query.trim() || displayRepoName,
+        hrefFromQuery: createTaskHref
+      }
+    ];
+
+    topbarSearchItems.set(items);
+    return () => topbarSearchItems.set([]);
+  });
+
   const metricsById = $derived(
     new Map(defaultMetrics.map((metric) => [metric.solverId, metric]))
   );
@@ -171,6 +219,7 @@
   let expandedInitialized = $state(false);
   let expandedTodoSolverId = $state<string | null>(null);
   let selectedTodoSolvers = $state<Record<string, string>>({});
+  let newTaskText = $state('');
 
   $effect(() => {
     if (expandedInitialized) return;
@@ -197,6 +246,28 @@
     selectedTodoSolvers = { ...selectedTodoSolvers, [todoId]: solutionId };
     expandedTodoSolverId = null;
     onViewSolution?.(solutionId);
+  }
+
+  function updateNewTask(event: Event) {
+    newTaskText = (event.currentTarget as HTMLInputElement).value;
+  }
+
+  function openNewTaskSearch() {
+    const query = newTaskText.trim();
+    if (!query) {
+      return;
+    }
+
+    requestTopbarSearch({ query });
+  }
+
+  function handleNewTaskKeydown(event: KeyboardEvent) {
+    if (event.key !== 'Enter' || event.shiftKey || event.metaKey || event.ctrlKey || event.altKey) {
+      return;
+    }
+
+    event.preventDefault();
+    openNewTaskSearch();
   }
 
   function closeSettingsModal() {
@@ -333,6 +404,34 @@
                 {/if}
               </lef-repo-checklist-item>
             {/each}
+            <lef-repo-checklist-item data-state="create" data-testid="repo-new-task-row">
+              <lef-repo-todo-check data-state="create" aria-hidden="true">
+                <Icon icon="lucide:plus" width="12" height="12" aria-hidden="true" />
+              </lef-repo-todo-check>
+              <input
+                data-testid="repo-new-task-input"
+                aria-label={localeText.solversView.newTaskAria}
+                placeholder={localeText.solversView.newTaskPlaceholder}
+                value={newTaskText}
+                autocomplete="off"
+                spellcheck="false"
+                oninput={updateNewTask}
+                onkeydown={handleNewTaskKeydown}
+              />
+              <lef-todo-solver-cell>
+                <button
+                  type="button"
+                  class="todo-solver-select create-task-search"
+                  data-testid="repo-new-task-search"
+                  aria-label={localeText.solversView.openCreateTaskSearch}
+                  title={localeText.solversView.openCreateTaskSearch}
+                  disabled={newTaskText.trim().length === 0}
+                  onclick={openNewTaskSearch}
+                >
+                  <Icon icon="lucide:search" width="14" height="14" aria-hidden="true" />
+                </button>
+              </lef-todo-solver-cell>
+            </lef-repo-checklist-item>
           </lef-repo-checklist>
         {/if}
 
@@ -640,6 +739,12 @@
     background: color-mix(in oklab, var(--kef-success, #16a34a) 80%, transparent);
   }
 
+  lef-repo-todo-check[data-state='create'] {
+    border-color: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 58%, var(--kef-line));
+    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 11%, transparent);
+    color: var(--kef-color-primary, #c89a5a);
+  }
+
   lef-repo-checklist-item {
     display: grid;
     grid-template-columns: 18px minmax(0, 1fr) auto;
@@ -653,6 +758,16 @@
     color: var(--lefine-text);
   }
 
+  lef-repo-checklist-item[data-state='create'] {
+    border-style: dashed;
+    background: color-mix(in oklab, var(--kef-bg-card) 66%, transparent);
+  }
+
+  lef-repo-checklist-item[data-state='create']:focus-within {
+    border-color: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 38%, var(--kef-line));
+    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 5%, var(--kef-bg-card));
+  }
+
   lef-repo-checklist-item lefine-text {
     min-width: 0;
     overflow-wrap: anywhere;
@@ -662,6 +777,23 @@
 
   lef-repo-checklist-item[data-state='done'] lefine-text {
     color: var(--lefine-text-soft);
+  }
+
+  lef-repo-checklist-item input[data-testid='repo-new-task-input'] {
+    width: 100%;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    color: var(--lefine-text);
+    font: inherit;
+    font-size: 0.9rem;
+    line-height: 1.3;
+    outline: 0;
+  }
+
+  lef-repo-checklist-item input[data-testid='repo-new-task-input']::placeholder {
+    color: var(--lefine-text-soft);
+    opacity: 0.78;
   }
 
   lef-todo-solver-cell {
@@ -699,6 +831,21 @@
 
   .todo-solver-select:active {
     transform: scale(0.98);
+  }
+
+  .create-task-search {
+    color: var(--lefine-text-soft);
+  }
+
+  .create-task-search:disabled {
+    cursor: default;
+    opacity: 0.46;
+    transform: none;
+  }
+
+  .create-task-search:disabled:hover {
+    border-color: color-mix(in oklab, var(--kef-line) 75%, transparent);
+    background: color-mix(in oklab, var(--lefine-text) 7%, var(--kef-bg-card));
   }
 
   .todo-solver-select lef-solver-avatar {

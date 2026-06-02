@@ -1,5 +1,6 @@
 import { writable } from 'svelte/store';
 import type { KefineTopbarIconName } from '$lib/components/kefine/KefineTopbarIcon.svelte';
+import type { KefineSearchWidgetId } from '$lib/kefine/search-widgets';
 
 export type TopbarSearchAction = {
   id: string;
@@ -7,6 +8,28 @@ export type TopbarSearchAction = {
   icon: KefineTopbarIconName;
   testId?: string;
   onClick: () => void | Promise<void>;
+};
+
+export type TopbarSearchItem = {
+  id: string;
+  title: string;
+  subtitle?: string;
+  category?: string;
+  href?: string;
+  actionLabel?: string;
+  icon?: KefineTopbarIconName;
+  keywords?: string[];
+  widget?: KefineSearchWidgetId;
+  hideWhenEmpty?: boolean;
+  showForQuery?: (query: string) => boolean;
+  hrefFromQuery?: (query: string) => string;
+  subtitleFromQuery?: (query: string) => string;
+};
+
+export type TopbarSearchRequest = {
+  id: number;
+  query?: string;
+  widget?: KefineSearchWidgetId | null;
 };
 
 /**
@@ -25,3 +48,22 @@ export const topbarSearchPlaceholderOverride = writable<string | null>(null);
  * Optional route-scoped icon actions rendered beside the shared topbar search.
  */
 export const topbarSearchActions = writable<TopbarSearchAction[]>([]);
+
+/**
+ * Optional route-scoped command-palette results.
+ */
+export const topbarSearchItems = writable<TopbarSearchItem[]>([]);
+
+/**
+ * Route-scoped requests to open the shared command palette with a seeded query.
+ */
+export const topbarSearchRequest = writable<TopbarSearchRequest | null>(null);
+
+let nextTopbarSearchRequestId = 1;
+
+export function requestTopbarSearch(options: Omit<TopbarSearchRequest, 'id'> = {}) {
+  topbarSearchRequest.set({
+    id: nextTopbarSearchRequestId++,
+    ...options
+  });
+}

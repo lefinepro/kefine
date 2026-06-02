@@ -889,6 +889,11 @@ export const KEFINE_TEXT_RU = {
     todoOpen: 'TODO',
     todoInProgress: 'В РАБОТЕ',
     todoDone: 'ГОТОВО',
+    newTaskPlaceholder: 'Новая задача',
+    newTaskAria: 'Новая задача',
+    openCreateTaskSearch: 'Открыть создание задачи в поиске',
+    createTaskSearchTitle: 'Создать задачу',
+    createTaskSearchAction: 'Создать',
     todoCount: (count: number) =>
       `${count} ${count === 1 ? 'задача' : count >= 2 && count <= 4 ? 'задачи' : 'задач'}`,
     solvers: 'Солверы',

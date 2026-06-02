@@ -68,6 +68,19 @@ test.describe('New frontend task results', () => {
     await expect(page.getByTestId('task-solver-variants').locator('[data-variant]')).toHaveCount(3);
     await expect(page.getByRole('button', { name: 'Apply solution' })).toHaveCount(0);
     await expect(page.getByRole('button', { name: /Merge/ })).toHaveCount(0);
+
+    await expect(page.getByTestId('repo-new-task-row')).toBeVisible();
+    await page.getByTestId('repo-new-task-input').fill('Add gzip middleware');
+    await page.getByTestId('repo-new-task-input').press('Enter');
+
+    await expect(page.getByTestId('kefine-topbar-search-dialog')).toBeVisible();
+    await expect(page.getByTestId('kefine-topbar-search-input')).toHaveValue('Add gzip middleware');
+    const createTaskResult = page.getByTestId('kefine-topbar-search-result-create-task');
+    await expect(createTaskResult).toBeVisible();
+    await expect(createTaskResult).toContainText('Add gzip middleware');
+
+    await createTaskResult.click();
+    await expect(page.getByTestId('kefine-task-input')).toHaveValue('Add gzip middleware');
   });
 
   test('solver detail topbar uses Apply instead of Merge', async ({ page }) => {

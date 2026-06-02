@@ -9,7 +9,11 @@
   import type { KefineLocale } from '$lib/constants/kefine-locale';
   import type { KefineTopbarIconName } from '$lib/components/kefine/KefineTopbarIcon.svelte';
   import type { KefineSearchWidgetId } from '$lib/kefine/search-widgets';
-  import type { TopbarSearchAction } from '$lib/kefine/topbar-search-context';
+  import type {
+    TopbarSearchAction,
+    TopbarSearchItem,
+    TopbarSearchRequest
+  } from '$lib/kefine/topbar-search-context';
 
   /** Built-in widgets the command palette can surface inline on any page. */
   export type { KefineSearchWidgetId };
@@ -27,18 +31,7 @@
     href: string;
   };
 
-  export type KefineTopbarSearchItem = {
-    id: string;
-    title: string;
-    subtitle?: string;
-    category?: string;
-    href?: string;
-    actionLabel?: string;
-    icon?: KefineTopbarIconName;
-    keywords?: string[];
-    /** When set, activating the item opens this widget inline instead of navigating. */
-    widget?: KefineSearchWidgetId;
-  };
+  export type KefineTopbarSearchItem = TopbarSearchItem;
 
   let {
     brandLabel,
@@ -78,6 +71,7 @@
     searchHomeHref = '/',
     searchItems = [],
     searchActions = [],
+    searchRequest = null,
     initialSearchQuery = '',
     initialWidget = null,
     showSearchWidgets = true,
@@ -137,8 +131,9 @@
     searchOpenLabel?: string;
     searchHomeLabel?: string;
     searchHomeHref?: string;
-    searchItems?: KefineTopbarSearchItem[];
+    searchItems?: TopbarSearchItem[];
     searchActions?: TopbarSearchAction[];
+    searchRequest?: TopbarSearchRequest | null;
     /** Deep-link query (from `?q=`) that auto-opens the palette seeded with this text. */
     initialSearchQuery?: string;
     /** Widget short link (e.g. `/@profile/weather`) that auto-opens this widget inline. */
@@ -291,11 +286,15 @@
   const normalizedSearchQuery = $derived(normalizeSearchValue(searchQuery));
   const filteredSearchItems = $derived.by(() => {
     if (!normalizedSearchQuery) {
-      return allSearchItems.slice(0, 9);
+      return allSearchItems.filter((item) => !item.hideWhenEmpty).slice(0, 9);
     }
 
     return allSearchItems
-      .filter((item) => getSearchHaystack(item).includes(normalizedSearchQuery))
+      .filter(
+        (item) =>
+          getSearchHaystack(item).includes(normalizedSearchQuery) ||
+          item.showForQuery?.(searchQuery) === true
+      )
       .slice(0, 9);
   });
 
@@ -319,6 +318,7 @@
   // We track the applied signature so the dialog opens once per distinct link
   // instead of re-opening on every reactive pass.
   let appliedDeepLink = $state<string | null>(null);
+  let appliedSearchRequestId = $state(0);
   $effect(() => {
     if (!showSearch) {
       return;
@@ -339,6 +339,18 @@
 
     appliedDeepLink = signature;
     void openSearchDialog({ query: initialSearchQuery ?? '', widget });
+  });
+
+  $effect(() => {
+    if (!showSearch || !searchRequest || appliedSearchRequestId === searchRequest.id) {
+      return;
+    }
+
+    appliedSearchRequestId = searchRequest.id;
+    void openSearchDialog({
+      query: searchRequest.query ?? '',
+      widget: searchRequest.widget ?? null
+    });
   });
 
   function handleBrandClick() {
@@ -407,6 +419,14 @@
 
   function getSearchItemTestId(item: KefineTopbarSearchItem) {
     return `kefine-topbar-search-result-${item.id.replace(/[^a-zA-Z0-9_-]+/g, '-')}`;
+  }
+
+  function getSearchItemSubtitle(item: KefineTopbarSearchItem) {
+    return item.subtitleFromQuery?.(searchQuery) || item.subtitle || item.category || item.href || searchOpenLabel;
+  }
+
+  function getSearchItemHref(item: KefineTopbarSearchItem) {
+    return item.hrefFromQuery?.(searchQuery.trim()) || item.href || '';
   }
 
   async function openSearchDialog(options?: { query?: string; widget?: KefineSearchWidgetId | null }) {
@@ -538,9 +558,9 @@
       return;
     }
 
+    const href = getSearchItemHref(item).trim();
     closeSearchDialog();
 
-    const href = item.href?.trim();
     if (href && typeof window !== 'undefined') {
       window.location.assign(href);
     }
@@ -965,7 +985,7 @@
                   <kefine-search-result-copy>
                     <lefine-text data-part="search-result-title">{item.title}</lefine-text>
                     <lefine-text data-part="search-result-subtitle">
-                      {item.subtitle || item.category || item.href || searchOpenLabel}
+                      {getSearchItemSubtitle(item)}
                     </lefine-text>
                   </kefine-search-result-copy>
                   <kefine-search-result-meta>
