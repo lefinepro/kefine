@@ -61,11 +61,14 @@ describe('parseOrgReadme', () => {
 });
 
 describe('parseOrgTodos', () => {
-  test('reads TODO and DONE states in order', () => {
-    const todos = parseOrgTodos(['* TODO First task', '* DONE Second task'].join('\n'));
+  test('reads TODO, IN PROGRESS and DONE states in order', () => {
+    const todos = parseOrgTodos(
+      ['* TODO First task', '* IN PROGRESS Second task', '* DONE Third task'].join('\n')
+    );
     expect(todos).toEqual([
       { id: 'todo-1', state: 'TODO', title: 'First task', done: false },
-      { id: 'todo-2', state: 'DONE', title: 'Second task', done: true }
+      { id: 'todo-2', state: 'IN PROGRESS', title: 'Second task', done: false },
+      { id: 'todo-3', state: 'DONE', title: 'Third task', done: true }
     ]);
   });
 

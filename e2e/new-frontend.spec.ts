@@ -34,28 +34,30 @@ test.describe('New frontend task results', () => {
     await expect(page.getByTestId('repo-brief')).toBeVisible();
     await expect(page.getByTestId('repo-brief-label')).toHaveCount(0);
     await expect(page.getByTestId('repo-readme')).not.toContainText('Live demo app');
-    await expect(page.getByTestId('repo-demonstration')).toContainText('Live demo app');
+    await expect(page.getByTestId('repo-demonstration')).toHaveCount(0);
     await expect(page.getByTestId('repo-readme')).not.toContainText('Settings');
     await expect(page.getByTestId('repo-readme')).not.toContainText('Folder layout');
     await expect(page.getByTestId('repo-checklist')).toBeVisible();
-    await expect(page.getByTestId('solver-task-list').getByText('TODO', { exact: true })).toHaveCount(0);
     await expect(page.getByTestId('repo-checklist-item')).toHaveCount(4);
-    await expect(page.getByTestId('repo-checklist-status').first()).toContainText('Open');
-    await expect(page.getByTestId('repo-checklist-status').last()).toContainText('Done');
-    const checklistBox = await page.getByTestId('repo-checklist').boundingBox();
-    const demonstrationBox = await page.getByTestId('repo-demonstration').boundingBox();
-    expect(demonstrationBox?.y ?? 0).toBeGreaterThan(checklistBox?.y ?? 0);
+    await expect(page.getByTestId('repo-checklist-item').nth(0)).toHaveAttribute('data-state', 'todo');
+    await expect(page.getByTestId('repo-checklist-item').nth(1)).toHaveAttribute('data-state', 'in-progress');
+    await expect(page.getByTestId('repo-checklist-item').last()).toHaveAttribute('data-state', 'done');
+    await expect(page.getByTestId('repo-checklist-status').nth(0)).toContainText('TODO');
+    await expect(page.getByTestId('repo-checklist-status').nth(1)).toContainText('IN PROGRESS');
+    await expect(page.getByTestId('repo-checklist-status').last()).toContainText('DONE');
     await expect(page.getByTestId('task-toggle-active')).toHaveCount(0);
     await expect(page.locator('lef-solutions-list')).toHaveCount(0);
     // The right rail keeps clone controls and exposes repository settings from
-    // an icon-triggered modal, then shows solvers when the checklist has a completed item.
+    // an icon-triggered modal; solver selection now lives inside checklist rows.
     await expect(page.getByTestId('solver-clone-rail')).toBeVisible();
     await page.getByTestId('repo-settings-trigger').click();
     await expect(page.getByTestId('repo-settings-dialog')).toBeVisible();
     await expect(page.getByTestId('repo-settings-dialog')).toContainText('Default branch');
     await page.getByRole('button', { name: 'Close repository settings' }).click();
-    await expect(page.getByTestId('todo-solvers-block')).toBeVisible();
-    await expect(page.getByTestId('completed-todo-source')).toContainText('Project scaffolding');
+    await expect(page.getByTestId('todo-solvers-block')).toHaveCount(0);
+    await expect(page.getByTestId('todo-solver-select')).toHaveCount(4);
+    await expect(page.getByTestId('todo-solver-select').first()).toContainText('Go Proxy Basic');
+    await page.getByTestId('todo-solver-select').first().click();
     await expect(page.getByTestId('task-solver-variants')).toBeVisible();
     await expect(page.getByTestId('task-solver-variants').locator('[data-variant]')).toHaveCount(3);
     await expect(page.getByRole('button', { name: 'Apply solution' })).toHaveCount(0);
@@ -70,7 +72,7 @@ test.describe('New frontend task results', () => {
     await expect(page.getByRole('button', { name: /Merge/ })).toHaveCount(0);
   });
 
-  test('right rail solver block shows solver avatars and lets you choose a variant', async ({ page }) => {
+  test('checklist task solver selector shows avatars and lets you choose a variant', async ({ page }) => {
     await mockOrderApi(page);
     await page.goto('/order/order-1/solutions?task=Build%20a%20Go%20mini%20proxy');
     await page.waitForLoadState('networkidle');
@@ -78,9 +80,11 @@ test.describe('New frontend task results', () => {
     await expect(page.getByTestId('solution-list-page')).toBeVisible();
     await expect(page.locator('lef-tasks-aside')).toHaveCount(0);
     await expect(page.getByTestId('task-toggle-active')).toHaveCount(0);
-    await expect(page.getByTestId('todo-solvers-block')).toBeVisible();
+    await expect(page.getByTestId('todo-solvers-block')).toHaveCount(0);
+    await expect(page.getByTestId('todo-solver-select')).toHaveCount(4);
 
-    // Completed checklist work unlocks the right-rail solver variants.
+    // Each checklist task owns a compact solver selector.
+    await page.getByTestId('todo-solver-select').first().click();
     const variants = page.getByTestId('task-solver-variants');
     await expect(variants).toBeVisible();
 

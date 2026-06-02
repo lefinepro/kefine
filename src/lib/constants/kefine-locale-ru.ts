@@ -886,8 +886,9 @@ export const KEFINE_TEXT_RU = {
     todoHeading: 'TODO',
     todoAria: 'Список TODO репозитория',
     checklistAria: 'Чеклист репозитория',
-    todoOpen: 'Открыто',
-    todoDone: 'Готово',
+    todoOpen: 'TODO',
+    todoInProgress: 'В РАБОТЕ',
+    todoDone: 'ГОТОВО',
     todoCount: (count: number) =>
       `${count} ${count === 1 ? 'задача' : count >= 2 && count <= 4 ? 'задачи' : 'задач'}`,
     solvers: 'Солверы',

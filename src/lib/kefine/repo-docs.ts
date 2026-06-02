@@ -4,8 +4,8 @@
  *
  * - `repo-docs/readme.org` — the README shown at the top. It holds the project
  *   settings, folder layout, demonstration links and a `Brief` section. The
- *   solvers screen renders the title, plain Brief and demonstration links, then
- *   surfaces settings from a right-rail modal.
+ *   solvers screen renders the title and plain Brief, then surfaces settings
+ *   from a right-rail modal.
  * - `repo-docs/todo.org` — the TODO list stored and rendered below as task rows.
  *
  * These replace the earlier `.meta/issues/brief.org` idea: the brief now lives
@@ -49,9 +49,9 @@ export interface OrgReadme {
   sections: OrgSection[];
 }
 
-export type OrgTodoState = 'TODO' | 'DONE';
+export type OrgTodoState = 'TODO' | 'IN PROGRESS' | 'DONE';
 
-/** A single `* TODO`/`* DONE` task from the TODO file. */
+/** A single `* TODO`/`* IN PROGRESS`/`* DONE` task from the TODO file. */
 export interface OrgTodo {
   id: string;
   state: OrgTodoState;
@@ -149,7 +149,7 @@ export function parseOrgReadme(src: string): OrgReadme {
 export function parseOrgTodos(src: string): OrgTodo[] {
   const todos: OrgTodo[] = [];
   for (const raw of src.split(/\r?\n/)) {
-    const match = raw.match(/^\*+\s+(TODO|DONE)\s+(.*)$/);
+    const match = raw.match(/^\*+\s+(TODO|IN PROGRESS|DONE)\s+(.*)$/);
     if (!match) continue;
     const state = match[1] as OrgTodoState;
     todos.push({

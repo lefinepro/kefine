@@ -1,6 +1,6 @@
 #+TITLE: @kefine/go-proxy checklist
 
 * TODO Minimal HTTP proxy with forward functionality
-* TODO Add request/response logging
+* IN PROGRESS Add request/response logging
 * TODO Rate limiting, caching and metrics
 * DONE Project scaffolding and config loader
