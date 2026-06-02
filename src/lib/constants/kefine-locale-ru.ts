@@ -29,6 +29,17 @@ export const KEFINE_TEXT_RU = {
     githubLabel: 'Открыть GitHub',
     signIn: 'Войти',
     signedIn: 'Выполнен вход',
+    searchLabel: 'Поиск',
+    searchPlaceholder: 'Поиск lepos, страниц, действий...',
+    searchResultsLabel: 'Результаты',
+    searchEmptyLabel: 'Ничего не найдено',
+    searchOpenLabel: 'Открыть',
+    searchHomeLabel: 'Главная',
+    searchWidgetsLabel: 'Виджеты',
+    searchWeatherLabel: 'Погода',
+    searchTranslatorLabel: 'Переводчик',
+    searchMusicLabel: 'Музыка',
+    searchWidgetBackLabel: 'Назад к результатам',
     socialLinks: {
       mastodon: {
         label: 'Открыть Mastodon',

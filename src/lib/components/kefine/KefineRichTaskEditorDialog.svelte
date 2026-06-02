@@ -112,6 +112,12 @@
   let autoOpenedTagEditor = $state(false);
   let autoOpenedFilePicker = $state(false);
 
+  $effect(() => {
+    if (compact && editorMode !== 'source') {
+      editorMode = 'source';
+    }
+  });
+
   const slashRegex = /(?:^|\s)\/([^\s/]*)$/u;
   const mentionRegex = /(?:^|\s)@([^\s@]*)$/u;
   const slashCommands: SlashCommand[] = [
@@ -525,6 +531,7 @@
     editorLoadError = '';
 
     try {
+      await loadProsekit();
       const instance = createEditor({
         extension: union(defineBasicExtension(), defineMention()),
         defaultContent: sourceToHtml(value)

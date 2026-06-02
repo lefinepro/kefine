@@ -4,6 +4,7 @@
   import { page } from '$app/state';
   import { isFeatureEnabled, resolvePublicRuntimeConfig } from '$lib/config/public-config';
   import { isSpecialRuntimeOrigin } from '$lib/config/special-runtime';
+  import type { KefineSearchWidgetId } from '$lib/kefine/search-widgets';
   import { resolveOrderProxyBasePath } from '$lib/order-proxy-path';
   import { onMount } from 'svelte';
   import { tick } from 'svelte';
@@ -98,12 +99,41 @@
 
   let {
     initialActorHandle,
-    initialOrderId
+    initialOrderId,
+    initialWidget = null
   }: {
     initialActorHandle?: string;
     initialOrderId?: string;
+    initialWidget?: KefineSearchWidgetId | null;
   } = $props();
   const localeText = $derived($kefineLocaleText);
+  // Latch the `?q=` deep link: the URL-sync effect below strips search params from
+  // the address bar, so we capture the query as soon as it appears and keep it so
+  // the command palette can surface it. Initialised from the mount URL (full page
+  // load) and updated by the effect (client-side navigation). Declared before the
+  // URL-sync effect so it wins the flush ordering when both react to a navigation.
+  let latchedDeepLinkSearchQuery = $state(page.url.searchParams.get('q') ?? '');
+  $effect(() => {
+    const query = page.url.searchParams.get('q') ?? '';
+    if (query) {
+      latchedDeepLinkSearchQuery = query;
+    }
+  });
+
+  // `replaceState` throws ("before router is initialized") if called during the
+  // initial hydration flush. The URL-sync effect below rewrites the address bar
+  // (e.g. stripping a `?q=` deep link), and an error thrown mid-flush aborts the
+  // whole effect batch — so unrelated UI (such as the command palette input)
+  // silently fails to update. Swallow that specific pre-init failure: the rewrite
+  // is purely cosmetic (the deep-link query is already latched) and a later
+  // navigation re-runs the effect once the router is live.
+  function safeReplaceState(url: URL, state: Parameters<typeof replaceState>[1]) {
+    try {
+      replaceState(url, state);
+    } catch {
+      // Router not initialised yet (initial hydration flush) — skip the rewrite.
+    }
+  }
   const runtimeConfig = $derived(resolvePublicRuntimeConfig(page.data.publicConfig));
   const repositoriesEnabled = $derived(isFeatureEnabled('repositories', runtimeConfig));
   const activeLocale = $derived(readLocaleFromPathname(page.url.pathname) ?? 'en');
@@ -520,11 +550,9 @@
   const RECENT_ORDERS_LIMIT = 10;
   const recentProfileOrders = $derived.by(() => {
     const profile = currentProfile;
-    if (!profile) {
-      return [];
-    }
-
-    const owned = createdOrders.filter((order) => order.ownerProfileId === profile.id);
+    const owned = profile
+      ? createdOrders.filter((order) => order.ownerProfileId === profile.id)
+      : createdOrders;
     const query = (solverSearchActive ? solverSearchText : draft.description).trim().toLowerCase();
     const matches = (order: OrderView) => {
       if (!query) return false;
@@ -544,6 +572,42 @@
 
     return sorted.slice(0, RECENT_ORDERS_LIMIT);
   });
+  const recentCreatedOrders = $derived.by(() =>
+    createdOrders
+      .slice()
+      .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
+      .slice(0, RECENT_ORDERS_LIMIT)
+  );
+  const topbarSearchItems = $derived.by(() =>
+    recentCreatedOrders.map((order) => {
+      const orderRouteId = order.shareId?.trim() || order.id;
+      const actorHandle = order.actorHandle?.trim() || normalizedActorHandle;
+
+      return {
+        id: order.id,
+        title: order.title?.trim() || order.id,
+        subtitle: [order.solver, order.status, order.id].filter(Boolean).join(' · '),
+        category: localeText.labels.task.replace(/:$/, ''),
+        href: localizeAppPath(
+          actorHandle
+            ? buildActorOrderPath(actorHandle, orderRouteId)
+            : `/order/${encodeURIComponent(orderRouteId)}`,
+          activeLocale
+        ),
+        actionLabel: localeText.labels.openOrderLink,
+        icon: 'project' as const,
+        keywords: [
+          order.id,
+          order.shareId,
+          order.description,
+          order.solver,
+          order.status,
+          order.actorHandle,
+          order.ownerUsername
+        ].filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+      };
+    })
+  );
   const TITLE_FONT_MAX = 2.0;
   const TITLE_FONT_MIN = 1.0;
   const TITLE_FONT_SHRINK_AT = 24;
@@ -1090,7 +1154,7 @@
             : '';
 
       if (window.location.href !== nextUrl.toString()) {
-        replaceState(nextUrl, page.state);
+        safeReplaceState(nextUrl, page.state);
       }
       return;
     }
@@ -1105,7 +1169,7 @@
     nextUrl.hash = '';
 
     if (window.location.href !== nextUrl.toString()) {
-      replaceState(nextUrl, page.state);
+      safeReplaceState(nextUrl, page.state);
     }
   });
 
@@ -1470,7 +1534,14 @@
 
   function selectTopbarLocale(locale: KefineLocale) {
     setKefineLocale(locale);
-    void goto(buildLocaleHomePath(locale));
+    if (!browser) {
+      void goto(buildLocaleHomePath(locale));
+      return;
+    }
+
+    const currentPath = stripLocalePrefix(window.location.pathname) || '/';
+    const nextPath = localizeAppPath(currentPath, locale);
+    void goto(`${nextPath}${window.location.search}${window.location.hash}`);
   }
 
   function loadCreatedOrders(): OrderView[] {
@@ -2163,8 +2234,28 @@
   }
 
   async function queueTaskBelow() {
-    if (!draft.description.trim()) return;
-    await submitDraft(draft, { background: true });
+    const normalized = normalizeDraftOrder(draft, localeText);
+
+    if (!normalized.description.trim() && !normalized.title.trim()) {
+      return;
+    }
+
+    const submittedSearchText = normalized.description.trim() || normalized.title.trim() || localeText.defaults.taskTitle;
+    solverSearchText = submittedSearchText;
+    solverSearchActive = true;
+    draft = createEmptyDraft();
+
+    const created = await submitDraft(normalized, { background: true });
+    if (!created) {
+      if (!draft.description.trim()) {
+        draft = normalized;
+      }
+
+      if (solverSearchText === submittedSearchText) {
+        solverSearchActive = false;
+        solverSearchText = '';
+      }
+    }
   }
 
   function attachFiles(files: File[]) {
@@ -2382,6 +2473,7 @@
     }
 
     updateProfileTask(currentOrder.id, patch);
+    const locallyPatchedOrder = currentOrder;
 
     if (browser && patch.shareId !== undefined) {
       const nextShareId = patch.shareId?.trim() || currentOrder.id;
@@ -2418,11 +2510,15 @@
 
     const nextOrderWithActor = applyActorIdentityFallback(
       {
-        ...currentOrder,
+        ...locallyPatchedOrder,
         ...updated,
-        id: currentOrder.id
+        ...(patch.title !== undefined ? { title: patch.title } : {}),
+        ...(patch.description !== undefined ? { description: patch.description } : {}),
+        ...(patch.taskIcon !== undefined ? { taskIcon: patch.taskIcon } : {}),
+        ...(patch.shareId !== undefined ? { shareId: patch.shareId } : {}),
+        id: locallyPatchedOrder.id
       },
-      currentOrder
+      locallyPatchedOrder
     );
     currentOrder = nextOrderWithActor;
     upsertOrder(nextOrderWithActor);
@@ -2727,6 +2823,21 @@
   languageEnglishLabel={localeText.topbar.languageEnglish}
   languageRussianLabel={localeText.topbar.languageRussian}
   languageArmenianLabel={localeText.topbar.languageArmenian}
+  searchLabel={localeText.topbar.searchLabel}
+  searchPlaceholder={localeText.topbar.searchPlaceholder}
+  searchResultsLabel={localeText.topbar.searchResultsLabel}
+  searchEmptyLabel={localeText.topbar.searchEmptyLabel}
+  searchOpenLabel={localeText.topbar.searchOpenLabel}
+  searchHomeLabel={localeText.topbar.searchHomeLabel}
+  searchWidgetsLabel={localeText.topbar.searchWidgetsLabel}
+  searchWeatherLabel={localeText.topbar.searchWeatherLabel}
+  searchTranslatorLabel={localeText.topbar.searchTranslatorLabel}
+  searchMusicLabel={localeText.topbar.searchMusicLabel}
+  searchWidgetBackLabel={localeText.topbar.searchWidgetBackLabel}
+  searchHomeHref={buildLocaleHomePath(activeLocale)}
+  searchItems={topbarSearchItems}
+  initialSearchQuery={latchedDeepLinkSearchQuery}
+  initialWidget={initialWidget}
   socialLinks={sidebarSocialLinks}
   showSocialLinks={false}
   legalLinks={sidebarLegalLinks}
@@ -2812,12 +2923,14 @@
           createServiceLabel={localeText.create.transformToService}
           serviceVariablesLabel={localeText.create.serviceVariables}
           executionEstimateLabel={localeText.labels.executionEstimate}
+          stopTaskLabel={localeText.buttons.stopTask}
           deleteTaskLabel={localeText.buttons.delete}
           onSubmit={handleSubmit}
           onQueueTask={queueTaskBelow}
           onAttachFiles={attachFiles}
           onRemoveFile={removeAttachedFile}
           onDeleteOrder={handleDeleteOrder}
+          onStopOrder={handleStopOrder}
           onOpenOrder={openOrder}
           onCreateServiceFromOrder={() => {}}
           onDescriptionChange={updateDescription}
@@ -2981,6 +3094,23 @@
               if (!orderId) {
                 stagePreviewOpen = true;
                 step = 'executing';
+                return;
+              }
+
+              if (currentOrder?.uiScenario !== 'vpn-service') {
+                step = 'executing';
+                paymentStage = 'payment-method-select';
+                stagePreviewOpen = false;
+
+                if (browser) {
+                  window.setTimeout(() => {
+                    const nextUrl = new URL(window.location.href);
+                    nextUrl.pathname = '/';
+                    nextUrl.search = '';
+                    nextUrl.hash = `/orders/${encodeURIComponent(orderId)}/stages`;
+                    window.history.pushState(window.history.state, '', nextUrl);
+                  });
+                }
                 return;
               }
 

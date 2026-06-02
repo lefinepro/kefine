@@ -185,7 +185,7 @@
   );
 </script>
 
-<lefine-box class="solutions-page-container">
+<lefine-box class="solutions-page-container" data-testid="solution-list-page">
   <lef-tasks-grid>
     <lef-tasks-aside aria-label={localeText.solversView.tasksAside}>
       <lef-tasks-aside-head>{localeText.solversView.tasksAside}</lef-tasks-aside-head>
@@ -330,8 +330,8 @@
                   type="button"
                   class="solution-merge-btn"
                   class:solution-merge-btn--merged={solution.rated ?? false}
-                  aria-label={(solution.rated ?? false) ? localeText.solversView.applied : localeText.solversView.pinSolution}
-                  title={(solution.rated ?? false) ? localeText.solversView.applied : localeText.solversView.pinSolution}
+                  aria-label={(solution.rated ?? false) ? localeText.solversView.applied : localeText.solversView.applySolution}
+                  title={(solution.rated ?? false) ? localeText.solversView.applied : localeText.solversView.applySolution}
                   onclick={() => onApplySolution?.(solution.id)}
                 >
                   <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -350,7 +350,10 @@
       <lef-task-rail aria-label={localeText.solversView.metricsAria}>
         <lef-task-rail-card>
           <lef-task-rail-head>{localeText.solversView.taskDescription}</lef-task-rail-head>
-          <lef-task-rail-body>{taskTitle}</lef-task-rail-body>
+          <lef-task-rail-body data-testid="solution-list-task-label">{repoName || taskTitle}</lef-task-rail-body>
+          {#if repoName && taskTitle}
+            <small>{taskTitle}</small>
+          {/if}
         </lef-task-rail-card>
 
         <lef-task-rail-actions>

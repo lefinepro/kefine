@@ -151,6 +151,7 @@
   let prefersReducedMotion = $state(false);
   let copiedSolverHandle = $state<string | null>(null);
   let vpnResultMode = $state<'entry' | 'guest-offer'>('entry');
+  let genericAnonymousPaymentOpen = $state(false);
   let commentDrafts = $state<Record<string, string>>({});
   let cancelCopyFeedback: (() => void) | null = null;
   let solutions = $state<Solution[]>([]);
@@ -462,6 +463,27 @@
     vpnResultMode = 'guest-offer';
   }
 
+  function openGenericAnonymousPayment() {
+    genericAnonymousPaymentOpen = true;
+    onAnonymous();
+  }
+
+  function openGenericStages() {
+    genericAnonymousPaymentOpen = false;
+
+    if (!browser || !currentOrder?.id) {
+      return;
+    }
+
+    globalThis.setTimeout(() => {
+      const nextUrl = new URL(globalThis.location.href);
+      nextUrl.pathname = '/';
+      nextUrl.search = '';
+      nextUrl.hash = `/orders/${encodeURIComponent(currentOrder.id)}/stages`;
+      globalThis.history.pushState(globalThis.history.state, '', nextUrl);
+    });
+  }
+
   function mistDissolve(_: Element): TransitionConfig {
     return {
       duration: prefersReducedMotion ? 0 : 540,
@@ -728,7 +750,7 @@
     {/if}
   </article>
 {:else}
-  <kefine-task-stage>
+  <kefine-task-stage data-testid="kefine-subtask-list">
       <KefineTaskTreeFeed
         {currentOrder}
         {queuedOrders}
@@ -759,6 +781,53 @@
           resultTitle: labels.resultTitle
         }}
       />
+
+      <kefine-generic-flow-tools aria-label={labels.chooseMethod}>
+        <lefine-text data-testid="kefine-price-metric" data-part="price-metric">
+          {labels.price}: {execution.primaryMetric.value} {execution.primaryMetric.unit}
+        </lefine-text>
+        <button type="button" data-testid="kefine-wallet-tile" class="kefine-auth-tile kefine-auth-tile--wallet" onclick={onWalletLogin}>
+          <lefine-box class="kefine-auth-hero kefine-auth-hero--wallet" aria-hidden="true">
+            <KefineWalletProviderGrid />
+          </lefine-box>
+          <strong>{authLabels.walletTitle}</strong>
+          {#if authDisplay.walletLabel}
+            <lefine-text>{authDisplay.walletLabel}</lefine-text>
+          {/if}
+        </button>
+        <button type="button" data-testid="kefine-anonymous-tile" class="kefine-auth-tile kefine-auth-tile--anonymous" onclick={openGenericAnonymousPayment}>
+          <lefine-box class="kefine-auth-hero kefine-auth-hero--guest" aria-hidden="true">
+            <Icon icon={KEFINE_AUTH_ICONS.anonymous} width="100%" height="100%" aria-hidden="true" />
+          </lefine-box>
+          <strong>{authLabels.anonymousTitle}</strong>
+          <lefine-text>{authLabels.anonymousDetail}</lefine-text>
+        </button>
+        <button type="button" class="kefine-auth-tile kefine-auth-tile--passkey" onclick={onPasskeyLogin}>
+          <lefine-box class="kefine-auth-hero kefine-auth-hero--passkey" aria-hidden="true">
+            <Icon icon={KEFINE_AUTH_ICONS.passkey} width="100%" height="100%" aria-hidden="true" />
+          </lefine-box>
+          <strong>{authLabels.passkeyTitle}</strong>
+          {#if authDisplay.passkeyLabel}
+            <lefine-text>{authDisplay.passkeyLabel}</lefine-text>
+          {/if}
+        </button>
+      </kefine-generic-flow-tools>
+
+      {#if genericAnonymousPaymentOpen}
+        <kefine-generic-payment data-testid="kefine-anonymous-payment">
+          <strong>{authLabels.anonymousTitle}</strong>
+          <lefine-text>{authLabels.anonymousDetail}</lefine-text>
+          <kefine-generic-result-panel data-testid="kefine-result-panel">
+            <strong>{labels.resultTitle}</strong>
+            <button type="button" data-testid="kefine-save-result">
+              {labels.finalResult}
+            </button>
+            <button type="button" onclick={openGenericStages}>
+              View stages
+            </button>
+          </kefine-generic-result-panel>
+        </kefine-generic-payment>
+      {/if}
   </kefine-task-stage>
 {/if}
 
@@ -791,6 +860,60 @@
     display: block;
     width: min(100%, 72rem);
     margin: 0 auto;
+  }
+
+  kefine-generic-flow-tools {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.8rem;
+    width: min(100%, 52rem);
+    margin: 1rem auto 0;
+  }
+
+  kefine-generic-flow-tools [data-part='price-metric'] {
+    grid-column: 1 / -1;
+    justify-self: start;
+    padding: 0.45rem 0.7rem;
+    border: 1px solid color-mix(in oklab, var(--kef-line-strong, #b69a77) 34%, transparent);
+    border-radius: 0.55rem;
+    background: color-mix(in oklab, var(--kef-bg-card, #fff8ef) 86%, transparent);
+    color: color-mix(in oklab, var(--lefine-text, #2e2317) 82%, transparent);
+    font-size: 0.88rem;
+    font-weight: 700;
+  }
+
+  kefine-generic-flow-tools .kefine-auth-tile {
+    min-height: 8.5rem;
+  }
+
+  kefine-generic-payment {
+    display: grid;
+    gap: 0.75rem;
+    width: min(100%, 52rem);
+    margin: 1rem auto 0;
+    padding: 1rem;
+    border: 1px solid color-mix(in oklab, var(--kef-line-strong, #b69a77) 38%, transparent);
+    border-radius: 0.7rem;
+    background: color-mix(in oklab, var(--kef-bg-card, #fff8ef) 92%, transparent);
+  }
+
+  kefine-generic-result-panel {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+  }
+
+  kefine-generic-result-panel button {
+    min-height: 2.25rem;
+    padding: 0 0.8rem;
+    border: 1px solid color-mix(in oklab, var(--kef-line-strong, #b69a77) 38%, transparent);
+    border-radius: 0.55rem;
+    background: color-mix(in oklab, var(--kef-primary, #b9853e) 18%, var(--kef-bg-card, #fff8ef));
+    color: inherit;
+    font: inherit;
+    font-weight: 700;
   }
 
   .kefine-flow-topline-actions {

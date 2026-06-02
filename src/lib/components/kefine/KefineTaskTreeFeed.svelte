@@ -124,6 +124,8 @@
   let hoveredRailNodeId = $state<string | null>(null);
   let collapsedNodeById = $state<Record<string, boolean>>({});
   let hiddenBranchVisibleByNodeId = $state<Record<string, boolean>>({});
+  let persistedThreadUiState: ThreadUiStorageState = { collapsed: {}, hiddenVisible: {} };
+  let hydratedThreadUiStorageKey = $state<string | null>(null);
   let branchPlacementDraftByNodeId = $state<Record<string, TaskBranchPlacement>>({});
   let branchVisibilityDraftByNodeId = $state<Record<string, TaskBranchVisibility>>({});
   let planEditorOpen = $state(false);
@@ -223,6 +225,9 @@
 
   function editorPlaceholder(node: TaskThreadNode): string {
     const action = commentMetaActionByNodeId[node.id];
+    if (action === 'insert') {
+      return 'Next step';
+    }
     if (action === 'branch') {
       return labels.createBranch ?? 'Create branch';
     }
@@ -253,26 +258,41 @@
 
   $effect(() => {
     if (!browser || !threadUiStorageKey) {
+      hydratedThreadUiStorageKey = null;
       return;
     }
 
     const persisted = resolveThreadUiStorageState(globalThis.localStorage.getItem(threadUiStorageKey));
+    persistedThreadUiState = persisted;
     collapsedNodeById = persisted.collapsed;
     hiddenBranchVisibleByNodeId = persisted.hiddenVisible;
+    hydratedThreadUiStorageKey = threadUiStorageKey;
   });
 
   $effect(() => {
-    if (!browser || !threadUiStorageKey) {
+    if (!browser || !threadUiStorageKey || hydratedThreadUiStorageKey !== threadUiStorageKey) {
       return;
     }
 
-    globalThis.localStorage.setItem(
-      threadUiStorageKey,
-      JSON.stringify({
-        collapsed: collapsedNodeById,
-        hiddenVisible: hiddenBranchVisibleByNodeId
-      } as ThreadUiStorageState)
-    );
+    const nextState: ThreadUiStorageState = {
+      collapsed: { ...persistedThreadUiState.collapsed },
+      hiddenVisible: { ...persistedThreadUiState.hiddenVisible }
+    };
+
+    for (const [nodeId, collapsed] of Object.entries(collapsedNodeById)) {
+      if (collapsed) {
+        nextState.collapsed[nodeId] = true;
+      }
+    }
+
+    for (const [nodeId, visible] of Object.entries(hiddenBranchVisibleByNodeId)) {
+      if (visible) {
+        nextState.hiddenVisible[nodeId] = true;
+      }
+    }
+
+    persistedThreadUiState = nextState;
+    globalThis.localStorage.setItem(threadUiStorageKey, JSON.stringify(nextState));
   });
 
   const nextOrders = $derived.by(() =>
@@ -515,7 +535,7 @@
           content
         );
       await onSaveDocument(nextContent);
-    } else if (action === 'edit' && onSaveDocument && currentOrder && node.stepId) {
+    } else if (action === 'edit' && onSaveDocument && currentOrder && (node.stepId || node.id)) {
       const shouldPreserveBranchMarker =
         Boolean(node.branchLabel) ||
         node.branchPlacement === 'left' ||
@@ -525,10 +545,11 @@
         {
         placement: node.branchPlacement ?? 'normal',
         visibility: node.branchVisibility ?? 'visible'
-      },
+        },
         shouldPreserveBranchMarker
       );
-      const nextContent = replaceTaskNodeInsert(currentOrder, node.stepId, editedContent);
+      const targetNodeKey = node.editableSource !== undefined ? node.id : (node.stepId || node.id);
+      const nextContent = replaceTaskNodeInsert(currentOrder, targetNodeKey, editedContent);
       await onSaveDocument(nextContent);
     } else if (action === 'comment' && currentOrder && isExchangeSearchNode(node) && systemInstructionEnabledByNodeId[node.id] === true && onSaveDocument) {
       const nextContent = replaceTaskNodeComment(currentOrder, exchangeInstructionNodeKey(currentOrder), content);
@@ -658,6 +679,10 @@
     return Boolean(node.commentable);
   }
 
+  function isSolverFallbackNode(node: TaskThreadNode): boolean {
+    return Boolean(currentOrder && node.id === `${currentOrder.id}-solver`);
+  }
+
 </script>
 
   {#snippet threadNode(node: TaskThreadNode, index: number, child = false, queued = false)}
@@ -720,7 +745,7 @@
         {#if node.branchLabel}
           <kefine-thread-branch-badge>{node.branchLabel}</kefine-thread-branch-badge>
         {/if}
-        <kefine-thread-line-copy>
+        <kefine-thread-line-copy data-testid={isSolverFallbackNode(node) ? 'kefine-solver-fallback' : null}>
           {#if node.children?.length}
             <button
               type="button"
@@ -790,6 +815,20 @@
           <kefine-thread-comment-plus-menu>
             <button
               type="button"
+              data-part="next-step-trigger"
+              aria-label="Add next step"
+              title="Add next step"
+              onclick={(event: MouseEvent) => {
+                event.stopPropagation();
+                openNodeCommentComposerWithAction(node, 'insert');
+              }}
+            >
+              <Icon icon="mdi:plus" width="16" height="16" aria-hidden="true" />
+              <lefine-text>Next step</lefine-text>
+            </button>
+
+            <button
+              type="button"
               data-part="comment-trigger-action"
               data-kind="comment"
               aria-label={labels.commentAction ?? 'Comment'}
@@ -798,6 +837,51 @@
             >
               <Icon icon="mdi:comment-text-outline" width="16" height="16" aria-hidden="true" />
               <lefine-text>{labels.commentAction ?? 'Comment'}</lefine-text>
+            </button>
+
+            <button
+              type="button"
+              data-part="comment-trigger-action"
+              data-kind="branch"
+              aria-label={labels.createBranch ?? 'Create branch'}
+              data-testid={`kefine-thread-action-branch-${node.id}`}
+              onclick={(event: MouseEvent) => {
+                event.stopPropagation();
+                openNodeBranchComposer(node, 'normal', 'visible');
+              }}
+            >
+              <Icon icon="mdi:source-branch" width="16" height="16" aria-hidden="true" />
+              <lefine-text>{labels.createBranch ?? 'Create branch'}</lefine-text>
+            </button>
+
+            <button
+              type="button"
+              data-part="comment-trigger-action"
+              data-kind="branch-left"
+              aria-label={labels.createBranchLeft ?? 'Create left branch'}
+              data-testid={`kefine-thread-action-branch-left-${node.id}`}
+              onclick={(event: MouseEvent) => {
+                event.stopPropagation();
+                openNodeBranchComposer(node, 'left', 'visible');
+              }}
+            >
+              <Icon icon="mdi:source-branch-plus" width="16" height="16" aria-hidden="true" />
+              <lefine-text>{labels.createBranchLeft ?? 'Left branch'}</lefine-text>
+            </button>
+
+            <button
+              type="button"
+              data-part="comment-trigger-action"
+              data-kind="branch-hidden"
+              aria-label={labels.createBranchHidden ?? 'Create hidden branch'}
+              data-testid={`kefine-thread-action-branch-hidden-${node.id}`}
+              onclick={(event: MouseEvent) => {
+                event.stopPropagation();
+                openNodeBranchComposer(node, 'normal', 'hidden');
+              }}
+            >
+              <Icon icon="mdi:eye-off-outline" width="16" height="16" aria-hidden="true" />
+              <lefine-text>{labels.createBranchHidden ?? 'Hidden branch'}</lefine-text>
             </button>
 
             {#if node.editableSource !== undefined}
@@ -818,8 +902,9 @@
             {/if}
           </kefine-thread-comment-plus-menu>
 
-          {#if openCommentComposerId === node.id && ['branch', 'edit'].includes(commentMetaActionByNodeId[node.id] ?? 'comment')}
-            <kefine-thread-inline-node-editor data-testid={`kefine-branch-editor-${node.id}`}>
+          {#if openCommentComposerId === node.id && ['insert', 'branch', 'edit'].includes(commentMetaActionByNodeId[node.id] ?? 'comment')}
+            {@const inlineAction = commentMetaActionByNodeId[node.id] ?? 'comment'}
+            <kefine-thread-inline-node-editor data-testid={inlineAction === 'insert' ? `kefine-inline-next-step-editor-${node.id}` : `kefine-branch-editor-${node.id}`}>
               <KefineRichTaskEditorDialog
                 open={true}
                 compact={true}
@@ -837,9 +922,20 @@
                 onSubmit={() => void submitComment(node)}
                 onCancel={() => closeNodeComposer(node)}
               />
-              {#if isCommentSubmitting(node)}
-                <lefine-text>{labels.saving}</lefine-text>
-              {/if}
+              <kefine-thread-comment-actions>
+                {#if isCommentSubmitting(node)}
+                  <lefine-text>{labels.saving}</lefine-text>
+                {/if}
+                <button
+                  type="button"
+                  disabled={isCommentSubmitting(node) || !(commentDrafts[node.id] ?? '').trim()}
+                  data-kind="apply-comment"
+                  data-testid={`kefine-thread-action-apply-${node.id}`}
+                  onclick={() => void submitComment(node)}
+                >
+                  {labels.apply}
+                </button>
+              </kefine-thread-comment-actions>
             </kefine-thread-inline-node-editor>
           {/if}
 
@@ -1016,8 +1112,10 @@
   {:else}
   <kefine-thread-head>
     <kefine-thread-title>
-      <lefine-text data-part="task-monogram" aria-hidden="true">{taskMonogram}</lefine-text>
-      <strong>{currentOrder?.title || labels.boardTitle}</strong>
+      <h2>
+        <lefine-text data-part="task-monogram" aria-hidden="true">{taskMonogram}</lefine-text>
+        <strong data-part="task-title">{currentOrder?.title || labels.boardTitle}</strong>
+      </h2>
     </kefine-thread-title>
     <kefine-thread-head-actions>
       {#if commentSubmittingStepId}
@@ -1188,11 +1286,16 @@
     color: #fffaf0;
   }
 
-  kefine-thread-head strong {
-    display: block;
+  kefine-thread-head h2 {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.7rem;
+    flex-wrap: wrap;
+    min-width: 0;
+    margin: 0;
     font-size: clamp(1.35rem, 2vw, 2.1rem);
     line-height: 1.08;
-    letter-spacing: -0.02em;
+    letter-spacing: 0;
   }
 
   kefine-thread-head [data-part='task-monogram'] {

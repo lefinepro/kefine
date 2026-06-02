@@ -745,6 +745,34 @@ function replaceSystemInsert(content: string | undefined, nodeKey: string, inser
     return next.trim();
   }
 
+  const generatedInsertMatch = nodeKey.match(/^(.*)-insert-(\d+)$/);
+  const parentNodeKey = generatedInsertMatch?.[1];
+  const insertIndex = Number(generatedInsertMatch?.[2] ?? 0) - 1;
+  if (parentNodeKey && insertIndex >= 0) {
+    const parsed = parseTaskDocumentContent(source);
+    const parentInserts = parsed.systemInserts[parentNodeKey];
+    if (parentInserts?.[insertIndex]) {
+      const blocks = [parsed.body].filter(Boolean);
+
+      for (const [key, comments] of Object.entries(parsed.systemComments)) {
+        for (const item of comments) {
+          blocks.push(
+            `#+begin_node_comment: ${key}\n${serializeStoredCommentPayload({ content: item.content, mentions: item.mentions })}\n#+end_node_comment`
+          );
+        }
+      }
+
+      for (const [key, inserts] of Object.entries(parsed.systemInserts)) {
+        inserts.forEach((item, index) => {
+          const nextContent = key === parentNodeKey && index === insertIndex ? insertContent.trim() : item.content;
+          blocks.push(`#+begin_node_insert: ${key}\n${nextContent}\n#+end_node_insert`);
+        });
+      }
+
+      return blocks.filter(Boolean).join('\n\n').trim();
+    }
+  }
+
   return appendSystemInsert(source, nodeKey, insertContent);
 }
 

@@ -121,15 +121,20 @@ module Lepos
             next({error: "PatchTracker not found"}.to_json)
           end
 
-          payload = JSON.parse(env.request.body.try(&.gets_to_end) || "{}").as_h?
-          unless payload
+          activity = begin
+            AptokPayload.activity_from_json(env.request.body.try(&.gets_to_end) || "{}")
+          rescue ex : JSON::ParseException | ArgumentError
+            nil
+          end
+
+          unless activity
             env.response.status_code = 400
             next({error: "Invalid activity body"}.to_json)
           end
 
-          case payload["type"]?.try(&.as_s?)
+          case activity.type
           when "Apply"
-            object_id = payload["object"]?.try(&.as_s?) || ""
+            object_id = AptokPayload.activity_object_id(activity) || ""
             merge_request_id = object_id.split('/').last? || object_id
             result = ForgeFedStore.apply_merge_request(merge_request_id, config)
             unless result

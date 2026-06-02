@@ -1,5 +1,5 @@
 import { expect, type Page, type Route } from '@playwright/test';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { ml_dsa65 } from '@noble/post-quantum/ml-dsa.js';
 
@@ -338,7 +338,30 @@ export async function mockPrivateKeyAuth(page: Page) {
 }
 
 export function readActorPrivateKeyPem() {
-  return readFileSync(path.resolve(process.cwd(), 'actor-privatekey.pem'), 'utf8');
+  const localFixturePath = path.resolve(process.cwd(), 'actor-privatekey.pem');
+  if (existsSync(localFixturePath)) {
+    return readFileSync(localFixturePath, 'utf8');
+  }
+
+  return generateActorPrivateKeyPem();
+}
+
+let generatedActorPrivateKeyPem: string | null = null;
+
+function generateActorPrivateKeyPem() {
+  if (generatedActorPrivateKeyPem) {
+    return generatedActorPrivateKeyPem;
+  }
+
+  const seed = new Uint8Array(Array.from({ length: 32 }, (_, index) => index + 1));
+  const { secretKey } = ml_dsa65.keygen(seed);
+  const base64 = Buffer.from(secretKey).toString('base64');
+  generatedActorPrivateKeyPem = [
+    '-----BEGIN PRIVATE KEY-----',
+    ...(base64.match(/.{1,64}/g) ?? []),
+    '-----END PRIVATE KEY-----'
+  ].join('\n');
+  return generatedActorPrivateKeyPem;
 }
 
 function pemToDer(pem: string) {
@@ -348,6 +371,10 @@ function pemToDer(pem: string) {
 
 function encodeKeyString(value: string, prefix: string) {
   return `${prefix}${Buffer.from(value, 'utf8').toString('base64url')}`;
+}
+
+function encodeCompactBytes(value: Uint8Array) {
+  return Buffer.from(value).toString('base64url');
 }
 
 export function readActorPrivateKeyCompact() {
@@ -366,11 +393,5 @@ export async function deriveActorPublicKeyString() {
     ]),
     publicKey
   ]);
-  const publicKeyPem = [
-    '-----BEGIN PUBLIC KEY-----',
-    ...(publicKeyDer.toString('base64').match(/.{1,64}/g) ?? []),
-    '-----END PUBLIC KEY-----'
-  ].join('\n');
-
-  return encodeKeyString(publicKeyPem, 'pqpk_');
+  return encodeCompactBytes(publicKeyDer);
 }

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { browser } from '$app/environment';
+  import { goto } from '$app/navigation';
   import type { DraftOrder, OrderView, TemplatePresentation } from './kefine-workflow';
   import { scheduleAfter } from '$lib/utils/helpers';
   import KefineOrderListItem from '$lib/components/kefine/KefineOrderListItem.svelte';
@@ -101,12 +102,14 @@
     relatedItemsLabel,
     createServiceLabel = 'Transform to service',
     serviceVariablesLabel = 'Service variables',
+    stopTaskLabel = 'Stop repo',
     deleteTaskLabel,
     onSubmit,
     onQueueTask,
     onAttachFiles,
     onRemoveFile,
     onDeleteOrder,
+    onStopOrder,
     onOpenOrder,
     onCreateServiceFromOrder,
     onDescriptionChange,
@@ -118,7 +121,6 @@
     recentOrders = []
   }: {
     draft: DraftOrder;
-    recentOrders?: OrderView[];
     template: TemplatePresentation | null;
     serviceSetup?: {
       title: string;
@@ -185,12 +187,14 @@
     relatedItemsLabel: string;
     createServiceLabel?: string;
     serviceVariablesLabel?: string;
+    stopTaskLabel?: string;
     deleteTaskLabel: string;
     onSubmit: () => void;
     onQueueTask: () => Promise<void> | void;
     onAttachFiles: (files: File[]) => void;
     onRemoveFile: (index: number) => void;
     onDeleteOrder: (order: OrderView, event: Event) => void;
+    onStopOrder?: (order: OrderView, event: Event) => void;
     onOpenOrder: (order: OrderView) => void;
     onCreateServiceFromOrder?: (order: OrderView, event: Event) => void;
     onDescriptionChange?: (value: string) => void;
@@ -889,6 +893,55 @@ initialized = true;
     return `/order/go-proxy/solutions?task=${encodeURIComponent(solverSearchText)}`;
   });
 
+  function isGoProxySearch(text: string): boolean {
+    const normalized = text.trim().toLowerCase();
+    return normalized.includes('мини прокси') && normalized.includes('go');
+  }
+
+  function isRustHelloWorldSearch(text: string): boolean {
+    const normalized = text.trim().toLowerCase();
+    return normalized.includes('hello world') && normalized.includes('rust');
+  }
+
+  function solverRepositoryName(text: string): string {
+    if (isGoProxySearch(text)) {
+      return 'kefine/go-proxy';
+    }
+
+    if (isRustHelloWorldSearch(text)) {
+      return 'rust/hello-world';
+    }
+
+    return 'feat/basic-forward';
+  }
+
+  function completedBranchLabel(text: string, completed: boolean): string {
+    return completed ? solverRepositoryName(text) : 'feat/basic-forward';
+  }
+
+  function shouldShowSolverList(text: string, completed: boolean): boolean {
+    return completed && (isGoProxySearch(text) || isRustHelloWorldSearch(text));
+  }
+
+  function orderSolutionsHref(order: OrderView): string {
+    return `/order/${encodeURIComponent(order.id)}/solutions?task=${encodeURIComponent(order.title || solverSearchText)}`;
+  }
+
+  function orderTaskHref(order: OrderView): string {
+    return order.actorHandle || order.ownerUsername
+      ? buildActorOrderPath(order.actorHandle ?? order.ownerUsername!, order.shareId ?? order.id)
+      : `/order/${order.id}`;
+  }
+
+  function openSolverList(event: MouseEvent, href: string) {
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+      return;
+    }
+
+    event.preventDefault();
+    void goto(href);
+  }
+
   function formatTemplateVariableLabel(key: string): string {
     const normalized = key.trim().replace(/[_-]+/g, ' ');
     if (!normalized) {
@@ -1100,11 +1153,7 @@ initialized = true;
       return;
     }
 
-    if (event.shiftKey) {
-      return;
-    }
-
-    if (event.altKey) {
+    if (event.shiftKey || event.altKey) {
       event.preventDefault();
       void onQueueTask();
       return;
@@ -1723,85 +1772,149 @@ initialized = true;
   {#if (solverSearchActive && solverSearchText?.trim()) || (searchRevealed && recentOrders.length > 0)}
     <section data-part="tasks-list" data-entrance={!listEntranceDone}>
       {#if solverSearchActive && solverSearchText?.trim() && !activeSearchDuplicate}
-        <a
-          href={searchResultHref}
-          style="text-decoration:none; color:inherit; display:block; animation-delay: 0ms;"
-          transition:taskDropIn={{ delay: 0 }}
+        <kefine-task-history-item
+          data-testid="kefine-solver-search-row"
+          style="animation-delay: 0ms;"
         >
-          <kefine-solver-search-row aria-live="polite" data-state={taskCompleted ? 'completed' : 'in-progress'}>
-            <lefine-text>{solverSearchText}</lefine-text>
-            {#if taskCompleted}
-              <kefine-task-branch>
-                <kefine-task-branch-name>feat/basic-forward</kefine-task-branch-name>
-                <lef-cp-branch-icon>
-                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <line x1="6" y1="3" x2="6" y2="15"></line>
-                    <circle cx="6" cy="18" r="3"></circle>
-                    <circle cx="18" cy="6" r="3"></circle>
-                    <path d="M18 9a9 9 0 0 1-9 9"></path>
-                  </svg>
-                </lef-cp-branch-icon>
-              </kefine-task-branch>
-            {/if}
-            {#if isFlying}
-              <lef-arrow-wrapper>
-                <lef-wind-flow>
-                  <lef-wind-line></lef-wind-line>
-                  <lef-wind-line></lef-wind-line>
-                </lef-wind-flow>
-                <lef-flying-arrow>➵</lef-flying-arrow>
-              </lef-arrow-wrapper>
-            {/if}
+          <a
+            href={searchResultHref}
+            style="text-decoration:none; color:inherit; display:block;"
+          >
+            <kefine-solver-search-row aria-live="polite" data-state={taskCompleted ? 'completed' : 'in-progress'}>
+              <lefine-text>{solverSearchText}</lefine-text>
+              {#if taskCompleted}
+                <kefine-task-branch>
+                  <kefine-task-branch-name>{completedBranchLabel(solverSearchText, taskCompleted)}</kefine-task-branch-name>
+                  <lef-cp-branch-icon>
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <line x1="6" y1="3" x2="6" y2="15"></line>
+                      <circle cx="6" cy="18" r="3"></circle>
+                      <circle cx="18" cy="6" r="3"></circle>
+                      <path d="M18 9a9 9 0 0 1-9 9"></path>
+                    </svg>
+                  </lef-cp-branch-icon>
+                </kefine-task-branch>
+              {/if}
+              {#if isFlying}
+                <lef-arrow-wrapper>
+                  <lef-wind-flow>
+                    <lef-wind-line></lef-wind-line>
+                    <lef-wind-line></lef-wind-line>
+                  </lef-wind-flow>
+                  <lef-flying-arrow>➵</lef-flying-arrow>
+                </lef-arrow-wrapper>
+              {/if}
 
-            <kefine-solver-search-indicator aria-label={taskCompleted ? solverSearchCompletedLabel : solverSearchLabel} title={taskCompleted ? solverSearchCompletedLabel : solverSearchLabel} data-completed={taskCompleted}>
-              <kefine-solver-search-dot aria-hidden="true"></kefine-solver-search-dot>
-            </kefine-solver-search-indicator>
-          </kefine-solver-search-row>
-        </a>
+              <kefine-solver-search-indicator aria-label={taskCompleted ? solverSearchCompletedLabel : solverSearchLabel} title={taskCompleted ? solverSearchCompletedLabel : solverSearchLabel} data-completed={taskCompleted}>
+                <kefine-solver-search-dot aria-hidden="true"></kefine-solver-search-dot>
+              </kefine-solver-search-indicator>
+            </kefine-solver-search-row>
+          </a>
+          {#if shouldShowSolverList(solverSearchText, taskCompleted)}
+            <kefine-task-history-actions>
+              <a
+                role="button"
+                data-part="open-solvers"
+                href={searchResultHref}
+                onmousedown={keepComposerFocus}
+                onclick={(event) => openSolverList(event, searchResultHref)}
+              >
+                Open solver list
+              </a>
+            </kefine-task-history-actions>
+          {/if}
+        </kefine-task-history-item>
       {/if}
       {#each filteredRecentOrders as order, i (order.id)}
         {@const isDuplicate = activeSearchDuplicate?.id === order.id}
         {@const inProgress = isDuplicate && solverSearchActive && !taskCompleted}
-        <a
-          href={order.actorHandle || order.ownerUsername ? buildActorOrderPath(order.actorHandle ?? order.ownerUsername!, order.shareId ?? order.id) : `/order/${order.id}`}
-          style="text-decoration:none; color:inherit; display:block; animation-delay: {i * 78}ms;"
-          transition:taskDropIn={{ delay: i * 78 }}
+        {@const orderHref = orderTaskHref(order)}
+        <kefine-task-history-item
+          data-testid={isDuplicate && !order.id.startsWith('temp-') ? 'kefine-solver-search-row' : null}
+          style="animation-delay: {i * 78}ms;"
+          data-order-id={order.id}
+          data-status={order.status}
           data-active-task={isDuplicate ? 'true' : null}
         >
-          <kefine-solver-search-row aria-live="polite" data-state={inProgress ? 'in-progress' : 'completed'}>
-            <lefine-text>{order.title}</lefine-text>
+          <a
+            href={orderHref}
+            data-testid={`kefine-open-order-${order.id}`}
+            style="text-decoration:none; color:inherit; display:block;"
+            onmousedown={keepComposerFocus}
+            onclick={(event) => openSolverList(event, orderHref)}
+          >
+            <kefine-solver-search-row aria-live="polite" data-state={inProgress ? 'in-progress' : 'completed'}>
+              <lefine-text>{order.title}</lefine-text>
 
-            <kefine-task-branch>
-                <kefine-task-branch-name>feat/basic-forward</kefine-task-branch-name>
-                <lef-cp-branch-icon>
-                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <line x1="6" y1="3" x2="6" y2="15"></line>
-                    <circle cx="6" cy="18" r="3"></circle>
-                    <circle cx="18" cy="6" r="3"></circle>
-                    <path d="M18 9a9 9 0 0 1-9 9"></path>
-                  </svg>
-                </lef-cp-branch-icon>
-              </kefine-task-branch>
+              {#if order.executionEstimate}
+                <lefine-text data-part="task-estimate" data-testid={`kefine-order-eta-${order.id}`}>
+                  {order.executionEstimate}
+                </lefine-text>
+              {/if}
 
-            {#if inProgress && isFlying}
-              <lef-arrow-wrapper>
-                <lef-wind-flow>
-                  <lef-wind-line></lef-wind-line>
-                  <lef-wind-line></lef-wind-line>
-                </lef-wind-flow>
-                <lef-flying-arrow>➵</lef-flying-arrow>
-              </lef-arrow-wrapper>
+              <kefine-task-branch>
+                  <kefine-task-branch-name>{completedBranchLabel(order.title, !inProgress)}</kefine-task-branch-name>
+                  <lef-cp-branch-icon>
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <line x1="6" y1="3" x2="6" y2="15"></line>
+                      <circle cx="6" cy="18" r="3"></circle>
+                      <circle cx="18" cy="6" r="3"></circle>
+                      <path d="M18 9a9 9 0 0 1-9 9"></path>
+                    </svg>
+                  </lef-cp-branch-icon>
+                </kefine-task-branch>
+
+              {#if inProgress && isFlying}
+                <lef-arrow-wrapper>
+                  <lef-wind-flow>
+                    <lef-wind-line></lef-wind-line>
+                    <lef-wind-line></lef-wind-line>
+                  </lef-wind-flow>
+                  <lef-flying-arrow>➵</lef-flying-arrow>
+                </lef-arrow-wrapper>
+              {/if}
+
+              <kefine-solver-search-indicator
+                aria-label={inProgress ? solverSearchLabel : solverSearchCompletedLabel}
+                title={inProgress ? solverSearchLabel : solverSearchCompletedLabel}
+                data-completed={!inProgress}
+              >
+                <kefine-solver-search-dot aria-hidden="true"></kefine-solver-search-dot>
+              </kefine-solver-search-indicator>
+            </kefine-solver-search-row>
+          </a>
+          <kefine-task-history-actions>
+            {#if shouldShowSolverList(order.title, !inProgress)}
+              <a
+                role="button"
+                data-part="open-solvers"
+                href={orderSolutionsHref(order)}
+                onmousedown={keepComposerFocus}
+                onclick={(event) => openSolverList(event, orderSolutionsHref(order))}
+              >
+                Open solver list
+              </a>
             {/if}
-
-            <kefine-solver-search-indicator
-              aria-label={inProgress ? solverSearchLabel : solverSearchCompletedLabel}
-              title={inProgress ? solverSearchLabel : solverSearchCompletedLabel}
-              data-completed={!inProgress}
-            >
-              <kefine-solver-search-dot aria-hidden="true"></kefine-solver-search-dot>
-            </kefine-solver-search-indicator>
-          </kefine-solver-search-row>
-        </a>
+            {#if onStopOrder && order.status !== 'stopped' && order.status !== 'completed' && order.status !== 'done'}
+              <button
+                type="button"
+                data-part="stop-task"
+                data-testid={`kefine-stop-order-${order.id}`}
+                aria-label={`${stopTaskLabel}: ${order.title}`}
+                title={stopTaskLabel}
+                onmousedown={keepComposerFocus}
+                onclick={(event) => onStopOrder?.(order, event)}
+                onpointerup={(event) => {
+                  if (event.pointerType === 'touch') {
+                    onStopOrder?.(order, event);
+                  }
+                }}
+              >
+                <lefine-text aria-hidden="true"></lefine-text>
+              </button>
+            {/if}
+          </kefine-task-history-actions>
+        </kefine-task-history-item>
       {/each}
     </section>
   {/if}
@@ -2987,10 +3100,77 @@ initialized = true;
     gap: 1rem;
   }
 
-  [data-part="tasks-list"][data-entrance] > a {
+  [data-part="tasks-list"][data-entrance] > kefine-task-history-item {
     animation: kefine-task-drop-in 420ms cubic-bezier(0.23, 1, 0.32, 1) backwards;
     transform-origin: 50% 0;
     will-change: transform, opacity;
+  }
+
+  kefine-task-history-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+
+  kefine-task-history-item > a {
+    min-width: 0;
+  }
+
+  kefine-task-history-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.36rem;
+    min-width: max-content;
+  }
+
+  kefine-task-history-actions a[data-part='open-solvers'],
+  kefine-task-history-actions button[data-part='stop-task'] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2rem;
+    border-radius: 999px;
+    border: 1px solid color-mix(in oklab, var(--kef-line) 84%, transparent);
+    background: color-mix(in oklab, var(--kef-bg-card) 92%, var(--kef-color-primary) 8%);
+    color: var(--lefine-text);
+    font-size: 0.78rem;
+    font-weight: 650;
+    line-height: 1;
+    text-decoration: none;
+    cursor: pointer;
+    transition:
+      background-color var(--kef-motion-fast) var(--kef-ease-soft),
+      border-color var(--kef-motion-fast) var(--kef-ease-soft),
+      transform 120ms ease;
+  }
+
+  kefine-task-history-actions a[data-part='open-solvers'] {
+    padding: 0 0.78rem;
+  }
+
+  kefine-task-history-actions button[data-part='stop-task'] {
+    width: 2rem;
+    padding: 0;
+  }
+
+  kefine-task-history-actions button[data-part='stop-task'] lefine-text {
+    width: 0.52rem;
+    height: 0.52rem;
+    border-radius: 0.16rem;
+    background: currentColor;
+  }
+
+  kefine-task-history-actions a[data-part='open-solvers']:hover,
+  kefine-task-history-actions button[data-part='stop-task']:hover {
+    background: color-mix(in oklab, var(--kef-bg-card) 82%, var(--kef-color-primary) 18%);
+    border-color: color-mix(in oklab, var(--kef-color-primary) 38%, var(--kef-line));
+  }
+
+  kefine-task-history-actions a[data-part='open-solvers']:active,
+  kefine-task-history-actions button[data-part='stop-task']:active {
+    transform: scale(0.96);
   }
 
   lef-tasks-grid {
@@ -3447,7 +3627,7 @@ initialized = true;
 
   kefine-solver-search-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
     align-items: center;
     gap: 0.72rem;
     min-height: 2.85rem;
@@ -3458,7 +3638,7 @@ initialized = true;
   }
 
   kefine-solver-search-row:has(lef-arrow-wrapper) {
-    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
   }
 
   lef-arrow-wrapper {
@@ -3550,6 +3730,13 @@ initialized = true;
     padding-block: 0.15rem 0;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  kefine-solver-search-row lefine-text[data-part='task-estimate'] {
+    flex: 0 0 auto;
+    color: color-mix(in oklab, var(--lefine-text) 66%, transparent);
+    font-size: 0.78rem;
+    font-weight: 600;
   }
 
   kefine-task-branch {

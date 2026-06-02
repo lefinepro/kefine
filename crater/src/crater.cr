@@ -1,4 +1,5 @@
 require "kemal"
+require "./crater/version"
 require "./crater/aptok"
 require "./crater/handlers/webfinger"
 require "./crater/handlers/nodeinfo"
@@ -27,8 +28,6 @@ require "./crater/ssh_git_shell"
 require "./crater/git_receive_hook"
 
 module Lepos
-  VERSION = "0.1.0"
-
   def self.run
     config = Utils::Config.load
     actor_private_key = config.resolved_actor_private_key_pem

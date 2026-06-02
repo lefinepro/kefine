@@ -1,9 +1,17 @@
 <script lang="ts">
   import KefineTopbarIcon from '$lib/components/kefine/KefineTopbarIcon.svelte';
-  import { onMount } from 'svelte';
+  import KefineWeatherWidget from '$lib/components/kefine/KefineWeatherWidget.svelte';
+  import KefineTranslatorWidget from '$lib/components/kefine/KefineTranslatorWidget.svelte';
+  import KefineMusicWidget from '$lib/components/kefine/KefineMusicWidget.svelte';
+  import { onMount, tick } from 'svelte';
+  import { detectWeatherIntent } from '$lib/kefine/weather-intent';
   import { scheduleAfter } from '$lib/utils/helpers';
   import type { KefineLocale } from '$lib/constants/kefine-locale';
   import type { KefineTopbarIconName } from '$lib/components/kefine/KefineTopbarIcon.svelte';
+  import type { KefineSearchWidgetId } from '$lib/kefine/search-widgets';
+
+  /** Built-in widgets the command palette can surface inline on any page. */
+  export type { KefineSearchWidgetId };
 
   type SocialLink = {
     id: 'mastodon' | 'discord' | 'linkedin' | 'telegram' | 'github';
@@ -16,6 +24,19 @@
     id: 'privacy' | 'terms';
     label: string;
     href: string;
+  };
+
+  export type KefineTopbarSearchItem = {
+    id: string;
+    title: string;
+    subtitle?: string;
+    category?: string;
+    href?: string;
+    actionLabel?: string;
+    icon?: KefineTopbarIconName;
+    keywords?: string[];
+    /** When set, activating the item opens this widget inline instead of navigating. */
+    widget?: KefineSearchWidgetId;
   };
 
   let {
@@ -46,6 +67,23 @@
     languageEnglishLabel,
     languageRussianLabel,
     languageArmenianLabel,
+    showSearch = true,
+    searchLabel = 'Search',
+    searchPlaceholder = 'Search lepos, pages, actions...',
+    searchResultsLabel = 'Results',
+    searchEmptyLabel = 'No matching results',
+    searchOpenLabel = 'Open',
+    searchHomeLabel = 'Home',
+    searchHomeHref = '/',
+    searchItems = [],
+    initialSearchQuery = '',
+    initialWidget = null,
+    showSearchWidgets = true,
+    searchWidgetsLabel = 'Widgets',
+    searchWeatherLabel = 'Weather',
+    searchTranslatorLabel = 'Translator',
+    searchMusicLabel = 'Music',
+    searchWidgetBackLabel = 'Back to results',
     socialLinks,
     showSocialLinks = false,
     showEmailButton = true,
@@ -88,6 +126,25 @@
     languageEnglishLabel: string;
     languageRussianLabel: string;
     languageArmenianLabel: string;
+    showSearch?: boolean;
+    searchLabel?: string;
+    searchPlaceholder?: string;
+    searchResultsLabel?: string;
+    searchEmptyLabel?: string;
+    searchOpenLabel?: string;
+    searchHomeLabel?: string;
+    searchHomeHref?: string;
+    searchItems?: KefineTopbarSearchItem[];
+    /** Deep-link query (from `?q=`) that auto-opens the palette seeded with this text. */
+    initialSearchQuery?: string;
+    /** Widget short link (e.g. `/@profile/weather`) that auto-opens this widget inline. */
+    initialWidget?: KefineSearchWidgetId | null;
+    showSearchWidgets?: boolean;
+    searchWidgetsLabel?: string;
+    searchWeatherLabel?: string;
+    searchTranslatorLabel?: string;
+    searchMusicLabel?: string;
+    searchWidgetBackLabel?: string;
     socialLinks: SocialLink[];
     showSocialLinks?: boolean;
     showEmailButton?: boolean;
@@ -127,6 +184,109 @@
   let themePickerOpen = $state(false);
   let localePickerOpen = $state(false);
   let cancelAuthClick: (() => void) | null = null;
+  let searchDialog: HTMLDialogElement | null = $state(null);
+  let searchInputElement: HTMLInputElement | null = $state(null);
+  let searchQuery = $state('');
+  let selectedSearchIndex = $state(0);
+  let searchOpen = $state(false);
+  let activeSearchWidget = $state<KefineSearchWidgetId | null>(null);
+  const searchShortcutLabel = 'Ctrl K';
+  const widgetSearchItems = $derived.by((): KefineTopbarSearchItem[] => {
+    if (!showSearchWidgets) {
+      return [];
+    }
+
+    return [
+      {
+        id: 'widget-weather',
+        title: searchWeatherLabel,
+        subtitle: searchWidgetsLabel,
+        category: searchWidgetsLabel,
+        icon: 'weather',
+        widget: 'weather',
+        keywords: [searchWeatherLabel, 'weather', 'forecast', 'погода', 'прогноз', 'եղանակ']
+      },
+      {
+        id: 'widget-translate',
+        title: searchTranslatorLabel,
+        subtitle: searchWidgetsLabel,
+        category: searchWidgetsLabel,
+        icon: 'translate',
+        widget: 'translate',
+        keywords: [searchTranslatorLabel, 'translate', 'translation', 'перевод', 'переводчик', 'թարգմանիչ']
+      },
+      {
+        id: 'widget-music',
+        title: searchMusicLabel,
+        subtitle: searchWidgetsLabel,
+        category: searchWidgetsLabel,
+        icon: 'music',
+        widget: 'music',
+        keywords: [searchMusicLabel, 'music', 'audio', 'track', 'музыка', 'երաժշտություն']
+      }
+    ];
+  });
+  const builtInSearchItems = $derived.by((): KefineTopbarSearchItem[] => {
+    const items: KefineTopbarSearchItem[] = [
+      {
+        id: 'home',
+        title: searchHomeLabel,
+        subtitle: brandLabel,
+        category: navigationLabel,
+        href: searchHomeHref,
+        icon: 'project',
+        keywords: [brandLabel, searchHomeLabel, 'home']
+      }
+    ];
+
+    for (const link of legalLinks) {
+      items.push({
+        id: `legal-${link.id}`,
+        title: link.label,
+        subtitle: legalLabel,
+        category: legalLabel,
+        href: link.href,
+        icon: 'open',
+        keywords: [link.id, link.label, legalLabel]
+      });
+    }
+
+    items.push(...widgetSearchItems);
+
+    return items;
+  });
+  const activeWidgetTitle = $derived.by(() => {
+    if (activeSearchWidget === 'weather') {
+      return searchWeatherLabel;
+    }
+
+    if (activeSearchWidget === 'translate') {
+      return searchTranslatorLabel;
+    }
+
+    if (activeSearchWidget === 'music') {
+      return searchMusicLabel;
+    }
+
+    return '';
+  });
+  // The weather widget only renders for weather-intent text. When opened from the
+  // palette we seed the localized keyword so it shows the default (geolocation)
+  // forecast immediately, while free-typed text like "London" still refines it.
+  const weatherWidgetQuery = $derived(
+    detectWeatherIntent(searchQuery) ? searchQuery : `${searchWeatherLabel} ${searchQuery}`.trim()
+  );
+  const allSearchItems = $derived([...builtInSearchItems, ...searchItems]);
+  const normalizedSearchQuery = $derived(normalizeSearchValue(searchQuery));
+  const filteredSearchItems = $derived.by(() => {
+    if (!normalizedSearchQuery) {
+      return allSearchItems.slice(0, 9);
+    }
+
+    return allSearchItems
+      .filter((item) => getSearchHaystack(item).includes(normalizedSearchQuery))
+      .slice(0, 9);
+  });
 
   function updateScrollState() {
     hasScrolled = window.scrollY > 8;
@@ -135,10 +295,39 @@
   onMount(() => {
     updateScrollState();
     window.addEventListener('scroll', updateScrollState, { passive: true });
+    window.addEventListener('keydown', handleGlobalSearchKeydown);
 
     return () => {
       window.removeEventListener('scroll', updateScrollState);
+      window.removeEventListener('keydown', handleGlobalSearchKeydown);
     };
+  });
+
+  // Deep links open the palette automatically: `?q=term` seeds the query and a
+  // widget short link (e.g. `/@profile/weather`) surfaces that widget inline.
+  // We track the applied signature so the dialog opens once per distinct link
+  // instead of re-opening on every reactive pass.
+  let appliedDeepLink = $state<string | null>(null);
+  $effect(() => {
+    if (!showSearch) {
+      return;
+    }
+
+    const query = (initialSearchQuery ?? '').trim();
+    const widget = initialWidget ?? null;
+
+    if (!query && !widget) {
+      appliedDeepLink = null;
+      return;
+    }
+
+    const signature = `${widget ?? ''}::${query}`;
+    if (appliedDeepLink === signature) {
+      return;
+    }
+
+    appliedDeepLink = signature;
+    void openSearchDialog({ query: initialSearchQuery ?? '', widget });
   });
 
   function handleBrandClick() {
@@ -188,6 +377,169 @@
     handleAuthClick();
   }
 
+  function normalizeSearchValue(value: string | null | undefined) {
+    return (value ?? '').trim().toLowerCase();
+  }
+
+  function getSearchHaystack(item: KefineTopbarSearchItem) {
+    return [
+      item.title,
+      item.subtitle,
+      item.category,
+      item.href,
+      ...(item.keywords ?? [])
+    ]
+      .filter((value): value is string => Boolean(value?.trim()))
+      .map(normalizeSearchValue)
+      .join(' ');
+  }
+
+  function getSearchItemTestId(item: KefineTopbarSearchItem) {
+    return `kefine-topbar-search-result-${item.id.replace(/[^a-zA-Z0-9_-]+/g, '-')}`;
+  }
+
+  async function openSearchDialog(options?: { query?: string; widget?: KefineSearchWidgetId | null }) {
+    if (!showSearch) {
+      return;
+    }
+
+    cancelBrandClick?.();
+    cancelLocaleClick?.();
+    cancelAuthClick?.();
+    themePickerOpen = false;
+    localePickerOpen = false;
+    onExpandedChange(false);
+    searchQuery = options?.query ?? '';
+    selectedSearchIndex = 0;
+    activeSearchWidget = options?.widget ?? null;
+    searchOpen = true;
+
+    if (searchDialog && !searchDialog.open) {
+      searchDialog.showModal();
+    }
+
+    await tick();
+    searchInputElement?.focus();
+  }
+
+  function closeSearchDialog() {
+    searchOpen = false;
+    searchQuery = '';
+    selectedSearchIndex = 0;
+    activeSearchWidget = null;
+
+    if (searchDialog?.open) {
+      searchDialog.close();
+    }
+  }
+
+  function handleSearchDialogClose() {
+    searchOpen = false;
+    searchQuery = '';
+    selectedSearchIndex = 0;
+    activeSearchWidget = null;
+  }
+
+  async function closeSearchWidget() {
+    activeSearchWidget = null;
+    searchQuery = '';
+    selectedSearchIndex = 0;
+    await tick();
+    searchInputElement?.focus();
+  }
+
+  function handleSearchDialogClick(event: MouseEvent) {
+    if (event.target === searchDialog) {
+      closeSearchDialog();
+    }
+  }
+
+  function handleGlobalSearchKeydown(event: KeyboardEvent) {
+    if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== 'k') {
+      return;
+    }
+
+    event.preventDefault();
+    void openSearchDialog();
+  }
+
+  function handleSearchInput(event: Event) {
+    searchQuery = (event.currentTarget as HTMLInputElement).value;
+    selectedSearchIndex = 0;
+  }
+
+  function moveSelectedSearchItem(offset: number) {
+    const count = filteredSearchItems.length;
+    if (count === 0) {
+      selectedSearchIndex = 0;
+      return;
+    }
+
+    selectedSearchIndex = (selectedSearchIndex + offset + count) % count;
+  }
+
+  function handleSearchKeydown(event: KeyboardEvent) {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      if (activeSearchWidget) {
+        void closeSearchWidget();
+      } else {
+        closeSearchDialog();
+      }
+      return;
+    }
+
+    // While a widget is open the input drives the widget query (e.g. weather
+    // city / translation text), so list navigation keys are inert.
+    if (activeSearchWidget) {
+      return;
+    }
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      moveSelectedSearchItem(1);
+      return;
+    }
+
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      moveSelectedSearchItem(-1);
+      return;
+    }
+
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      const item = filteredSearchItems[selectedSearchIndex];
+      if (item) {
+        activateSearchItem(item);
+      }
+    }
+  }
+
+  function activateSearchItem(item: KefineTopbarSearchItem) {
+    if (item.widget) {
+      // Surface the developed widget inline so it is reachable from the command
+      // palette on any page, instead of leaving the page.
+      activeSearchWidget = item.widget;
+      searchQuery = '';
+      selectedSearchIndex = 0;
+      void focusSearchInput();
+      return;
+    }
+
+    closeSearchDialog();
+
+    const href = item.href?.trim();
+    if (href && typeof window !== 'undefined') {
+      window.location.assign(href);
+    }
+  }
+
+  async function focusSearchInput() {
+    await tick();
+    searchInputElement?.focus();
+  }
+
   function handleThemeButtonClick() {
     themePickerOpen = !themePickerOpen;
     localePickerOpen = false;
@@ -201,11 +553,9 @@
 
   function handleLocaleButtonClick() {
     cancelLocaleClick?.();
-    cancelLocaleClick = scheduleAfter(220, () => {
-      localePickerOpen = !localePickerOpen;
-      themePickerOpen = false;
-      cancelLocaleClick = null;
-    });
+    cancelLocaleClick = null;
+    localePickerOpen = !localePickerOpen;
+    themePickerOpen = false;
   }
 
   function handleLocaleButtonDoubleClick() {
@@ -218,11 +568,15 @@
 
   function selectTheme(theme: 'light' | 'dark' | 'auto') {
     themePickerOpen = false;
+    localePickerOpen = false;
+    onExpandedChange(false);
     onThemeChange(theme);
   }
 
   function selectLocale(next: KefineLocale) {
     localePickerOpen = false;
+    themePickerOpen = false;
+    onExpandedChange(false);
     onLocale(next);
   }
 
@@ -299,6 +653,14 @@
 
     themePickerOpen = false;
     localePickerOpen = false;
+  });
+
+  $effect(() => {
+    if (selectedSearchIndex < filteredSearchItems.length) {
+      return;
+    }
+
+    selectedSearchIndex = Math.max(0, filteredSearchItems.length - 1);
   });
 </script>
 
@@ -471,6 +833,123 @@
     </kefine-sidebar-root>
     </nav>
 
+    {#if showSearch}
+      <kefine-topbar-search-shell>
+        <button
+          type="button"
+          data-part="search-trigger"
+          data-testid="kefine-topbar-search-trigger"
+          aria-label={searchLabel}
+          aria-haspopup="dialog"
+          aria-expanded={searchOpen}
+          title={`${searchLabel} (${searchShortcutLabel})`}
+          onclick={() => void openSearchDialog()}
+        >
+          <KefineTopbarIcon name="search" size={18} />
+          <lefine-text data-part="search-placeholder">{searchPlaceholder}</lefine-text>
+          <lefine-kbd data-part="search-shortcut">{searchShortcutLabel}</lefine-kbd>
+        </button>
+      </kefine-topbar-search-shell>
+
+      <dialog
+        bind:this={searchDialog}
+        data-part="search-dialog"
+        data-testid="kefine-topbar-search-dialog"
+        aria-label={searchLabel}
+        onclose={handleSearchDialogClose}
+        onclick={handleSearchDialogClick}
+      >
+        <kefine-search-panel>
+          <kefine-search-input-row>
+            {#if activeSearchWidget}
+              <button
+                type="button"
+                data-part="search-widget-back"
+                data-testid="kefine-topbar-search-widget-back"
+                aria-label={searchWidgetBackLabel}
+                title={searchWidgetBackLabel}
+                onclick={() => void closeSearchWidget()}
+              >
+                <KefineTopbarIcon name="open" size={18} />
+              </button>
+            {:else}
+              <KefineTopbarIcon name="search" size={21} />
+            {/if}
+            <input
+              bind:this={searchInputElement}
+              value={searchQuery}
+              data-testid="kefine-topbar-search-input"
+              aria-label={searchLabel}
+              placeholder={searchPlaceholder}
+              autocomplete="off"
+              spellcheck="false"
+              oninput={handleSearchInput}
+              onkeydown={handleSearchKeydown}
+            />
+            <lefine-kbd>{searchShortcutLabel}</lefine-kbd>
+          </kefine-search-input-row>
+          {#if activeSearchWidget}
+            <kefine-search-results-header>
+              <lefine-text>{activeWidgetTitle}</lefine-text>
+            </kefine-search-results-header>
+            <kefine-search-widget
+              data-part="search-widget"
+              data-widget={activeSearchWidget}
+              data-testid="kefine-topbar-search-widget"
+            >
+              {#if activeSearchWidget === 'weather'}
+                <KefineWeatherWidget active query={weatherWidgetQuery} />
+              {:else if activeSearchWidget === 'translate'}
+                <KefineTranslatorWidget active query={searchQuery} />
+              {:else if activeSearchWidget === 'music'}
+                <KefineMusicWidget active />
+              {/if}
+            </kefine-search-widget>
+          {:else}
+          <kefine-search-results-header>
+            <lefine-text>{searchResultsLabel}</lefine-text>
+          </kefine-search-results-header>
+          <kefine-search-results>
+            {#if filteredSearchItems.length > 0}
+              {#each filteredSearchItems as item, index (item.id)}
+                <button
+                  type="button"
+                  data-part="search-result"
+                  data-active={index === selectedSearchIndex}
+                  data-testid={getSearchItemTestId(item)}
+                  onmouseenter={() => {
+                    selectedSearchIndex = index;
+                  }}
+                  onclick={() => activateSearchItem(item)}
+                >
+                  <kefine-search-result-icon>
+                    <KefineTopbarIcon name={item.icon ?? 'project'} size={18} />
+                  </kefine-search-result-icon>
+                  <kefine-search-result-copy>
+                    <lefine-text data-part="search-result-title">{item.title}</lefine-text>
+                    <lefine-text data-part="search-result-subtitle">
+                      {item.subtitle || item.category || item.href || searchOpenLabel}
+                    </lefine-text>
+                  </kefine-search-result-copy>
+                  <kefine-search-result-meta>
+                    {#if item.category}
+                      <lefine-text>{item.category}</lefine-text>
+                    {/if}
+                    <lefine-kbd>{item.actionLabel ?? searchOpenLabel}</lefine-kbd>
+                  </kefine-search-result-meta>
+                </button>
+              {/each}
+            {:else}
+              <kefine-search-empty>
+                <lefine-text>{searchEmptyLabel}</lefine-text>
+              </kefine-search-empty>
+            {/if}
+          </kefine-search-results>
+          {/if}
+        </kefine-search-panel>
+      </dialog>
+    {/if}
+
     {#if showAuthButton}
       <button
         data-part="auth"
@@ -541,6 +1020,289 @@
     background: color-mix(in oklab, var(--kef-bg-card) 90%, var(--kef-bg));
     box-shadow: 0 10px 24px color-mix(in oklab, #544536 8%, transparent);
     backdrop-filter: blur(14px);
+  }
+
+  kefine-topbar-search-shell {
+    display: flex;
+    justify-content: center;
+    flex: 1 1 min(28rem, 48vw);
+    min-width: 2.55rem;
+    pointer-events: auto;
+  }
+
+  button[data-part='search-trigger'] {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.58rem;
+    width: min(100%, 30rem);
+    min-height: 2.5rem;
+    padding: 0.42rem 0.58rem 0.42rem 0.72rem;
+    border: var(--kef-border-width-soft) solid color-mix(in oklab, var(--kef-border) 68%, transparent);
+    border-radius: calc(var(--kef-radius-ui) - 0.04rem);
+    background: color-mix(in oklab, var(--kef-bg-card) 90%, var(--kef-bg));
+    color: color-mix(in oklab, var(--lefine-text) 82%, transparent);
+    font: inherit;
+    cursor: pointer;
+    box-shadow: 0 8px 18px color-mix(in oklab, #544536 5%, transparent);
+    transition:
+      background-color var(--kef-motion-fast) var(--kef-ease-soft),
+      border-color var(--kef-motion-fast) var(--kef-ease-soft),
+      color var(--kef-motion-fast) var(--kef-ease-soft),
+      box-shadow var(--kef-motion-fast) var(--kef-ease-soft);
+  }
+
+  kefine-topbar[data-scrolled='true'] button[data-part='search-trigger'] {
+    background: transparent;
+    box-shadow: none;
+  }
+
+  button[data-part='search-trigger']:hover,
+  button[data-part='search-trigger'][aria-expanded='true'] {
+    border-color: color-mix(in oklab, var(--kef-primary) 34%, var(--kef-border));
+    background: color-mix(in oklab, var(--kef-primary) 8%, var(--kef-bg-card));
+    color: color-mix(in oklab, var(--kef-primary) 92%, #4f3d30);
+    box-shadow: 0 10px 22px color-mix(in oklab, var(--lefine-text) 6%, transparent);
+  }
+
+  button[data-part='search-trigger'] [data-part='search-placeholder'] {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.94rem;
+    font-weight: 560;
+    line-height: 1.1;
+    letter-spacing: 0;
+    text-align: left;
+    color: color-mix(in oklab, currentColor 84%, transparent);
+  }
+
+  lefine-kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.28rem;
+    min-height: 1.46rem;
+    padding: 0 0.42rem;
+    border: var(--kef-border-width-soft) solid color-mix(in oklab, currentColor 18%, transparent);
+    border-radius: var(--kef-radius-sm);
+    background: color-mix(in oklab, var(--kef-bg-soft) 72%, transparent);
+    color: color-mix(in oklab, currentColor 72%, transparent);
+    font-size: 0.72rem;
+    font-weight: 680;
+    line-height: 1;
+    letter-spacing: 0;
+    white-space: nowrap;
+  }
+
+  dialog[data-part='search-dialog'] {
+    position: fixed;
+    top: clamp(4.5rem, 12dvh, 7rem);
+    left: 50%;
+    right: auto;
+    bottom: auto;
+    transform: translateX(-50%);
+    width: min(48rem, calc(100vw - 1.8rem));
+    max-height: min(72dvh, 42rem);
+    margin: 0;
+    padding: 0;
+    border: var(--kef-border-width-soft) solid color-mix(in oklab, var(--kef-border) 74%, transparent);
+    border-radius: var(--kef-radius-ui);
+    background: color-mix(in oklab, var(--kef-bg-card) 97%, var(--kef-bg));
+    color: var(--lefine-text);
+    overflow: hidden;
+    box-shadow: 0 24px 80px color-mix(in oklab, #000000 22%, transparent);
+    pointer-events: auto;
+  }
+
+  dialog[data-part='search-dialog']::backdrop {
+    background: color-mix(in oklab, #000000 18%, transparent);
+    backdrop-filter: blur(4px);
+  }
+
+  kefine-search-panel {
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr);
+    max-height: min(72dvh, 42rem);
+  }
+
+  kefine-search-input-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 4.45rem;
+    padding: 0.78rem 1rem;
+    border-bottom: var(--kef-border-width-soft) solid color-mix(in oklab, var(--kef-border) 46%, transparent);
+    color: color-mix(in oklab, var(--lefine-text) 84%, transparent);
+  }
+
+  dialog[data-part='search-dialog'] input[data-testid='kefine-topbar-search-input'] {
+    appearance: none;
+    min-width: 0;
+    width: 100%;
+    border: 0;
+    border-radius: 0;
+    outline: 0;
+    background: transparent;
+    box-shadow: none;
+    color: var(--lefine-text);
+    font: inherit;
+    font-size: 1.15rem;
+    font-weight: 640;
+    line-height: 1.2;
+    letter-spacing: 0;
+    padding: 0;
+  }
+
+  dialog[data-part='search-dialog'] input[data-testid='kefine-topbar-search-input']:focus {
+    box-shadow: none;
+  }
+
+  dialog[data-part='search-dialog'] input[data-testid='kefine-topbar-search-input']::placeholder {
+    color: color-mix(in oklab, var(--lefine-text-soft) 62%, transparent);
+  }
+
+  kefine-search-results-header {
+    display: flex;
+    align-items: center;
+    min-height: 2.7rem;
+    padding: 0.7rem 1rem 0.3rem;
+    color: color-mix(in oklab, var(--lefine-text-soft) 76%, transparent);
+    font-size: 0.78rem;
+    font-weight: 720;
+    line-height: 1;
+    letter-spacing: 0;
+    text-transform: uppercase;
+  }
+
+  kefine-search-results {
+    display: grid;
+    gap: 0.26rem;
+    padding: 0 0.7rem 0.78rem;
+    overflow: auto;
+  }
+
+  button[data-part='search-result'] {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.76rem;
+    min-height: 3.9rem;
+    width: 100%;
+    padding: 0.58rem 0.68rem;
+    border: var(--kef-border-width-soft) solid transparent;
+    border-radius: calc(var(--kef-radius-ui) - 0.1rem);
+    background: transparent;
+    color: var(--lefine-text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition:
+      background-color var(--kef-motion-fast) var(--kef-ease-soft),
+      border-color var(--kef-motion-fast) var(--kef-ease-soft),
+      color var(--kef-motion-fast) var(--kef-ease-soft);
+  }
+
+  button[data-part='search-result'][data-active='true'],
+  button[data-part='search-result']:hover {
+    border-color: color-mix(in oklab, var(--kef-primary) 24%, var(--kef-line));
+    background: color-mix(in oklab, var(--kef-primary) 8%, var(--kef-bg-card));
+    color: color-mix(in oklab, var(--kef-primary) 92%, #4f3d30);
+  }
+
+  kefine-search-result-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.2rem;
+    height: 2.2rem;
+    border: var(--kef-border-width-soft) solid color-mix(in oklab, currentColor 16%, transparent);
+    border-radius: var(--kef-radius-md);
+    background: color-mix(in oklab, var(--kef-bg-soft) 76%, transparent);
+    color: color-mix(in oklab, currentColor 78%, transparent);
+  }
+
+  kefine-search-result-copy {
+    display: grid;
+    gap: 0.18rem;
+    min-width: 0;
+  }
+
+  lefine-text[data-part='search-result-title'],
+  lefine-text[data-part='search-result-subtitle'] {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    line-height: 1.12;
+    letter-spacing: 0;
+  }
+
+  lefine-text[data-part='search-result-title'] {
+    font-size: 0.98rem;
+    font-weight: 690;
+    color: color-mix(in oklab, currentColor 96%, transparent);
+  }
+
+  lefine-text[data-part='search-result-subtitle'] {
+    font-size: 0.82rem;
+    font-weight: 560;
+    color: color-mix(in oklab, var(--lefine-text-soft) 76%, transparent);
+  }
+
+  kefine-search-result-meta {
+    display: flex;
+    align-items: center;
+    justify-content: end;
+    gap: 0.55rem;
+    min-width: 0;
+    color: color-mix(in oklab, var(--lefine-text-soft) 74%, transparent);
+    font-size: 0.82rem;
+    font-weight: 620;
+    white-space: nowrap;
+  }
+
+  kefine-search-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 7rem;
+    padding: 1rem;
+    color: color-mix(in oklab, var(--lefine-text-soft) 76%, transparent);
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-align: center;
+  }
+
+  button[data-part='search-widget-back'] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.2rem;
+    height: 2.2rem;
+    padding: 0;
+    border: var(--kef-border-width-soft) solid color-mix(in oklab, var(--kef-border) 52%, transparent);
+    border-radius: var(--kef-radius-md);
+    background: color-mix(in oklab, var(--kef-bg-soft) 72%, transparent);
+    color: color-mix(in oklab, var(--lefine-text) 82%, transparent);
+    cursor: pointer;
+    transition:
+      background-color var(--kef-motion-fast) var(--kef-ease-soft),
+      border-color var(--kef-motion-fast) var(--kef-ease-soft),
+      color var(--kef-motion-fast) var(--kef-ease-soft);
+  }
+
+  button[data-part='search-widget-back']:hover {
+    border-color: color-mix(in oklab, var(--kef-primary) 30%, var(--kef-line));
+    color: color-mix(in oklab, var(--kef-primary) 92%, #4f3d30);
+  }
+
+  kefine-search-widget {
+    display: block;
+    padding: 0 1rem 1rem;
+    overflow: auto;
   }
 
   kefine-sidebar-root {
@@ -916,6 +1678,55 @@
 
     kefine-topbar-row {
       padding: 0.7rem 0.55rem;
+      gap: 0.45rem;
+    }
+
+    kefine-topbar-search-shell {
+      flex: 0 0 2.55rem;
+      width: 2.55rem;
+    }
+
+    button[data-part='search-trigger'] {
+      display: inline-flex;
+      justify-content: center;
+      width: 2.55rem;
+      min-width: 2.55rem;
+      padding: 0;
+      gap: 0;
+    }
+
+    button[data-part='search-trigger'] [data-part='search-placeholder'],
+    button[data-part='search-trigger'] [data-part='search-shortcut'] {
+      display: none;
+    }
+
+    dialog[data-part='search-dialog'] {
+      top: 4.2rem;
+      width: min(100vw - 1rem, 36rem);
+      max-height: calc(100dvh - 5rem);
+    }
+
+    kefine-search-panel {
+      max-height: calc(100dvh - 5rem);
+    }
+
+    kefine-search-input-row {
+      min-height: 4rem;
+      padding: 0.68rem 0.78rem;
+      gap: 0.58rem;
+    }
+
+    dialog[data-part='search-dialog'] input[data-testid='kefine-topbar-search-input'] {
+      font-size: 1rem;
+    }
+
+    kefine-search-result-meta > lefine-text {
+      display: none;
+    }
+
+    button[data-part='search-result'] {
+      min-height: 3.65rem;
+      gap: 0.58rem;
     }
 
     kefine-sidebar-root,
@@ -952,10 +1763,6 @@
       width: min(12rem, calc(100vw - 1.1rem));
       min-width: min(12rem, calc(100vw - 1.1rem));
       max-width: min(12rem, calc(100vw - 1.1rem));
-    }
-
-    kefine-sidebar-popover:popover-open {
-      inset: auto auto auto auto;
     }
 
     kefine-sidebar-stack {
