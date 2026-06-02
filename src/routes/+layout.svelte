@@ -14,6 +14,7 @@
   import { resolvePublicRuntimeConfig, setBrowserPublicRuntimeConfig } from '$lib/config/public-config';
   import { kefineLocale, kefineLocaleText, setKefineLocale, type KefineLocale } from '$lib/constants/kefine-locale';
   import { buildLocaleHomePath, localizeAppPath, readLocaleFromPathname } from '$lib/routing/kefine-locale-routing';
+  import { topbarSearchPlaceholderOverride } from '$lib/kefine/topbar-search-context';
   import { getSeoMeta } from '$lib/seo';
   import type { LayoutData } from './$types';
 
@@ -38,6 +39,7 @@
 
 	const { children, data }: Props = $props();
   const localeText = $derived($kefineLocaleText);
+  const searchPlaceholderOverride = $derived($topbarSearchPlaceholderOverride);
   const passkeySession = $derived($passkeySessionStore);
   const runtimePublicConfig = $derived(resolvePublicRuntimeConfig(data.publicConfig));
   const activeLocale = $derived(readLocaleFromPathname(page.url.pathname) ?? data.initialLocale ?? 'en');
@@ -270,7 +272,7 @@
     languageRussianLabel={localeText.topbar.languageRussian}
     languageArmenianLabel={localeText.topbar.languageArmenian}
     searchLabel={localeText.topbar.searchLabel}
-    searchPlaceholder={localeText.topbar.searchPlaceholder}
+    searchPlaceholder={searchPlaceholderOverride ?? localeText.topbar.searchPlaceholder}
     searchResultsLabel={localeText.topbar.searchResultsLabel}
     searchEmptyLabel={localeText.topbar.searchEmptyLabel}
     searchOpenLabel={localeText.topbar.searchOpenLabel}

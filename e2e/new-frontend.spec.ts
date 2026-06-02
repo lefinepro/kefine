@@ -23,9 +23,12 @@ test.describe('New frontend task results', () => {
 
     await expect(page).toHaveURL(/\/order\/order-1\/solutions/);
     await expect(page.getByTestId('solution-list-page')).toBeVisible();
-    await expect(page.getByTestId('solution-list-task-label')).toContainText('kefine/go-proxy');
+    // The repository name now lives in the header search bar instead of a right-side card.
+    await expect(page.getByTestId('kefine-topbar-search-trigger')).toContainText('kefine/go-proxy');
     await expect(page.getByTestId('solver-task-list')).toBeVisible();
     await expect(page.locator('lef-solutions-list')).toHaveCount(0);
+    // The right rail is reduced to the clone block only — no metrics chart.
+    await expect(page.getByTestId('solver-clone-rail')).toBeVisible();
     await expect(page.getByTestId('task-solver-variants')).toBeVisible();
     await expect(page.getByTestId('task-solver-variants').locator('[data-variant]')).toHaveCount(3);
     await expect(page.getByRole('button', { name: 'Apply solution' })).toHaveCount(0);

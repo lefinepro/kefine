@@ -1,8 +1,6 @@
 <script lang="ts">
   import { browser } from '$app/environment';
-  import { defaultMetrics, type Solution, type SolutionMetric } from '$lib/kefine/solutions-data';
-  import SolutionMetricsMini from './SolutionMetricsMini.svelte';
-  import SolutionMetricsBlock from './SolutionMetricsBlock.svelte';
+  import { defaultMetrics, type Solution } from '$lib/kefine/solutions-data';
   import { kefineLocaleText } from '$lib/constants/kefine-locale';
   import {
     buildSolverAvatars,
@@ -13,23 +11,13 @@
 
   export type SolversHistoryTask = SolverHistoryTask;
 
-  export type SolversSettingsState = {
-    isPublic: boolean;
-    vcsEnabled: boolean;
-    defaultBranch: string;
-  };
-
   let {
     solutions = [],
     taskTitle = '',
     repoName = '',
     historyTasks = [],
     cloneUrl = '',
-    settingsState = { isPublic: true, vcsEnabled: true, defaultBranch: 'main' },
     onViewSolution,
-    onSettings,
-    onClone,
-    onApplySettings,
     onSelectHistoryTask
   }: {
     solutions?: Solution[];
@@ -37,29 +25,13 @@
     repoName?: string;
     historyTasks?: SolversHistoryTask[];
     cloneUrl?: string;
-    settingsState?: SolversSettingsState;
     onViewSolution?: ((id: string) => void) | null | undefined;
-    onSettings?: (() => void) | null | undefined;
-    onClone?: (() => void) | null | undefined;
-    onApplySettings?: ((next: SolversSettingsState) => void) | null | undefined;
     onSelectHistoryTask?: ((id: string) => void) | null | undefined;
   } = $props();
 
-  let chartsFocused = $state(false);
-  let clonePanelOpen = $state(false);
-  let settingsPanelOpen = $state(false);
   let cloneTestPending = $state(false);
   let cloneTestResult = $state<{ ok: boolean; message: string } | null>(null);
   let copyFlash = $state(false);
-  let isPublicDraft = $state(true);
-  let vcsEnabledDraft = $state(true);
-  let branchDraft = $state('main');
-
-  $effect(() => {
-    isPublicDraft = settingsState.isPublic;
-    vcsEnabledDraft = settingsState.vcsEnabled;
-    branchDraft = settingsState.defaultBranch;
-  });
 
   const resolvedCloneUrl = $derived.by(() => {
     if (cloneUrl) return cloneUrl;
@@ -100,49 +72,11 @@
     }
   }
 
-  function openClone() {
-    settingsPanelOpen = false;
-    clonePanelOpen = !clonePanelOpen;
-    onClone?.();
-  }
-
-  function openSettings() {
-    clonePanelOpen = false;
-    settingsPanelOpen = !settingsPanelOpen;
-    onSettings?.();
-  }
-
-  function applySettings() {
-    onApplySettings?.({
-      isPublic: isPublicDraft,
-      vcsEnabled: vcsEnabledDraft,
-      defaultBranch: branchDraft.trim() || 'main'
-    });
-    settingsPanelOpen = false;
-  }
-
-  function setChartsFocusedFromKeyboard(event: KeyboardEvent, focused: boolean) {
-    if (event.key !== 'Enter' && event.key !== ' ') {
-      return;
-    }
-
-    event.preventDefault();
-    chartsFocused = focused;
-  }
-
   const localeText = $derived($kefineLocaleText);
 
   const metricsById = $derived(
     new Map(defaultMetrics.map((metric) => [metric.solverId, metric]))
   );
-
-  const visibleMetrics = $derived.by<SolutionMetric[]>(() => {
-    const metrics = solutions
-      .map((solution) => metricsById.get(solution.id))
-      .filter((metric): metric is SolutionMetric => Boolean(metric));
-
-    return metrics.length > 0 ? metrics : defaultMetrics;
-  });
 
   function formatPrice(value: number | undefined): string {
     if (value === undefined || Number.isNaN(value)) return '—';
@@ -197,7 +131,6 @@
 
 <lefine-box class="solutions-page-container" data-testid="solution-list-page">
   <lef-tasks-grid>
-    {#if !chartsFocused}
       <lef-main-tasks aria-label={localeText.solversView.tasksAside} data-testid="solver-task-list">
         <lef-main-task-list>
           {#each displayedHistoryTasks as task (task.id)}
@@ -316,143 +249,36 @@
         </lef-main-task-list>
       </lef-main-tasks>
 
-      <lef-task-rail aria-label={localeText.solversView.metricsAria}>
-        <lef-task-rail-card>
-          <lef-task-rail-head>{localeText.solversView.taskDescription}</lef-task-rail-head>
-          <lef-task-rail-body data-testid="solution-list-task-label">{repoName || taskTitle}</lef-task-rail-body>
-          {#if repoName && taskTitle}
-            <small>{taskTitle}</small>
-          {/if}
-        </lef-task-rail-card>
-
-        <lef-task-rail-actions>
-          <button
-            type="button"
-            class="task-rail-btn"
-            aria-expanded={settingsPanelOpen}
-            aria-label={localeText.solversView.settings}
-            onclick={openSettings}
-          >
-            <lef-task-rail-icon aria-hidden="true">⚙</lef-task-rail-icon>
-            <lefine-text>{localeText.solversView.settings}</lefine-text>
-          </button>
+      <lef-task-rail aria-label={localeText.solversView.cloneHeading} data-testid="solver-clone-rail">
+        <lef-task-rail-panel data-kind="clone">
+          <lef-task-rail-head>{localeText.solversView.cloneHeading}</lef-task-rail-head>
+          <lef-task-rail-clone>
+            <code>{resolvedCloneUrl}</code>
+            <button type="button" class="task-rail-btn" onclick={copyClone}>
+              <lefine-text>
+                {copyFlash ? localeText.solversView.copied : localeText.solversView.copy}
+              </lefine-text>
+            </button>
+          </lef-task-rail-clone>
           <button
             type="button"
             class="task-rail-btn task-rail-btn--primary"
-            aria-expanded={clonePanelOpen}
-            aria-label={localeText.solversView.clone}
-            onclick={openClone}
+            disabled={cloneTestPending}
+            onclick={testCloneIntegration}
           >
-            <lef-task-rail-icon aria-hidden="true">⤓</lef-task-rail-icon>
-            <lefine-text>{localeText.solversView.clone}</lefine-text>
+            <lefine-text>
+              {cloneTestPending
+                ? localeText.solversView.cloneTestRunning
+                : localeText.solversView.cloneTestRun}
+            </lefine-text>
           </button>
-        </lef-task-rail-actions>
-
-        {#if clonePanelOpen}
-          <lef-task-rail-panel data-kind="clone">
-            <lef-task-rail-head>{localeText.solversView.cloneHeading}</lef-task-rail-head>
-            <lef-task-rail-clone>
-              <code>{resolvedCloneUrl}</code>
-              <button type="button" class="task-rail-btn" onclick={copyClone}>
-                <lefine-text>
-                  {copyFlash ? localeText.solversView.copied : localeText.solversView.copy}
-                </lefine-text>
-              </button>
-            </lef-task-rail-clone>
-            <button
-              type="button"
-              class="task-rail-btn task-rail-btn--primary"
-              disabled={cloneTestPending}
-              onclick={testCloneIntegration}
-            >
-              <lefine-text>
-                {cloneTestPending
-                  ? localeText.solversView.cloneTestRunning
-                  : localeText.solversView.cloneTestRun}
-              </lefine-text>
-            </button>
-            {#if cloneTestResult}
-              <lef-task-rail-status data-state={cloneTestResult.ok ? 'ok' : 'fail'}>
-                {cloneTestResult.message}
-              </lef-task-rail-status>
-            {/if}
-          </lef-task-rail-panel>
-        {/if}
-
-        {#if settingsPanelOpen}
-          <lef-task-rail-panel data-kind="settings">
-            <lef-task-rail-head>{localeText.solversView.settingsHeading}</lef-task-rail-head>
-            <label class="settings-row">
-              <input type="checkbox" bind:checked={isPublicDraft} />
-              <lefine-text>{localeText.solversView.settingsPublic}</lefine-text>
-            </label>
-            <label class="settings-row">
-              <input type="checkbox" bind:checked={vcsEnabledDraft} />
-              <lefine-text>{localeText.solversView.settingsVcs}</lefine-text>
-            </label>
-            <label class="settings-row settings-row--input">
-              <lefine-text>{localeText.solversView.settingsBranch}</lefine-text>
-              <input type="text" bind:value={branchDraft} maxlength="40" />
-            </label>
-            <button type="button" class="task-rail-btn task-rail-btn--primary" onclick={applySettings}>
-              <lefine-text>{localeText.solversView.settingsApply}</lefine-text>
-            </button>
-          </lef-task-rail-panel>
-        {/if}
-
-        <!-- Clicking anywhere inside the metrics area expands the detailed charts.
-             Buttons above are safe because they have their own handlers and stop propagation implicitly by being separate. -->
-        <lefine-box
-          role="button"
-          tabindex="0"
-          aria-label={localeText.solversView.metricsAria}
-          onclick={() => (chartsFocused = true)}
-          onkeydown={(event: KeyboardEvent) => setChartsFocusedFromKeyboard(event, true)}
-          style="cursor: pointer;"
-        >
-          <SolutionMetricsMini
-            metrics={visibleMetrics}
-            activeSolverId={solutions[0]?.id ?? visibleMetrics[0]?.solverId ?? '5'}
-            project={solutions[0]?.project}
-            slug={solutions[0]?.slug}
-          />
-        </lefine-box>
+          {#if cloneTestResult}
+            <lef-task-rail-status data-state={cloneTestResult.ok ? 'ok' : 'fail'}>
+              {cloneTestResult.message}
+            </lef-task-rail-status>
+          {/if}
+        </lef-task-rail-panel>
       </lef-task-rail>
-    {:else}
-      <!-- Charts Focused Mode -->
-      <lefine-box
-        class="charts-main"
-        role="button"
-        tabindex="0"
-        aria-label={localeText.solversView.metricsAria}
-        onclick={() => (chartsFocused = false)}
-        onkeydown={(event: KeyboardEvent) => setChartsFocusedFromKeyboard(event, false)}
-        style="cursor: pointer;"
-      >
-        <SolutionMetricsBlock
-          metrics={visibleMetrics}
-          activeSolverId={solutions[0]?.id ?? visibleMetrics[0]?.solverId ?? '5'}
-          title={localeText.solversView.metricsTitle}
-          subtitle={localeText.solversView.metricsSubtitle}
-        />
-      </lefine-box>
-
-        <lef-task-rail aria-label={localeText.solversView.compactSolversAria}>
-          <lef-task-rail-card>
-            <lef-task-rail-head>{localeText.solversView.solvers}</lef-task-rail-head>
-
-        </lef-task-rail-card>
-
-        <lefine-box class="compact-solvers">
-          {#each solutions as solution}
-            <button type="button" class="compact-solver" onclick={() => onViewSolution?.(solution.id)}>
-              <strong>{solution.solver}</strong>
-              <small>{solution.title}</small>
-            </button>
-          {/each}
-        </lefine-box>
-      </lef-task-rail>
-    {/if}
   </lef-tasks-grid>
 </lefine-box>
 
@@ -731,16 +557,6 @@
     top: 1rem;
   }
 
-  lef-task-rail-card {
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-    padding: 0.6rem 0.7rem;
-    background: var(--kef-bg-card);
-    border: 1px solid var(--kef-line);
-    border-radius: 0.75rem;
-  }
-
   lef-task-rail-head {
     display: block;
     font-size: 0.72rem;
@@ -748,19 +564,6 @@
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--lefine-text-soft);
-  }
-
-  lef-task-rail-body {
-    display: block;
-    font-size: 0.95rem;
-    color: var(--lefine-text);
-    line-height: 1.3;
-  }
-
-  lef-task-rail-actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.4rem;
   }
 
   .task-rail-btn {
@@ -780,12 +583,6 @@
   .task-rail-btn--primary {
     background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 14%, var(--kef-bg-card));
     border-color: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 35%, var(--kef-line));
-  }
-
-  lef-task-rail-icon {
-    display: inline-flex;
-    align-items: center;
-    font-size: 1rem;
   }
 
   lef-task-rail-panel {
@@ -846,52 +643,6 @@
     color: var(--kef-error, #ef4444);
   }
 
-  .settings-row {
-    display: flex;
-    align-items: center;
-    gap: 0.55rem;
-    font-size: 0.85rem;
-    color: var(--lefine-text);
-    cursor: pointer;
-  }
-
-  .settings-row input[type='checkbox'] {
-    accent-color: var(--kef-color-primary, #c89a5a);
-    width: 16px;
-    height: 16px;
-  }
-
-  .settings-row--input {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.25rem;
-    cursor: default;
-  }
-
-  .settings-row--input lefine-text {
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--lefine-text-soft);
-  }
-
-  .settings-row--input input[type='text'] {
-    width: 100%;
-    padding: 0.4rem 0.55rem;
-    border-radius: 0.5rem;
-    border: 1px solid var(--kef-line);
-    background: var(--kef-bg-card);
-    color: var(--lefine-text);
-    font: inherit;
-    font-size: 0.85rem;
-  }
-
-  .settings-row--input input[type='text']:focus-visible {
-    outline: 2px solid color-mix(in oklab, var(--kef-color-primary, #c89a5a) 50%, transparent);
-    outline-offset: 1px;
-  }
-
   .task-rail-btn:disabled {
     opacity: 0.6;
     cursor: not-allowed;
@@ -935,45 +686,5 @@
       grid-column: 2;
       justify-items: start;
     }
-  }
-
-  /* === Charts Focused Mode styles === */
-  .charts-main {
-    grid-column: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  .compact-solvers {
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-    padding: 0.5rem 0;
-  }
-
-  .compact-solver {
-    padding: 0.5rem 0.6rem;
-    background: var(--kef-bg-card);
-    border: 1px solid var(--kef-line);
-    border-radius: 6px;
-    font-size: 0.8rem;
-    cursor: pointer;
-    transition: background 120ms ease;
-  }
-
-  .compact-solver:hover {
-    background: color-mix(in oklab, var(--kef-color-primary) 8%, var(--kef-bg-card));
-  }
-
-  .compact-solver strong {
-    display: block;
-    font-size: 0.85rem;
-    color: var(--lefine-text);
-  }
-
-  .compact-solver small {
-    color: var(--lefine-text-soft);
-    font-size: 0.72rem;
   }
 </style>
