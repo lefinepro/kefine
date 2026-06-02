@@ -27,7 +27,7 @@ test.describe('New frontend task results', () => {
     await expect(page.getByTestId('kefine-topbar-search-trigger')).toContainText('@kefine/go-proxy');
     await expect(page.getByTestId('solver-task-list')).toBeVisible();
     // The repository README and checklist are rendered by default on the main
-    // screen, while settings move to the right-rail modal and folder layout is
+    // screen, while settings move to the topbar modal and folder layout is
     // not part of the main content.
     await expect(page.getByTestId('repo-readme')).toBeVisible();
     await expect(page.getByTestId('repo-readme-title')).toContainText('@kefine/go-proxy');
@@ -47,16 +47,18 @@ test.describe('New frontend task results', () => {
     await expect(page.getByTestId('repo-checklist-status').last()).toContainText('DONE');
     await expect(page.getByTestId('task-toggle-active')).toHaveCount(0);
     await expect(page.locator('lef-solutions-list')).toHaveCount(0);
-    // The right rail keeps clone controls and exposes repository settings from
-    // an icon-triggered modal; solver selection now lives inside checklist rows.
-    await expect(page.getByTestId('solver-clone-rail')).toBeVisible();
+    // Clone and repository settings now live as icons beside the shared header search.
+    await expect(page.getByTestId('solver-clone-rail')).toHaveCount(0);
+    await expect(page.getByTestId('repo-clone-trigger')).toBeVisible();
+    await expect(page.getByTestId('repo-settings-trigger')).toBeVisible();
     await page.getByTestId('repo-settings-trigger').click();
     await expect(page.getByTestId('repo-settings-dialog')).toBeVisible();
     await expect(page.getByTestId('repo-settings-dialog')).toContainText('Default branch');
     await page.getByRole('button', { name: 'Close repository settings' }).click();
     await expect(page.getByTestId('todo-solvers-block')).toHaveCount(0);
     await expect(page.getByTestId('todo-solver-select')).toHaveCount(4);
-    await expect(page.getByTestId('todo-solver-select').first()).toContainText('Go Proxy Basic');
+    await expect(page.getByTestId('todo-solver-select').first()).not.toContainText('Go Proxy Basic');
+    await expect(page.getByTestId('todo-solver-select').first().locator('lef-solver-avatar')).toHaveText('GB');
     await page.getByTestId('todo-solver-select').first().click();
     await expect(page.getByTestId('task-solver-variants')).toBeVisible();
     await expect(page.getByTestId('task-solver-variants').locator('[data-variant]')).toHaveCount(3);
@@ -84,6 +86,8 @@ test.describe('New frontend task results', () => {
     await expect(page.getByTestId('todo-solver-select')).toHaveCount(4);
 
     // Each checklist task owns a compact solver selector.
+    await expect(page.getByTestId('todo-solver-select').first()).not.toContainText('Go Proxy Basic');
+    await expect(page.getByTestId('todo-solver-select').first().locator('lef-solver-avatar')).toHaveText('GB');
     await page.getByTestId('todo-solver-select').first().click();
     const variants = page.getByTestId('task-solver-variants');
     await expect(variants).toBeVisible();

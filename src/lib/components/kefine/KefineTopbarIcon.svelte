@@ -15,6 +15,7 @@
     | 'menu'
     | 'project'
     | 'copy'
+    | 'settings'
     | 'check'
     | 'open'
     | 'profile'
@@ -118,6 +119,16 @@
   {:else if name === 'copy'}
     <rect x="9" y="7" width="10" height="12" rx="2.2" />
     <path d="M15 7V6.2A2.2 2.2 0 0 0 12.8 4H7.2A2.2 2.2 0 0 0 5 6.2v9.6A2.2 2.2 0 0 0 7.2 18H8" />
+  {:else if name === 'settings'}
+    <path d="M4.5 7h5" />
+    <path d="M13.5 7h6" />
+    <circle cx="11.5" cy="7" r="2" />
+    <path d="M4.5 12h8" />
+    <path d="M16.5 12h3" />
+    <circle cx="14.5" cy="12" r="2" />
+    <path d="M4.5 17h11" />
+    <path d="M19.5 17h0" />
+    <circle cx="17.5" cy="17" r="2" />
   {:else if name === 'check'}
     <path d="m5.4 12.4 4.1 4.1 9.1-9.1" />
   {:else if name === 'open'}

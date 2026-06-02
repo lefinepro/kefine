@@ -9,6 +9,7 @@
   import type { KefineLocale } from '$lib/constants/kefine-locale';
   import type { KefineTopbarIconName } from '$lib/components/kefine/KefineTopbarIcon.svelte';
   import type { KefineSearchWidgetId } from '$lib/kefine/search-widgets';
+  import type { TopbarSearchAction } from '$lib/kefine/topbar-search-context';
 
   /** Built-in widgets the command palette can surface inline on any page. */
   export type { KefineSearchWidgetId };
@@ -76,6 +77,7 @@
     searchHomeLabel = 'Home',
     searchHomeHref = '/',
     searchItems = [],
+    searchActions = [],
     initialSearchQuery = '',
     initialWidget = null,
     showSearchWidgets = true,
@@ -136,6 +138,7 @@
     searchHomeLabel?: string;
     searchHomeHref?: string;
     searchItems?: KefineTopbarSearchItem[];
+    searchActions?: TopbarSearchAction[];
     /** Deep-link query (from `?q=`) that auto-opens the palette seeded with this text. */
     initialSearchQuery?: string;
     /** Widget short link (e.g. `/@profile/weather`) that auto-opens this widget inline. */
@@ -853,6 +856,22 @@
           <lefine-text data-part="search-placeholder">{searchPlaceholder}</lefine-text>
           <lefine-kbd data-part="search-shortcut">{searchShortcutLabel}</lefine-kbd>
         </button>
+        {#if searchActions.length > 0}
+          <kefine-topbar-search-actions>
+            {#each searchActions as action (action.id)}
+              <button
+                type="button"
+                data-part="search-action"
+                data-testid={action.testId}
+                aria-label={action.label}
+                title={action.label}
+                onclick={() => void action.onClick()}
+              >
+                <KefineTopbarIcon name={action.icon} size={18} />
+              </button>
+            {/each}
+          </kefine-topbar-search-actions>
+        {/if}
       </kefine-topbar-search-shell>
 
       <dialog
@@ -1028,6 +1047,8 @@
 
   kefine-topbar-search-shell {
     display: flex;
+    align-items: center;
+    gap: 0.4rem;
     justify-content: center;
     flex: 1 1 min(28rem, 48vw);
     min-width: 2.55rem;
@@ -1063,6 +1084,45 @@
 
   button[data-part='search-trigger']:hover,
   button[data-part='search-trigger'][aria-expanded='true'] {
+    border-color: color-mix(in oklab, var(--kef-primary) 34%, var(--kef-border));
+    background: color-mix(in oklab, var(--kef-primary) 8%, var(--kef-bg-card));
+    color: color-mix(in oklab, var(--kef-primary) 92%, #4f3d30);
+    box-shadow: 0 10px 22px color-mix(in oklab, var(--lefine-text) 6%, transparent);
+  }
+
+  kefine-topbar-search-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex: 0 0 auto;
+  }
+
+  button[data-part='search-action'] {
+    display: inline-grid;
+    place-items: center;
+    width: 2.5rem;
+    min-width: 2.5rem;
+    height: 2.5rem;
+    padding: 0;
+    border: var(--kef-border-width-soft) solid color-mix(in oklab, var(--kef-border) 68%, transparent);
+    border-radius: calc(var(--kef-radius-ui) - 0.04rem);
+    background: color-mix(in oklab, var(--kef-bg-card) 90%, var(--kef-bg));
+    color: color-mix(in oklab, var(--lefine-text) 82%, transparent);
+    cursor: pointer;
+    box-shadow: 0 8px 18px color-mix(in oklab, #544536 5%, transparent);
+    transition:
+      background-color var(--kef-motion-fast) var(--kef-ease-soft),
+      border-color var(--kef-motion-fast) var(--kef-ease-soft),
+      color var(--kef-motion-fast) var(--kef-ease-soft),
+      box-shadow var(--kef-motion-fast) var(--kef-ease-soft);
+  }
+
+  kefine-topbar[data-scrolled='true'] button[data-part='search-action'] {
+    background: transparent;
+    box-shadow: none;
+  }
+
+  button[data-part='search-action']:hover {
     border-color: color-mix(in oklab, var(--kef-primary) 34%, var(--kef-border));
     background: color-mix(in oklab, var(--kef-primary) 8%, var(--kef-bg-card));
     color: color-mix(in oklab, var(--kef-primary) 92%, #4f3d30);
@@ -1686,8 +1746,19 @@
     }
 
     kefine-topbar-search-shell {
-      flex: 0 0 2.55rem;
-      width: 2.55rem;
+      flex: 0 0 auto;
+      width: auto;
+      gap: 0.32rem;
+    }
+
+    kefine-topbar-search-actions {
+      gap: 0.28rem;
+    }
+
+    button[data-part='search-action'] {
+      width: 2.25rem;
+      min-width: 2.25rem;
+      height: 2.55rem;
     }
 
     button[data-part='search-trigger'] {

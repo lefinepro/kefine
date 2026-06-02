@@ -9,6 +9,7 @@
     solverAvatarColor,
     solverInitials
   } from '$lib/kefine/solver-avatars';
+  import { topbarSearchActions, type TopbarSearchAction } from '$lib/kefine/topbar-search-context';
   import type { SolverHistoryTask } from '$lib/components/kefine/kefine-solver-history';
   import type { OrgReadme, OrgTodo, OrgTodoState } from '$lib/kefine/repo-docs';
 
@@ -61,8 +62,6 @@
 
   const displayRepoName = $derived(displayProjectPath(readme?.title || repoName || 'kefine/go-proxy'));
 
-  let cloneTestPending = $state(false);
-  let cloneTestResult = $state<{ ok: boolean; message: string } | null>(null);
   let copyFlash = $state(false);
   let settingsModalOpen = $state(false);
 
@@ -83,29 +82,36 @@
     }
   }
 
-  async function testCloneIntegration() {
-    cloneTestPending = true;
-    cloneTestResult = null;
-    if (!browser) return;
-    try {
-      const url = resolvedCloneUrl.replace(/^git clone\s+/, '');
-      const probe = new URL(url.replace(/\.git$/, ''));
-      const response = await fetch(`${probe.origin}${probe.pathname}/info/refs?service=git-upload-pack`, {
-        method: 'HEAD',
-        mode: 'no-cors',
-        cache: 'no-store'
-      });
-      cloneTestResult = response
-        ? { ok: true, message: localeText.solversView.cloneTestOk }
-        : { ok: false, message: localeText.solversView.cloneTestFail };
-    } catch {
-      cloneTestResult = { ok: false, message: localeText.solversView.cloneTestFail };
-    } finally {
-      cloneTestPending = false;
-    }
-  }
-
   const localeText = $derived($kefineLocaleText);
+
+  $effect(() => {
+    const actions: TopbarSearchAction[] = [
+      {
+        id: 'repo-clone',
+        label: copyFlash
+          ? localeText.solversView.copied
+          : localeText.solversView.copyGitCloneCommand,
+        icon: 'copy' as const,
+        testId: 'repo-clone-trigger',
+        onClick: copyClone
+      }
+    ];
+
+    if (readmeSettingsSection) {
+      actions.push({
+        id: 'repo-settings',
+        label: localeText.solversView.openRepositorySettings,
+        icon: 'settings' as const,
+        testId: 'repo-settings-trigger',
+        onClick: () => {
+          settingsModalOpen = true;
+        }
+      });
+    }
+
+    topbarSearchActions.set(actions);
+    return () => topbarSearchActions.set([]);
+  });
 
   const metricsById = $derived(
     new Map(defaultMetrics.map((metric) => [metric.solverId, metric]))
@@ -286,7 +292,6 @@
                         style="--avatar-color: {solverAvatarColor(selectedSolution.solver)}"
                         aria-hidden="true"
                       >{solverInitials(selectedSolution.solver)}</lef-solver-avatar>
-                      <lefine-text>{selectedSolution.solver}</lefine-text>
                       <lef-todo-solver-chevron data-expanded={solverExpanded ? 'true' : 'false'}>
                         <Icon icon="lucide:chevron-right" width="13" height="13" aria-hidden="true" />
                       </lef-todo-solver-chevron>
@@ -453,53 +458,6 @@
         {/if}
       </lef-main-tasks>
 
-      <lef-task-rail aria-label={localeText.solversView.cloneHeading} data-testid="solver-clone-rail">
-        {#if readmeSettingsSection}
-          <lef-task-rail-actions>
-            <button
-              type="button"
-              class="task-rail-icon-btn"
-              data-testid="repo-settings-trigger"
-              aria-label={localeText.solversView.openRepositorySettings}
-              title={localeText.solversView.openRepositorySettings}
-              aria-haspopup="dialog"
-              onclick={() => {
-                settingsModalOpen = true;
-              }}
-            >
-              <Icon icon="lucide:settings" width="16" height="16" aria-hidden="true" />
-            </button>
-          </lef-task-rail-actions>
-        {/if}
-        <lef-task-rail-panel data-kind="clone">
-          <lef-task-rail-head>{localeText.solversView.cloneHeading}</lef-task-rail-head>
-          <lef-task-rail-clone>
-            <code>{resolvedCloneUrl}</code>
-            <button type="button" class="task-rail-btn" onclick={copyClone}>
-              <lefine-text>
-                {copyFlash ? localeText.solversView.copied : localeText.solversView.copy}
-              </lefine-text>
-            </button>
-          </lef-task-rail-clone>
-          <button
-            type="button"
-            class="task-rail-btn task-rail-btn--primary"
-            disabled={cloneTestPending}
-            onclick={testCloneIntegration}
-          >
-            <lefine-text>
-              {cloneTestPending
-                ? localeText.solversView.cloneTestRunning
-                : localeText.solversView.cloneTestRun}
-            </lefine-text>
-          </button>
-          {#if cloneTestResult}
-            <lef-task-rail-status data-state={cloneTestResult.ok ? 'ok' : 'fail'}>
-              {cloneTestResult.message}
-            </lef-task-rail-status>
-          {/if}
-        </lef-task-rail-panel>
-      </lef-task-rail>
   </lef-tasks-grid>
 </lefine-box>
 
@@ -530,14 +488,14 @@
 
 <style>
   .solutions-page-container {
-    max-width: 1280px;
+    max-width: 920px;
     margin: 0 auto;
-    padding: 0 8px;
+    padding: 0 12px 2rem;
   }
 
   lef-tasks-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 280px;
+    grid-template-columns: minmax(0, 1fr);
     gap: 1rem;
     align-items: start;
   }
@@ -687,7 +645,7 @@
 
   lef-repo-checklist-item {
     display: grid;
-    grid-template-columns: 18px minmax(0, 1fr) auto minmax(8.5rem, auto);
+    grid-template-columns: 18px minmax(0, 1fr) auto auto;
     align-items: center;
     gap: 0.6rem;
     min-height: 2.7rem;
@@ -745,11 +703,12 @@
   .todo-solver-select {
     display: inline-flex;
     align-items: center;
-    gap: 0.45rem;
-    min-width: 8rem;
-    max-width: 13rem;
+    justify-content: center;
+    gap: 0.2rem;
+    min-width: 2.65rem;
+    width: 2.65rem;
     height: 2.15rem;
-    padding: 0.3rem 0.45rem;
+    padding: 0.3rem 0.35rem;
     border: 1px solid color-mix(in oklab, var(--kef-line) 75%, transparent);
     border-radius: 8px;
     background: color-mix(in oklab, var(--lefine-text) 7%, var(--kef-bg-card));
@@ -775,15 +734,6 @@
     font-size: 0.42rem;
     box-shadow: none;
     flex: 0 0 auto;
-  }
-
-  .todo-solver-select > lefine-text {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: 0.78rem;
-    line-height: 1;
   }
 
   lef-todo-solver-chevron {
@@ -1051,127 +1001,6 @@
     white-space: nowrap;
   }
 
-  lef-task-rail {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    position: sticky;
-    top: 1rem;
-  }
-
-  lef-task-rail-actions {
-    display: flex;
-    justify-content: flex-end;
-  }
-
-  .task-rail-icon-btn {
-    display: inline-grid;
-    place-items: center;
-    width: 2rem;
-    height: 2rem;
-    border-radius: 0.55rem;
-    border: 1px solid var(--kef-line);
-    background: var(--kef-bg-card);
-    color: var(--lefine-text);
-    cursor: pointer;
-  }
-
-  .task-rail-icon-btn:hover {
-    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 10%, var(--kef-bg-card));
-    border-color: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 30%, var(--kef-line));
-  }
-
-  lef-task-rail-head {
-    display: block;
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--lefine-text-soft);
-  }
-
-  .task-rail-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.35rem;
-    padding: 0.4rem 0.6rem;
-    border-radius: 0.55rem;
-    font-size: 0.8rem;
-    border: 1px solid var(--kef-line);
-    background: var(--kef-bg-card);
-    color: var(--lefine-text);
-    cursor: pointer;
-  }
-
-  .task-rail-btn--primary {
-    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 14%, var(--kef-bg-card));
-    border-color: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 35%, var(--kef-line));
-  }
-
-  lef-task-rail-panel {
-    display: flex;
-    flex-direction: column;
-    gap: 0.55rem;
-    padding: 0.7rem 0.75rem 0.8rem;
-    background: var(--kef-bg-card);
-    border: 1px solid var(--kef-line);
-    border-radius: 0.7rem;
-    animation: task-rail-panel-appear 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
-    transform-origin: top center;
-  }
-
-  @keyframes task-rail-panel-appear {
-    from { opacity: 0; transform: translateY(-4px) scale(0.98); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
-  }
-
-  lef-task-rail-clone {
-    display: flex;
-    align-items: stretch;
-    gap: 0.4rem;
-    min-width: 0;
-  }
-
-  lef-task-rail-clone code {
-    flex: 1 1 auto;
-    min-width: 0;
-    padding: 0.4rem 0.55rem;
-    border-radius: 0.5rem;
-    background: color-mix(in oklab, var(--kef-line) 30%, transparent);
-    color: var(--lefine-text);
-    font-family: ui-monospace, monospace;
-    font-size: 0.72rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  lef-task-rail-status {
-    display: block;
-    padding: 0.4rem 0.55rem;
-    border-radius: 0.5rem;
-    font-size: 0.78rem;
-    border: 1px solid transparent;
-  }
-
-  lef-task-rail-status[data-state='ok'] {
-    background: color-mix(in oklab, var(--kef-success, #16a34a) 14%, var(--kef-bg-card));
-    border-color: color-mix(in oklab, var(--kef-success, #16a34a) 35%, var(--kef-line));
-    color: var(--kef-success, #16a34a);
-  }
-
-  lef-task-rail-status[data-state='fail'] {
-    background: color-mix(in oklab, var(--kef-error, #ef4444) 12%, var(--kef-bg-card));
-    border-color: color-mix(in oklab, var(--kef-error, #ef4444) 35%, var(--kef-line));
-    color: var(--kef-error, #ef4444);
-  }
-
-  .task-rail-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
   lef-repo-settings-dialog {
     display: flex;
     flex-direction: column;
@@ -1234,9 +1063,6 @@
       grid-template-columns: minmax(0, 1fr);
     }
 
-    lef-task-rail {
-      position: static;
-    }
   }
 
   @media (max-width: 760px) {
@@ -1283,7 +1109,7 @@
     }
 
     .todo-solver-select {
-      max-width: min(100%, 15rem);
+      max-width: none;
     }
 
     lef-task-variants.todo-solver-variants {

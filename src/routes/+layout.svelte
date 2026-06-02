@@ -14,7 +14,7 @@
   import { resolvePublicRuntimeConfig, setBrowserPublicRuntimeConfig } from '$lib/config/public-config';
   import { kefineLocale, kefineLocaleText, setKefineLocale, type KefineLocale } from '$lib/constants/kefine-locale';
   import { buildLocaleHomePath, localizeAppPath, readLocaleFromPathname } from '$lib/routing/kefine-locale-routing';
-  import { topbarSearchPlaceholderOverride } from '$lib/kefine/topbar-search-context';
+  import { topbarSearchActions, topbarSearchPlaceholderOverride } from '$lib/kefine/topbar-search-context';
   import { getSeoMeta } from '$lib/seo';
   import type { LayoutData } from './$types';
 
@@ -40,6 +40,7 @@
 	const { children, data }: Props = $props();
   const localeText = $derived($kefineLocaleText);
   const searchPlaceholderOverride = $derived($topbarSearchPlaceholderOverride);
+  const searchActions = $derived($topbarSearchActions);
   const passkeySession = $derived($passkeySessionStore);
   const runtimePublicConfig = $derived(resolvePublicRuntimeConfig(data.publicConfig));
   const activeLocale = $derived(readLocaleFromPathname(page.url.pathname) ?? data.initialLocale ?? 'en');
@@ -284,6 +285,7 @@
     searchWidgetBackLabel={localeText.topbar.searchWidgetBackLabel}
     searchHomeHref={buildLocaleHomePath(activeLocale)}
     initialSearchQuery={page.url.searchParams.get('q') ?? ''}
+    searchActions={searchActions}
     socialLinks={sidebarSocialLinks}
     showSocialLinks={false}
     legalLinks={sidebarLegalLinks}
