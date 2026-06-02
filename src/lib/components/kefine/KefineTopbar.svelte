@@ -77,6 +77,7 @@
     searchHomeHref = '/',
     searchItems = [],
     initialSearchQuery = '',
+    searchDefaultQuery = '',
     initialWidget = null,
     showSearchWidgets = true,
     searchWidgetsLabel = 'Widgets',
@@ -93,6 +94,7 @@
     onBrandClick,
     onOpenEmailDialog,
     onThemeChange,
+    onSearchQueryChange,
     onAuth,
     onOpenProfile,
     onSignOut,
@@ -137,6 +139,8 @@
     searchItems?: KefineTopbarSearchItem[];
     /** Deep-link query (from `?q=`) that auto-opens the palette seeded with this text. */
     initialSearchQuery?: string;
+    /** Query to prefill when opening the palette manually on a search results page. */
+    searchDefaultQuery?: string;
     /** Widget short link (e.g. `/@profile/weather`) that auto-opens this widget inline. */
     initialWidget?: KefineSearchWidgetId | null;
     showSearchWidgets?: boolean;
@@ -154,6 +158,7 @@
     onBrandClick: () => void;
     onOpenEmailDialog: () => void;
     onThemeChange: (theme: 'light' | 'dark' | 'auto') => void;
+    onSearchQueryChange?: (query: string) => void;
     onAuth: () => void;
     onOpenProfile: () => void;
     onSignOut: () => void;
@@ -409,7 +414,7 @@
     themePickerOpen = false;
     localePickerOpen = false;
     onExpandedChange(false);
-    searchQuery = options?.query ?? '';
+    searchQuery = options?.query ?? searchDefaultQuery;
     selectedSearchIndex = 0;
     activeSearchWidget = options?.widget ?? null;
     searchOpen = true;
@@ -464,8 +469,10 @@
   }
 
   function handleSearchInput(event: Event) {
-    searchQuery = (event.currentTarget as HTMLInputElement).value;
+    const nextQuery = (event.currentTarget as HTMLInputElement).value;
+    searchQuery = nextQuery;
     selectedSearchIndex = 0;
+    onSearchQueryChange?.(nextQuery);
   }
 
   function moveSelectedSearchItem(offset: number) {
@@ -1679,11 +1686,13 @@
     kefine-topbar-row {
       padding: 0.7rem 0.55rem;
       gap: 0.45rem;
+      justify-content: flex-start;
     }
 
     kefine-topbar-search-shell {
       flex: 0 0 2.55rem;
       width: 2.55rem;
+      margin-left: auto;
     }
 
     button[data-part='search-trigger'] {

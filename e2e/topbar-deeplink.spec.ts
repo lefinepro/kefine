@@ -9,7 +9,7 @@ async function gotoDeepLink(page: import('@playwright/test').Page, path: string)
     window.localStorage.clear();
   });
   await page.goto(path);
-  await expect(page.getByTestId('kefine-task-input')).toBeVisible();
+  await expect(page.getByTestId('kefine-topbar-search-trigger')).toBeVisible();
 }
 
 test.describe('Search deep links', () => {
@@ -17,8 +17,8 @@ test.describe('Search deep links', () => {
     await mockOrderApi(page);
     await gotoDeepLink(page, '/?q=redis');
 
-    await expect(page.getByTestId('kefine-task-input')).toHaveValue('redis');
-    await expect(page.getByTestId('kefine-search-page-mode')).toHaveAttribute(
+    await expect(page.getByTestId('kefine-task-input')).toHaveCount(0);
+    await expect(page.getByTestId('kefine-search-page-results')).toHaveAttribute(
       'data-mode',
       'anonymous'
     );

@@ -113,7 +113,7 @@
   } = $props();
   const localeText = $derived($kefineLocaleText);
   // Latch `?q=` before URL sync runs: search pages keep it in the address bar and
-  // seed the composer, while non-search routes can still hand it to the command
+  // seed the result query, while non-search routes can still hand it to the command
   // palette before canonical task/profile URLs drop search params.
   function readInitialSearchPageQuery() {
     return initialSearchQuery || page.url.searchParams.get('q') || '';
@@ -596,6 +596,27 @@
   const searchPageAlternateHref = $derived(
     searchPageMode ? buildSearchPageHref(searchPageMode === 'saved' ? 'anonymous' : 'saved') : ''
   );
+  const searchPageMatchedOrders = $derived.by(() => {
+    if (!searchPageMode) {
+      return [];
+    }
+
+    const query = searchPageQuery.trim().toLowerCase();
+    if (!query) {
+      return [];
+    }
+
+    return createdOrders
+      .filter((order) => orderMatchesQuery(order, query))
+      .sort((left, right) => {
+        const leftScore = orderSearchScore(left, query);
+        const rightScore = orderSearchScore(right, query);
+        if (leftScore !== rightScore) {
+          return rightScore - leftScore;
+        }
+        return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
+      });
+  });
   const canSaveCurrentOrderLocally = $derived(
     Boolean(
       currentOrder &&
@@ -630,6 +651,42 @@
 
     const params = new URLSearchParams({ q: query });
     return `${basePath}?${params.toString()}`;
+  }
+
+  function updateSearchPageQuery(query: string) {
+    latchedSearchPageQuery = query;
+    draft.description = query;
+    appliedSearchPageDraftQuery = query.trim();
+    hasAppliedSearchPageDraftQuery = true;
+  }
+
+  function orderMatchesQuery(order: OrderView, query: string): boolean {
+    return [
+      order.id,
+      order.shareId,
+      order.title,
+      order.description,
+      order.solver,
+      order.status,
+      order.actorHandle,
+      order.ownerUsername,
+      order.ownerDisplayName
+    ]
+      .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+      .some((value) => value.toLowerCase().includes(query));
+  }
+
+  function orderSearchScore(order: OrderView, query: string): number {
+    const title = order.title.toLowerCase();
+    const description = order.description.toLowerCase();
+    if (title === query) return 100;
+    if (title.startsWith(query)) return 70;
+    if (title.includes(query)) return 45;
+    if (description.includes(query)) return 30;
+    if (order.solver.toLowerCase().includes(query)) return 18;
+    if (order.status.toLowerCase().includes(query)) return 10;
+    if (order.id.toLowerCase().includes(query) || order.shareId?.toLowerCase().includes(query)) return 6;
+    return 1;
   }
 
   const RECENT_ORDERS_LIMIT = 10;
@@ -2935,6 +2992,7 @@
   searchHomeHref={buildLocaleHomePath(activeLocale)}
   searchItems={topbarSearchItems}
   initialSearchQuery={latchedSearchPageQuery ? '' : latchedDeepLinkSearchQuery}
+  searchDefaultQuery={searchPageMode ? searchPageQuery : ''}
   initialWidget={initialWidget}
   socialLinks={sidebarSocialLinks}
   showSocialLinks={false}
@@ -2947,6 +3005,7 @@
     }
   }}
   onThemeChange={(theme) => { themeMode = theme; }}
+  onSearchQueryChange={searchPageMode ? updateSearchPageQuery : undefined}
   onAuth={selectTopbarAuth}
   onOpenProfile={openTopbarProfile}
   onSignOut={() => { void signOutProfileSession(); }}
@@ -2995,7 +3054,7 @@
           solverSearchLabel={localeText.create.solverSearchLabel}
           solverSearchCompletedLabel={localeText.create.solverSearchCompleted}
           solverLabel={localeText.labels.solver}
-          matchedOrders={matchedOrders}
+          matchedOrders={searchPageMode ? searchPageMatchedOrders : matchedOrders}
           isSearching={draft.description.trim().length > 0}
           matchedTasksLabel={localeText.create.matchedTasks}
           recentTasksLabel={localeText.labels.taskQueue}
@@ -3018,6 +3077,8 @@
           composerHints={localeText.create.composerHints}
           openTaskLabel={localeText.labels.openOrderLink}
           relatedItemsLabel={localeText.labels.relatedItems}
+          searchResultsOnly={Boolean(searchPageMode)}
+          searchResultsEmptyLabel={localeText.topbar.searchEmptyLabel}
           searchMode={searchPageMode}
           searchModeAnonymousLabel={localeText.create.searchModeAnonymous}
           searchModeSavedLabel={localeText.create.searchModeSaved}

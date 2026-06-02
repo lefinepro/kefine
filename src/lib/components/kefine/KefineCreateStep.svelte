@@ -102,6 +102,8 @@
     composerHints,
     openTaskLabel,
     relatedItemsLabel,
+    searchResultsOnly = false,
+    searchResultsEmptyLabel = 'No matching results',
     searchMode = null,
     searchModeAnonymousLabel = 'Anonymous search',
     searchModeSavedLabel = 'Saved search',
@@ -195,6 +197,8 @@
     composerHints: string;
     openTaskLabel: string;
     relatedItemsLabel: string;
+    searchResultsOnly?: boolean;
+    searchResultsEmptyLabel?: string;
     searchMode?: SearchPageMode | null;
     searchModeAnonymousLabel?: string;
     searchModeSavedLabel?: string;
@@ -1422,7 +1426,7 @@ initialized = true;
 
 </script>
 
-{#if afeIntroCard}
+{#if afeIntroCard && !searchResultsOnly}
   <h1 class="lefine-title">Lefine</h1>
   <p class="lefine-subtitle">{afeIntroCard.detail}</p>
 {/if}
@@ -1465,6 +1469,7 @@ initialized = true;
 
 
 
+  {#if !searchResultsOnly}
   <fieldset data-part="exec-row" data-testid="kefine-create-form">
     <kefine-task-shell>
       <label data-part="sr-only" for="order-title">{title}</label>
@@ -1961,39 +1966,51 @@ initialized = true;
       {/each}
     </section>
   {/if}
+  {/if}
 
-  {#if isSearching && sortedMatchedOrders.length > 0}
-    <section data-part="recent" aria-label={isSearching ? matchedTasksLabel : solverLabel}>
+  {#if isSearching && (sortedMatchedOrders.length > 0 || searchResultsOnly)}
+    <section
+      data-part="recent"
+      data-testid={searchResultsOnly ? 'kefine-search-page-results' : null}
+      data-mode={searchResultsOnly ? searchMode : null}
+      aria-label={isSearching ? matchedTasksLabel : solverLabel}
+    >
       <kefine-recent-title>{matchedTasksLabel}</kefine-recent-title>
-      <ul data-part="recent-list" data-compact="true" data-testid="kefine-search-results">
-        {#each sortedMatchedOrders as order, i (order.id)}
-          <li transition:taskDropIn={{ delay: i * 78 }} style="list-style:none;">
-            <KefineOrderListItem
-              {order}
-              {openTaskLabel}
-              {relatedItemsLabel}
-              {createServiceLabel}
-              {serviceVariablesLabel}
-              {deleteTaskLabel}
-              showCreateService={false}
-              showDelete={true}
-              searchQuery={draft.description}
-              itemTestId={`kefine-search-order-${order.id}`}
-              openTestId={`kefine-open-search-order-${order.id}`}
-              deleteTestId={`kefine-delete-search-order-${order.id}`}
-              onOpen={() => onOpenOrder(order)}
-              onCreateService={(event) => onCreateServiceFromOrder?.(order, event)}
-              onOpenKeydown={(event) => handleOpenOrderKeydown(order, event)}
-              onDelete={(event) => handleDeleteClick(order, event)}
-            />
-          </li>
-        {/each}
-      </ul>
+      {#if sortedMatchedOrders.length > 0}
+        <ul data-part="recent-list" data-compact="true" data-testid="kefine-search-results">
+          {#each sortedMatchedOrders as order, i (order.id)}
+            <li transition:taskDropIn={{ delay: i * 78 }} style="list-style:none;">
+              <KefineOrderListItem
+                {order}
+                {openTaskLabel}
+                {relatedItemsLabel}
+                {createServiceLabel}
+                {serviceVariablesLabel}
+                {deleteTaskLabel}
+                showCreateService={false}
+                showDelete={true}
+                searchQuery={draft.description}
+                itemTestId={`kefine-search-order-${order.id}`}
+                openTestId={`kefine-open-search-order-${order.id}`}
+                deleteTestId={`kefine-delete-search-order-${order.id}`}
+                onOpen={() => onOpenOrder(order)}
+                onCreateService={(event) => onCreateServiceFromOrder?.(order, event)}
+                onOpenKeydown={(event) => handleOpenOrderKeydown(order, event)}
+                onDelete={(event) => handleDeleteClick(order, event)}
+              />
+            </li>
+          {/each}
+        </ul>
+      {:else}
+        <kefine-search-results-empty data-testid="kefine-search-results-empty">
+          <lefine-text>{searchResultsEmptyLabel}</lefine-text>
+        </kefine-search-results-empty>
+      {/if}
     </section>
   {/if}
 </article>
 
-{#if pinnedServices.length > 0}
+{#if !searchResultsOnly && pinnedServices.length > 0}
   <lef-services-showcase>
     <lef-services-head>
       <strong>{pinnedServicesTitle}</strong>
@@ -2022,9 +2039,10 @@ initialized = true;
   </lef-services-showcase>
 {/if}
 
+{#if !searchResultsOnly}
   {#if afeIntroCard}
-   <lef-afe-showcase-heading>{afeIntroCard.title}</lef-afe-showcase-heading>
- {/if}
+    <lef-afe-showcase-heading>{afeIntroCard.title}</lef-afe-showcase-heading>
+  {/if}
 
 <lef-afe-showcase>
   <lef-afe-layout>
@@ -2095,6 +2113,7 @@ initialized = true;
     </lef-afe-steps>
   </lef-afe-layout>
 </lef-afe-showcase>
+{/if}
 
 <style>
   @keyframes kefine-task-drop-in {
@@ -4561,6 +4580,21 @@ initialized = true;
 
   ul[data-part='recent-list'][data-compact='true'] {
     gap: 0.42rem;
+  }
+
+  kefine-search-results-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 9rem;
+    padding: 1.2rem;
+    border: 1px solid color-mix(in oklab, var(--kef-line) 70%, transparent);
+    border-radius: 0.42rem;
+    background: color-mix(in oklab, var(--kef-bg-card) 86%, transparent);
+    color: color-mix(in oklab, var(--lefine-text-soft) 86%, transparent);
+    font-size: 0.95rem;
+    font-weight: 620;
+    text-align: center;
   }
 
   lef-services-showcase {
