@@ -96,28 +96,48 @@
   const THEME_STORAGE_KEY = 'kefine-theme';
   const BRAND_HOME_NAVIGATION_STORAGE_KEY = 'kefine-brand-home-navigation';
   const CLONE_DRAFT_STORAGE_KEY = 'kefine-clone-draft-v1';
+  type KefineSearchPageMode = 'anonymous' | 'saved';
 
   let {
     initialActorHandle,
     initialOrderId,
-    initialWidget = null
+    initialWidget = null,
+    initialSearchQuery = '',
+    initialSearchMode = null
   }: {
     initialActorHandle?: string;
     initialOrderId?: string;
     initialWidget?: KefineSearchWidgetId | null;
+    initialSearchQuery?: string;
+    initialSearchMode?: KefineSearchPageMode | null;
   } = $props();
   const localeText = $derived($kefineLocaleText);
-  // Latch the `?q=` deep link: the URL-sync effect below strips search params from
-  // the address bar, so we capture the query as soon as it appears and keep it so
-  // the command palette can surface it. Initialised from the mount URL (full page
-  // load) and updated by the effect (client-side navigation). Declared before the
-  // URL-sync effect so it wins the flush ordering when both react to a navigation.
-  let latchedDeepLinkSearchQuery = $state(page.url.searchParams.get('q') ?? '');
+  // Latch `?q=` before URL sync runs: search pages keep it in the address bar and
+  // seed the composer, while non-search routes can still hand it to the command
+  // palette before canonical task/profile URLs drop search params.
+  let latchedSearchPageQuery = $state(initialSearchQuery || page.url.searchParams.get('q') || '');
+  let latchedDeepLinkSearchQuery = $state(latchedSearchPageQuery);
+  let searchPageUrlHasQuery = $state(Boolean(latchedSearchPageQuery.trim()));
   $effect(() => {
     const query = page.url.searchParams.get('q') ?? '';
     if (query) {
+      latchedSearchPageQuery = query;
       latchedDeepLinkSearchQuery = query;
+      searchPageUrlHasQuery = true;
+    } else {
+      searchPageUrlHasQuery = false;
     }
+  });
+  const searchPageMode = $derived.by((): KefineSearchPageMode | null => {
+    if (!searchPageUrlHasQuery) {
+      return null;
+    }
+
+    if (initialSearchMode === 'saved' || initialSearchMode === 'anonymous') {
+      return initialSearchMode;
+    }
+
+    return getNormalizedInitialActorHandle() ? 'saved' : 'anonymous';
   });
 
   // `replaceState` throws ("before router is initialized") if called during the
@@ -327,6 +347,8 @@
   let PasskeyDialogComponent = $state<LazyComponent | null>(null);
   let PrivateKeyDialogComponent = $state<LazyComponent | null>(null);
   let EmailCodeDialogComponent = $state<LazyComponent | null>(null);
+  let appliedSearchPageDraftQuery = $state('');
+  let hasAppliedSearchPageDraftQuery = $state(false);
 
   const passkeySession = $derived($passkeySessionStore);
   const isPasskeyActive = $derived(passkeySession ? passkeySession.expiresAt.getTime() > Date.now() : false);
@@ -421,6 +443,31 @@
   const resolvedTheme = $derived(themeMode === 'auto' ? (systemPrefersDark ? 'dark' : 'light') : themeMode);
   const isDarkTheme = $derived(resolvedTheme === 'dark');
   const topbarThemeActionLabel = $derived(themeMode === 'auto' ? localeText.topbar.theme.auto : isDarkTheme ? localeText.topbar.theme.dark : localeText.topbar.theme.light);
+
+  $effect(() => {
+    const query = latchedSearchPageQuery.trim();
+    if (!query || step !== 'create') {
+      return;
+    }
+
+    const currentDescription = draft.description.trim();
+    if (currentDescription && currentDescription !== appliedSearchPageDraftQuery) {
+      if (currentDescription === query) {
+        appliedSearchPageDraftQuery = query;
+        hasAppliedSearchPageDraftQuery = true;
+      }
+      return;
+    }
+
+    if (!currentDescription && hasAppliedSearchPageDraftQuery && query === appliedSearchPageDraftQuery) {
+      return;
+    }
+
+    draft.description = latchedSearchPageQuery;
+    appliedSearchPageDraftQuery = query;
+    hasAppliedSearchPageDraftQuery = true;
+  });
+
   const layoutMode = $derived(
     step === 'create' ? 'create' : step === 'executing' || step === 'payment' || step === 'submitting' ? 'flow' : 'default'
   );
@@ -526,6 +573,24 @@
   const profileUrl = $derived(
     currentProfile && browser ? `${window.location.origin}${localizeAppPath(buildProfilePath(currentProfile.primaryHandle), activeLocale)}` : ''
   );
+  const searchPageQuery = $derived.by(() => {
+    const currentQuery = draft.description.trim();
+    if (currentQuery || hasAppliedSearchPageDraftQuery) {
+      return currentQuery;
+    }
+
+    return latchedSearchPageQuery.trim();
+  });
+  const searchPageProfileHandle = $derived(
+    getNormalizedInitialActorHandle() ??
+      currentProfile?.primaryHandle ??
+      runtimeConfig.defaultActor.handle?.trim() ??
+      'staff'
+  );
+  const searchPageHref = $derived(searchPageMode ? buildSearchPageHref(searchPageMode) : '');
+  const searchPageAlternateHref = $derived(
+    searchPageMode ? buildSearchPageHref(searchPageMode === 'saved' ? 'anonymous' : 'saved') : ''
+  );
   const canSaveCurrentOrderLocally = $derived(
     Boolean(
       currentOrder &&
@@ -547,6 +612,21 @@
         )
       : []
   );
+
+  function buildSearchPageHref(mode: KefineSearchPageMode): string {
+    const basePath =
+      mode === 'saved'
+        ? localizeAppPath(buildProfilePath(searchPageProfileHandle), activeLocale)
+        : buildLocaleHomePath(activeLocale);
+    const query = searchPageQuery.trim();
+    if (!query) {
+      return basePath;
+    }
+
+    const params = new URLSearchParams({ q: query });
+    return `${basePath}?${params.toString()}`;
+  }
+
   const RECENT_ORDERS_LIMIT = 10;
   const recentProfileOrders = $derived.by(() => {
     const profile = currentProfile;
@@ -1142,6 +1222,19 @@
     const actorHandle =
       currentOrder?.actorHandle?.trim() ||
       getRouteActorHandleFallback();
+
+    if (searchPageMode && step === 'create') {
+      const searchUrl = new URL(buildSearchPageHref(searchPageMode), window.location.origin);
+      nextUrl.pathname = searchUrl.pathname;
+      nextUrl.search = searchUrl.search;
+      nextUrl.hash = '';
+
+      if (window.location.href !== nextUrl.toString()) {
+        safeReplaceState(nextUrl, page.state);
+      }
+      searchPageUrlHasQuery = Boolean(searchPageQuery.trim());
+      return;
+    }
 
     if (orderRouteId && actorHandle) {
       nextUrl.pathname = localizeAppPath(buildActorOrderPath(actorHandle, orderRouteId), activeLocale);
@@ -2836,7 +2929,7 @@
   searchWidgetBackLabel={localeText.topbar.searchWidgetBackLabel}
   searchHomeHref={buildLocaleHomePath(activeLocale)}
   searchItems={topbarSearchItems}
-  initialSearchQuery={latchedDeepLinkSearchQuery}
+  initialSearchQuery={latchedSearchPageQuery ? '' : latchedDeepLinkSearchQuery}
   initialWidget={initialWidget}
   socialLinks={sidebarSocialLinks}
   showSocialLinks={false}
@@ -2920,6 +3013,14 @@
           composerHints={localeText.create.composerHints}
           openTaskLabel={localeText.labels.openOrderLink}
           relatedItemsLabel={localeText.labels.relatedItems}
+          searchMode={searchPageMode}
+          searchModeAnonymousLabel={localeText.create.searchModeAnonymous}
+          searchModeSavedLabel={localeText.create.searchModeSaved}
+          searchModeSaveLabel={localeText.create.searchModeSave}
+          searchModeAnonymousActionLabel={localeText.create.searchModeAnonymousAction}
+          searchModeOpenPageLabel={localeText.create.searchModeOpenPage}
+          searchModeHref={searchPageHref}
+          searchModeAlternateHref={searchPageAlternateHref}
           createServiceLabel={localeText.create.transformToService}
           serviceVariablesLabel={localeText.create.serviceVariables}
           executionEstimateLabel={localeText.labels.executionEstimate}

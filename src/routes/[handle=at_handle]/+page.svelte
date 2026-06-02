@@ -7,6 +7,7 @@
   import KefineProfileSetupDots from '$lib/components/kefine/KefineProfileSetupDots.svelte';
   import KefineTopbar from '$lib/components/kefine/KefineTopbar.svelte';
   import { onMount } from 'svelte';
+  import type { Component } from 'svelte';
   import { disconnectAppKit } from '$lib/auth/appkit';
   import { authState, clearAuthState, hydrateAuthStateFromSession } from '$lib/auth/auth-store.svelte.js';
   import { loadGeneratedPrivateKeyCookie } from '$lib/auth/publickey-cookie';
@@ -47,6 +48,11 @@
   let publicTasks = $state<OrderView[]>([]);
   let ownerTasks = $state<OrderView[]>([]);
   let copyState = $state<'idle' | 'profile'>('idle');
+  let Workspace: Component<{
+    initialActorHandle?: string;
+    initialSearchQuery?: string;
+    initialSearchMode?: 'anonymous' | 'saved' | null;
+  }> | null = $state(null);
 
   let displayName = $state('');
   let username = $state('');
@@ -67,6 +73,8 @@
   const isOwner = $derived(Boolean(profile && viewerProfile && profile.id === viewerProfile.id));
   const runtimeConfig = $derived(resolvePublicRuntimeConfig(page.data.publicConfig));
   const canonicalProfilePath = $derived(profile ? localizeAppPath(buildProfilePath(profile.primaryHandle), activeLocale) : '');
+  const profileSearchQuery = $derived(page.url.searchParams.get('q') ?? '');
+  const shouldRenderSearchWorkspace = $derived(Boolean(profileSearchQuery.trim()));
   const setupMetadata = $derived((profile?.metadata ?? {}) as ProfileMetadata);
   const hasOwnerTasks = $derived((isOwner ? ownerTasks : publicTasks).length > 0);
 
@@ -238,6 +246,16 @@
   }
 
   let profileLoadKey = $state('');
+  $effect(() => {
+    if (!shouldRenderSearchWorkspace || Workspace) {
+      return;
+    }
+
+    import('$lib/components/kefine/KefineWorkspace.svelte').then((module) => {
+      Workspace = module.default;
+    });
+  });
+
   $effect(() => {
     if (!browser) {
       return;
@@ -678,7 +696,15 @@
   <title>{profile ? `${profile.displayName} | Lefine` : 'Profile | Lefine'}</title>
 </svelte:head>
 
-{#if unavailable}
+{#if shouldRenderSearchWorkspace}
+  {#if Workspace}
+    <Workspace
+      initialActorHandle={requestedHandle}
+      initialSearchQuery={profileSearchQuery}
+      initialSearchMode="saved"
+    />
+  {/if}
+{:else if unavailable}
   <section class="profile-page">
     <article class="profile-unavailable">
       <lefine-text class="profile-unavailable__code">404</lefine-text>
