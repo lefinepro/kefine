@@ -853,6 +853,13 @@ export const KEFINE_TEXT_HY = {
   solversView: {
     ...KEFINE_TEXT_EN.solversView,
     tasksAside: 'Առաջադրանքներ',
+    readmeHeading: 'README',
+    readmeAria: 'Repository-ի README',
+    briefHeading: 'Համառոտ',
+    todoHeading: 'TODO',
+    todoAria: 'Repository-ի TODO ցուցակ',
+    todoDone: 'Կատարված',
+    todoCount: (count: number) => `${count} ${count === 1 ? 'առաջադրանք' : 'առաջադրանք'}`,
     solvers: 'Solver-ներ',
     solverVariants: 'Solver-ի տարբերակներ',
     chooseVariant: 'Ընտրեք տարբերակ',

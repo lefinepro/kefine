@@ -878,6 +878,13 @@ export const KEFINE_TEXT_EN = {
   },
   solversView: {
     tasksAside: 'Tasks',
+    readmeHeading: 'README',
+    readmeAria: 'Repository README',
+    briefHeading: 'Brief',
+    todoHeading: 'TODO',
+    todoAria: 'Repository TODO list',
+    todoDone: 'Done',
+    todoCount: (count: number) => `${count} ${count === 1 ? 'task' : 'tasks'}`,
     solvers: 'Solvers',
     solverVariants: 'Solver variants',
     chooseVariant: 'Choose a variant',

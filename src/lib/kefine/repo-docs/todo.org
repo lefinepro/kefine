@@ -1,0 +1,6 @@
+#+TITLE: kefine/go-proxy TODO
+
+* TODO Minimal HTTP proxy with forward functionality
+* TODO Add request/response logging
+* TODO Rate limiting, caching and metrics
+* DONE Project scaffolding and config loader

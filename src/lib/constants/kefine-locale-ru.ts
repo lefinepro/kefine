@@ -880,6 +880,14 @@ export const KEFINE_TEXT_RU = {
   },
   solversView: {
     tasksAside: 'Задачи',
+    readmeHeading: 'README',
+    readmeAria: 'README репозитория',
+    briefHeading: 'Кратко',
+    todoHeading: 'TODO',
+    todoAria: 'Список TODO репозитория',
+    todoDone: 'Готово',
+    todoCount: (count: number) =>
+      `${count} ${count === 1 ? 'задача' : count >= 2 && count <= 4 ? 'задачи' : 'задач'}`,
     solvers: 'Солверы',
     solverVariants: 'Варианты солверов',
     chooseVariant: 'Выберите вариант',

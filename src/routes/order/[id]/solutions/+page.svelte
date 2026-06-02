@@ -7,6 +7,7 @@
     type SolversHistoryTask
   } from '$lib/components/kefine/KefineSolversView.svelte';
   import { topbarSearchPlaceholderOverride } from '$lib/kefine/topbar-search-context';
+  import { repoReadme, repoTodos } from '$lib/kefine/repo-docs';
 
   const id = $page.params.id;
   const taskQuery = $page.url.searchParams.get('task') || '';
@@ -78,6 +79,8 @@
   {solutions}
   taskTitle={taskQuery}
   repoName={repoName}
+  readme={repoReadme}
+  todos={repoTodos}
   historyTasks={historyTasks}
   onSelectHistoryTask={handleSelectHistoryTask}
   onViewSolution={(solutionId) => goto(`/order/${id}/solver/${solutionId}`)}

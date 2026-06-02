@@ -8,6 +8,7 @@
     solverInitials
   } from '$lib/kefine/solver-avatars';
   import type { SolverHistoryTask } from '$lib/components/kefine/kefine-solver-history';
+  import type { OrgReadme, OrgTodo } from '$lib/kefine/repo-docs';
 
   export type SolversHistoryTask = SolverHistoryTask;
 
@@ -15,6 +16,8 @@
     solutions = [],
     taskTitle = '',
     repoName = '',
+    readme = null,
+    todos = [],
     historyTasks = [],
     cloneUrl = '',
     onViewSolution,
@@ -23,11 +26,18 @@
     solutions?: Solution[];
     taskTitle?: string;
     repoName?: string;
+    readme?: OrgReadme | null;
+    todos?: OrgTodo[];
     historyTasks?: SolversHistoryTask[];
     cloneUrl?: string;
     onViewSolution?: ((id: string) => void) | null | undefined;
     onSelectHistoryTask?: ((id: string) => void) | null | undefined;
   } = $props();
+
+  // README sections other than the Brief, which is surfaced separately above.
+  const readmeDetailSections = $derived(
+    (readme?.sections ?? []).filter((section) => section.id !== 'brief')
+  );
 
   let cloneTestPending = $state(false);
   let cloneTestResult = $state<{ ok: boolean; message: string } | null>(null);
@@ -132,6 +142,49 @@
 <lefine-box class="solutions-page-container" data-testid="solution-list-page">
   <lef-tasks-grid>
       <lef-main-tasks aria-label={localeText.solversView.tasksAside} data-testid="solver-task-list">
+        {#if readme}
+          <lef-repo-readme aria-label={localeText.solversView.readmeAria} data-testid="repo-readme">
+            <lef-repo-readme-head>{localeText.solversView.readmeHeading}</lef-repo-readme-head>
+            {#if readme.brief}
+              <lef-repo-brief data-testid="repo-brief">
+                <small>{localeText.solversView.briefHeading}</small>
+                <p>{readme.brief}</p>
+              </lef-repo-brief>
+            {/if}
+            {#each readmeDetailSections as section (section.id)}
+              <lef-repo-section data-section={section.id}>
+                <h3>{section.title}</h3>
+                {#each section.text as line (line)}
+                  <p>{line}</p>
+                {/each}
+                {#if section.settings.length > 0}
+                  <dl>
+                    {#each section.settings as setting (setting.key)}
+                      <lef-repo-kv>
+                        <dt>{setting.key}</dt>
+                        <dd>{setting.value}</dd>
+                      </lef-repo-kv>
+                    {/each}
+                  </dl>
+                {/if}
+                {#if section.links.length > 0}
+                  <lef-repo-links>
+                    {#each section.links as link (link.url)}
+                      <a href={link.url} target="_blank" rel="noopener noreferrer">{link.label}</a>
+                    {/each}
+                  </lef-repo-links>
+                {:else if section.items.length > 0}
+                  <ul>
+                    {#each section.items as item (item)}
+                      <li>{item}</li>
+                    {/each}
+                  </ul>
+                {/if}
+              </lef-repo-section>
+            {/each}
+          </lef-repo-readme>
+        {/if}
+
         <lef-main-task-list>
           {#each displayedHistoryTasks as task (task.id)}
             {@const isExpanded = expandedTaskId === task.id}
@@ -247,6 +300,32 @@
             </lef-task-card>
           {/each}
         </lef-main-task-list>
+
+        {#if todos.length > 0}
+          <lef-repo-todo aria-label={localeText.solversView.todoAria} data-testid="repo-todo">
+            <lef-repo-todo-head>
+              <lefine-text>{localeText.solversView.todoHeading}</lefine-text>
+              <small>{localeText.solversView.todoCount(todos.length)}</small>
+            </lef-repo-todo-head>
+            <lef-repo-todo-list>
+              {#each todos as todo (todo.id)}
+                <lef-repo-todo-item data-done={todo.done ? 'true' : 'false'} data-testid="repo-todo-item">
+                  <lef-repo-todo-check data-done={todo.done ? 'true' : 'false'} aria-hidden="true">
+                    {#if todo.done}
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    {/if}
+                  </lef-repo-todo-check>
+                  <lefine-text>{todo.title}</lefine-text>
+                  {#if todo.done}
+                    <lef-repo-todo-state>{localeText.solversView.todoDone}</lef-repo-todo-state>
+                  {/if}
+                </lef-repo-todo-item>
+              {/each}
+            </lef-repo-todo-list>
+          </lef-repo-todo>
+        {/if}
       </lef-main-tasks>
 
       <lef-task-rail aria-label={localeText.solversView.cloneHeading} data-testid="solver-clone-rail">
@@ -299,6 +378,214 @@
   lef-main-tasks {
     display: block;
     min-width: 0;
+  }
+
+  lef-repo-readme {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    padding: 0.9rem 1rem 1rem;
+    margin-bottom: 0.6rem;
+    border: 1px solid var(--kef-line);
+    border-radius: 0.75rem;
+    background: var(--kef-bg-card);
+  }
+
+  lef-repo-readme-head {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--lefine-text-soft);
+  }
+
+  lef-repo-brief {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.65rem 0.75rem;
+    border-radius: 0.6rem;
+    border: 1px solid color-mix(in oklab, var(--kef-color-primary, #c89a5a) 28%, var(--kef-line));
+    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 8%, transparent);
+  }
+
+  lef-repo-brief small {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 75%, var(--lefine-text));
+  }
+
+  lef-repo-brief p {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.45;
+    color: var(--lefine-text);
+  }
+
+  lef-repo-section {
+    display: block;
+  }
+
+  lef-repo-section h3 {
+    margin: 0 0 0.35rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--lefine-text);
+  }
+
+  lef-repo-section p {
+    margin: 0 0 0.3rem;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    color: var(--lefine-text-soft);
+  }
+
+  lef-repo-section dl {
+    display: grid;
+    grid-template-columns: minmax(7rem, max-content) minmax(0, 1fr);
+    gap: 0.2rem 0.75rem;
+    margin: 0;
+  }
+
+  lef-repo-section dl lef-repo-kv {
+    display: contents;
+  }
+
+  lef-repo-section dt {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--lefine-text);
+  }
+
+  lef-repo-section dd {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--lefine-text-soft);
+    font-family: ui-monospace, monospace;
+    overflow-wrap: anywhere;
+  }
+
+  lef-repo-section ul {
+    margin: 0;
+    padding-left: 1.1rem;
+  }
+
+  lef-repo-section li {
+    font-size: 0.82rem;
+    color: var(--lefine-text-soft);
+  }
+
+  lef-repo-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  lef-repo-links a {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.3rem 0.6rem;
+    border-radius: 0.5rem;
+    border: 1px solid color-mix(in oklab, var(--kef-color-primary, #c89a5a) 30%, var(--kef-line));
+    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 8%, var(--kef-bg-card));
+    color: var(--lefine-text);
+    font-size: 0.8rem;
+    text-decoration: none;
+  }
+
+  lef-repo-links a:hover {
+    border-color: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 55%, var(--kef-line));
+    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 16%, var(--kef-bg-card));
+  }
+
+  lef-repo-todo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    margin-top: 0.7rem;
+    padding-top: 0.6rem;
+    border-top: 1px solid var(--kef-line);
+  }
+
+  lef-repo-todo-head {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--lefine-text-soft);
+  }
+
+  lef-repo-todo-head small {
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: none;
+    color: var(--lefine-text-soft);
+  }
+
+  lef-repo-todo-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  lef-repo-todo-item {
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.45rem 0.7rem;
+    border-radius: 8px;
+  }
+
+  lef-repo-todo-item:hover {
+    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 6%, transparent);
+  }
+
+  lef-repo-todo-item[data-done='true'] lefine-text {
+    color: var(--lefine-text-soft);
+    text-decoration: line-through;
+  }
+
+  lef-repo-todo-item lefine-text {
+    min-width: 0;
+    font-size: 0.9rem;
+    line-height: 1.3;
+    color: var(--lefine-text);
+    overflow-wrap: anywhere;
+  }
+
+  lef-repo-todo-check {
+    display: inline-grid;
+    place-items: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    border: 1.5px solid color-mix(in oklab, var(--kef-line) 82%, var(--lefine-text-soft));
+    background: color-mix(in oklab, var(--kef-bg-card) 88%, transparent);
+    color: #fff;
+  }
+
+  lef-repo-todo-check[data-done='true'] {
+    border-color: color-mix(in oklab, var(--kef-success, #16a34a) 70%, var(--kef-line));
+    background: color-mix(in oklab, var(--kef-success, #16a34a) 80%, transparent);
+  }
+
+  lef-repo-todo-check svg {
+    width: 11px;
+    height: 11px;
+  }
+
+  lef-repo-todo-state {
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--kef-success, #16a34a);
   }
 
   lef-main-task-list {

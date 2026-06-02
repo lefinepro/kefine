@@ -26,6 +26,13 @@ test.describe('New frontend task results', () => {
     // The repository name now lives in the header search bar instead of a right-side card.
     await expect(page.getByTestId('kefine-topbar-search-trigger')).toContainText('kefine/go-proxy');
     await expect(page.getByTestId('solver-task-list')).toBeVisible();
+    // The repository README (with its Brief section) and the TODO list sourced
+    // from the repo org files are rendered by default on the main screen.
+    await expect(page.getByTestId('repo-readme')).toBeVisible();
+    await expect(page.getByTestId('repo-brief')).toContainText('Brief');
+    await expect(page.getByTestId('repo-readme')).toContainText('Live demo app');
+    await expect(page.getByTestId('repo-todo')).toBeVisible();
+    await expect(page.getByTestId('repo-todo-item').first()).toBeVisible();
     await expect(page.locator('lef-solutions-list')).toHaveCount(0);
     // The right rail is reduced to the clone block only — no metrics chart.
     await expect(page.getByTestId('solver-clone-rail')).toBeVisible();
