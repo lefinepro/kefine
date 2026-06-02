@@ -115,9 +115,14 @@
   // Latch `?q=` before URL sync runs: search pages keep it in the address bar and
   // seed the composer, while non-search routes can still hand it to the command
   // palette before canonical task/profile URLs drop search params.
-  let latchedSearchPageQuery = $state(initialSearchQuery || page.url.searchParams.get('q') || '');
-  let latchedDeepLinkSearchQuery = $state(latchedSearchPageQuery);
-  let searchPageUrlHasQuery = $state(Boolean(latchedSearchPageQuery.trim()));
+  function readInitialSearchPageQuery() {
+    return initialSearchQuery || page.url.searchParams.get('q') || '';
+  }
+
+  const initialSearchPageQuery = readInitialSearchPageQuery();
+  let latchedSearchPageQuery = $state(initialSearchPageQuery);
+  let latchedDeepLinkSearchQuery = $state(initialSearchPageQuery);
+  let searchPageUrlHasQuery = $state(Boolean(initialSearchPageQuery.trim()));
   $effect(() => {
     const query = page.url.searchParams.get('q') ?? '';
     if (query) {
