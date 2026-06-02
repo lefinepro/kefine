@@ -437,7 +437,13 @@
             <lef-task-rail-head>{localeText.solversView.solvers}</lef-task-rail-head>
             {#if completedTodo}
               <lef-rail-solver-source data-testid="completed-todo-source">
-                <Icon icon="lucide:check-circle-2" width="15" height="15" aria-hidden="true" />
+                <Icon
+                  icon="lucide:check-circle-2"
+                  width="15"
+                  height="15"
+                  style="color: var(--kef-success, #16a34a)"
+                  aria-hidden="true"
+                />
                 <lef-rail-solver-source-title>{completedTodo.title}</lef-rail-solver-source-title>
               </lef-rail-solver-source>
             {/if}
@@ -1044,10 +1050,6 @@
     color: var(--lefine-text);
     font-size: 0.76rem;
     line-height: 1.25;
-  }
-
-  lef-rail-solver-source svg {
-    color: var(--kef-success, #16a34a);
   }
 
   lef-rail-solver-source-title {

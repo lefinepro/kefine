@@ -1535,7 +1535,10 @@
   function selectTopbarLocale(locale: KefineLocale) {
     setKefineLocale(locale);
     if (!browser) {
-      void goto(buildLocaleHomePath(locale));
+      return;
+    }
+
+    if (!readLocaleFromPathname(window.location.pathname)) {
       return;
     }
 
