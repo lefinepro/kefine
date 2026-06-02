@@ -220,25 +220,27 @@
           {@const showVariants = task.isActive && solutions.length > 0}
           <lef-task-card
             data-active={task.isActive ? 'true' : 'false'}
-            data-expanded={isExpanded ? 'true' : 'false'}
+            data-expanded={showVariants && isExpanded ? 'true' : 'false'}
           >
-            <button
-              type="button"
-              class="task-toggle"
-              data-testid={task.isActive ? 'task-toggle-active' : undefined}
-              aria-expanded={isExpanded}
-              aria-label={isExpanded
-                ? localeText.solversView.collapseTask
-                : localeText.solversView.expandTask}
-              onclick={() => toggleTask(task.id)}
-            >
-              <lef-task-toggle-main>
-                <lefine-text>{task.title}</lefine-text>
-                {#if task.description && task.description !== task.title}
-                  <small>{task.description}</small>
-                {/if}
-              </lef-task-toggle-main>
-              {#if showVariants}
+            {#if showVariants}
+              <!-- Active task: expandable, with stacked solver avatars and a
+                   variant chooser revealed when expanded. -->
+              <button
+                type="button"
+                class="task-toggle"
+                data-testid="task-toggle-active"
+                aria-expanded={isExpanded}
+                aria-label={isExpanded
+                  ? localeText.solversView.collapseTask
+                  : localeText.solversView.expandTask}
+                onclick={() => toggleTask(task.id)}
+              >
+                <lef-task-toggle-main>
+                  <lefine-text>{task.title}</lefine-text>
+                  {#if task.description && task.description !== task.title}
+                    <small>{task.description}</small>
+                  {/if}
+                </lef-task-toggle-main>
                 <lef-solver-avatars
                   aria-label={localeText.solversView.solversCount(solutions.length)}
                 >
@@ -255,19 +257,17 @@
                     >
                   {/if}
                 </lef-solver-avatars>
-              {/if}
-              <lef-task-chevron
-                data-expanded={isExpanded ? 'true' : 'false'}
-                aria-hidden="true"
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="6 9 12 15 18 9" />
-                </svg>
-              </lef-task-chevron>
-            </button>
+                <lef-task-chevron
+                  data-expanded={isExpanded ? 'true' : 'false'}
+                  aria-hidden="true"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </lef-task-chevron>
+              </button>
 
-            {#if isExpanded}
-              {#if showVariants}
+              {#if isExpanded}
                 <lef-task-variants
                   data-testid="task-solver-variants"
                   aria-label={localeText.solversView.solverVariants}
@@ -291,17 +291,31 @@
                     </button>
                   {/each}
                 </lef-task-variants>
-              {:else if onSelectHistoryTask && !task.isActive}
-                <lef-task-variants>
-                  <button
-                    type="button"
-                    class="task-variant task-variant--open"
-                    onclick={() => onSelectHistoryTask?.(task.id)}
-                  >
-                    <lefine-text>{localeText.solversView.view}</lefine-text>
-                  </button>
-                </lef-task-variants>
               {/if}
+            {:else if onSelectHistoryTask && !task.isActive}
+              <!-- History task: a direct link back to that past order. -->
+              <button
+                type="button"
+                class="task-toggle task-toggle--link"
+                onclick={() => onSelectHistoryTask?.(task.id)}
+              >
+                <lef-task-toggle-main>
+                  <lefine-text>{task.title}</lefine-text>
+                  {#if task.description && task.description !== task.title}
+                    <small>{task.description}</small>
+                  {/if}
+                </lef-task-toggle-main>
+              </button>
+            {:else}
+              <!-- Active task without variants (or read-only history): static. -->
+              <lef-task-static>
+                <lef-task-toggle-main>
+                  <lefine-text>{task.title}</lefine-text>
+                  {#if task.description && task.description !== task.title}
+                    <small>{task.description}</small>
+                  {/if}
+                </lef-task-toggle-main>
+              </lef-task-static>
             {/if}
           </lef-task-card>
         {/each}
@@ -665,6 +679,16 @@
     transform: scale(0.99);
   }
 
+  .task-toggle--link {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  lef-task-static {
+    display: block;
+    width: 100%;
+    padding: 0.5rem 0.55rem;
+  }
+
   lef-task-toggle-main {
     display: flex;
     flex-direction: column;
@@ -821,16 +845,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-
-  .task-variant--open {
-    justify-content: flex-start;
-  }
-
-  .task-variant--open lefine-text {
-    font-size: 0.78rem;
-    font-weight: 600;
-    color: var(--kef-color-primary, #c89a5a);
   }
 
   lef-solutions-list {
