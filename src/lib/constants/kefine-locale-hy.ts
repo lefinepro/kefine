@@ -29,6 +29,11 @@ export const KEFINE_TEXT_HY = {
     searchEmptyLabel: 'Համապատասխան արդյունք չկա',
     searchOpenLabel: 'Բացել',
     searchHomeLabel: 'Գլխավոր',
+    searchWidgetsLabel: 'Վիջեթներ',
+    searchWeatherLabel: 'Եղանակ',
+    searchTranslatorLabel: 'Թարգմանիչ',
+    searchMusicLabel: 'Երաժշտություն',
+    searchWidgetBackLabel: 'Վերադառնալ արդյունքներ',
     theme: {
       auto: 'Ավտո',
       light: 'Բաց',

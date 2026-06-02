@@ -35,6 +35,11 @@ export const KEFINE_TEXT_EN = {
     searchEmptyLabel: 'No matching results',
     searchOpenLabel: 'Open',
     searchHomeLabel: 'Home',
+    searchWidgetsLabel: 'Widgets',
+    searchWeatherLabel: 'Weather',
+    searchTranslatorLabel: 'Translator',
+    searchMusicLabel: 'Music',
+    searchWidgetBackLabel: 'Back to results',
     socialLinks: {
       mastodon: {
         label: 'Open Mastodon',

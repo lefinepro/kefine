@@ -273,6 +273,11 @@
     searchEmptyLabel={localeText.topbar.searchEmptyLabel}
     searchOpenLabel={localeText.topbar.searchOpenLabel}
     searchHomeLabel={localeText.topbar.searchHomeLabel}
+    searchWidgetsLabel={localeText.topbar.searchWidgetsLabel}
+    searchWeatherLabel={localeText.topbar.searchWeatherLabel}
+    searchTranslatorLabel={localeText.topbar.searchTranslatorLabel}
+    searchMusicLabel={localeText.topbar.searchMusicLabel}
+    searchWidgetBackLabel={localeText.topbar.searchWidgetBackLabel}
     searchHomeHref={buildLocaleHomePath(activeLocale)}
     socialLinks={sidebarSocialLinks}
     showSocialLinks={false}

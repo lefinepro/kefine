@@ -1,9 +1,16 @@
 <script lang="ts">
   import KefineTopbarIcon from '$lib/components/kefine/KefineTopbarIcon.svelte';
+  import KefineWeatherWidget from '$lib/components/kefine/KefineWeatherWidget.svelte';
+  import KefineTranslatorWidget from '$lib/components/kefine/KefineTranslatorWidget.svelte';
+  import KefineMusicWidget from '$lib/components/kefine/KefineMusicWidget.svelte';
   import { onMount, tick } from 'svelte';
+  import { detectWeatherIntent } from '$lib/kefine/weather-intent';
   import { scheduleAfter } from '$lib/utils/helpers';
   import type { KefineLocale } from '$lib/constants/kefine-locale';
   import type { KefineTopbarIconName } from '$lib/components/kefine/KefineTopbarIcon.svelte';
+
+  /** Built-in widgets the command palette can surface inline on any page. */
+  export type KefineSearchWidgetId = 'weather' | 'translate' | 'music';
 
   type SocialLink = {
     id: 'mastodon' | 'discord' | 'linkedin' | 'telegram' | 'github';
@@ -27,6 +34,8 @@
     actionLabel?: string;
     icon?: KefineTopbarIconName;
     keywords?: string[];
+    /** When set, activating the item opens this widget inline instead of navigating. */
+    widget?: KefineSearchWidgetId;
   };
 
   let {
@@ -66,6 +75,12 @@
     searchHomeLabel = 'Home',
     searchHomeHref = '/',
     searchItems = [],
+    showSearchWidgets = true,
+    searchWidgetsLabel = 'Widgets',
+    searchWeatherLabel = 'Weather',
+    searchTranslatorLabel = 'Translator',
+    searchMusicLabel = 'Music',
+    searchWidgetBackLabel = 'Back to results',
     socialLinks,
     showSocialLinks = false,
     showEmailButton = true,
@@ -117,6 +132,12 @@
     searchHomeLabel?: string;
     searchHomeHref?: string;
     searchItems?: KefineTopbarSearchItem[];
+    showSearchWidgets?: boolean;
+    searchWidgetsLabel?: string;
+    searchWeatherLabel?: string;
+    searchTranslatorLabel?: string;
+    searchMusicLabel?: string;
+    searchWidgetBackLabel?: string;
     socialLinks: SocialLink[];
     showSocialLinks?: boolean;
     showEmailButton?: boolean;
@@ -161,7 +182,43 @@
   let searchQuery = $state('');
   let selectedSearchIndex = $state(0);
   let searchOpen = $state(false);
+  let activeSearchWidget = $state<KefineSearchWidgetId | null>(null);
   const searchShortcutLabel = 'Ctrl K';
+  const widgetSearchItems = $derived.by((): KefineTopbarSearchItem[] => {
+    if (!showSearchWidgets) {
+      return [];
+    }
+
+    return [
+      {
+        id: 'widget-weather',
+        title: searchWeatherLabel,
+        subtitle: searchWidgetsLabel,
+        category: searchWidgetsLabel,
+        icon: 'weather',
+        widget: 'weather',
+        keywords: [searchWeatherLabel, 'weather', 'forecast', 'погода', 'прогноз', 'եղանակ']
+      },
+      {
+        id: 'widget-translate',
+        title: searchTranslatorLabel,
+        subtitle: searchWidgetsLabel,
+        category: searchWidgetsLabel,
+        icon: 'translate',
+        widget: 'translate',
+        keywords: [searchTranslatorLabel, 'translate', 'translation', 'перевод', 'переводчик', 'թարգմանիչ']
+      },
+      {
+        id: 'widget-music',
+        title: searchMusicLabel,
+        subtitle: searchWidgetsLabel,
+        category: searchWidgetsLabel,
+        icon: 'music',
+        widget: 'music',
+        keywords: [searchMusicLabel, 'music', 'audio', 'track', 'музыка', 'երաժշտություն']
+      }
+    ];
+  });
   const builtInSearchItems = $derived.by((): KefineTopbarSearchItem[] => {
     const items: KefineTopbarSearchItem[] = [
       {
@@ -187,8 +244,31 @@
       });
     }
 
+    items.push(...widgetSearchItems);
+
     return items;
   });
+  const activeWidgetTitle = $derived.by(() => {
+    if (activeSearchWidget === 'weather') {
+      return searchWeatherLabel;
+    }
+
+    if (activeSearchWidget === 'translate') {
+      return searchTranslatorLabel;
+    }
+
+    if (activeSearchWidget === 'music') {
+      return searchMusicLabel;
+    }
+
+    return '';
+  });
+  // The weather widget only renders for weather-intent text. When opened from the
+  // palette we seed the localized keyword so it shows the default (geolocation)
+  // forecast immediately, while free-typed text like "London" still refines it.
+  const weatherWidgetQuery = $derived(
+    detectWeatherIntent(searchQuery) ? searchQuery : `${searchWeatherLabel} ${searchQuery}`.trim()
+  );
   const allSearchItems = $derived([...builtInSearchItems, ...searchItems]);
   const normalizedSearchQuery = $derived(normalizeSearchValue(searchQuery));
   const filteredSearchItems = $derived.by(() => {
@@ -297,6 +377,7 @@
     onExpandedChange(false);
     searchQuery = '';
     selectedSearchIndex = 0;
+    activeSearchWidget = null;
     searchOpen = true;
 
     if (searchDialog && !searchDialog.open) {
@@ -311,6 +392,7 @@
     searchOpen = false;
     searchQuery = '';
     selectedSearchIndex = 0;
+    activeSearchWidget = null;
 
     if (searchDialog?.open) {
       searchDialog.close();
@@ -321,6 +403,15 @@
     searchOpen = false;
     searchQuery = '';
     selectedSearchIndex = 0;
+    activeSearchWidget = null;
+  }
+
+  async function closeSearchWidget() {
+    activeSearchWidget = null;
+    searchQuery = '';
+    selectedSearchIndex = 0;
+    await tick();
+    searchInputElement?.focus();
   }
 
   function handleSearchDialogClick(event: MouseEvent) {
@@ -356,7 +447,17 @@
   function handleSearchKeydown(event: KeyboardEvent) {
     if (event.key === 'Escape') {
       event.preventDefault();
-      closeSearchDialog();
+      if (activeSearchWidget) {
+        void closeSearchWidget();
+      } else {
+        closeSearchDialog();
+      }
+      return;
+    }
+
+    // While a widget is open the input drives the widget query (e.g. weather
+    // city / translation text), so list navigation keys are inert.
+    if (activeSearchWidget) {
       return;
     }
 
@@ -382,12 +483,27 @@
   }
 
   function activateSearchItem(item: KefineTopbarSearchItem) {
+    if (item.widget) {
+      // Surface the developed widget inline so it is reachable from the command
+      // palette on any page, instead of leaving the page.
+      activeSearchWidget = item.widget;
+      searchQuery = '';
+      selectedSearchIndex = 0;
+      void focusSearchInput();
+      return;
+    }
+
     closeSearchDialog();
 
     const href = item.href?.trim();
     if (href && typeof window !== 'undefined') {
       window.location.assign(href);
     }
+  }
+
+  async function focusSearchInput() {
+    await tick();
+    searchInputElement?.focus();
   }
 
   function handleThemeButtonClick() {
@@ -711,7 +827,20 @@
       >
         <kefine-search-panel>
           <kefine-search-input-row>
-            <KefineTopbarIcon name="search" size={21} />
+            {#if activeSearchWidget}
+              <button
+                type="button"
+                data-part="search-widget-back"
+                data-testid="kefine-topbar-search-widget-back"
+                aria-label={searchWidgetBackLabel}
+                title={searchWidgetBackLabel}
+                onclick={() => void closeSearchWidget()}
+              >
+                <KefineTopbarIcon name="open" size={18} />
+              </button>
+            {:else}
+              <KefineTopbarIcon name="search" size={21} />
+            {/if}
             <input
               bind:this={searchInputElement}
               value={searchQuery}
@@ -725,6 +854,24 @@
             />
             <lefine-kbd>{searchShortcutLabel}</lefine-kbd>
           </kefine-search-input-row>
+          {#if activeSearchWidget}
+            <kefine-search-results-header>
+              <lefine-text>{activeWidgetTitle}</lefine-text>
+            </kefine-search-results-header>
+            <kefine-search-widget
+              data-part="search-widget"
+              data-widget={activeSearchWidget}
+              data-testid="kefine-topbar-search-widget"
+            >
+              {#if activeSearchWidget === 'weather'}
+                <KefineWeatherWidget active query={weatherWidgetQuery} />
+              {:else if activeSearchWidget === 'translate'}
+                <KefineTranslatorWidget active query={searchQuery} />
+              {:else if activeSearchWidget === 'music'}
+                <KefineMusicWidget active />
+              {/if}
+            </kefine-search-widget>
+          {:else}
           <kefine-search-results-header>
             <lefine-text>{searchResultsLabel}</lefine-text>
           </kefine-search-results-header>
@@ -764,6 +911,7 @@
               </kefine-search-empty>
             {/if}
           </kefine-search-results>
+          {/if}
         </kefine-search-panel>
       </dialog>
     {/if}
@@ -1092,6 +1240,35 @@
     font-size: 0.95rem;
     font-weight: 600;
     text-align: center;
+  }
+
+  button[data-part='search-widget-back'] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.2rem;
+    height: 2.2rem;
+    padding: 0;
+    border: var(--kef-border-width-soft) solid color-mix(in oklab, var(--kef-border) 52%, transparent);
+    border-radius: var(--kef-radius-md);
+    background: color-mix(in oklab, var(--kef-bg-soft) 72%, transparent);
+    color: color-mix(in oklab, var(--lefine-text) 82%, transparent);
+    cursor: pointer;
+    transition:
+      background-color var(--kef-motion-fast) var(--kef-ease-soft),
+      border-color var(--kef-motion-fast) var(--kef-ease-soft),
+      color var(--kef-motion-fast) var(--kef-ease-soft);
+  }
+
+  button[data-part='search-widget-back']:hover {
+    border-color: color-mix(in oklab, var(--kef-primary) 30%, var(--kef-line));
+    color: color-mix(in oklab, var(--kef-primary) 92%, #4f3d30);
+  }
+
+  kefine-search-widget {
+    display: block;
+    padding: 0 1rem 1rem;
+    overflow: auto;
   }
 
   kefine-sidebar-root {

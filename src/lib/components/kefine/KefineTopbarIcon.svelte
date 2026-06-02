@@ -9,6 +9,9 @@
     | 'theme-dark'
     | 'email'
     | 'search'
+    | 'weather'
+    | 'translate'
+    | 'music'
     | 'menu'
     | 'project'
     | 'copy'
@@ -87,6 +90,23 @@
   {:else if name === 'search'}
     <circle cx="10.8" cy="10.8" r="5.8" />
     <path d="m15.2 15.2 4 4" />
+  {:else if name === 'weather'}
+    <circle cx="9" cy="8" r="2.6" />
+    <path d="M9 2.6V4" />
+    <path d="M4.2 8H3" />
+    <path d="m5.4 4.4.9.9" />
+    <path d="m13.5 4.4-.9.9" />
+    <path d="M16.8 19.4a3 3 0 0 0 .2-6A4.2 4.2 0 0 0 8.9 14.3 3.2 3.2 0 0 0 9.2 19.4Z" />
+  {:else if name === 'translate'}
+    <path d="M3.8 6h7.2" />
+    <path d="M7.4 5.2v.8c0 3-1.9 5.4-4.4 6.5" />
+    <path d="M5 10.4c.9 1.6 2.6 2.8 4.5 3.4" />
+    <path d="m12.6 19 3.3-8 3.3 8" />
+    <path d="M13.7 16.2h4.4" />
+  {:else if name === 'music'}
+    <path d="M9 17V6l9-2v9" />
+    <circle cx="6.5" cy="17" r="2.5" />
+    <circle cx="15.5" cy="15" r="2.5" />
   {:else if name === 'menu'}
     <path d="M5 7h14" />
     <path d="M5 12h14" />
