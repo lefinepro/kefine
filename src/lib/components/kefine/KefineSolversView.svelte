@@ -4,6 +4,11 @@
   import SolutionMetricsMini from './SolutionMetricsMini.svelte';
   import SolutionMetricsBlock from './SolutionMetricsBlock.svelte';
   import { kefineLocaleText } from '$lib/constants/kefine-locale';
+  import {
+    buildSolverAvatars,
+    solverAvatarColor,
+    solverInitials
+  } from '$lib/kefine/solver-avatars';
   import type { SolverHistoryTask } from '$lib/components/kefine/kefine-solver-history';
 
   export type SolversHistoryTask = SolverHistoryTask;
@@ -183,6 +188,26 @@
   const displayedHistoryTasks = $derived(
     historyTasks.length > 0 ? historyTasks : fallbackHistoryTasks
   );
+
+  // Stacked solver avatars shown next to the active task; the solvers in
+  // `solutions` are the choosable variants for that task.
+  const taskSolverAvatars = $derived(buildSolverAvatars(solutions, 4));
+
+  // Which task row is expanded. The active task starts expanded so the solver
+  // variants are visible right away; clicking any row toggles it.
+  let expandedTaskId = $state<string | null>(null);
+  let expandedInitialized = $state(false);
+
+  $effect(() => {
+    if (expandedInitialized) return;
+    const active = displayedHistoryTasks.find((task) => task.isActive);
+    expandedTaskId = active?.id ?? displayedHistoryTasks[0]?.id ?? null;
+    expandedInitialized = true;
+  });
+
+  function toggleTask(id: string) {
+    expandedTaskId = expandedTaskId === id ? null : id;
+  }
 </script>
 
 <lefine-box class="solutions-page-container" data-testid="solution-list-page">
@@ -191,26 +216,94 @@
       <lef-tasks-aside-head>{localeText.solversView.tasksAside}</lef-tasks-aside-head>
       <lef-tasks-aside-list>
         {#each displayedHistoryTasks as task (task.id)}
-          {#if onSelectHistoryTask && !task.isActive}
+          {@const isExpanded = expandedTaskId === task.id}
+          {@const showVariants = task.isActive && solutions.length > 0}
+          <lef-task-card
+            data-active={task.isActive ? 'true' : 'false'}
+            data-expanded={isExpanded ? 'true' : 'false'}
+          >
             <button
               type="button"
-              class="aside-item-btn"
-              data-active="false"
-              onclick={() => onSelectHistoryTask?.(task.id)}
+              class="task-toggle"
+              data-testid={task.isActive ? 'task-toggle-active' : undefined}
+              aria-expanded={isExpanded}
+              aria-label={isExpanded
+                ? localeText.solversView.collapseTask
+                : localeText.solversView.expandTask}
+              onclick={() => toggleTask(task.id)}
             >
-              <lefine-text>{task.title}</lefine-text>
-              {#if task.description && task.description !== task.title}
-                <small>{task.description}</small>
+              <lef-task-toggle-main>
+                <lefine-text>{task.title}</lefine-text>
+                {#if task.description && task.description !== task.title}
+                  <small>{task.description}</small>
+                {/if}
+              </lef-task-toggle-main>
+              {#if showVariants}
+                <lef-solver-avatars
+                  aria-label={localeText.solversView.solversCount(solutions.length)}
+                >
+                  {#each taskSolverAvatars.avatars as avatar (avatar.id)}
+                    <lef-solver-avatar
+                      style="--avatar-color: {avatar.color}"
+                      title={avatar.name}
+                      aria-hidden="true"
+                    >{avatar.initials}</lef-solver-avatar>
+                  {/each}
+                  {#if taskSolverAvatars.overflow > 0}
+                    <lef-solver-avatar data-overflow="true" aria-hidden="true"
+                      >+{taskSolverAvatars.overflow}</lef-solver-avatar
+                    >
+                  {/if}
+                </lef-solver-avatars>
               {/if}
+              <lef-task-chevron
+                data-expanded={isExpanded ? 'true' : 'false'}
+                aria-hidden="true"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </lef-task-chevron>
             </button>
-          {:else}
-            <lef-tasks-aside-item data-active={task.isActive ? 'true' : 'false'}>
-              <lefine-text>{task.title}</lefine-text>
-              {#if task.description && task.description !== task.title}
-                <small>{task.description}</small>
+
+            {#if isExpanded}
+              {#if showVariants}
+                <lef-task-variants
+                  data-testid="task-solver-variants"
+                  aria-label={localeText.solversView.solverVariants}
+                >
+                  <lef-task-variants-head>{localeText.solversView.chooseVariant}</lef-task-variants-head>
+                  {#each solutions as solution (solution.id)}
+                    <button
+                      type="button"
+                      class="task-variant"
+                      data-variant={solution.id}
+                      onclick={() => onViewSolution?.(solution.id)}
+                    >
+                      <lef-solver-avatar
+                        style="--avatar-color: {solverAvatarColor(solution.solver)}"
+                        aria-hidden="true"
+                      >{solverInitials(solution.solver)}</lef-solver-avatar>
+                      <lef-task-variant-meta>
+                        <strong>{solution.solver}</strong>
+                        <small>{solution.title}</small>
+                      </lef-task-variant-meta>
+                    </button>
+                  {/each}
+                </lef-task-variants>
+              {:else if onSelectHistoryTask && !task.isActive}
+                <lef-task-variants>
+                  <button
+                    type="button"
+                    class="task-variant task-variant--open"
+                    onclick={() => onSelectHistoryTask?.(task.id)}
+                  >
+                    <lefine-text>{localeText.solversView.view}</lefine-text>
+                  </button>
+                </lef-task-variants>
               {/if}
-            </lef-tasks-aside-item>
-          {/if}
+            {/if}
+          </lef-task-card>
         {/each}
       </lef-tasks-aside-list>
     </lef-tasks-aside>
@@ -530,41 +623,66 @@
     gap: 0.4rem;
   }
 
-  lef-tasks-aside-item {
+  lef-task-card {
     display: flex;
+    flex-direction: column;
+    border-radius: 0.55rem;
+    border: 1px solid transparent;
+    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 6%, var(--kef-bg-card));
+    overflow: hidden;
+    transition: background 140ms ease, border-color 140ms ease;
+  }
+
+  lef-task-card[data-active='true'] {
+    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 12%, var(--kef-bg-card));
+    border-color: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 28%, var(--kef-line));
+  }
+
+  lef-task-card[data-expanded='true'] {
+    border-color: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 32%, var(--kef-line));
+  }
+
+  .task-toggle {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.5rem 0.6rem;
-    border-radius: 0.55rem;
+    width: 100%;
+    padding: 0.5rem 0.55rem;
+    text-align: left;
+    cursor: pointer;
+    font: inherit;
     border: 0;
-    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 8%, var(--kef-bg-card));
+    background: transparent;
     color: var(--lefine-text);
-    font-size: 0.85rem;
   }
 
-  lef-tasks-aside-item[data-active='true'] {
-    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 14%, var(--kef-bg-card));
+  .task-toggle:hover {
+    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 8%, transparent);
   }
 
-  lef-tasks-aside-item lefine-text,
-  .aside-item-btn lefine-text {
+  .task-toggle:active {
+    transform: scale(0.99);
+  }
+
+  lef-task-toggle-main {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.12rem;
+    min-width: 0;
+  }
+
+  lef-task-toggle-main lefine-text {
     min-width: 0;
     overflow-wrap: anywhere;
     white-space: normal;
     line-height: 1.3;
+    font-size: 0.85rem;
     color: var(--lefine-text);
   }
 
-  lef-tasks-aside-item,
-  .aside-item-btn {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.15rem;
-  }
-
-  lef-tasks-aside-item small,
-  .aside-item-btn small {
+  lef-task-toggle-main small {
     color: var(--lefine-text-soft);
     font-size: 0.72em;
     line-height: 1.25;
@@ -572,26 +690,147 @@
     white-space: normal;
   }
 
-  .aside-item-btn {
+  lef-solver-avatars {
+    display: inline-flex;
+    flex-direction: row-reverse;
+    align-items: center;
+    padding-left: 0.32rem;
+  }
+
+  lef-solver-avatar {
+    display: inline-grid;
+    place-items: center;
+    width: 1.45rem;
+    height: 1.45rem;
+    border-radius: 999px;
+    background: var(--avatar-color, color-mix(in oklab, var(--kef-color-primary, #c89a5a) 35%, var(--kef-bg-card)));
+    color: #fff;
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    line-height: 1;
+    box-shadow: 0 0 0 2px var(--kef-bg-card);
+    text-transform: uppercase;
+  }
+
+  lef-solver-avatars lef-solver-avatar {
+    margin-left: -0.45rem;
+  }
+
+  lef-solver-avatars lef-solver-avatar:first-child {
+    margin-left: 0;
+  }
+
+  lef-solver-avatar[data-overflow='true'] {
+    background: color-mix(in oklab, var(--kef-line) 70%, var(--kef-bg-card));
+    color: var(--lefine-text-soft);
+    font-size: 0.58rem;
+  }
+
+  lef-task-chevron {
+    display: inline-flex;
+    align-items: center;
+    color: var(--lefine-text-soft);
+    transition: transform 160ms ease;
+  }
+
+  lef-task-chevron svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  lef-task-chevron[data-expanded='true'] {
+    transform: rotate(180deg);
+  }
+
+  lef-task-variants {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0 0.4rem 0.45rem;
+    animation: task-variants-appear 200ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  @keyframes task-variants-appear {
+    from { opacity: 0; transform: translateY(-3px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    lef-task-variants {
+      animation: none;
+    }
+  }
+
+  lef-task-variants-head {
+    display: block;
+    font-size: 0.64rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--lefine-text-soft);
+    padding: 0.1rem 0.3rem 0.2rem;
+  }
+
+  .task-variant {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
     width: 100%;
+    padding: 0.38rem 0.4rem;
     text-align: left;
     cursor: pointer;
     font: inherit;
-    border: 0;
-    padding: 0.5rem 0.6rem;
-    border-radius: 0.55rem;
-    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 6%, var(--kef-bg-card));
+    border: 1px solid transparent;
+    border-radius: 0.45rem;
+    background: var(--kef-bg-card);
     color: var(--lefine-text);
-    font-size: 0.85rem;
-    transition: background 140ms ease, transform 140ms ease;
+    transition: background 140ms ease, border-color 140ms ease, transform 140ms ease;
   }
 
-  .aside-item-btn:hover {
-    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 12%, var(--kef-bg-card));
+  .task-variant:hover {
+    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 10%, var(--kef-bg-card));
+    border-color: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 32%, var(--kef-line));
   }
 
-  .aside-item-btn:active {
+  .task-variant:active {
     transform: scale(0.98);
+  }
+
+  lef-task-variant-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.05rem;
+    min-width: 0;
+  }
+
+  lef-task-variant-meta strong {
+    font-size: 0.78rem;
+    font-weight: 600;
+    line-height: 1.25;
+    color: var(--lefine-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  lef-task-variant-meta small {
+    font-size: 0.68rem;
+    line-height: 1.2;
+    color: var(--lefine-text-soft);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .task-variant--open {
+    justify-content: flex-start;
+  }
+
+  .task-variant--open lefine-text {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--kef-color-primary, #c89a5a);
   }
 
   lef-solutions-list {

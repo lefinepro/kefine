@@ -879,6 +879,11 @@ export const KEFINE_TEXT_EN = {
   solversView: {
     tasksAside: 'Tasks',
     solvers: 'Solvers',
+    solverVariants: 'Solver variants',
+    chooseVariant: 'Choose a variant',
+    solversCount: (count: number) => `${count} ${count === 1 ? 'solver' : 'solvers'}`,
+    expandTask: 'Expand task',
+    collapseTask: 'Collapse task',
     taskDescription: 'Task description',
     settings: 'Settings',
     clone: 'Clone',

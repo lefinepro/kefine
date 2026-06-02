@@ -35,4 +35,30 @@ test.describe('New frontend task results', () => {
     await expect(page.getByRole('button', { name: 'Apply solution' })).toBeVisible();
     await expect(page.getByRole('button', { name: /Merge/ })).toHaveCount(0);
   });
+
+  test('solvers task aside shows solver avatars and lets you choose a variant', async ({ page }) => {
+    await mockOrderApi(page);
+    await page.goto('/order/order-1/solutions?task=Build%20a%20Go%20mini%20proxy');
+
+    await expect(page.getByTestId('solution-list-page')).toBeVisible();
+
+    // The active task starts expanded with its solver variants visible.
+    const variants = page.getByTestId('task-solver-variants');
+    await expect(variants).toBeVisible();
+
+    // Each solver renders a small avatar with deterministic initials.
+    await expect(variants.locator('[data-variant="5"] lef-solver-avatar')).toHaveText('GB');
+    await expect(variants.locator('[data-variant="6"] lef-solver-avatar')).toHaveText('GP');
+
+    // Collapsing the task hides the variant list, expanding shows it again.
+    const toggle = page.getByTestId('task-toggle-active');
+    await toggle.click();
+    await expect(variants).toHaveCount(0);
+    await toggle.click();
+    await expect(page.getByTestId('task-solver-variants')).toBeVisible();
+
+    // Choosing a variant opens that solver's detail page.
+    await page.locator('[data-variant="6"]').click();
+    await expect(page).toHaveURL(/\/order\/order-1\/solver\/6/);
+  });
 });

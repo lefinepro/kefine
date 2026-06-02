@@ -881,6 +881,11 @@ export const KEFINE_TEXT_RU = {
   solversView: {
     tasksAside: 'Задачи',
     solvers: 'Солверы',
+    solverVariants: 'Варианты солверов',
+    chooseVariant: 'Выберите вариант',
+    solversCount: (count: number) => `${count} ${count === 1 ? 'солвер' : 'солверов'}`,
+    expandTask: 'Развернуть задачу',
+    collapseTask: 'Свернуть задачу',
     taskDescription: 'Описание задачи',
     settings: 'Настройки',
     clone: 'Клонировать',
