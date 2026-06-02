@@ -728,6 +728,7 @@
       searchMusicLabel={localeText.topbar.searchMusicLabel}
       searchWidgetBackLabel={localeText.topbar.searchWidgetBackLabel}
       searchHomeHref={buildLocaleHomePath(activeLocale)}
+      initialSearchQuery={page.url.searchParams.get('q') ?? ''}
       socialLinks={sidebarSocialLinks}
       showSocialLinks={false}
       legalLinks={sidebarLegalLinks}

@@ -8,9 +8,10 @@
   import { scheduleAfter } from '$lib/utils/helpers';
   import type { KefineLocale } from '$lib/constants/kefine-locale';
   import type { KefineTopbarIconName } from '$lib/components/kefine/KefineTopbarIcon.svelte';
+  import type { KefineSearchWidgetId } from '$lib/kefine/search-widgets';
 
   /** Built-in widgets the command palette can surface inline on any page. */
-  export type KefineSearchWidgetId = 'weather' | 'translate' | 'music';
+  export type { KefineSearchWidgetId };
 
   type SocialLink = {
     id: 'mastodon' | 'discord' | 'linkedin' | 'telegram' | 'github';
@@ -75,6 +76,8 @@
     searchHomeLabel = 'Home',
     searchHomeHref = '/',
     searchItems = [],
+    initialSearchQuery = '',
+    initialWidget = null,
     showSearchWidgets = true,
     searchWidgetsLabel = 'Widgets',
     searchWeatherLabel = 'Weather',
@@ -132,6 +135,10 @@
     searchHomeLabel?: string;
     searchHomeHref?: string;
     searchItems?: KefineTopbarSearchItem[];
+    /** Deep-link query (from `?q=`) that auto-opens the palette seeded with this text. */
+    initialSearchQuery?: string;
+    /** Widget short link (e.g. `/@profile/weather`) that auto-opens this widget inline. */
+    initialWidget?: KefineSearchWidgetId | null;
     showSearchWidgets?: boolean;
     searchWidgetsLabel?: string;
     searchWeatherLabel?: string;
@@ -296,6 +303,33 @@
     };
   });
 
+  // Deep links open the palette automatically: `?q=term` seeds the query and a
+  // widget short link (e.g. `/@profile/weather`) surfaces that widget inline.
+  // We track the applied signature so the dialog opens once per distinct link
+  // instead of re-opening on every reactive pass.
+  let appliedDeepLink = $state<string | null>(null);
+  $effect(() => {
+    if (!showSearch) {
+      return;
+    }
+
+    const query = (initialSearchQuery ?? '').trim();
+    const widget = initialWidget ?? null;
+
+    if (!query && !widget) {
+      appliedDeepLink = null;
+      return;
+    }
+
+    const signature = `${widget ?? ''}::${query}`;
+    if (appliedDeepLink === signature) {
+      return;
+    }
+
+    appliedDeepLink = signature;
+    void openSearchDialog({ query: initialSearchQuery ?? '', widget });
+  });
+
   function handleBrandClick() {
     cancelBrandClick?.();
     cancelBrandClick = scheduleAfter(220, () => {
@@ -364,7 +398,7 @@
     return `kefine-topbar-search-result-${item.id.replace(/[^a-zA-Z0-9_-]+/g, '-')}`;
   }
 
-  async function openSearchDialog() {
+  async function openSearchDialog(options?: { query?: string; widget?: KefineSearchWidgetId | null }) {
     if (!showSearch) {
       return;
     }
@@ -375,9 +409,9 @@
     themePickerOpen = false;
     localePickerOpen = false;
     onExpandedChange(false);
-    searchQuery = '';
+    searchQuery = options?.query ?? '';
     selectedSearchIndex = 0;
-    activeSearchWidget = null;
+    activeSearchWidget = options?.widget ?? null;
     searchOpen = true;
 
     if (searchDialog && !searchDialog.open) {

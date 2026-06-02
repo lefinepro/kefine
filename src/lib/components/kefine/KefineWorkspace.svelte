@@ -1,9 +1,10 @@
 <script lang="ts">
   import { browser } from '$app/environment';
-  import { goto, replaceState } from '$app/navigation';
+  import { afterNavigate, goto, replaceState } from '$app/navigation';
   import { page } from '$app/state';
   import { isFeatureEnabled, resolvePublicRuntimeConfig } from '$lib/config/public-config';
   import { isSpecialRuntimeOrigin } from '$lib/config/special-runtime';
+  import type { KefineSearchWidgetId } from '$lib/kefine/search-widgets';
   import { resolveOrderProxyBasePath } from '$lib/order-proxy-path';
   import { onMount } from 'svelte';
   import { tick } from 'svelte';
@@ -98,12 +99,36 @@
 
   let {
     initialActorHandle,
-    initialOrderId
+    initialOrderId,
+    initialWidget = null
   }: {
     initialActorHandle?: string;
     initialOrderId?: string;
+    initialWidget?: KefineSearchWidgetId | null;
   } = $props();
   const localeText = $derived($kefineLocaleText);
+  // Latch the `?q=` deep link: the URL-sync effect below strips search params from
+  // the address bar, so we capture the query as soon as it appears and keep it so
+  // the command palette can surface it. Initialised from the mount URL (full page
+  // load) and updated by the effect (client-side navigation). Declared before the
+  // URL-sync effect so it wins the flush ordering when both react to a navigation.
+  let latchedDeepLinkSearchQuery = $state(page.url.searchParams.get('q') ?? '');
+  $effect(() => {
+    const query = page.url.searchParams.get('q') ?? '';
+    if (query) {
+      latchedDeepLinkSearchQuery = query;
+    }
+  });
+
+  // `replaceState` throws ("before router is initialized") if called during the
+  // initial hydration flush. The URL-sync effect below rewrites the address bar
+  // (e.g. stripping a `?q=` deep link), so gate it until the first navigation has
+  // settled — otherwise the thrown error aborts the whole effect batch and unrelated
+  // UI (such as the command palette input) silently fails to update.
+  let routerReady = $state(false);
+  afterNavigate(() => {
+    routerReady = true;
+  });
   const runtimeConfig = $derived(resolvePublicRuntimeConfig(page.data.publicConfig));
   const repositoriesEnabled = $derived(isFeatureEnabled('repositories', runtimeConfig));
   const activeLocale = $derived(readLocaleFromPathname(page.url.pathname) ?? 'en');
@@ -1102,6 +1127,7 @@
 
   $effect(() => {
     if (!browser) return;
+    if (!routerReady) return;
     if (isHydratingRoute) return;
 
     const nextUrl = new URL(window.location.href);
@@ -2806,6 +2832,8 @@
   searchWidgetBackLabel={localeText.topbar.searchWidgetBackLabel}
   searchHomeHref={buildLocaleHomePath(activeLocale)}
   searchItems={topbarSearchItems}
+  initialSearchQuery={latchedDeepLinkSearchQuery}
+  initialWidget={initialWidget}
   socialLinks={sidebarSocialLinks}
   showSocialLinks={false}
   legalLinks={sidebarLegalLinks}

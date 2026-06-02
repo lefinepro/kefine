@@ -26,6 +26,7 @@
     '/[actor=actor_handle]/orders/[id]',
     '/[handle=at_handle]',
     '/[handle=at_handle]/[shareId]',
+    '/[handle=at_handle]/[widget=kefine_widget]',
     // OAuth consent / integration pages render their own full-screen clean UI (no shared topbar)
     '/oauth/authorize'
   ]);
@@ -225,6 +226,7 @@
   <meta name="robots" content={seo.robots} />
   <meta name="theme-color" content="#d3a45c" />
   <link rel="canonical" href={canonicalUrl} />
+  <link rel="search" type="application/opensearchdescription+xml" title={localeText.brand.name} href="/opensearch.xml" />
   <meta property="og:site_name" content="Lefine" />
   <meta property="og:title" content={seo.title} />
   <meta property="og:description" content={seo.description} />
@@ -279,6 +281,7 @@
     searchMusicLabel={localeText.topbar.searchMusicLabel}
     searchWidgetBackLabel={localeText.topbar.searchWidgetBackLabel}
     searchHomeHref={buildLocaleHomePath(activeLocale)}
+    initialSearchQuery={page.url.searchParams.get('q') ?? ''}
     socialLinks={sidebarSocialLinks}
     showSocialLinks={false}
     legalLinks={sidebarLegalLinks}
