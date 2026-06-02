@@ -91,7 +91,7 @@
         label: copyFlash
           ? localeText.solversView.copied
           : localeText.solversView.copyGitCloneCommand,
-        icon: 'copy' as const,
+        icon: 'download' as const,
         testId: 'repo-clone-trigger',
         onClick: copyClone
       }
@@ -264,7 +264,13 @@
                 data-state={statusKind}
                 data-testid="repo-checklist-item"
               >
-                <lef-repo-todo-check data-state={statusKind} aria-hidden="true">
+                <lef-repo-todo-check
+                  data-state={statusKind}
+                  data-testid="repo-checklist-status"
+                  role="img"
+                  aria-label={todoStatusLabel(todo.state)}
+                  title={todoStatusLabel(todo.state)}
+                >
                   {#if todo.state === 'DONE'}
                     <Icon icon="lucide:check" width="12" height="12" aria-hidden="true" />
                   {:else if todo.state === 'IN PROGRESS'}
@@ -272,12 +278,6 @@
                   {/if}
                 </lef-repo-todo-check>
                 <lefine-text>{todo.title}</lefine-text>
-                <lef-repo-todo-status
-                  data-state={statusKind}
-                  data-testid="repo-checklist-status"
-                >
-                  {todoStatusLabel(todo.state)}
-                </lef-repo-todo-status>
                 {#if selectedSolution}
                   <lef-todo-solver-cell>
                     <button
@@ -292,9 +292,6 @@
                         style="--avatar-color: {solverAvatarColor(selectedSolution.solver)}"
                         aria-hidden="true"
                       >{solverInitials(selectedSolution.solver)}</lef-solver-avatar>
-                      <lef-todo-solver-chevron data-expanded={solverExpanded ? 'true' : 'false'}>
-                        <Icon icon="lucide:chevron-right" width="13" height="13" aria-hidden="true" />
-                      </lef-todo-solver-chevron>
                     </button>
                   </lef-todo-solver-cell>
                 {/if}
@@ -645,7 +642,7 @@
 
   lef-repo-checklist-item {
     display: grid;
-    grid-template-columns: 18px minmax(0, 1fr) auto auto;
+    grid-template-columns: 18px minmax(0, 1fr) auto;
     align-items: center;
     gap: 0.6rem;
     min-height: 2.7rem;
@@ -667,33 +664,6 @@
     color: var(--lefine-text-soft);
   }
 
-  lef-repo-todo-status {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 4.6rem;
-    padding: 0.22rem 0.45rem;
-    border-radius: 999px;
-    border: 1px solid var(--kef-line);
-    font-size: 0.68rem;
-    font-weight: 700;
-    line-height: 1;
-    color: var(--lefine-text-soft);
-    white-space: nowrap;
-  }
-
-  lef-repo-todo-status[data-state='in-progress'] {
-    border-color: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 40%, var(--kef-line));
-    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 12%, transparent);
-    color: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 82%, var(--lefine-text));
-  }
-
-  lef-repo-todo-status[data-state='done'] {
-    border-color: color-mix(in oklab, var(--kef-success, #16a34a) 35%, var(--kef-line));
-    background: color-mix(in oklab, var(--kef-success, #16a34a) 10%, transparent);
-    color: var(--kef-success, #16a34a);
-  }
-
   lef-todo-solver-cell {
     display: flex;
     justify-content: flex-end;
@@ -704,9 +674,8 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.2rem;
-    min-width: 2.65rem;
-    width: 2.65rem;
+    min-width: 2.15rem;
+    width: 2.15rem;
     height: 2.15rem;
     padding: 0.3rem 0.35rem;
     border: 1px solid color-mix(in oklab, var(--kef-line) 75%, transparent);
@@ -723,6 +692,11 @@
     border-color: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 32%, var(--kef-line));
   }
 
+  .todo-solver-select[aria-expanded='true'] {
+    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 12%, var(--kef-bg-card));
+    border-color: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 42%, var(--kef-line));
+  }
+
   .todo-solver-select:active {
     transform: scale(0.98);
   }
@@ -734,18 +708,6 @@
     font-size: 0.42rem;
     box-shadow: none;
     flex: 0 0 auto;
-  }
-
-  lef-todo-solver-chevron {
-    display: inline-flex;
-    align-items: center;
-    flex: 0 0 auto;
-    color: var(--lefine-text-soft);
-    transition: transform 160ms ease;
-  }
-
-  lef-todo-solver-chevron[data-expanded='true'] {
-    transform: rotate(90deg);
   }
 
   lef-task-variants.todo-solver-variants {
@@ -1098,14 +1060,9 @@
       grid-template-columns: 18px minmax(0, 1fr) auto;
     }
 
-    lef-repo-todo-status {
-      grid-column: 3;
-      justify-self: end;
-    }
-
     lef-todo-solver-cell {
-      grid-column: 2 / -1;
-      justify-content: flex-start;
+      grid-column: 3;
+      justify-content: flex-end;
     }
 
     .todo-solver-select {

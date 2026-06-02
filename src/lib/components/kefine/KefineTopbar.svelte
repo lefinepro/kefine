@@ -196,6 +196,12 @@
   let searchOpen = $state(false);
   let activeSearchWidget = $state<KefineSearchWidgetId | null>(null);
   const searchShortcutLabel = 'Ctrl K';
+  const contextualSearchPlaceholder = $derived(
+    searchPlaceholder.trim().startsWith('@') ? searchPlaceholder.trim() : ''
+  );
+  const visibleSearchPlaceholder = $derived(
+    contextualSearchPlaceholder ? searchLabel : searchPlaceholder
+  );
   const widgetSearchItems = $derived.by((): KefineTopbarSearchItem[] => {
     if (!showSearchWidgets) {
       return [];
@@ -846,14 +852,21 @@
           type="button"
           data-part="search-trigger"
           data-testid="kefine-topbar-search-trigger"
+          data-context={contextualSearchPlaceholder ? 'project' : 'search'}
           aria-label={searchLabel}
           aria-haspopup="dialog"
           aria-expanded={searchOpen}
           title={`${searchLabel} (${searchShortcutLabel})`}
           onclick={() => void openSearchDialog()}
         >
-          <KefineTopbarIcon name="search" size={18} />
-          <lefine-text data-part="search-placeholder">{searchPlaceholder}</lefine-text>
+          {#if contextualSearchPlaceholder}
+            <lefine-text data-part="search-context" data-testid="kefine-topbar-search-context">
+              {contextualSearchPlaceholder}
+            </lefine-text>
+          {:else}
+            <KefineTopbarIcon name="search" size={18} />
+          {/if}
+          <lefine-text data-part="search-placeholder">{visibleSearchPlaceholder}</lefine-text>
           <lefine-kbd data-part="search-shortcut">{searchShortcutLabel}</lefine-kbd>
         </button>
         {#if searchActions.length > 0}
@@ -863,6 +876,7 @@
                 type="button"
                 data-part="search-action"
                 data-testid={action.testId}
+                data-icon={action.icon}
                 aria-label={action.label}
                 title={action.label}
                 onclick={() => void action.onClick()}
@@ -1090,6 +1104,10 @@
     box-shadow: 0 10px 22px color-mix(in oklab, var(--lefine-text) 6%, transparent);
   }
 
+  button[data-part='search-trigger'][data-context='project'] {
+    grid-template-columns: minmax(0, max-content) minmax(5rem, 1fr) auto;
+  }
+
   kefine-topbar-search-actions {
     display: inline-flex;
     align-items: center;
@@ -1129,6 +1147,24 @@
     box-shadow: 0 10px 22px color-mix(in oklab, var(--lefine-text) 6%, transparent);
   }
 
+  button[data-part='search-trigger'] [data-part='search-context'] {
+    display: inline-flex;
+    align-items: center;
+    min-width: 0;
+    max-width: 14rem;
+    padding: 0.24rem 0.48rem;
+    border-radius: calc(var(--kef-radius-sm) + 0.08rem);
+    background: color-mix(in oklab, var(--kef-primary) 18%, var(--kef-bg-card));
+    color: color-mix(in oklab, var(--kef-primary) 82%, var(--lefine-text));
+    font-size: 0.83rem;
+    font-weight: 760;
+    line-height: 1;
+    letter-spacing: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   button[data-part='search-trigger'] [data-part='search-placeholder'] {
     min-width: 0;
     overflow: hidden;
@@ -1140,6 +1176,10 @@
     letter-spacing: 0;
     text-align: left;
     color: color-mix(in oklab, currentColor 84%, transparent);
+  }
+
+  button[data-part='search-trigger'][data-context='project'] [data-part='search-placeholder'] {
+    color: color-mix(in oklab, var(--lefine-text-soft) 74%, transparent);
   }
 
   lefine-kbd {
@@ -1768,6 +1808,17 @@
       min-width: 2.55rem;
       padding: 0;
       gap: 0;
+    }
+
+    button[data-part='search-trigger'][data-context='project'] {
+      width: clamp(5.8rem, 30vw, 9.5rem);
+      min-width: 0;
+      padding: 0 0.45rem;
+    }
+
+    button[data-part='search-trigger'][data-context='project'] [data-part='search-context'] {
+      max-width: 100%;
+      padding-inline: 0.4rem;
     }
 
     button[data-part='search-trigger'] [data-part='search-placeholder'],

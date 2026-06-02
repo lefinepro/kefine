@@ -15,6 +15,7 @@
     | 'menu'
     | 'project'
     | 'copy'
+    | 'download'
     | 'settings'
     | 'check'
     | 'open'
@@ -119,6 +120,10 @@
   {:else if name === 'copy'}
     <rect x="9" y="7" width="10" height="12" rx="2.2" />
     <path d="M15 7V6.2A2.2 2.2 0 0 0 12.8 4H7.2A2.2 2.2 0 0 0 5 6.2v9.6A2.2 2.2 0 0 0 7.2 18H8" />
+  {:else if name === 'download'}
+    <path d="M12 4.5v9.2" />
+    <path d="m7.8 9.8 4.2 4.2 4.2-4.2" />
+    <path d="M5 16.8v1.4A1.8 1.8 0 0 0 6.8 20h10.4a1.8 1.8 0 0 0 1.8-1.8v-1.4" />
   {:else if name === 'settings'}
     <path d="M4.5 7h5" />
     <path d="M13.5 7h6" />

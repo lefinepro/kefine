@@ -24,7 +24,8 @@ test.describe('New frontend task results', () => {
     await expect(page).toHaveURL(/\/order\/order-1\/solutions/);
     await expect(page.getByTestId('solution-list-page')).toBeVisible();
     // The repository name now lives in the header search bar instead of a right-side card.
-    await expect(page.getByTestId('kefine-topbar-search-trigger')).toContainText('@kefine/go-proxy');
+    await expect(page.getByTestId('kefine-topbar-search-trigger')).toHaveAttribute('data-context', 'project');
+    await expect(page.getByTestId('kefine-topbar-search-context')).toHaveText('@kefine/go-proxy');
     await expect(page.getByTestId('solver-task-list')).toBeVisible();
     // The repository README and checklist are rendered by default on the main
     // screen, while settings move to the topbar modal and folder layout is
@@ -42,14 +43,16 @@ test.describe('New frontend task results', () => {
     await expect(page.getByTestId('repo-checklist-item').nth(0)).toHaveAttribute('data-state', 'todo');
     await expect(page.getByTestId('repo-checklist-item').nth(1)).toHaveAttribute('data-state', 'in-progress');
     await expect(page.getByTestId('repo-checklist-item').last()).toHaveAttribute('data-state', 'done');
-    await expect(page.getByTestId('repo-checklist-status').nth(0)).toContainText('TODO');
-    await expect(page.getByTestId('repo-checklist-status').nth(1)).toContainText('IN PROGRESS');
-    await expect(page.getByTestId('repo-checklist-status').last()).toContainText('DONE');
+    await expect(page.locator('lef-repo-todo-status')).toHaveCount(0);
+    await expect(page.getByTestId('repo-checklist-status').nth(0)).toHaveAttribute('title', 'TODO');
+    await expect(page.getByTestId('repo-checklist-status').nth(1)).toHaveAttribute('title', 'IN PROGRESS');
+    await expect(page.getByTestId('repo-checklist-status').last()).toHaveAttribute('title', 'DONE');
     await expect(page.getByTestId('task-toggle-active')).toHaveCount(0);
     await expect(page.locator('lef-solutions-list')).toHaveCount(0);
     // Clone and repository settings now live as icons beside the shared header search.
     await expect(page.getByTestId('solver-clone-rail')).toHaveCount(0);
     await expect(page.getByTestId('repo-clone-trigger')).toBeVisible();
+    await expect(page.getByTestId('repo-clone-trigger')).toHaveAttribute('data-icon', 'download');
     await expect(page.getByTestId('repo-settings-trigger')).toBeVisible();
     await page.getByTestId('repo-settings-trigger').click();
     await expect(page.getByTestId('repo-settings-dialog')).toBeVisible();
@@ -59,6 +62,7 @@ test.describe('New frontend task results', () => {
     await expect(page.getByTestId('todo-solver-select')).toHaveCount(4);
     await expect(page.getByTestId('todo-solver-select').first()).not.toContainText('Go Proxy Basic');
     await expect(page.getByTestId('todo-solver-select').first().locator('lef-solver-avatar')).toHaveText('GB');
+    await expect(page.locator('lef-todo-solver-chevron')).toHaveCount(0);
     await page.getByTestId('todo-solver-select').first().click();
     await expect(page.getByTestId('task-solver-variants')).toBeVisible();
     await expect(page.getByTestId('task-solver-variants').locator('[data-variant]')).toHaveCount(3);
