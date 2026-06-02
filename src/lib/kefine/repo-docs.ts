@@ -3,8 +3,10 @@
  * screen. The repository carries two Org files that drive the screen by default:
  *
  * - `repo-docs/readme.org` — the README shown at the top. It holds the project
- *   settings, folder layout, demonstration links and a `Brief` section.
- * - `repo-docs/todo.org` — the TODO list stored and rendered below the README.
+ *   settings, folder layout, demonstration links and a `Brief` section. The
+ *   solvers screen renders the title, plain Brief and demonstration links, then
+ *   surfaces settings from a right-rail modal.
+ * - `repo-docs/todo.org` — the TODO list stored and rendered below as task rows.
  *
  * These replace the earlier `.meta/issues/brief.org` idea: the brief now lives
  * inside the README, and the tasks live in the TODO file, both on the repo.

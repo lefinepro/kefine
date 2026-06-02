@@ -1,7 +1,9 @@
 <script lang="ts">
   import { browser } from '$app/environment';
+  import Icon from '@iconify/svelte';
   import { defaultMetrics, type Solution } from '$lib/kefine/solutions-data';
   import { kefineLocaleText } from '$lib/constants/kefine-locale';
+  import KefineModal from '$lib/components/kefine/KefineModal.svelte';
   import {
     buildSolverAvatars,
     solverAvatarColor,
@@ -34,14 +36,22 @@
     onSelectHistoryTask?: ((id: string) => void) | null | undefined;
   } = $props();
 
-  // README sections other than the Brief, which is surfaced separately above.
-  const readmeDetailSections = $derived(
-    (readme?.sections ?? []).filter((section) => section.id !== 'brief')
+  const readmeSettingsSection = $derived(
+    (readme?.sections ?? []).find((section) => section.id === 'settings') ?? null
+  );
+
+  // README sections visible in the main flow. Settings move to the right-rail
+  // modal and Folder layout is intentionally omitted per review feedback.
+  const readmeVisibleSections = $derived(
+    (readme?.sections ?? []).filter(
+      (section) => !['brief', 'settings', 'folder-layout'].includes(section.id)
+    )
   );
 
   let cloneTestPending = $state(false);
   let cloneTestResult = $state<{ ok: boolean; message: string } | null>(null);
   let copyFlash = $state(false);
+  let settingsModalOpen = $state(false);
 
   const resolvedCloneUrl = $derived.by(() => {
     if (cloneUrl) return cloneUrl;
@@ -137,6 +147,10 @@
   function toggleTask(id: string) {
     expandedTaskId = expandedTaskId === id ? null : id;
   }
+
+  function closeSettingsModal() {
+    settingsModalOpen = false;
+  }
 </script>
 
 <lefine-box class="solutions-page-container" data-testid="solution-list-page">
@@ -144,14 +158,15 @@
       <lef-main-tasks aria-label={localeText.solversView.tasksAside} data-testid="solver-task-list">
         {#if readme}
           <lef-repo-readme aria-label={localeText.solversView.readmeAria} data-testid="repo-readme">
-            <lef-repo-readme-head>{localeText.solversView.readmeHeading}</lef-repo-readme-head>
+            <lef-repo-readme-head>
+              <h2 data-testid="repo-readme-title">{readme.title || repoName}</h2>
+            </lef-repo-readme-head>
             {#if readme.brief}
               <lef-repo-brief data-testid="repo-brief">
-                <small>{localeText.solversView.briefHeading}</small>
                 <p>{readme.brief}</p>
               </lef-repo-brief>
             {/if}
-            {#each readmeDetailSections as section (section.id)}
+            {#each readmeVisibleSections as section (section.id)}
               <lef-repo-section data-section={section.id}>
                 <h3>{section.title}</h3>
                 {#each section.text as line (line)}
@@ -307,28 +322,51 @@
               <lefine-text>{localeText.solversView.todoHeading}</lefine-text>
               <small>{localeText.solversView.todoCount(todos.length)}</small>
             </lef-repo-todo-head>
-            <lef-repo-todo-list>
+            <lef-main-task-list data-part="repo-todos">
               {#each todos as todo (todo.id)}
-                <lef-repo-todo-item data-done={todo.done ? 'true' : 'false'} data-testid="repo-todo-item">
-                  <lef-repo-todo-check data-done={todo.done ? 'true' : 'false'} aria-hidden="true">
-                    {#if todo.done}
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
-                    {/if}
-                  </lef-repo-todo-check>
-                  <lefine-text>{todo.title}</lefine-text>
-                  {#if todo.done}
-                    <lef-repo-todo-state>{localeText.solversView.todoDone}</lef-repo-todo-state>
-                  {/if}
-                </lef-repo-todo-item>
+                <lef-task-card
+                  data-kind="todo"
+                  data-done={todo.done ? 'true' : 'false'}
+                  data-testid="repo-todo-task-card"
+                >
+                  <lef-task-static class="main-task-toggle repo-todo-toggle">
+                    <lef-repo-todo-check data-done={todo.done ? 'true' : 'false'} aria-hidden="true">
+                      {#if todo.done}
+                        <Icon icon="lucide:check" width="12" height="12" aria-hidden="true" />
+                      {/if}
+                    </lef-repo-todo-check>
+                    <lef-task-toggle-main>
+                      <lefine-text>{todo.title}</lefine-text>
+                      {#if todo.done}
+                        <small>{localeText.solversView.todoDone}</small>
+                      {/if}
+                    </lef-task-toggle-main>
+                  </lef-task-static>
+                </lef-task-card>
               {/each}
-            </lef-repo-todo-list>
+            </lef-main-task-list>
           </lef-repo-todo>
         {/if}
       </lef-main-tasks>
 
       <lef-task-rail aria-label={localeText.solversView.cloneHeading} data-testid="solver-clone-rail">
+        {#if readmeSettingsSection}
+          <lef-task-rail-actions>
+            <button
+              type="button"
+              class="task-rail-icon-btn"
+              data-testid="repo-settings-trigger"
+              aria-label={localeText.solversView.openRepositorySettings}
+              title={localeText.solversView.openRepositorySettings}
+              aria-haspopup="dialog"
+              onclick={() => {
+                settingsModalOpen = true;
+              }}
+            >
+              <Icon icon="lucide:settings" width="16" height="16" aria-hidden="true" />
+            </button>
+          </lef-task-rail-actions>
+        {/if}
         <lef-task-rail-panel data-kind="clone">
           <lef-task-rail-head>{localeText.solversView.cloneHeading}</lef-task-rail-head>
           <lef-task-rail-clone>
@@ -361,6 +399,31 @@
   </lef-tasks-grid>
 </lefine-box>
 
+{#if readmeSettingsSection}
+  <KefineModal
+    open={settingsModalOpen}
+    onClose={closeSettingsModal}
+    closeLabel={localeText.solversView.closeRepositorySettings}
+    width="medium"
+    placement="right"
+  >
+    <lef-repo-settings-dialog data-testid="repo-settings-dialog">
+      <lef-repo-settings-head>
+        <h2>{localeText.solversView.repositorySettingsHeading}</h2>
+        <p>{readme?.title || repoName}</p>
+      </lef-repo-settings-head>
+      <dl>
+        {#each readmeSettingsSection.settings as setting (setting.key)}
+          <lef-repo-settings-kv>
+            <dt>{setting.key}</dt>
+            <dd>{setting.value}</dd>
+          </lef-repo-settings-kv>
+        {/each}
+      </dl>
+    </lef-repo-settings-dialog>
+  </KefineModal>
+{/if}
+
 <style>
   .solutions-page-container {
     max-width: 1280px;
@@ -383,7 +446,7 @@
   lef-repo-readme {
     display: flex;
     flex-direction: column;
-    gap: 0.85rem;
+    gap: 0.75rem;
     padding: 0.9rem 1rem 1rem;
     margin-bottom: 0.6rem;
     border: 1px solid var(--kef-line);
@@ -392,36 +455,26 @@
   }
 
   lef-repo-readme-head {
-    font-size: 0.72rem;
+    display: block;
+  }
+
+  lef-repo-readme-head h2 {
+    margin: 0;
+    font-size: 1.08rem;
+    line-height: 1.25;
     font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--lefine-text-soft);
+    color: var(--lefine-text);
   }
 
   lef-repo-brief {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    padding: 0.65rem 0.75rem;
-    border-radius: 0.6rem;
-    border: 1px solid color-mix(in oklab, var(--kef-color-primary, #c89a5a) 28%, var(--kef-line));
-    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 8%, transparent);
-  }
-
-  lef-repo-brief small {
-    font-size: 0.68rem;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 75%, var(--lefine-text));
+    display: block;
   }
 
   lef-repo-brief p {
     margin: 0;
-    font-size: 0.9rem;
+    font-size: 0.92rem;
     line-height: 1.45;
-    color: var(--lefine-text);
+    color: var(--lefine-text-soft);
   }
 
   lef-repo-section {
@@ -527,36 +580,9 @@
     color: var(--lefine-text-soft);
   }
 
-  lef-repo-todo-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.15rem;
-  }
-
-  lef-repo-todo-item {
-    display: grid;
-    grid-template-columns: 18px minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 0.65rem;
-    padding: 0.45rem 0.7rem;
-    border-radius: 8px;
-  }
-
-  lef-repo-todo-item:hover {
-    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 6%, transparent);
-  }
-
-  lef-repo-todo-item[data-done='true'] lefine-text {
-    color: var(--lefine-text-soft);
-    text-decoration: line-through;
-  }
-
-  lef-repo-todo-item lefine-text {
-    min-width: 0;
-    font-size: 0.9rem;
-    line-height: 1.3;
-    color: var(--lefine-text);
-    overflow-wrap: anywhere;
+  lef-main-task-list[data-part='repo-todos'] {
+    padding: 0;
+    gap: 0.35rem;
   }
 
   lef-repo-todo-check {
@@ -573,19 +599,6 @@
   lef-repo-todo-check[data-done='true'] {
     border-color: color-mix(in oklab, var(--kef-success, #16a34a) 70%, var(--kef-line));
     background: color-mix(in oklab, var(--kef-success, #16a34a) 80%, transparent);
-  }
-
-  lef-repo-todo-check svg {
-    width: 11px;
-    height: 11px;
-  }
-
-  lef-repo-todo-state {
-    font-size: 0.66rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--kef-success, #16a34a);
   }
 
   lef-main-task-list {
@@ -612,6 +625,25 @@
   lef-task-card[data-expanded='true'] {
     border-color: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 24%, var(--kef-line));
     background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 6%, var(--kef-bg-card));
+  }
+
+  lef-task-card[data-kind='todo'] {
+    border-color: color-mix(in oklab, var(--kef-line) 55%, transparent);
+    background: color-mix(in oklab, var(--kef-bg-card) 82%, transparent);
+  }
+
+  lef-task-card[data-kind='todo']:hover {
+    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 6%, transparent);
+  }
+
+  lef-task-card[data-kind='todo'][data-done='true'] lef-task-toggle-main lefine-text {
+    color: var(--lefine-text-soft);
+    text-decoration: line-through;
+  }
+
+  .repo-todo-toggle {
+    min-height: 2.75rem;
+    cursor: default;
   }
 
   .task-toggle {
@@ -844,6 +876,28 @@
     top: 1rem;
   }
 
+  lef-task-rail-actions {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .task-rail-icon-btn {
+    display: inline-grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.55rem;
+    border: 1px solid var(--kef-line);
+    background: var(--kef-bg-card);
+    color: var(--lefine-text);
+    cursor: pointer;
+  }
+
+  .task-rail-icon-btn:hover {
+    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 10%, var(--kef-bg-card));
+    border-color: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 30%, var(--kef-line));
+  }
+
   lef-task-rail-head {
     display: block;
     font-size: 0.72rem;
@@ -933,6 +987,63 @@
   .task-rail-btn:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+  }
+
+  lef-repo-settings-dialog {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    color: var(--lefine-text);
+  }
+
+  lef-repo-settings-head {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    padding-right: 2.4rem;
+  }
+
+  lef-repo-settings-head h2,
+  lef-repo-settings-head p {
+    margin: 0;
+  }
+
+  lef-repo-settings-head h2 {
+    font-size: 1.05rem;
+    line-height: 1.25;
+    font-weight: 700;
+  }
+
+  lef-repo-settings-head p {
+    font-size: 0.86rem;
+    color: var(--lefine-text-soft);
+    overflow-wrap: anywhere;
+  }
+
+  lef-repo-settings-dialog dl {
+    display: grid;
+    grid-template-columns: minmax(8rem, max-content) minmax(0, 1fr);
+    gap: 0.5rem 0.9rem;
+    margin: 0;
+  }
+
+  lef-repo-settings-kv {
+    display: contents;
+  }
+
+  lef-repo-settings-dialog dt {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--lefine-text);
+  }
+
+  lef-repo-settings-dialog dd {
+    margin: 0;
+    min-width: 0;
+    font-family: ui-monospace, monospace;
+    font-size: 0.8rem;
+    color: var(--lefine-text-soft);
+    overflow-wrap: anywhere;
   }
 
   @media (max-width: 980px) {
