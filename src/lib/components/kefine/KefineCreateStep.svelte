@@ -23,7 +23,7 @@
   import { buildActorOrderPath } from '$lib/components/kefine/kefine-workspace-helpers';
   import { defaultMetrics } from '$lib/kefine/solutions-data';
   import { cubicOut } from 'svelte/easing';
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   const PLACEHOLDER_TYPE_DELAY_MS = 58;
   const PLACEHOLDER_DELETE_DELAY_MS = 34;
   const PLACEHOLDER_PAUSE_MS = 1150;
@@ -103,6 +103,7 @@
     openTaskLabel,
     relatedItemsLabel,
     searchResultsOnly = false,
+    searchFocusRequest = 0,
     searchResultsEmptyLabel = 'No matching results',
     searchMode = null,
     searchModeAnonymousLabel = 'Anonymous search',
@@ -198,6 +199,7 @@
     openTaskLabel: string;
     relatedItemsLabel: string;
     searchResultsOnly?: boolean;
+    searchFocusRequest?: number;
     searchResultsEmptyLabel?: string;
     searchMode?: SearchPageMode | null;
     searchModeAnonymousLabel?: string;
@@ -226,6 +228,10 @@
     onExecutionEstimateChange?: (value: string) => void;
     onOpenSolution?: (solutionId: string) => void;
   } = $props();
+
+  const showSearchComposer = $derived(!searchResultsOnly);
+  const showHomeContent = $derived(!searchMode && !searchResultsOnly);
+  const showTaskHistory = $derived(!searchMode && !searchResultsOnly);
 
   // Show the proxy configuration widget as soon as the draft reads like a proxy
   // request — no submit required (e.g. typing "Нужен прокси сервер").
@@ -452,6 +458,22 @@
   let taskCompleted = $state(false);
   let isFlying = $state(false);
   let initialized = $state(false);
+
+  $effect(() => {
+    const request = searchFocusRequest;
+    if (!browser || !request || !showSearchComposer) {
+      return;
+    }
+
+    void tick().then(() => {
+      inputMetaOpen = true;
+      searchRevealed = true;
+      placeholderFocused = true;
+      stopPlaceholderAnimation({ hide: true });
+      taskTextarea?.focus();
+      taskTextarea?.setSelectionRange(draft.description.length, draft.description.length);
+    });
+  });
 
   function orderScore(query: string, order: OrderView): number {
     const q = query.trim().toLowerCase();
@@ -1426,7 +1448,7 @@ initialized = true;
 
 </script>
 
-{#if afeIntroCard && !searchResultsOnly}
+{#if afeIntroCard && showHomeContent}
   <h1 class="lefine-title">Lefine</h1>
   <p class="lefine-subtitle">{afeIntroCard.detail}</p>
 {/if}
@@ -1469,7 +1491,7 @@ initialized = true;
 
 
 
-  {#if !searchResultsOnly}
+  {#if showSearchComposer}
   <fieldset data-part="exec-row" data-testid="kefine-create-form">
     <kefine-task-shell>
       <label data-part="sr-only" for="order-title">{title}</label>
@@ -1716,7 +1738,7 @@ initialized = true;
     </kefine-qr-card>
   {/if}
 
-  {#if !searchResultsOnly}
+  {#if showSearchComposer}
     {#if inputMetaOpen}
       <kefine-input-meta data-part="input-meta">
         <kefine-composer-strip aria-label={composerHints}>
@@ -1824,7 +1846,7 @@ initialized = true;
   <!-- Extracted-music preview — appears when the draft reads like "extract audio from video" -->
   <KefineMusicWidget active={musicIntentActive} />
 
-  {#if !searchResultsOnly}
+  {#if showTaskHistory}
     <!-- Persistent task history on main page (same data as in profile) -->
     {#if (solverSearchActive && solverSearchText?.trim()) || (searchRevealed && recentOrders.length > 0)}
       <section data-part="tasks-list" data-entrance={!listEntranceDone}>
@@ -1977,11 +1999,11 @@ initialized = true;
     {/if}
   {/if}
 
-  {#if isSearching && (sortedMatchedOrders.length > 0 || searchResultsOnly)}
+  {#if isSearching && (sortedMatchedOrders.length > 0 || searchMode)}
     <section
       data-part="recent"
-      data-testid={searchResultsOnly ? 'kefine-search-page-results' : null}
-      data-mode={searchResultsOnly ? searchMode : null}
+      data-testid={searchMode ? 'kefine-search-page-results' : null}
+      data-mode={searchMode}
       aria-label={isSearching ? matchedTasksLabel : solverLabel}
     >
       <kefine-recent-title>{matchedTasksLabel}</kefine-recent-title>
@@ -2019,7 +2041,7 @@ initialized = true;
   {/if}
 </article>
 
-{#if !searchResultsOnly && pinnedServices.length > 0}
+{#if showHomeContent && pinnedServices.length > 0}
   <lef-services-showcase>
     <lef-services-head>
       <strong>{pinnedServicesTitle}</strong>
@@ -2048,7 +2070,7 @@ initialized = true;
   </lef-services-showcase>
 {/if}
 
-{#if !searchResultsOnly}
+{#if showHomeContent}
   {#if afeIntroCard}
     <lef-afe-showcase-heading>{afeIntroCard.title}</lef-afe-showcase-heading>
   {/if}

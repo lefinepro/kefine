@@ -4,8 +4,7 @@ export const prerender = false;
 
 /**
  * OpenSearch descriptor so browsers can install the site as a search engine and
- * route queries through the `?q={searchTerms}` deep link that opens the command
- * palette (see KefineTopbar `initialSearchQuery`).
+ * route queries through the root `?q={searchTerms}` search page.
  */
 export const GET: RequestHandler = ({ url }) => {
   const origin = url.origin;

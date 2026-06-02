@@ -354,6 +354,7 @@
   let EmailCodeDialogComponent = $state<LazyComponent | null>(null);
   let appliedSearchPageDraftQuery = $state('');
   let hasAppliedSearchPageDraftQuery = $state(false);
+  let searchInputFocusRequest = $state(0);
 
   const passkeySession = $derived($passkeySessionStore);
   const isPasskeyActive = $derived(passkeySession ? passkeySession.expiresAt.getTime() > Date.now() : false);
@@ -596,6 +597,10 @@
   const searchPageAlternateHref = $derived(
     searchPageMode ? buildSearchPageHref(searchPageMode === 'saved' ? 'anonymous' : 'saved') : ''
   );
+  const searchResultsOnly = $derived(searchPageMode === 'saved');
+  const inlineHomeSearchActive = $derived(
+    step === 'create' && !getNormalizedInitialActorHandle() && !getNormalizedInitialOrderId() && !initialWidget
+  );
   const searchPageMatchedOrders = $derived.by(() => {
     if (!searchPageMode) {
       return [];
@@ -658,6 +663,15 @@
     draft.description = query;
     appliedSearchPageDraftQuery = query.trim();
     hasAppliedSearchPageDraftQuery = true;
+  }
+
+  async function focusHomeSearchInput() {
+    if (step !== 'create') {
+      step = 'create';
+      await tick();
+    }
+
+    searchInputFocusRequest += 1;
   }
 
   function orderMatchesQuery(order: OrderView, query: string): boolean {
@@ -3005,12 +3019,13 @@
     }
   }}
   onThemeChange={(theme) => { themeMode = theme; }}
-  onSearchQueryChange={searchPageMode ? updateSearchPageQuery : undefined}
+  onSearchQueryChange={searchResultsOnly ? updateSearchPageQuery : undefined}
   onAuth={selectTopbarAuth}
   onOpenProfile={openTopbarProfile}
   onSignOut={() => { void signOutProfileSession(); }}
-   onAuthDoubleClick={() => { void openTopbarProfileSetup(); }}
-   onLocale={selectTopbarLocale}
+  onAuthDoubleClick={() => { void openTopbarProfileSetup(); }}
+  onSearchTrigger={inlineHomeSearchActive ? focusHomeSearchInput : undefined}
+  onLocale={selectTopbarLocale}
 />
 
 <main data-sidebar-expanded={leftNavExpanded}>
@@ -3077,7 +3092,8 @@
           composerHints={localeText.create.composerHints}
           openTaskLabel={localeText.labels.openOrderLink}
           relatedItemsLabel={localeText.labels.relatedItems}
-          searchResultsOnly={Boolean(searchPageMode)}
+          searchResultsOnly={searchResultsOnly}
+          searchFocusRequest={searchInputFocusRequest}
           searchResultsEmptyLabel={localeText.topbar.searchEmptyLabel}
           searchMode={searchPageMode}
           searchModeAnonymousLabel={localeText.create.searchModeAnonymous}

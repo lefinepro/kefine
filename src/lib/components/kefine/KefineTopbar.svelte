@@ -99,6 +99,7 @@
     onOpenProfile,
     onSignOut,
     onAuthDoubleClick,
+    onSearchTrigger,
     onLocale
   }: {
     brandLabel: string;
@@ -137,9 +138,9 @@
     searchHomeLabel?: string;
     searchHomeHref?: string;
     searchItems?: KefineTopbarSearchItem[];
-    /** Deep-link query (from `?q=`) that auto-opens the palette seeded with this text. */
+    /** Deep-link query that seeds the palette on non-search routes. */
     initialSearchQuery?: string;
-    /** Query to prefill when opening the palette manually on a search results page. */
+    /** Query to prefill when opening the palette manually on saved-search routes. */
     searchDefaultQuery?: string;
     /** Widget short link (e.g. `/@profile/weather`) that auto-opens this widget inline. */
     initialWidget?: KefineSearchWidgetId | null;
@@ -163,6 +164,7 @@
     onOpenProfile: () => void;
     onSignOut: () => void;
     onAuthDoubleClick: () => void;
+    onSearchTrigger?: () => void | Promise<void>;
     onLocale: (locale: KefineLocale) => void;
   } = $props();
 
@@ -308,8 +310,9 @@
     };
   });
 
-  // Deep links open the palette automatically: `?q=term` seeds the query and a
-  // widget short link (e.g. `/@profile/weather`) surfaces that widget inline.
+  // Deep links can open the palette automatically: non-search `?q=term` routes
+  // seed the query and widget short links (e.g. `/@profile/weather`) surface
+  // that widget inline.
   // We track the applied signature so the dialog opens once per distinct link
   // instead of re-opening on every reactive pass.
   let appliedDeepLink = $state<string | null>(null);
@@ -405,6 +408,11 @@
 
   async function openSearchDialog(options?: { query?: string; widget?: KefineSearchWidgetId | null }) {
     if (!showSearch) {
+      return;
+    }
+
+    if (onSearchTrigger && !options?.query && !options?.widget) {
+      await onSearchTrigger();
       return;
     }
 

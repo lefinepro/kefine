@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 import { mockOrderApi } from './helpers/kefine';
 
-// Clears persisted state, then lands on a deep link so the palette auto-opens.
+// Clears persisted state, then lands on a deep link.
 async function gotoDeepLink(page: import('@playwright/test').Page, path: string) {
   await page.goto('/');
   await page.evaluate(() => {
@@ -17,7 +17,8 @@ test.describe('Search deep links', () => {
     await mockOrderApi(page);
     await gotoDeepLink(page, '/?q=redis');
 
-    await expect(page.getByTestId('kefine-task-input')).toHaveCount(0);
+    await expect(page.getByTestId('kefine-task-input')).toBeVisible();
+    await expect(page.getByTestId('kefine-task-input')).toHaveValue('redis');
     await expect(page.getByTestId('kefine-search-page-results')).toHaveAttribute(
       'data-mode',
       'anonymous'
