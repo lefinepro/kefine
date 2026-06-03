@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { gotoAndWaitForReady, mockPrivateKeyAuth, readActorPrivateKeyCompact, readActorPrivateKeyPem } from './helpers/kefine';
+import { gotoAndWaitForReady, mockPrivateKeyAuth, readActorPrivateKeyCompact } from './helpers/kefine';
 
 test.describe('Auth Flows', () => {
   test('privatekey login works with compact pqsk key and sends only local public key string to auth', async ({ page }) => {
