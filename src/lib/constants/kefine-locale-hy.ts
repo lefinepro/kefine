@@ -115,6 +115,11 @@ export const KEFINE_TEXT_HY = {
     addExecutionEstimate: '+ ժամկետ',
     fileCount: (count: number) => `${count} ֆայլ`,
     composerHints: 'Enter-ը ուղարկում է, Alt+Enter-ը ուղարկում է ֆոնում, Shift+Enter-ը նոր տող է ավելացնում',
+    searchModeAnonymous: 'Անանուն որոնում',
+    searchModeSaved: 'Պահված որոնում',
+    searchModeSave: 'Պահել որոնումը',
+    searchModeAnonymousAction: 'Դարձնել անանուն',
+    searchModeOpenPage: 'Բացել որոնման էջը',
     richEditorDescription: 'Ctrl+Enter-ը բացում է ամբողջական ProseKit խմբագիր երկար տեխնիկական նկարագրության համար։',
     richEditorVisual: 'Վիզուալ',
     richEditorSource: 'Org',
@@ -147,7 +152,11 @@ export const KEFINE_TEXT_HY = {
     pathPaymentLabel: 'Վճարում:',
     noRecentTasks: 'Պահված repos դեռ չկան',
     matchedTasks: 'Գտնված ավարտված repos',
-    noMatchedTasks: 'Այս հարցմանը համապատասխան ավարտված repos դեռ չկան'
+    noMatchedTasks: 'Այս հարցմանը համապատասխան ավարտված repos դեռ չկան',
+    searchCreateTaskHint: (query: string) =>
+      query
+        ? `Սեղմեք Enter՝ «${query}» առաջադրանք ստեղծելու և անմիջապես այն գործարկելու համար`
+        : 'Սեղմեք Enter՝ առաջադրանք ստեղծելու և անմիջապես այն գործարկելու համար'
   },
   proxyWidget: {
     title: 'Պրոքսի սերվերը պատրաստ է',

@@ -8,6 +8,7 @@
   import KefineMusicWidget from '$lib/components/kefine/KefineMusicWidget.svelte';
   import KefineWeatherWidget from '$lib/components/kefine/KefineWeatherWidget.svelte';
   import KefineTranslatorWidget from '$lib/components/kefine/KefineTranslatorWidget.svelte';
+  import KefineSearchInput from '$lib/components/kefine/KefineSearchInput.svelte';
   import SolutionMetricsMini from '$lib/components/kefine/SolutionMetricsMini.svelte';
   import { detectProxyServerIntent } from '$lib/kefine/proxy-intent';
   import {
@@ -23,11 +24,13 @@
   import { buildActorOrderPath } from '$lib/components/kefine/kefine-workspace-helpers';
   import { defaultMetrics } from '$lib/kefine/solutions-data';
   import { cubicOut } from 'svelte/easing';
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   const PLACEHOLDER_TYPE_DELAY_MS = 58;
   const PLACEHOLDER_DELETE_DELAY_MS = 34;
   const PLACEHOLDER_PAUSE_MS = 1150;
   const PLACEHOLDER_NEXT_DELAY_MS = 250;
+
+  type SearchPageMode = 'anonymous' | 'saved';
 
   /** Curtain-drop / oversized → shrink entrance for task rows */
   function taskDropIn(
@@ -100,11 +103,20 @@
     composerHints,
     openTaskLabel,
     relatedItemsLabel,
+    searchResultsOnly = false,
+    searchFocusRequest = 0,
+    searchResultsEmptyLabel = 'No matching results',
+    searchCreateTaskHint = (query: string) =>
+      query
+        ? `Press Enter to create a task for “${query}” and start executing it`
+        : 'Press Enter to create a task and start executing it',
+    searchMode = null,
     createServiceLabel = 'Transform to service',
     serviceVariablesLabel = 'Service variables',
     stopTaskLabel = 'Stop repo',
     deleteTaskLabel,
     onSubmit,
+    onSearchSubmit,
     onQueueTask,
     onAttachFiles,
     onRemoveFile,
@@ -185,11 +197,17 @@
     composerHints: string;
     openTaskLabel: string;
     relatedItemsLabel: string;
+    searchResultsOnly?: boolean;
+    searchFocusRequest?: number;
+    searchResultsEmptyLabel?: string;
+    searchCreateTaskHint?: (query: string) => string;
+    searchMode?: SearchPageMode | null;
     createServiceLabel?: string;
     serviceVariablesLabel?: string;
     stopTaskLabel?: string;
     deleteTaskLabel: string;
     onSubmit: () => void;
+    onSearchSubmit?: () => void;
     onQueueTask: () => Promise<void> | void;
     onAttachFiles: (files: File[]) => void;
     onRemoveFile: (index: number) => void;
@@ -204,6 +222,11 @@
     onExecutionEstimateChange?: (value: string) => void;
     onOpenSolution?: (solutionId: string) => void;
   } = $props();
+
+  const showTaskComposer = $derived(!searchMode && !searchResultsOnly);
+  const showSearchPageInput = $derived(searchMode === 'anonymous');
+  const showHomeContent = $derived(!searchMode && !searchResultsOnly);
+  const showTaskHistory = $derived(!searchMode && !searchResultsOnly);
 
   // Show the proxy configuration widget as soon as the draft reads like a proxy
   // request — no submit required (e.g. typing "Нужен прокси сервер").
@@ -430,6 +453,44 @@
   let taskCompleted = $state(false);
   let isFlying = $state(false);
   let initialized = $state(false);
+
+  $effect(() => {
+    const request = searchFocusRequest;
+    if (!browser || !request || !showTaskComposer) {
+      return;
+    }
+
+    void tick().then(() => {
+      inputMetaOpen = true;
+      searchRevealed = true;
+      placeholderFocused = true;
+      stopPlaceholderAnimation({ hide: true });
+      taskTextarea?.focus();
+      taskTextarea?.setSelectionRange(draft.description.length, draft.description.length);
+    });
+  });
+
+  function handleSearchPageInput(value: string) {
+    if (onDescriptionChange) {
+      onDescriptionChange(value);
+      return;
+    }
+
+    draft.description = value;
+  }
+
+  function handleSearchPageKeydown(event: KeyboardEvent) {
+    if (event.key !== 'Enter' || event.isComposing) {
+      return;
+    }
+
+    if (!draft.description.trim()) {
+      return;
+    }
+
+    event.preventDefault();
+    (onSearchSubmit ?? onSubmit)();
+  }
 
   function orderScore(query: string, order: OrderView): number {
     const q = query.trim().toLowerCase();
@@ -1404,7 +1465,7 @@ initialized = true;
 
 </script>
 
-{#if afeIntroCard}
+{#if afeIntroCard && showHomeContent}
   <h1 class="lefine-title">Lefine</h1>
   <p class="lefine-subtitle">{afeIntroCard.detail}</p>
 {/if}
@@ -1447,6 +1508,7 @@ initialized = true;
 
 
 
+  {#if showTaskComposer}
   <fieldset data-part="exec-row" data-testid="kefine-create-form">
     <kefine-task-shell>
       <label data-part="sr-only" for="order-title">{title}</label>
@@ -1509,6 +1571,24 @@ initialized = true;
       </kefine-submit-popover>
     {/if}
   </fieldset>
+  {/if}
+
+  {#if showSearchPageInput}
+    <kefine-search-page-input-shell>
+      <KefineSearchInput
+        value={draft.description}
+        label={title}
+        placeholder={placeholder}
+        inputTestId="kefine-search-page-input"
+        rowTestId="kefine-search-page-input-row"
+        variant="page"
+        showShortcut={false}
+        focusRequest={searchFocusRequest}
+        onInput={handleSearchPageInput}
+        onKeydown={handleSearchPageKeydown}
+      />
+    </kefine-search-page-input-shell>
+  {/if}
 
   {#if pinnedAnswers.length > 0}
     <kefine-pinned-strip data-part="pinned-strip" aria-label={instantPinnedLabel}>
@@ -1593,6 +1673,11 @@ initialized = true;
             <kefine-instant-text>
               <lefine-text data-part="instant-name">{site.name}</lefine-text>
               <lefine-text data-part="instant-url">{site.url}</lefine-text>
+              {#if site.description}
+                <lefine-text data-part="instant-description" data-testid={`kefine-instant-description-${site.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}>
+                  {site.description}
+                </lefine-text>
+              {/if}
             </kefine-instant-text>
             <kefine-instant-go aria-hidden="true">{instantAnswerGoHint} ↗</kefine-instant-go>
           </a>
@@ -1662,99 +1747,101 @@ initialized = true;
     </kefine-qr-card>
   {/if}
 
-  {#if inputMetaOpen}
-    <kefine-input-meta data-part="input-meta">
-      <kefine-composer-strip aria-label={composerHints}>
-        <button type="button" data-part="composer-chip" title={backgroundExecuteAria} onmousedown={keepComposerFocus} onclick={() => fileInput?.click()}>
-          <lefine-text>{addFileLabel}</lefine-text>
-          {#if draft.files.length > 0}
-            <strong>{fileCountLabel(draft.files.length)}</strong>
+  {#if showTaskComposer}
+    {#if inputMetaOpen}
+      <kefine-input-meta data-part="input-meta">
+        <kefine-composer-strip aria-label={composerHints}>
+          <button type="button" data-part="composer-chip" title={backgroundExecuteAria} onmousedown={keepComposerFocus} onclick={() => fileInput?.click()}>
+            <lefine-text>{addFileLabel}</lefine-text>
+            {#if draft.files.length > 0}
+              <strong>{fileCountLabel(draft.files.length)}</strong>
+            {/if}
+          </button>
+          {#if executionEditorOpen}
+            <kefine-execution-editor>
+              <input
+                value={draft.executionEstimate}
+                data-part="execution-estimate-input"
+                placeholder={executionEstimateLabel}
+                oninput={(e) => onExecutionEstimateChange?.((e.currentTarget as HTMLInputElement).value)}
+              />
+            </kefine-execution-editor>
+          {:else}
+            <button type="button" data-part="composer-chip" onmousedown={keepComposerFocus} onclick={() => { executionEditorOpen = true; }}>
+              <lefine-text>{addExecutionEstimateLabel}</lefine-text>
+            </button>
           {/if}
-        </button>
-        {#if executionEditorOpen}
-          <kefine-execution-editor>
+          {#if tagEditorOpen}
             <input
-              value={draft.executionEstimate}
-              data-part="execution-estimate-input"
-              placeholder={executionEstimateLabel}
-              oninput={(e) => onExecutionEstimateChange?.((e.currentTarget as HTMLInputElement).value)}
+              bind:this={tagInput}
+              bind:value={tagInputValue}
+              data-part="tag-input"
+              placeholder={tagPlaceholderLabel}
+              maxlength="32"
+              onkeydown={handleTagInputKeydown}
+              onblur={() => {
+                if (tagInputValue.trim()) {
+                  commitTag(tagInputValue);
+                  return;
+                }
+
+                tagEditorOpen = false;
+              }}
             />
-          </kefine-execution-editor>
-        {:else}
-          <button type="button" data-part="composer-chip" onmousedown={keepComposerFocus} onclick={() => { executionEditorOpen = true; }}>
-            <lefine-text>{addExecutionEstimateLabel}</lefine-text>
-          </button>
-        {/if}
-        {#if tagEditorOpen}
-          <input
-            bind:this={tagInput}
-            bind:value={tagInputValue}
-            data-part="tag-input"
-            placeholder={tagPlaceholderLabel}
-            maxlength="32"
-            onkeydown={handleTagInputKeydown}
-            onblur={() => {
-              if (tagInputValue.trim()) {
-                commitTag(tagInputValue);
-                return;
-              }
-
-              tagEditorOpen = false;
-            }}
-          />
-        {:else}
-          <button type="button" data-part="composer-chip" data-part-tag="true" onmousedown={keepComposerFocus} onclick={() => { tagEditorOpen = true; }}>
-            <lefine-text>{addTagLabel}</lefine-text>
-          </button>
-        {/if}
-      </kefine-composer-strip>
-
-      {#if (draft.tags?.length ?? 0) > 0}
-        <kefine-tag-strip data-has-tags="true">
-          {#each draft.tags ?? [] as tag (`tag-${tag}`)}
-            <button type="button" data-part="tag-pill" onmousedown={keepComposerFocus} onclick={() => removeTag(tag)} aria-label={removeTagLabel(tag)}>
-              <lefine-text>#{tag}</lefine-text>
-              <strong>×</strong>
+          {:else}
+            <button type="button" data-part="composer-chip" data-part-tag="true" onmousedown={keepComposerFocus} onclick={() => { tagEditorOpen = true; }}>
+              <lefine-text>{addTagLabel}</lefine-text>
             </button>
-          {/each}
-        </kefine-tag-strip>
-      {/if}
+          {/if}
+        </kefine-composer-strip>
 
-      {#if (draft.templateFiles?.length ?? 0) > 0}
-        <kefine-file-list data-template-files="true">
-          {#each draft.templateFiles ?? [] as file (`template-${file.id}`)}
-            <lefine-box data-part="template-file-pill">
-              <lefine-text>{file.name}</lefine-text>
-              <strong>{Math.max(1, Math.round((file.size ?? 1024) / 1024))} KB</strong>
-            </lefine-box>
-          {/each}
-        </kefine-file-list>
-      {/if}
+        {#if (draft.tags?.length ?? 0) > 0}
+          <kefine-tag-strip data-has-tags="true">
+            {#each draft.tags ?? [] as tag (`tag-${tag}`)}
+              <button type="button" data-part="tag-pill" onmousedown={keepComposerFocus} onclick={() => removeTag(tag)} aria-label={removeTagLabel(tag)}>
+                <lefine-text>#{tag}</lefine-text>
+                <strong>×</strong>
+              </button>
+            {/each}
+          </kefine-tag-strip>
+        {/if}
 
-      {#if draft.files.length > 0}
-        <kefine-file-list>
-          {#each draft.files as file, index (`${file.name}-${file.size}-${index}`)}
-            <button type="button" data-part="file-pill" onmousedown={keepComposerFocus} onclick={() => onRemoveFile(index)}>
-              {#if isImageFile(file) && filePreviews.has(index)}
-                <lefine-box data-part="file-preview-wrapper">
-                  <img
-                    src={filePreviews.get(index)}
-                    alt={file.name}
-                    data-part="file-preview"
-                  />
-                </lefine-box>
-              {/if}
-              <lefine-text>{file.name}</lefine-text>
-              <strong>{Math.max(1, Math.round(file.size / 1024))} KB</strong>
-            </button>
-          {/each}
-        </kefine-file-list>
-      {/if}
-    </kefine-input-meta>
+        {#if (draft.templateFiles?.length ?? 0) > 0}
+          <kefine-file-list data-template-files="true">
+            {#each draft.templateFiles ?? [] as file (`template-${file.id}`)}
+              <lefine-box data-part="template-file-pill">
+                <lefine-text>{file.name}</lefine-text>
+                <strong>{Math.max(1, Math.round((file.size ?? 1024) / 1024))} KB</strong>
+              </lefine-box>
+            {/each}
+          </kefine-file-list>
+        {/if}
+
+        {#if draft.files.length > 0}
+          <kefine-file-list>
+            {#each draft.files as file, index (`${file.name}-${file.size}-${index}`)}
+              <button type="button" data-part="file-pill" onmousedown={keepComposerFocus} onclick={() => onRemoveFile(index)}>
+                {#if isImageFile(file) && filePreviews.has(index)}
+                  <lefine-box data-part="file-preview-wrapper">
+                    <img
+                      src={filePreviews.get(index)}
+                      alt={file.name}
+                      data-part="file-preview"
+                    />
+                  </lefine-box>
+                {/if}
+                <lefine-text>{file.name}</lefine-text>
+                <strong>{Math.max(1, Math.round(file.size / 1024))} KB</strong>
+              </button>
+            {/each}
+          </kefine-file-list>
+        {/if}
+      </kefine-input-meta>
+    {/if}
+
+    <input bind:this={fileInput} data-part="file-input" type="file" multiple onchange={handleFileChange} />
+    <p id="kefine-composer-hints" data-part="composer-hints" hidden>{composerHints}</p>
   {/if}
-
-  <input bind:this={fileInput} data-part="file-input" type="file" multiple onchange={handleFileChange} />
-  <p id="kefine-composer-hints" data-part="composer-hints" hidden>{composerHints}</p>
 
   <!-- Proxy/VPN configuration preview — appears above the task history while typing -->
   <KefineProxyConfigWidget active={proxyIntentActive} />
@@ -1768,9 +1855,10 @@ initialized = true;
   <!-- Extracted-music preview — appears when the draft reads like "extract audio from video" -->
   <KefineMusicWidget active={musicIntentActive} />
 
-  <!-- Persistent task history on main page (same data as in profile) -->
-  {#if (solverSearchActive && solverSearchText?.trim()) || (searchRevealed && recentOrders.length > 0)}
-    <section data-part="tasks-list" data-entrance={!listEntranceDone}>
+  {#if showTaskHistory}
+    <!-- Persistent task history on main page (same data as in profile) -->
+    {#if (solverSearchActive && solverSearchText?.trim()) || (searchRevealed && recentOrders.length > 0)}
+      <section data-part="tasks-list" data-entrance={!listEntranceDone}>
       {#if solverSearchActive && solverSearchText?.trim() && !activeSearchDuplicate}
         <kefine-task-history-item
           data-testid="kefine-solver-search-row"
@@ -1916,41 +2004,63 @@ initialized = true;
           </kefine-task-history-actions>
         </kefine-task-history-item>
       {/each}
-    </section>
+      </section>
+    {/if}
   {/if}
 
-  {#if isSearching && sortedMatchedOrders.length > 0}
-    <section data-part="recent" aria-label={isSearching ? matchedTasksLabel : solverLabel}>
-      <kefine-recent-title>{matchedTasksLabel}</kefine-recent-title>
-      <ul data-part="recent-list" data-compact="true" data-testid="kefine-search-results">
-        {#each sortedMatchedOrders as order, i (order.id)}
-          <li transition:taskDropIn={{ delay: i * 78 }} style="list-style:none;">
-            <KefineOrderListItem
-              {order}
-              {openTaskLabel}
-              {relatedItemsLabel}
-              {createServiceLabel}
-              {serviceVariablesLabel}
-              {deleteTaskLabel}
-              showCreateService={false}
-              showDelete={true}
-              searchQuery={draft.description}
-              itemTestId={`kefine-search-order-${order.id}`}
-              openTestId={`kefine-open-search-order-${order.id}`}
-              deleteTestId={`kefine-delete-search-order-${order.id}`}
-              onOpen={() => onOpenOrder(order)}
-              onCreateService={(event) => onCreateServiceFromOrder?.(order, event)}
-              onOpenKeydown={(event) => handleOpenOrderKeydown(order, event)}
-              onDelete={(event) => handleDeleteClick(order, event)}
-            />
-          </li>
-        {/each}
-      </ul>
+  {#if isSearching && (sortedMatchedOrders.length > 0 || searchMode)}
+    <section
+      data-part="recent"
+      data-testid={searchMode ? 'kefine-search-page-results' : null}
+      data-mode={searchMode}
+      aria-label={isSearching ? matchedTasksLabel : solverLabel}
+    >
+      {#if !searchMode}
+        <kefine-recent-title>{matchedTasksLabel}</kefine-recent-title>
+      {/if}
+      {#if sortedMatchedOrders.length > 0}
+        <ul data-part="recent-list" data-compact="true" data-testid="kefine-search-results">
+          {#each sortedMatchedOrders as order, i (order.id)}
+            <li transition:taskDropIn={{ delay: i * 78 }} style="list-style:none;">
+              <KefineOrderListItem
+                {order}
+                {openTaskLabel}
+                {relatedItemsLabel}
+                {createServiceLabel}
+                {serviceVariablesLabel}
+                {deleteTaskLabel}
+                showCreateService={false}
+                showDelete={true}
+                compact={Boolean(searchMode)}
+                searchQuery={draft.description}
+                itemTestId={`kefine-search-order-${order.id}`}
+                openTestId={`kefine-open-search-order-${order.id}`}
+                deleteTestId={`kefine-delete-search-order-${order.id}`}
+                onOpen={() => onOpenOrder(order)}
+                onCreateService={(event) => onCreateServiceFromOrder?.(order, event)}
+                onOpenKeydown={(event) => handleOpenOrderKeydown(order, event)}
+                onDelete={(event) => handleDeleteClick(order, event)}
+              />
+            </li>
+          {/each}
+        </ul>
+      {:else if searchMode}
+        <kefine-search-results-empty
+          data-testid="kefine-search-create-hint"
+          data-variant="create-hint"
+        >
+          <lefine-text>{searchCreateTaskHint(draft.description.trim())}</lefine-text>
+        </kefine-search-results-empty>
+      {:else}
+        <kefine-search-results-empty data-testid="kefine-search-results-empty">
+          <lefine-text>{searchResultsEmptyLabel}</lefine-text>
+        </kefine-search-results-empty>
+      {/if}
     </section>
   {/if}
 </article>
 
-{#if pinnedServices.length > 0}
+{#if showHomeContent && pinnedServices.length > 0}
   <lef-services-showcase>
     <lef-services-head>
       <strong>{pinnedServicesTitle}</strong>
@@ -1979,9 +2089,10 @@ initialized = true;
   </lef-services-showcase>
 {/if}
 
+{#if showHomeContent}
   {#if afeIntroCard}
-   <lef-afe-showcase-heading>{afeIntroCard.title}</lef-afe-showcase-heading>
- {/if}
+    <lef-afe-showcase-heading>{afeIntroCard.title}</lef-afe-showcase-heading>
+  {/if}
 
 <lef-afe-showcase>
   <lef-afe-layout>
@@ -2052,6 +2163,7 @@ initialized = true;
     </lef-afe-steps>
   </lef-afe-layout>
 </lef-afe-showcase>
+{/if}
 
 <style>
   @keyframes kefine-task-drop-in {
@@ -3846,6 +3958,12 @@ initialized = true;
     box-shadow: none;
   }
 
+  kefine-search-page-input-shell {
+    display: block;
+    min-width: 0;
+    width: 100%;
+  }
+
   kefine-task-shell {
     margin: 0;
     display: grid;
@@ -4250,12 +4368,21 @@ initialized = true;
 
   lefine-text[data-part='instant-name'] {
     font-weight: 600;
-    letter-spacing: -0.01em;
+    letter-spacing: 0;
   }
 
   lefine-text[data-part='instant-url'] {
     color: var(--lefine-text-soft);
     font-size: 0.82rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  lefine-text[data-part='instant-description'] {
+    color: color-mix(in oklab, var(--lefine-text) 66%, transparent);
+    font-size: 0.78rem;
+    line-height: 1.32;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -4464,6 +4591,28 @@ initialized = true;
 
   ul[data-part='recent-list'][data-compact='true'] {
     gap: 0.42rem;
+  }
+
+  kefine-search-results-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 9rem;
+    padding: 1.2rem;
+    border: 1px solid color-mix(in oklab, var(--kef-line) 70%, transparent);
+    border-radius: 0.42rem;
+    background: color-mix(in oklab, var(--kef-bg-card) 86%, transparent);
+    color: color-mix(in oklab, var(--lefine-text-soft) 86%, transparent);
+    font-size: 0.95rem;
+    font-weight: 620;
+    text-align: center;
+  }
+
+  kefine-search-results-empty[data-variant='create-hint'] {
+    border-style: dashed;
+    border-color: color-mix(in oklab, var(--kef-primary) 42%, var(--kef-line));
+    background: color-mix(in oklab, var(--kef-primary) 6%, var(--kef-bg-card));
+    color: color-mix(in oklab, var(--lefine-text) 80%, transparent);
   }
 
   lef-services-showcase {

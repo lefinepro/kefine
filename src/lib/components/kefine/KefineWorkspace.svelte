@@ -96,28 +96,53 @@
   const THEME_STORAGE_KEY = 'kefine-theme';
   const BRAND_HOME_NAVIGATION_STORAGE_KEY = 'kefine-brand-home-navigation';
   const CLONE_DRAFT_STORAGE_KEY = 'kefine-clone-draft-v1';
+  type KefineSearchPageMode = 'anonymous' | 'saved';
 
   let {
     initialActorHandle,
     initialOrderId,
-    initialWidget = null
+    initialWidget = null,
+    initialSearchQuery = '',
+    initialSearchMode = null
   }: {
     initialActorHandle?: string;
     initialOrderId?: string;
     initialWidget?: KefineSearchWidgetId | null;
+    initialSearchQuery?: string;
+    initialSearchMode?: KefineSearchPageMode | null;
   } = $props();
   const localeText = $derived($kefineLocaleText);
-  // Latch the `?q=` deep link: the URL-sync effect below strips search params from
-  // the address bar, so we capture the query as soon as it appears and keep it so
-  // the command palette can surface it. Initialised from the mount URL (full page
-  // load) and updated by the effect (client-side navigation). Declared before the
-  // URL-sync effect so it wins the flush ordering when both react to a navigation.
-  let latchedDeepLinkSearchQuery = $state(page.url.searchParams.get('q') ?? '');
+  // Latch `?q=` before URL sync runs: search pages keep it in the address bar and
+  // seed the result query, while non-search routes can still hand it to the command
+  // palette before canonical task/profile URLs drop search params.
+  function readInitialSearchPageQuery() {
+    return initialSearchQuery || page.url.searchParams.get('q') || '';
+  }
+
+  const initialSearchPageQuery = readInitialSearchPageQuery();
+  let latchedSearchPageQuery = $state(initialSearchPageQuery);
+  let latchedDeepLinkSearchQuery = $state(initialSearchPageQuery);
+  let searchPageUrlHasQuery = $state(Boolean(initialSearchPageQuery.trim()));
   $effect(() => {
     const query = page.url.searchParams.get('q') ?? '';
     if (query) {
+      latchedSearchPageQuery = query;
       latchedDeepLinkSearchQuery = query;
+      searchPageUrlHasQuery = true;
+    } else {
+      searchPageUrlHasQuery = false;
     }
+  });
+  const searchPageMode = $derived.by((): KefineSearchPageMode | null => {
+    if (!searchPageUrlHasQuery) {
+      return null;
+    }
+
+    if (initialSearchMode === 'saved' || initialSearchMode === 'anonymous') {
+      return initialSearchMode;
+    }
+
+    return getNormalizedInitialActorHandle() ? 'saved' : 'anonymous';
   });
 
   // `replaceState` throws ("before router is initialized") if called during the
@@ -327,6 +352,9 @@
   let PasskeyDialogComponent = $state<LazyComponent | null>(null);
   let PrivateKeyDialogComponent = $state<LazyComponent | null>(null);
   let EmailCodeDialogComponent = $state<LazyComponent | null>(null);
+  let appliedSearchPageDraftQuery = $state('');
+  let hasAppliedSearchPageDraftQuery = $state(false);
+  let searchInputFocusRequest = $state(0);
   let appliedDeepLinkTask = $state('');
 
   $effect(() => {
@@ -441,6 +469,31 @@
   const resolvedTheme = $derived(themeMode === 'auto' ? (systemPrefersDark ? 'dark' : 'light') : themeMode);
   const isDarkTheme = $derived(resolvedTheme === 'dark');
   const topbarThemeActionLabel = $derived(themeMode === 'auto' ? localeText.topbar.theme.auto : isDarkTheme ? localeText.topbar.theme.dark : localeText.topbar.theme.light);
+
+  $effect(() => {
+    const query = latchedSearchPageQuery.trim();
+    if (!query || step !== 'create') {
+      return;
+    }
+
+    const currentDescription = draft.description.trim();
+    if (currentDescription && currentDescription !== appliedSearchPageDraftQuery) {
+      if (currentDescription === query) {
+        appliedSearchPageDraftQuery = query;
+        hasAppliedSearchPageDraftQuery = true;
+      }
+      return;
+    }
+
+    if (!currentDescription && hasAppliedSearchPageDraftQuery && query === appliedSearchPageDraftQuery) {
+      return;
+    }
+
+    draft.description = latchedSearchPageQuery;
+    appliedSearchPageDraftQuery = query;
+    hasAppliedSearchPageDraftQuery = true;
+  });
+
   const layoutMode = $derived(
     step === 'create' ? 'create' : step === 'executing' || step === 'payment' || step === 'submitting' ? 'flow' : 'default'
   );
@@ -546,6 +599,46 @@
   const profileUrl = $derived(
     currentProfile && browser ? `${window.location.origin}${localizeAppPath(buildProfilePath(currentProfile.primaryHandle), activeLocale)}` : ''
   );
+  const searchPageQuery = $derived.by(() => {
+    const currentQuery = draft.description.trim();
+    if (currentQuery || hasAppliedSearchPageDraftQuery) {
+      return currentQuery;
+    }
+
+    return latchedSearchPageQuery.trim();
+  });
+  const searchPageProfileHandle = $derived(
+    getNormalizedInitialActorHandle() ??
+      currentProfile?.primaryHandle ??
+      runtimeConfig.defaultActor.handle?.trim() ??
+      'staff'
+  );
+  const searchResultsOnly = $derived(searchPageMode === 'saved');
+  const inlineHomeSearchActive = $derived(
+    step === 'create' && !getNormalizedInitialActorHandle() && !getNormalizedInitialOrderId() && !initialWidget
+  );
+  const showTopbarSearch = $derived(!inlineHomeSearchActive);
+  const searchPageMatchedOrders = $derived.by(() => {
+    if (!searchPageMode) {
+      return [];
+    }
+
+    const query = searchPageQuery.trim().toLowerCase();
+    if (!query) {
+      return [];
+    }
+
+    return createdOrders
+      .filter((order) => orderMatchesQuery(order, query))
+      .sort((left, right) => {
+        const leftScore = orderSearchScore(left, query);
+        const rightScore = orderSearchScore(right, query);
+        if (leftScore !== rightScore) {
+          return rightScore - leftScore;
+        }
+        return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
+      });
+  });
   const canSaveCurrentOrderLocally = $derived(
     Boolean(
       currentOrder &&
@@ -567,6 +660,66 @@
         )
       : []
   );
+
+  function buildSearchPageHref(mode: KefineSearchPageMode): string {
+    const basePath =
+      mode === 'saved'
+        ? localizeAppPath(buildProfilePath(searchPageProfileHandle), activeLocale)
+        : buildLocaleHomePath(activeLocale);
+    const query = searchPageQuery.trim();
+    if (!query) {
+      return basePath;
+    }
+
+    const params = new URLSearchParams({ q: query });
+    return `${basePath}?${params.toString()}`;
+  }
+
+  function updateSearchPageQuery(query: string) {
+    latchedSearchPageQuery = query;
+    draft.description = query;
+    appliedSearchPageDraftQuery = query.trim();
+    hasAppliedSearchPageDraftQuery = true;
+  }
+
+  async function focusHomeSearchInput() {
+    if (step !== 'create') {
+      step = 'create';
+      await tick();
+    }
+
+    searchInputFocusRequest += 1;
+  }
+
+  function orderMatchesQuery(order: OrderView, query: string): boolean {
+    return [
+      order.id,
+      order.shareId,
+      order.title,
+      order.description,
+      order.solver,
+      order.status,
+      order.actorHandle,
+      order.ownerUsername,
+      order.ownerDisplayName
+    ]
+      .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+      .some((value) => value.toLowerCase().includes(query));
+  }
+
+  function orderSearchScore(order: OrderView, query: string): number {
+    const title = order.title.toLowerCase();
+    const description = order.description.toLowerCase();
+    if (title === query) return 100;
+    if (title.startsWith(query)) return 70;
+    if (title.includes(query)) return 45;
+    if (description.includes(query)) return 30;
+    if (order.solver.toLowerCase().includes(query)) return 18;
+    if (order.status.toLowerCase().includes(query)) return 10;
+    if (order.id.toLowerCase().includes(query) || order.shareId?.toLowerCase().includes(query)) return 6;
+    return 1;
+  }
+
   const RECENT_ORDERS_LIMIT = 10;
   const recentProfileOrders = $derived.by(() => {
     const profile = currentProfile;
@@ -1162,6 +1315,19 @@
     const actorHandle =
       currentOrder?.actorHandle?.trim() ||
       getRouteActorHandleFallback();
+
+    if (searchPageMode && step === 'create') {
+      const searchUrl = new URL(buildSearchPageHref(searchPageMode), window.location.origin);
+      nextUrl.pathname = searchUrl.pathname;
+      nextUrl.search = searchUrl.search;
+      nextUrl.hash = '';
+
+      if (window.location.href !== nextUrl.toString()) {
+        safeReplaceState(nextUrl, page.state);
+      }
+      searchPageUrlHasQuery = Boolean(searchPageQuery.trim());
+      return;
+    }
 
     if (orderRouteId && actorHandle) {
       nextUrl.pathname = localizeAppPath(buildActorOrderPath(actorHandle, orderRouteId), activeLocale);
@@ -2256,6 +2422,34 @@
     });
   }
 
+  function handleSearchSubmit() {
+    const normalized = normalizeDraftOrder(draft, localeText);
+
+    if (!normalized.description.trim() && !normalized.title.trim()) {
+      return;
+    }
+
+    const submittedSearchText = normalized.description.trim() || normalized.title.trim() || localeText.defaults.taskTitle;
+    solverSearchText = submittedSearchText;
+    solverSearchActive = true;
+    draft = createEmptyDraft();
+
+    // Foreground submit: pressing Enter on a search page creates the task and
+    // immediately opens the executing screen so the run starts in view.
+    void submitDraft(normalized).then((created) => {
+      if (!created) {
+        if (!draft.description.trim()) {
+          draft = normalized;
+        }
+
+        if (solverSearchText === submittedSearchText) {
+          solverSearchActive = false;
+          solverSearchText = '';
+        }
+      }
+    });
+  }
+
   async function queueTaskBelow() {
     const normalized = normalizeDraftOrder(draft, localeText);
 
@@ -2858,8 +3052,10 @@
   searchMusicLabel={localeText.topbar.searchMusicLabel}
   searchWidgetBackLabel={localeText.topbar.searchWidgetBackLabel}
   searchHomeHref={buildLocaleHomePath(activeLocale)}
+  showSearch={showTopbarSearch}
   searchItems={topbarSearchItems}
-  initialSearchQuery={latchedDeepLinkSearchQuery}
+  initialSearchQuery={latchedSearchPageQuery ? '' : latchedDeepLinkSearchQuery}
+  searchDefaultQuery={searchPageMode ? searchPageQuery : ''}
   initialWidget={initialWidget}
   socialLinks={sidebarSocialLinks}
   showSocialLinks={false}
@@ -2873,15 +3069,17 @@
     }
   }}
   onThemeChange={(theme) => { themeMode = theme; }}
+  onSearchQueryChange={searchResultsOnly ? updateSearchPageQuery : undefined}
   onAuth={selectTopbarAuth}
   onOpenProfile={openTopbarProfile}
   onSignOut={() => { void signOutProfileSession(); }}
-   onAuthDoubleClick={() => { void openTopbarProfileSetup(); }}
-   onLocale={selectTopbarLocale}
+  onAuthDoubleClick={() => { void openTopbarProfileSetup(); }}
+  onSearchTrigger={inlineHomeSearchActive ? focusHomeSearchInput : undefined}
+  onLocale={selectTopbarLocale}
 />
 
 <main data-sidebar-expanded={leftNavExpanded}>
-  <kefine-layout data-mode={layoutMode} data-step={step}>
+  <kefine-layout data-mode={layoutMode} data-step={step} data-search-page={searchPageMode ?? null}>
     <section class="kefine-window-grid">
     {#if craterHealthState === 'failed'}
       <kefine-screen in:softScreenTransition out:softScreenTransition>
@@ -2921,7 +3119,7 @@
           solverSearchLabel={localeText.create.solverSearchLabel}
           solverSearchCompletedLabel={localeText.create.solverSearchCompleted}
           solverLabel={localeText.labels.solver}
-          matchedOrders={matchedOrders}
+          matchedOrders={searchPageMode ? searchPageMatchedOrders : matchedOrders}
           isSearching={draft.description.trim().length > 0}
           matchedTasksLabel={localeText.create.matchedTasks}
           recentTasksLabel={localeText.labels.taskQueue}
@@ -2944,12 +3142,18 @@
           composerHints={localeText.create.composerHints}
           openTaskLabel={localeText.labels.openOrderLink}
           relatedItemsLabel={localeText.labels.relatedItems}
+          searchResultsOnly={searchResultsOnly}
+          searchFocusRequest={searchInputFocusRequest}
+          searchResultsEmptyLabel={localeText.topbar.searchEmptyLabel}
+          searchCreateTaskHint={localeText.create.searchCreateTaskHint}
+          searchMode={searchPageMode}
           createServiceLabel={localeText.create.transformToService}
           serviceVariablesLabel={localeText.create.serviceVariables}
           executionEstimateLabel={localeText.labels.executionEstimate}
           stopTaskLabel={localeText.buttons.stopTask}
           deleteTaskLabel={localeText.buttons.delete}
           onSubmit={handleSubmit}
+          onSearchSubmit={handleSearchSubmit}
           onQueueTask={queueTaskBelow}
           onAttachFiles={attachFiles}
           onRemoveFile={removeAttachedFile}
@@ -3338,6 +3542,10 @@
     padding-bottom: clamp(2rem, 6vh, 4rem);
   }
 
+  kefine-layout[data-mode='create'][data-search-page] {
+    padding-top: clamp(4.35rem, 8vh, 5.75rem);
+  }
+
   kefine-layout[data-mode='flow'] {
     width: min(1100px, 100%);
     padding-top: clamp(3.5rem, 8vh, 5.5rem);
@@ -3412,6 +3620,10 @@
       min-height: auto;
       width: min(980px, 100%);
       padding-top: 6rem;
+    }
+
+    kefine-layout[data-mode='create'][data-search-page] {
+      padding-top: 5.25rem;
     }
 
     main[data-sidebar-expanded='true'] kefine-layout[data-mode='create'] {

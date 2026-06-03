@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { gotoAndWaitForReady, mockOrderApi } from './helpers/kefine';
+import { createTask, gotoAndWaitForReady, mockOrderApi } from './helpers/kefine';
 
 test.describe('Topbar search', () => {
   test('home screen keeps the sidebar focused on brand and legal links', async ({ page }) => {
@@ -18,10 +18,8 @@ test.describe('Topbar search', () => {
     await mockOrderApi(page);
     await gotoAndWaitForReady(page);
 
-    await page.getByTestId('kefine-task-input').fill('Need Redis backup script');
-    await page.getByTestId('kefine-task-input').press('Shift+Enter');
-
-    await expect(page.locator('[data-order-id="order-1"]')).toBeVisible();
+    await createTask(page, 'Need Redis backup script');
+    await expect(page).toHaveURL(/\/order-1$/);
 
     await page.getByTestId('kefine-topbar-search-trigger').click();
     await expect(page.getByTestId('kefine-topbar-search-dialog')).toBeVisible();
@@ -40,6 +38,8 @@ test.describe('Topbar search', () => {
   test('surfaces developed widgets inline from the command palette', async ({ page }) => {
     await mockOrderApi(page);
     await gotoAndWaitForReady(page);
+    await createTask(page, 'Open widget command palette');
+    await expect(page).toHaveURL(/\/order-1$/);
 
     await page.getByTestId('kefine-topbar-search-trigger').click();
     await expect(page.getByTestId('kefine-topbar-search-dialog')).toBeVisible();

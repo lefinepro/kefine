@@ -139,6 +139,11 @@ export const KEFINE_TEXT_RU = {
     addExecutionEstimate: '+ срок',
     fileCount: (count: number) => `${count} файл${count === 1 ? '' : count < 5 ? 'а' : 'ов'}`,
     composerHints: 'Enter отправляет, Alt+Enter ставит в фон, Shift+Enter делает новую строку',
+    searchModeAnonymous: 'Анонимный поиск',
+    searchModeSaved: 'Сохранённый поиск',
+    searchModeSave: 'Сохранить поиск',
+    searchModeAnonymousAction: 'Сделать анонимным',
+    searchModeOpenPage: 'Открыть страницу поиска',
     richEditorDescription: 'Ctrl+Enter открывает полноценный ProseKit-редактор для длинного технического описания.',
     richEditorVisual: 'Визуально',
     richEditorSource: 'Org',
@@ -171,7 +176,11 @@ export const KEFINE_TEXT_RU = {
     pathPaymentLabel: 'Оплата:',
     noRecentTasks: 'Сохранённых repos пока нет',
     matchedTasks: 'Найденные завершённые repos',
-    noMatchedTasks: 'По этому запросу завершённые repos не найдены'
+    noMatchedTasks: 'По этому запросу завершённые repos не найдены',
+    searchCreateTaskHint: (query: string) =>
+      query
+        ? `Нажмите Enter, чтобы создать задачу «${query}» и сразу запустить её выполнение`
+        : 'Нажмите Enter, чтобы создать задачу и сразу запустить её выполнение'
   },
   proxyWidget: {
     title: 'Прокси-сервер готов',

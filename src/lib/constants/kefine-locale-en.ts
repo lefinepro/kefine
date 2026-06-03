@@ -139,6 +139,11 @@ export const KEFINE_TEXT_EN = {
     addExecutionEstimate: '+ ETA',
     fileCount: (count: number) => `${count} file${count === 1 ? '' : 's'}`,
     composerHints: 'Enter to send, Alt+Enter to queue, Shift+Enter for a new line',
+    searchModeAnonymous: 'Anonymous search',
+    searchModeSaved: 'Saved search',
+    searchModeSave: 'Save search',
+    searchModeAnonymousAction: 'Make anonymous',
+    searchModeOpenPage: 'Open search page',
     richEditorDescription: 'Ctrl+Enter opens a full ProseKit editor for longer technical briefs.',
     richEditorVisual: 'Visual',
     richEditorSource: 'Org',
@@ -171,7 +176,11 @@ export const KEFINE_TEXT_EN = {
     pathPaymentLabel: 'Payment:',
     noRecentTasks: 'No saved repos yet',
     matchedTasks: 'Resolved repos',
-    noMatchedTasks: 'No resolved repos match this query yet'
+    noMatchedTasks: 'No resolved repos match this query yet',
+    searchCreateTaskHint: (query: string) =>
+      query
+        ? `Press Enter to create a task for “${query}” and start executing it`
+        : 'Press Enter to create a task and start executing it'
   },
   proxyWidget: {
     title: 'Proxy server ready',

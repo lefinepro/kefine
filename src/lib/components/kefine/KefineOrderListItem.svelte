@@ -17,6 +17,7 @@
     showStop = false,
     showDelete = false,
     showCreateService = false,
+    compact = false,
     searchQuery = '',
     onOpen,
     onCreateService,
@@ -42,6 +43,7 @@
     showStop?: boolean;
     showDelete?: boolean;
     showCreateService?: boolean;
+    compact?: boolean;
     searchQuery?: string;
     onOpen: () => void;
     onCreateService?: (event: MouseEvent) => void;
@@ -54,11 +56,25 @@
     onStopPointerCancel?: () => void;
   } = $props();
 
+  function escapeHtml(text: string): string {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   function highlightText(text: string, query: string): string {
-    if (!query.trim()) return text;
+    const escapedText = escapeHtml(text);
+    if (!query.trim()) return escapedText;
     const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const regex = new RegExp(`(${escaped})`, 'gi');
-    return text.replace(regex, '<mark style="background:color-mix(in oklab, var(--kef-color-primary, #c89a5a) 35%, transparent); color:inherit; border-radius:2px; padding:0 1px;">$1</mark>');
+    return escapedText.replace(regex, '<mark style="background:color-mix(in oklab, var(--kef-color-primary, #c89a5a) 35%, transparent); color:inherit; border-radius:2px; padding:0 1px;">$1</mark>');
+  }
+
+  function normalizeSnippet(text: string | undefined): string {
+    return (text ?? '').replace(/\s+/g, ' ').trim();
   }
 
   function formatTemplateVariableLabel(key: string): string {
@@ -74,6 +90,7 @@
   const hasServiceVariables = $derived((order.templateVariables?.length ?? 0) > 0);
   const hasExpandedSections = $derived(hasLabels || hasServiceVariables);
   const canMakeTemplate = $derived(order.status === 'completed' || order.status === 'done');
+  const orderSnippet = $derived(normalizeSnippet(order.description));
 </script>
 
 <li>
@@ -82,6 +99,7 @@
     data-order-id={order.id}
     data-status={order.status}
     data-has-sections={hasExpandedSections}
+    data-compact={compact}
   >
     <summary ondblclick={onOpen}>
       <kefine-order-row>
@@ -95,6 +113,11 @@
 
         <kefine-order-copy>
           <kefine-order-title>{@html highlightText(order.title ?? '', searchQuery)}</kefine-order-title>
+          {#if orderSnippet}
+            <kefine-order-snippet data-testid={`kefine-order-snippet-${order.id}`}>
+              {@html highlightText(orderSnippet, searchQuery)}
+            </kefine-order-snippet>
+          {/if}
         </kefine-order-copy>
       </kefine-order-row>
     </summary>
@@ -279,6 +302,18 @@
     overflow-wrap: anywhere;
   }
 
+  kefine-order-snippet {
+    display: -webkit-box;
+    color: color-mix(in oklab, var(--lefine-text) 66%, transparent);
+    font-size: 0.86rem;
+    line-height: 1.35;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    line-clamp: 2;
+    -webkit-line-clamp: 2;
+  }
+
   kefine-order-disclosure {
     display: inline-grid;
     place-items: center;
@@ -365,6 +400,55 @@
     gap: 0.5rem;
   }
 
+  li > details[data-compact='true'] kefine-order-row {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.52rem;
+    padding: 0.58rem 0;
+  }
+
+  li > details[data-compact='true'] kefine-order-disclosure {
+    display: none;
+  }
+
+  li > details[data-compact='true'] kefine-order-copy {
+    display: flex;
+    align-items: center;
+    gap: 0.42rem;
+    min-width: 0;
+    white-space: nowrap;
+  }
+
+  li > details[data-compact='true'] kefine-order-title,
+  li > details[data-compact='true'] kefine-order-snippet {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    overflow-wrap: normal;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  li > details[data-compact='true'] kefine-order-title {
+    flex: 0 1 auto;
+    max-width: 46%;
+  }
+
+  li > details[data-compact='true'] kefine-order-snippet {
+    flex: 1 1 auto;
+    -webkit-box-orient: initial;
+    line-clamp: unset;
+    -webkit-line-clamp: unset;
+  }
+
+  li > details[data-compact='true'] kefine-order-snippet::before {
+    content: '- ';
+    color: color-mix(in oklab, var(--lefine-text) 38%, transparent);
+  }
+
+  li > details[data-compact='true'] kefine-order-panel {
+    padding-inline: 0;
+  }
+
   kefine-order-sections details {
     border-radius: 0.7rem;
     border-color: color-mix(in oklab, var(--kef-line) 32%, transparent);
@@ -428,6 +512,10 @@
   @media (max-width: 760px) {
     kefine-order-row {
       grid-template-columns: auto auto minmax(0, 1fr);
+    }
+
+    li > details[data-compact='true'] kefine-order-title {
+      max-width: 52%;
     }
 
     kefine-order-detail-row {
