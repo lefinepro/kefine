@@ -17,6 +17,7 @@
     showStop = false,
     showDelete = false,
     showCreateService = false,
+    compact = false,
     searchQuery = '',
     onOpen,
     onCreateService,
@@ -42,6 +43,7 @@
     showStop?: boolean;
     showDelete?: boolean;
     showCreateService?: boolean;
+    compact?: boolean;
     searchQuery?: string;
     onOpen: () => void;
     onCreateService?: (event: MouseEvent) => void;
@@ -97,6 +99,7 @@
     data-order-id={order.id}
     data-status={order.status}
     data-has-sections={hasExpandedSections}
+    data-compact={compact}
   >
     <summary ondblclick={onOpen}>
       <kefine-order-row>
@@ -397,6 +400,55 @@
     gap: 0.5rem;
   }
 
+  li > details[data-compact='true'] kefine-order-row {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.52rem;
+    padding: 0.58rem 0;
+  }
+
+  li > details[data-compact='true'] kefine-order-disclosure {
+    display: none;
+  }
+
+  li > details[data-compact='true'] kefine-order-copy {
+    display: flex;
+    align-items: center;
+    gap: 0.42rem;
+    min-width: 0;
+    white-space: nowrap;
+  }
+
+  li > details[data-compact='true'] kefine-order-title,
+  li > details[data-compact='true'] kefine-order-snippet {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    overflow-wrap: normal;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  li > details[data-compact='true'] kefine-order-title {
+    flex: 0 1 auto;
+    max-width: 46%;
+  }
+
+  li > details[data-compact='true'] kefine-order-snippet {
+    flex: 1 1 auto;
+    -webkit-box-orient: initial;
+    line-clamp: unset;
+    -webkit-line-clamp: unset;
+  }
+
+  li > details[data-compact='true'] kefine-order-snippet::before {
+    content: '- ';
+    color: color-mix(in oklab, var(--lefine-text) 38%, transparent);
+  }
+
+  li > details[data-compact='true'] kefine-order-panel {
+    padding-inline: 0;
+  }
+
   kefine-order-sections details {
     border-radius: 0.7rem;
     border-color: color-mix(in oklab, var(--kef-line) 32%, transparent);
@@ -460,6 +512,10 @@
   @media (max-width: 760px) {
     kefine-order-row {
       grid-template-columns: auto auto minmax(0, 1fr);
+    }
+
+    li > details[data-compact='true'] kefine-order-title {
+      max-width: 52%;
     }
 
     kefine-order-detail-row {

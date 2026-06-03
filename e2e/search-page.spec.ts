@@ -40,7 +40,7 @@ async function gotoSearchPage(page: Page, path: string) {
 }
 
 test.describe('Search page URLs', () => {
-  test('opens root query as anonymous results controlled by the centered search', async ({ page }) => {
+  test('opens root query as anonymous results controlled by the page search', async ({ page }) => {
     await mockOrderApi(page);
     await gotoSearchPage(page, '/?q=redis%20backup');
 
@@ -53,9 +53,20 @@ test.describe('Search page URLs', () => {
     );
     await expect(page.getByTestId('kefine-search-order-order-redis')).toContainText('Redis backup script');
     await expect(page.getByTestId('kefine-order-snippet-order-redis')).toContainText('Automate Redis snapshots');
-    await expect(page.getByTestId('kefine-search-save-link')).toBeVisible();
+    await expect(page.getByTestId('kefine-search-page-mode')).toHaveCount(0);
+    await expect(page.getByTestId('kefine-search-save-link')).toHaveCount(0);
+    await expect(page.getByTestId('kefine-search-open-page')).toHaveCount(0);
+    await expect(page.getByText('Resolved repos')).toHaveCount(0);
     await expect(page.getByTestId('kefine-topbar-search-trigger')).toHaveCount(0);
     await expect(page.getByTestId('kefine-topbar-search-dialog')).toHaveCount(0);
+
+    const titleBox = await page.locator('[data-testid="kefine-search-order-order-redis"] kefine-order-title').boundingBox();
+    const snippetBox = await page.locator('[data-testid="kefine-search-order-order-redis"] kefine-order-snippet').boundingBox();
+    expect(titleBox).not.toBeNull();
+    expect(snippetBox).not.toBeNull();
+    const titleCenterY = (titleBox?.y ?? 0) + (titleBox?.height ?? 0) / 2;
+    const snippetCenterY = (snippetBox?.y ?? 0) + (snippetBox?.height ?? 0) / 2;
+    expect(Math.abs(titleCenterY - snippetCenterY)).toBeLessThan(4);
 
     await page.getByTestId('kefine-search-page-input').fill('postgres restore');
     await expect(page).toHaveURL(/\/\?q=postgres\+restore$/);
@@ -71,7 +82,10 @@ test.describe('Search page URLs', () => {
     await expect(page.getByTestId('kefine-search-page-results')).toHaveAttribute('data-mode', 'saved');
     await expect(page.getByTestId('kefine-search-order-order-ci')).toContainText('CI rollback checklist');
     await expect(page.getByTestId('kefine-order-snippet-order-ci')).toContainText('Rollback failed deploys');
-    await expect(page.getByTestId('kefine-search-anonymous-link')).toBeVisible();
+    await expect(page.getByTestId('kefine-search-page-mode')).toHaveCount(0);
+    await expect(page.getByTestId('kefine-search-anonymous-link')).toHaveCount(0);
+    await expect(page.getByTestId('kefine-search-open-page')).toHaveCount(0);
+    await expect(page.getByText('Resolved repos')).toHaveCount(0);
     await expect(page).toHaveURL(/\/@staff\?q=ci\+rollback$/);
 
     await page.getByTestId('kefine-topbar-search-trigger').click();

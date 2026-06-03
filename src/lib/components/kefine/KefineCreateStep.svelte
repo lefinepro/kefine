@@ -107,13 +107,6 @@
     searchFocusRequest = 0,
     searchResultsEmptyLabel = 'No matching results',
     searchMode = null,
-    searchModeAnonymousLabel = 'Anonymous search',
-    searchModeSavedLabel = 'Saved search',
-    searchModeSaveLabel = 'Save search',
-    searchModeAnonymousActionLabel = 'Make anonymous',
-    searchModeOpenPageLabel = 'Open search page',
-    searchModeHref = '',
-    searchModeAlternateHref = '',
     createServiceLabel = 'Transform to service',
     serviceVariablesLabel = 'Service variables',
     stopTaskLabel = 'Stop repo',
@@ -203,13 +196,6 @@
     searchFocusRequest?: number;
     searchResultsEmptyLabel?: string;
     searchMode?: SearchPageMode | null;
-    searchModeAnonymousLabel?: string;
-    searchModeSavedLabel?: string;
-    searchModeSaveLabel?: string;
-    searchModeAnonymousActionLabel?: string;
-    searchModeOpenPageLabel?: string;
-    searchModeHref?: string;
-    searchModeAlternateHref?: string;
     createServiceLabel?: string;
     serviceVariablesLabel?: string;
     stopTaskLabel?: string;
@@ -1583,31 +1569,6 @@ initialized = true;
     </kefine-search-page-input-shell>
   {/if}
 
-  {#if searchMode}
-    <kefine-search-mode-strip
-      data-testid="kefine-search-page-mode"
-      data-mode={searchMode}
-      aria-label={searchMode === 'saved' ? searchModeSavedLabel : searchModeAnonymousLabel}
-    >
-      <lefine-text>{searchMode === 'saved' ? searchModeSavedLabel : searchModeAnonymousLabel}</lefine-text>
-      <kefine-search-mode-actions>
-        {#if searchModeAlternateHref}
-          <a
-            data-testid={searchMode === 'saved' ? 'kefine-search-anonymous-link' : 'kefine-search-save-link'}
-            href={searchModeAlternateHref}
-          >
-            {searchMode === 'saved' ? searchModeAnonymousActionLabel : searchModeSaveLabel}
-          </a>
-        {/if}
-        {#if searchModeHref}
-          <a data-testid="kefine-search-open-page" href={searchModeHref} target="_blank" rel="noreferrer">
-            {searchModeOpenPageLabel}
-          </a>
-        {/if}
-      </kefine-search-mode-actions>
-    </kefine-search-mode-strip>
-  {/if}
-
   {#if pinnedAnswers.length > 0}
     <kefine-pinned-strip data-part="pinned-strip" aria-label={instantPinnedLabel}>
       {#each pinnedAnswers as site (site.url)}
@@ -2033,7 +1994,9 @@ initialized = true;
       data-mode={searchMode}
       aria-label={isSearching ? matchedTasksLabel : solverLabel}
     >
-      <kefine-recent-title>{matchedTasksLabel}</kefine-recent-title>
+      {#if !searchMode}
+        <kefine-recent-title>{matchedTasksLabel}</kefine-recent-title>
+      {/if}
       {#if sortedMatchedOrders.length > 0}
         <ul data-part="recent-list" data-compact="true" data-testid="kefine-search-results">
           {#each sortedMatchedOrders as order, i (order.id)}
@@ -2047,6 +2010,7 @@ initialized = true;
                 {deleteTaskLabel}
                 showCreateService={false}
                 showDelete={true}
+                compact={Boolean(searchMode)}
                 searchQuery={draft.description}
                 itemTestId={`kefine-search-order-${order.id}`}
                 openTestId={`kefine-open-search-order-${order.id}`}
@@ -3972,60 +3936,6 @@ initialized = true;
     width: 100%;
   }
 
-  kefine-search-mode-strip {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.65rem;
-    min-width: 0;
-    margin: -0.15rem 0 0.2rem;
-    padding: 0 0.32rem;
-  }
-
-  kefine-search-mode-strip > lefine-text {
-    min-width: 0;
-    color: color-mix(in oklab, var(--lefine-text) 68%, transparent);
-    font-size: 0.82rem;
-    font-weight: 650;
-    line-height: 1.25;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  kefine-search-mode-actions {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 0.38rem;
-    flex: 0 0 auto;
-  }
-
-  kefine-search-mode-actions a {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 1.86rem;
-    max-width: 12rem;
-    padding: 0.32rem 0.58rem;
-    border: 1px solid color-mix(in oklab, var(--kef-primary) 20%, var(--kef-border));
-    border-radius: 0.34rem;
-    color: color-mix(in oklab, var(--lefine-text) 86%, var(--kef-primary));
-    background: color-mix(in oklab, var(--kef-bg-card) 80%, transparent);
-    font-size: 0.78rem;
-    font-weight: 700;
-    line-height: 1;
-    text-decoration: none;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  kefine-search-mode-actions a:hover {
-    border-color: color-mix(in oklab, var(--kef-primary) 42%, var(--kef-border));
-    background: color-mix(in oklab, var(--kef-primary) 10%, var(--kef-bg-card));
-  }
-
   kefine-task-shell {
     margin: 0;
     display: grid;
@@ -4740,23 +4650,6 @@ initialized = true;
 
     fieldset[data-part='exec-row'] {
       grid-template-columns: minmax(0, 1fr);
-    }
-
-    kefine-search-mode-strip {
-      align-items: stretch;
-      flex-direction: column;
-      gap: 0.45rem;
-      padding: 0;
-    }
-
-    kefine-search-mode-actions {
-      justify-content: stretch;
-      width: 100%;
-    }
-
-    kefine-search-mode-actions a {
-      flex: 1 1 0;
-      max-width: none;
     }
 
     kefine-task-shell {

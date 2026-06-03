@@ -613,10 +613,6 @@
       runtimeConfig.defaultActor.handle?.trim() ??
       'staff'
   );
-  const searchPageHref = $derived(searchPageMode ? buildSearchPageHref(searchPageMode) : '');
-  const searchPageAlternateHref = $derived(
-    searchPageMode ? buildSearchPageHref(searchPageMode === 'saved' ? 'anonymous' : 'saved') : ''
-  );
   const searchResultsOnly = $derived(searchPageMode === 'saved');
   const inlineHomeSearchActive = $derived(
     step === 'create' && !getNormalizedInitialActorHandle() && !getNormalizedInitialOrderId() && !initialWidget
@@ -3055,7 +3051,7 @@
 />
 
 <main data-sidebar-expanded={leftNavExpanded}>
-  <kefine-layout data-mode={layoutMode} data-step={step}>
+  <kefine-layout data-mode={layoutMode} data-step={step} data-search-page={searchPageMode ?? null}>
     <section class="kefine-window-grid">
     {#if craterHealthState === 'failed'}
       <kefine-screen in:softScreenTransition out:softScreenTransition>
@@ -3122,13 +3118,6 @@
           searchFocusRequest={searchInputFocusRequest}
           searchResultsEmptyLabel={localeText.topbar.searchEmptyLabel}
           searchMode={searchPageMode}
-          searchModeAnonymousLabel={localeText.create.searchModeAnonymous}
-          searchModeSavedLabel={localeText.create.searchModeSaved}
-          searchModeSaveLabel={localeText.create.searchModeSave}
-          searchModeAnonymousActionLabel={localeText.create.searchModeAnonymousAction}
-          searchModeOpenPageLabel={localeText.create.searchModeOpenPage}
-          searchModeHref={searchPageHref}
-          searchModeAlternateHref={searchPageAlternateHref}
           createServiceLabel={localeText.create.transformToService}
           serviceVariablesLabel={localeText.create.serviceVariables}
           executionEstimateLabel={localeText.labels.executionEstimate}
@@ -3523,6 +3512,10 @@
     padding-bottom: clamp(2rem, 6vh, 4rem);
   }
 
+  kefine-layout[data-mode='create'][data-search-page] {
+    padding-top: clamp(4.35rem, 8vh, 5.75rem);
+  }
+
   kefine-layout[data-mode='flow'] {
     width: min(1100px, 100%);
     padding-top: clamp(3.5rem, 8vh, 5.5rem);
@@ -3597,6 +3590,10 @@
       min-height: auto;
       width: min(980px, 100%);
       padding-top: 6rem;
+    }
+
+    kefine-layout[data-mode='create'][data-search-page] {
+      padding-top: 5.25rem;
     }
 
     main[data-sidebar-expanded='true'] kefine-layout[data-mode='create'] {
