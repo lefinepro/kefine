@@ -101,7 +101,6 @@ const pages = [
   { file: 'music-widget.png', route: '/@api/music', waitFor: '[data-testid="kefine-music-widget"]' },
   { file: 'task-detail.png', route: '/task/order-1', waitFor: 'body' },
   { file: 'order-detail.png', route: '/order/order-1', waitFor: 'body' },
-  { file: 'profile-task.png', route: '/@api/order-1', waitFor: 'body' },
   { file: 'shared-task.png', route: '/shared/tasks/order-1', waitFor: 'body' },
   {
     file: 'solutions.png',
