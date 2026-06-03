@@ -53,7 +53,11 @@
   const seo = $derived(getSeoMeta(seoUrl, runtimePublicConfig));
   const canonicalUrl = $derived(`${requestOrigin}${seo.canonicalPath}`);
   const imageUrl = $derived(`${requestOrigin}${seo.imagePath}`);
-  const showSharedTopbar = $derived(!ROUTES_WITH_OWN_TOPBAR.has(page.route.id ?? ''));
+  const routeId = $derived(page.route.id ?? '');
+  const isCanonicalSolversRoute = $derived(
+    routeId === '/[handle=at_handle]/[shareId]' && page.url.searchParams.has('task')
+  );
+  const showSharedTopbar = $derived(!ROUTES_WITH_OWN_TOPBAR.has(routeId) || isCanonicalSolversRoute);
   const sidebarSocialLinks = $derived([
     {
       id: 'mastodon' as const,

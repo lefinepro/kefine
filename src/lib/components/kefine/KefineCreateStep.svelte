@@ -949,7 +949,7 @@ initialized = true;
   const searchResultHref = $derived.by(() => {
     const first = matchedOrders[0];
     if (first?.actorHandle && (first.shareId ?? first.id)) {
-      return buildActorOrderPath(first.actorHandle, first.shareId ?? first.id);
+      return withTaskQuery(buildActorOrderPath(first.actorHandle, first.shareId ?? first.id), solverSearchText);
     }
     return `/order/go-proxy?task=${encodeURIComponent(solverSearchText)}`;
   });
@@ -984,8 +984,16 @@ initialized = true;
     return completed && (isGoProxySearch(text) || isRustHelloWorldSearch(text));
   }
 
+  function withTaskQuery(path: string, text: string): string {
+    return `${path}?task=${encodeURIComponent(text)}`;
+  }
+
   function orderSolutionsHref(order: OrderView): string {
-    return `/order/${encodeURIComponent(order.id)}?task=${encodeURIComponent(order.title || solverSearchText)}`;
+    const routeId = order.shareId ?? order.id;
+    const path = order.actorHandle || order.ownerUsername
+      ? buildActorOrderPath(order.actorHandle ?? order.ownerUsername!, routeId)
+      : `/order/${encodeURIComponent(routeId)}`;
+    return withTaskQuery(path, order.title || solverSearchText);
   }
 
   function orderTaskHref(order: OrderView): string {

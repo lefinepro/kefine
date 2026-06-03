@@ -103,7 +103,7 @@ const pages = [
   { file: 'shared-task.png', route: '/shared/tasks/order-1', waitFor: 'body' },
   {
     file: 'solutions.png',
-    route: '/order/order-1?task=Document%20current%20workspace%20pages',
+    route: '/@api/order-1?task=Document%20current%20workspace%20pages',
     waitFor: '[data-testid="solution-list-page"]'
   },
   { file: 'solver-detail.png', route: '/order/order-1/solver/1', waitFor: 'lef-solver-page' },

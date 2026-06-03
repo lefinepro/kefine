@@ -21,7 +21,7 @@ test.describe('New frontend task results', () => {
     await expect(taskRow).toContainText('@kefine/go-proxy');
     await openSolvers.click();
 
-    await expect(page).toHaveURL(/\/order\/order-1/);
+    await expect(page).toHaveURL(/\/@api\/order-1\?task=/);
     await expect(page.getByTestId('solution-list-page')).toBeVisible();
     // The repository name now lives in the header search bar instead of a right-side card.
     await expect(page.getByTestId('kefine-topbar-search-trigger')).toHaveAttribute('data-context', 'project');
@@ -93,7 +93,7 @@ test.describe('New frontend task results', () => {
 
   test('checklist task solver selector shows avatars and lets you choose a variant', async ({ page }) => {
     await mockOrderApi(page);
-    await page.goto('/order/order-1?task=Build%20a%20Go%20mini%20proxy');
+    await page.goto('/@api/order-1?task=Build%20a%20Go%20mini%20proxy');
     await page.waitForLoadState('networkidle');
 
     await expect(page.getByTestId('solution-list-page')).toBeVisible();
