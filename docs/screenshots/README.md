@@ -20,7 +20,6 @@ Set `START_SERVER=0 BASE_URL=http://127.0.0.1:5173` to use an already-running de
 | music-widget.png | `/@api/music` |
 | task-detail.png | `/task/order-1` |
 | order-detail.png | `/order/order-1` |
-| profile task reference | https://raw.githubusercontent.com/lefinepro/kefine/d8d540d9626221e71912f2184119fa9345b7b305/docs/screenshots/issue-122-main-task-list.png |
 | shared-task.png | `/shared/tasks/order-1` |
 | solutions.png | `/order/order-1/solutions?task=Document%20current%20workspace%20pages` |
 | solver-detail.png | `/order/order-1/solver/1` |
