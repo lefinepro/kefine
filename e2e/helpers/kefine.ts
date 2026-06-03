@@ -276,12 +276,21 @@ export async function createTask(page: Page, title: string) {
     }
 
     try {
-      const orders = JSON.parse(raw) as Array<{ id?: string; shareId?: string; title?: string }>;
+      const orders = JSON.parse(raw) as Array<{
+        actorHandle?: string;
+        id?: string;
+        ownerUsername?: string;
+        shareId?: string;
+        title?: string;
+      }>;
       const order = orders.find((item) => {
         const id = item.id ?? '';
         return item.title === taskTitle && id && !id.startsWith('temp-') && !id.startsWith('local-');
       });
-      return order ? (order.shareId || order.id) : null;
+      if (!order) return null;
+      const routeId = order.shareId || order.id;
+      const actorHandle = order.actorHandle || order.ownerUsername || 'api';
+      return routeId ? `/@${actorHandle}/${routeId}` : null;
     } catch {
       return null;
     }
@@ -290,7 +299,7 @@ export async function createTask(page: Page, title: string) {
   if (!routeValue) {
     throw new Error(`Created task "${title}" was not written to local storage.`);
   }
-  await page.goto(`/order/${encodeURIComponent(routeValue)}`);
+  await page.goto(routeValue);
 }
 
 export async function mockPrivateKeyAuth(page: Page) {

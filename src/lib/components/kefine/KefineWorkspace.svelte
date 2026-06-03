@@ -574,8 +574,7 @@
     const isTaskRoute =
       getNormalizedInitialOrderId() !== null ||
       (browser &&
-        (/^\/task\//.test(stripLocalePrefix(window.location.pathname).replace(/\/+$/, '')) ||
-          /^\/@[^/]+\/order\/[^/]+/.test(stripLocalePrefix(window.location.pathname).replace(/\/+$/, ''))));
+        /^\/task\//.test(stripLocalePrefix(window.location.pathname).replace(/\/+$/, '')));
 
     if (isTaskRoute) {
       return title ? `${title} | Lefine` : 'Loading task | Lefine';

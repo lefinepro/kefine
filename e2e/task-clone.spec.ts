@@ -8,7 +8,7 @@ test.describe('Task Clone', () => {
     await gotoAndWaitForReady(page);
 
     await createTask(page, 'Repository creation flow');
-    await expect(page).toHaveURL(/\/order-1$/);
+    await expect(page).toHaveURL(/\/@api\/order-1$/);
 
     await page.getByTitle('Task settings').click();
     const settingsDialog = page.getByRole('dialog', { name: 'Task settings' });
@@ -25,7 +25,7 @@ test.describe('Task Clone', () => {
     await reopenedSettings.getByRole('button', { name: 'Save' }).click();
 
     await page.reload();
-    await expect(page).toHaveURL(/\/order-1$/);
+    await expect(page).toHaveURL(/\/@api\/order-1$/);
     await expect(page.locator('strong').filter({ hasText: 'Repository creation flow' })).toBeVisible();
 
     await page.getByRole('button', { name: 'Clone task' }).click();
@@ -59,7 +59,7 @@ test.describe('Task Clone', () => {
     await gotoAndWaitForReady(page);
 
     await createTask(page, 'Cloneable repository task');
-    await expect(page).toHaveURL(/\/order-1$/);
+    await expect(page).toHaveURL(/\/@api\/order-1$/);
 
     api.setOrderOwner('order-1', {
       ownerUsername: 'miihsjalbglghkgbzqmeaxid',

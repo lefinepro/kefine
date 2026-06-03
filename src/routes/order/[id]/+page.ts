@@ -2,8 +2,9 @@ import type { PageLoad } from './$types';
 
 export const prerender = false;
 
-export const load: PageLoad = ({ params }) => {
+export const load: PageLoad = ({ params, url }) => {
   return {
-    initialOrderId: params.id
+    orderId: params.id,
+    taskText: url.searchParams.get('task') ?? ''
   };
 };

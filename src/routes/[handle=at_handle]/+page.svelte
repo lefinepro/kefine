@@ -12,8 +12,8 @@
   import { authState, clearAuthState, hydrateAuthStateFromSession } from '$lib/auth/auth-store.svelte.js';
   import { loadGeneratedPrivateKeyCookie } from '$lib/auth/publickey-cookie';
   import { clearPasskeySession, loadPasskeySession, passkeySessionStore } from '$lib/auth/passkey-session';
-  import { parseStoredOrders, type OrderView, type TaskAccessMode } from '$lib/components/kefine/kefine-workflow';
-  import { buildActorOrderPath, shortenAuthLabel } from '$lib/components/kefine/kefine-workspace-helpers';
+  import { parseStoredOrders } from '$lib/components/kefine/kefine-workflow';
+  import { shortenAuthLabel } from '$lib/components/kefine/kefine-workspace-helpers';
   import { resolvePublicRuntimeConfig } from '$lib/config/public-config';
   import { kefineLocale, kefineLocaleText, setKefineLocale, type KefineLocale } from '$lib/constants/kefine-locale';
   import {
@@ -45,8 +45,6 @@
   let viewerProfile = $state<Profile | null>(null);
   let unavailable = $state(false);
   let following = $state(false);
-  let publicTasks = $state<OrderView[]>([]);
-  let ownerTasks = $state<OrderView[]>([]);
   let copyState = $state<'idle' | 'profile'>('idle');
   let Workspace: Component<{
     initialActorHandle?: string;
@@ -76,7 +74,6 @@
   const profileSearchQuery = $derived(page.url.searchParams.get('q') ?? '');
   const shouldRenderSearchWorkspace = $derived(Boolean(profileSearchQuery.trim()));
   const setupMetadata = $derived((profile?.metadata ?? {}) as ProfileMetadata);
-  const hasOwnerTasks = $derived((isOwner ? ownerTasks : publicTasks).length > 0);
 
   const hasIdentityStepCompleted = $derived(
     Boolean(firstName.trim() || surname.trim() || profile?.displayName.trim() || username.trim())
@@ -192,11 +189,6 @@
     const id =
       typeof crypto !== 'undefined' && 'randomUUID' in crypto ? `social-${crypto.randomUUID()}` : `social-${Date.now()}`;
     return { id, type: 'website', label: 'Website', value: '' };
-  }
-
-  function getTaskUrl(order: OrderView): string {
-    const handle = profile?.primaryHandle || profile?.username || requestedHandle;
-    return localizeAppPath(buildActorOrderPath(handle, order.shareId ?? order.id), activeLocale);
   }
 
   function syncDraftStateFromProfile(nextProfile: Profile | null) {
@@ -360,14 +352,6 @@
 
     unavailable = false;
     following = viewerProfile ? isFollowingProfile(localStorage, viewerProfile.id, storedProfile.id) : false;
-
-    const storedOrders = parseStoredOrders(localStorage.getItem('kefine-created-orders-v1'), localeText);
-    ownerTasks = storedOrders.filter(
-      (order) =>
-        order.ownerProfileId === storedProfile.id &&
-        (order.status === 'completed' || order.status === 'done' || order.isClosedCompleted === true)
-    );
-    publicTasks = ownerTasks.filter((order) => order.isPublicTask === true && order.status !== 'stopped');
 
     if (buildProfilePath(storedProfile.primaryHandle) !== buildProfilePath(requestedHandle)) {
       await goto(localizeAppPath(buildProfilePath(storedProfile.primaryHandle), activeLocale), { replaceState: true });
@@ -627,48 +611,6 @@
     }
   }
 
-  function updateTaskRule(order: OrderView, mode: TaskAccessMode, patch: { enabled?: boolean; priceUsd?: number }) {
-    if (!browser || !profile || !isOwner) {
-      return;
-    }
-
-    const storedOrders = parseStoredOrders(localStorage.getItem('kefine-created-orders-v1'), localeText);
-    const nextOrders = storedOrders.map((item) => {
-      if (item.id !== order.id) {
-        return item;
-      }
-
-      return {
-        ...item,
-        accessRules: {
-          ...item.accessRules,
-          [mode]: {
-            enabled: patch.enabled ?? item.accessRules?.[mode]?.enabled ?? false,
-            priceUsd: patch.priceUsd ?? item.accessRules?.[mode]?.priceUsd ?? 0
-          }
-        }
-      };
-    });
-
-    localStorage.setItem('kefine-created-orders-v1', JSON.stringify(nextOrders));
-    void loadProfilePageState();
-  }
-
-  function updateTaskPublicState(orderId: string, nextIsPublic: boolean) {
-    if (!browser || !profile || !isOwner) {
-      return;
-    }
-
-    const storedOrders = parseStoredOrders(localStorage.getItem('kefine-created-orders-v1'), localeText);
-    localStorage.setItem(
-      'kefine-created-orders-v1',
-      JSON.stringify(
-        storedOrders.map((item) => (item.id === orderId ? { ...item, isPublicTask: nextIsPublic } : item))
-      )
-    );
-    void loadProfilePageState();
-  }
-
   function followCurrentProfile() {
     if (!browser || !profile || !viewerProfile || viewerProfile.id === profile.id) {
       return;
@@ -817,7 +759,7 @@
       />
     {/if}
 
-    <lefine-box class:profile-layout={true} class:profile-layout--single={!hasOwnerTasks}>
+    <lefine-box class:profile-layout={true} class:profile-layout--single={true}>
       <lefine-box class="profile-main" class:profile-main--setup={isOwner && onboardingStep === 'identity'}>
         {#if isOwner && onboardingStep}
           {#if onboardingStep === 'identity'}
@@ -992,71 +934,6 @@
         {/if}
       </lefine-box>
 
-      {#if hasOwnerTasks}
-        <aside class="profile-side">
-          <article class="profile-surface profile-tasks">
-            <lefine-box class="profile-section__head">
-              <strong>{localeText.profile.repos}</strong>
-            </lefine-box>
-            <lefine-box class="profile-task-list">
-              {#each (isOwner ? ownerTasks : publicTasks) as order (order.id)}
-                <article class="profile-task">
-                  <lefine-box class="profile-task__head">
-                    <lefine-box>
-                      <strong>{order.title}</strong>
-                      <p>{order.solver}</p>
-                    </lefine-box>
-                    <lefine-box class="profile-task__actions">
-                      <a href={getTaskUrl(order)}>{localeText.profile.openTask}</a>
-                    </lefine-box>
-                  </lefine-box>
-
-                  {#if isOwner}
-                    <label class="profile-toggle">
-                      <input
-                        checked={order.isPublicTask === true}
-                        type="checkbox"
-                        onchange={(event) => updateTaskPublicState(order.id, (event.currentTarget as HTMLInputElement).checked)}
-                      />
-                      <lefine-text>{localeText.profile.publicTask}</lefine-text>
-                    </label>
-
-                    <lefine-box class="profile-rules">
-                      {#each ([
-                        ['view', localeText.profile.viewAccess],
-                        ['watch', localeText.profile.watchAccess],
-                        ['join', localeText.profile.joinAccess]
-                      ] as const) as [mode, label]}
-                        <lefine-box class="profile-rules__row">
-                          <label class="profile-toggle">
-                            <input
-                              checked={order.accessRules?.[mode]?.enabled === true}
-                              type="checkbox"
-                              onchange={(event) =>
-                                updateTaskRule(order, mode, { enabled: (event.currentTarget as HTMLInputElement).checked })}
-                            />
-                            <lefine-text>{label}</lefine-text>
-                          </label>
-                          <input
-                            min="0"
-                            step="1"
-                            type="number"
-                            value={order.accessRules?.[mode]?.priceUsd ?? 0}
-                            onchange={(event) =>
-                              updateTaskRule(order, mode, { priceUsd: Number((event.currentTarget as HTMLInputElement).value) })}
-                          />
-                        </lefine-box>
-                      {/each}
-                    </lefine-box>
-                  {/if}
-                </article>
-              {:else}
-                <p>{isOwner ? localeText.profile.noOwnerTasks : localeText.profile.noPublicTasks}</p>
-              {/each}
-            </lefine-box>
-          </article>
-        </aside>
-      {/if}
     </lefine-box>
 
   </section>
@@ -1083,17 +960,14 @@
   }
 
   .profile-main,
-  .profile-side,
   .profile-unavailable,
   .profile-surface,
-  .profile-section,
-  .profile-task {
+  .profile-section {
     display: grid;
     gap: 0.9rem;
   }
 
-  .profile-surface,
-  .profile-task {
+  .profile-surface {
     padding: 1.25rem;
     border-radius: 1.1rem;
     background: color-mix(in oklab, var(--kef-color-bg-card) 97%, var(--kef-color-bg));
@@ -1186,9 +1060,6 @@
   }
 
   .profile-section__head,
-  .profile-task__head,
-  .profile-task__actions,
-  .profile-rules__row,
   .profile-toggle,
   .profile-details__footer {
     display: flex;
@@ -1196,8 +1067,7 @@
     align-items: center;
   }
 
-  .profile-section__head,
-  .profile-task__head {
+  .profile-section__head {
     justify-content: space-between;
   }
 
@@ -1253,7 +1123,6 @@
     color: var(--kef-color-muted);
   }
 
-  .profile-task__head p,
   .profile-section__head p {
     margin: 0;
   }
@@ -1264,11 +1133,8 @@
 
   .profile-step-surface,
   .profile-details,
-  .profile-tasks,
-  .profile-task-list,
   .profile-links-column,
-  .profile-grid-two,
-  .profile-rules {
+  .profile-grid-two {
     display: grid;
     gap: 1rem;
   }
@@ -1396,21 +1262,12 @@
   }
 
   .profile-field lefine-text,
-  .profile-section__head strong,
-  .profile-task__head strong {
+  .profile-section__head strong {
     font-size: 0.94rem;
   }
 
-  .profile-field textarea,
-  .profile-rules__row input[type='number'] {
+  .profile-field textarea {
     width: 100%;
-  }
-
-  .profile-rules__row {
-    padding: 1rem;
-    border-radius: 1rem;
-    background: color-mix(in oklab, var(--kef-color-bg) 45%, var(--kef-color-bg-card));
-    border: 1px solid color-mix(in oklab, var(--kef-color-text) 8%, transparent);
   }
 
   .profile-setup__footer,
@@ -1431,17 +1288,7 @@
     max-width: 38rem;
   }
 
-  .profile-task__actions {
-    justify-content: flex-end;
-    flex-wrap: wrap;
-  }
-
-  .profile-rules__row .profile-toggle {
-    flex: 1 1 auto;
-  }
-
-  .profile-surface a,
-  .profile-task a {
+  .profile-surface a {
     color: inherit;
   }
 
@@ -1450,11 +1297,6 @@
     .profile-layout--single,
     .profile-grid-two {
       grid-template-columns: 1fr;
-    }
-
-    .profile-task__head {
-      flex-direction: column;
-      align-items: flex-start;
     }
 
     .profile-main--setup {

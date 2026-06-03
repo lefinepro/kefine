@@ -1,16 +1,20 @@
 <script lang="ts">
-  import { page } from '$app/stores';
-  import { goto } from '$app/navigation';
   import { browser } from '$app/environment';
-  import { defaultSolutions, type Solution } from '$lib/kefine/solutions-data';
+  import { goto } from '$app/navigation';
   import KefineSolversView, {
     type SolversHistoryTask
   } from '$lib/components/kefine/KefineSolversView.svelte';
-  import { topbarSearchPlaceholderOverride } from '$lib/kefine/topbar-search-context';
   import { repoReadme, repoTodos } from '$lib/kefine/repo-docs';
+  import { defaultSolutions, type Solution } from '$lib/kefine/solutions-data';
+  import { topbarSearchPlaceholderOverride } from '$lib/kefine/topbar-search-context';
 
-  const id = $page.params.id;
-  const taskQuery = $page.url.searchParams.get('task') || '';
+  let {
+    orderId,
+    taskText = ''
+  }: {
+    orderId: string;
+    taskText?: string;
+  } = $props();
 
   const solutions: Solution[] = defaultSolutions.filter(
     (s) => s.project?.includes('go-proxy') || s.solver.includes('Proxy')
@@ -36,11 +40,11 @@
       {
         id: 'current',
         title: repoName,
-        description: taskQuery || repoName,
+        description: taskText || repoName,
         isActive: true
       }
     ];
-    const seen = new Set<string>([taskQuery.trim().toLowerCase()]);
+    const seen = new Set<string>([taskText.trim().toLowerCase()]);
     for (const entry of completed.slice(-9).reverse()) {
       const trimmed = entry.trim();
       if (!trimmed) continue;
@@ -49,7 +53,7 @@
       seen.add(key);
       list.push({
         id: `history-${list.length}`,
-        title: trimmed.length > 60 ? `${trimmed.slice(0, 60)}…` : trimmed,
+        title: trimmed.length > 60 ? `${trimmed.slice(0, 60)}...` : trimmed,
         description: trimmed
       });
       if (list.length >= 10) break;
@@ -58,13 +62,15 @@
   });
 
   function handleSelectHistoryTask(historyId: string) {
-    const task = historyTasks.find((t) => t.id === historyId);
+    const task = historyTasks.find((item) => item.id === historyId);
     if (!task || task.isActive) return;
     goto(`/?task=${encodeURIComponent(task.description ?? task.title)}`);
   }
 
-  // Surface the active repository name in the shared header search bar while
-  // this screen is mounted, then restore the default placeholder on leave.
+  function handleViewSolution(solutionId: string) {
+    goto(`/order/${encodeURIComponent(orderId)}/solver/${solutionId}`);
+  }
+
   $effect(() => {
     topbarSearchPlaceholderOverride.set(repoName);
     return () => topbarSearchPlaceholderOverride.set(null);
@@ -72,16 +78,16 @@
 </script>
 
 <svelte:head>
-  <title>Solvers · {repoName}</title>
+  <title>Solvers | {repoName}</title>
 </svelte:head>
 
 <KefineSolversView
   {solutions}
-  taskTitle={taskQuery}
+  taskTitle={taskText}
   repoName={repoName}
   readme={repoReadme}
   todos={repoTodos}
   historyTasks={historyTasks}
   onSelectHistoryTask={handleSelectHistoryTask}
-  onViewSolution={(solutionId) => goto(`/order/${id}/solver/${solutionId}`)}
+  onViewSolution={handleViewSolution}
 />
