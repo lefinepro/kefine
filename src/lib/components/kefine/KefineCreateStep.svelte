@@ -106,12 +106,17 @@
     searchResultsOnly = false,
     searchFocusRequest = 0,
     searchResultsEmptyLabel = 'No matching results',
+    searchCreateTaskHint = (query: string) =>
+      query
+        ? `Press Enter to create a task for “${query}” and start executing it`
+        : 'Press Enter to create a task and start executing it',
     searchMode = null,
     createServiceLabel = 'Transform to service',
     serviceVariablesLabel = 'Service variables',
     stopTaskLabel = 'Stop repo',
     deleteTaskLabel,
     onSubmit,
+    onSearchSubmit,
     onQueueTask,
     onAttachFiles,
     onRemoveFile,
@@ -195,12 +200,14 @@
     searchResultsOnly?: boolean;
     searchFocusRequest?: number;
     searchResultsEmptyLabel?: string;
+    searchCreateTaskHint?: (query: string) => string;
     searchMode?: SearchPageMode | null;
     createServiceLabel?: string;
     serviceVariablesLabel?: string;
     stopTaskLabel?: string;
     deleteTaskLabel: string;
     onSubmit: () => void;
+    onSearchSubmit?: () => void;
     onQueueTask: () => Promise<void> | void;
     onAttachFiles: (files: File[]) => void;
     onRemoveFile: (index: number) => void;
@@ -470,6 +477,19 @@
     }
 
     draft.description = value;
+  }
+
+  function handleSearchPageKeydown(event: KeyboardEvent) {
+    if (event.key !== 'Enter' || event.isComposing) {
+      return;
+    }
+
+    if (!draft.description.trim()) {
+      return;
+    }
+
+    event.preventDefault();
+    (onSearchSubmit ?? onSubmit)();
   }
 
   function orderScore(query: string, order: OrderView): number {
@@ -1565,6 +1585,7 @@ initialized = true;
         showShortcut={false}
         focusRequest={searchFocusRequest}
         onInput={handleSearchPageInput}
+        onKeydown={handleSearchPageKeydown}
       />
     </kefine-search-page-input-shell>
   {/if}
@@ -2023,6 +2044,13 @@ initialized = true;
             </li>
           {/each}
         </ul>
+      {:else if searchMode}
+        <kefine-search-results-empty
+          data-testid="kefine-search-create-hint"
+          data-variant="create-hint"
+        >
+          <lefine-text>{searchCreateTaskHint(draft.description.trim())}</lefine-text>
+        </kefine-search-results-empty>
       {:else}
         <kefine-search-results-empty data-testid="kefine-search-results-empty">
           <lefine-text>{searchResultsEmptyLabel}</lefine-text>
@@ -4578,6 +4606,13 @@ initialized = true;
     font-size: 0.95rem;
     font-weight: 620;
     text-align: center;
+  }
+
+  kefine-search-results-empty[data-variant='create-hint'] {
+    border-style: dashed;
+    border-color: color-mix(in oklab, var(--kef-primary) 42%, var(--kef-line));
+    background: color-mix(in oklab, var(--kef-primary) 6%, var(--kef-bg-card));
+    color: color-mix(in oklab, var(--lefine-text) 80%, transparent);
   }
 
   lef-services-showcase {

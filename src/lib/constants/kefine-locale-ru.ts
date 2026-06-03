@@ -176,7 +176,11 @@ export const KEFINE_TEXT_RU = {
     pathPaymentLabel: 'Оплата:',
     noRecentTasks: 'Сохранённых repos пока нет',
     matchedTasks: 'Найденные завершённые repos',
-    noMatchedTasks: 'По этому запросу завершённые repos не найдены'
+    noMatchedTasks: 'По этому запросу завершённые repos не найдены',
+    searchCreateTaskHint: (query: string) =>
+      query
+        ? `Нажмите Enter, чтобы создать задачу «${query}» и сразу запустить её выполнение`
+        : 'Нажмите Enter, чтобы создать задачу и сразу запустить её выполнение'
   },
   proxyWidget: {
     title: 'Прокси-сервер готов',

@@ -176,7 +176,11 @@ export const KEFINE_TEXT_EN = {
     pathPaymentLabel: 'Payment:',
     noRecentTasks: 'No saved repos yet',
     matchedTasks: 'Resolved repos',
-    noMatchedTasks: 'No resolved repos match this query yet'
+    noMatchedTasks: 'No resolved repos match this query yet',
+    searchCreateTaskHint: (query: string) =>
+      query
+        ? `Press Enter to create a task for “${query}” and start executing it`
+        : 'Press Enter to create a task and start executing it'
   },
   proxyWidget: {
     title: 'Proxy server ready',

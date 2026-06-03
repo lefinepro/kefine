@@ -71,7 +71,21 @@ test.describe('Search page URLs', () => {
     await page.getByTestId('kefine-search-page-input').fill('postgres restore');
     await expect(page).toHaveURL(/\/\?q=postgres\+restore$/);
     await expect(page.getByTestId('kefine-search-order-order-redis')).toHaveCount(0);
-    await expect(page.getByTestId('kefine-search-results-empty')).toBeVisible();
+    await expect(page.getByTestId('kefine-search-results-empty')).toHaveCount(0);
+    await expect(page.getByText('No matching results')).toHaveCount(0);
+    const createHint = page.getByTestId('kefine-search-create-hint');
+    await expect(createHint).toBeVisible();
+    await expect(createHint).toContainText('Press Enter to create a task');
+    await expect(createHint).toContainText('postgres restore');
+  });
+
+  test('creates and starts executing a task by pressing Enter on the search page', async ({ page }) => {
+    await mockOrderApi(page);
+    await gotoSearchPage(page, '/?q=postgres%20restore');
+
+    await expect(page.getByTestId('kefine-search-create-hint')).toBeVisible();
+    await page.getByTestId('kefine-search-page-input').press('Enter');
+    await expect(page).toHaveURL(/\/order-1$/);
   });
 
   test('opens profile query as saved results controlled by the topbar search', async ({ page }) => {
@@ -103,7 +117,7 @@ test.describe('Search page URLs', () => {
     await expect(page.getByTestId('kefine-topbar-search-trigger')).toHaveCount(0);
     await expect(page.getByTestId('kefine-task-input')).toHaveCount(0);
     await expect(page.getByTestId('kefine-instant-description-github')).toBeVisible();
-    await expect(page.getByTestId('kefine-search-results-empty')).toBeVisible();
+    await expect(page.getByTestId('kefine-search-create-hint')).toBeVisible();
 
     await gotoSearchPage(page, '/?q=translate%20from%20english%20to%20russian');
     await expect(page.getByTestId('kefine-search-page-input')).toBeVisible();

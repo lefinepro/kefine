@@ -152,7 +152,11 @@ export const KEFINE_TEXT_HY = {
     pathPaymentLabel: 'Վճարում:',
     noRecentTasks: 'Պահված repos դեռ չկան',
     matchedTasks: 'Գտնված ավարտված repos',
-    noMatchedTasks: 'Այս հարցմանը համապատասխան ավարտված repos դեռ չկան'
+    noMatchedTasks: 'Այս հարցմանը համապատասխան ավարտված repos դեռ չկան',
+    searchCreateTaskHint: (query: string) =>
+      query
+        ? `Սեղմեք Enter՝ «${query}» առաջադրանք ստեղծելու և անմիջապես այն գործարկելու համար`
+        : 'Սեղմեք Enter՝ առաջադրանք ստեղծելու և անմիջապես այն գործարկելու համար'
   },
   proxyWidget: {
     title: 'Պրոքսի սերվերը պատրաստ է',

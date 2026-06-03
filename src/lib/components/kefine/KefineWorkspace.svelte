@@ -2422,6 +2422,34 @@
     });
   }
 
+  function handleSearchSubmit() {
+    const normalized = normalizeDraftOrder(draft, localeText);
+
+    if (!normalized.description.trim() && !normalized.title.trim()) {
+      return;
+    }
+
+    const submittedSearchText = normalized.description.trim() || normalized.title.trim() || localeText.defaults.taskTitle;
+    solverSearchText = submittedSearchText;
+    solverSearchActive = true;
+    draft = createEmptyDraft();
+
+    // Foreground submit: pressing Enter on a search page creates the task and
+    // immediately opens the executing screen so the run starts in view.
+    void submitDraft(normalized).then((created) => {
+      if (!created) {
+        if (!draft.description.trim()) {
+          draft = normalized;
+        }
+
+        if (solverSearchText === submittedSearchText) {
+          solverSearchActive = false;
+          solverSearchText = '';
+        }
+      }
+    });
+  }
+
   async function queueTaskBelow() {
     const normalized = normalizeDraftOrder(draft, localeText);
 
@@ -3117,6 +3145,7 @@
           searchResultsOnly={searchResultsOnly}
           searchFocusRequest={searchInputFocusRequest}
           searchResultsEmptyLabel={localeText.topbar.searchEmptyLabel}
+          searchCreateTaskHint={localeText.create.searchCreateTaskHint}
           searchMode={searchPageMode}
           createServiceLabel={localeText.create.transformToService}
           serviceVariablesLabel={localeText.create.serviceVariables}
@@ -3124,6 +3153,7 @@
           stopTaskLabel={localeText.buttons.stopTask}
           deleteTaskLabel={localeText.buttons.delete}
           onSubmit={handleSubmit}
+          onSearchSubmit={handleSearchSubmit}
           onQueueTask={queueTaskBelow}
           onAttachFiles={attachFiles}
           onRemoveFile={removeAttachedFile}
