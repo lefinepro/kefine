@@ -36,7 +36,7 @@ test.describe('Task Lifecycle', () => {
 
     await createTask(page, 'Optimize database queries');
 
-    await expect(page).toHaveURL(/\/order-1$/);
+    await expect(page).toHaveURL(/\/@api\/order-1$/);
     await expect(page.getByRole('heading', { name: 'Optimize database queries' })).toBeVisible();
     await expect(page.getByTestId('kefine-subtask-list')).toBeVisible();
     await expect(page.getByTestId('kefine-price-metric')).toBeVisible();
@@ -81,7 +81,7 @@ test.describe('Task Lifecycle', () => {
     expect(storedAfter).toContain('order-1');
 
     await realRow.getByTestId('kefine-open-order-order-1').click();
-    await expect(page).toHaveURL(/\/order-1$/);
+    await expect(page).toHaveURL(/\/@api\/order-1$/);
   });
 
   test('reloading a persisted order route keeps the executing flow mounted', async ({ page }) => {
@@ -90,11 +90,11 @@ test.describe('Task Lifecycle', () => {
     await gotoAndWaitForReady(page);
 
     await createTask(page, 'Persisted route order');
-    await expect(page).toHaveURL(/\/order-1$/);
+    await expect(page).toHaveURL(/\/@api\/order-1$/);
 
     await page.reload();
 
-    await expect(page).toHaveURL(/\/order-1$/);
+    await expect(page).toHaveURL(/\/@api\/order-1$/);
     await expect(page.getByRole('heading', { name: 'Persisted route order' })).toBeVisible();
     await expect(page.getByTestId('kefine-wallet-tile')).toBeVisible();
   });
@@ -104,7 +104,7 @@ test.describe('Task Lifecycle', () => {
     await gotoAndWaitForReady(page);
 
     await createTask(page, 'Custom slug order');
-    await expect(page).toHaveURL(/\/order-1$/);
+    await expect(page).toHaveURL(/\/@api\/order-1$/);
 
     await page.getByTitle('Task settings').click();
     const settingsDialog = page.getByRole('dialog', { name: 'Task settings' });
@@ -114,10 +114,10 @@ test.describe('Task Lifecycle', () => {
     await expect
       .poll(() => page.evaluate(() => window.localStorage.getItem('kefine-created-orders-v1') ?? ''))
       .toContain('custom-slug-order');
-    await expect(page).toHaveURL(/\/custom-slug-order$/);
+    await expect(page).toHaveURL(/\/@api\/custom-slug-order$/);
     await page.reload();
 
-    await expect(page).toHaveURL(/\/custom-slug-order$/);
+    await expect(page).toHaveURL(/\/@api\/custom-slug-order$/);
     await expect(page.getByRole('heading', { name: 'Custom slug order' })).toBeVisible();
     await expect(page.getByTestId('kefine-wallet-tile')).toBeVisible();
   });
@@ -208,7 +208,7 @@ test.describe('Task Lifecycle', () => {
 
     await createTask(page, 'Build a landing page');
 
-    await expect(page).toHaveURL(/\/order-1$/);
+    await expect(page).toHaveURL(/\/@api\/order-1$/);
     await expect(page.getByTestId('kefine-solver-fallback')).toBeVisible();
     await expect(page.getByTestId('kefine-promo-toggle')).toHaveCount(0);
     await expect(page.getByTestId('kefine-promo-input')).toHaveCount(0);
@@ -219,7 +219,7 @@ test.describe('Task Lifecycle', () => {
     await gotoAndWaitForReady(page);
 
     await createTask(page, 'Build a landing page');
-    await expect(page).toHaveURL(/\/order-1$/);
+    await expect(page).toHaveURL(/\/@api\/order-1$/);
 
     await page.locator('[data-part="next-step-trigger"]').first().click({ force: true });
 
@@ -236,7 +236,7 @@ test.describe('Task Lifecycle', () => {
     await gotoAndWaitForReady(page);
 
     await createTask(page, 'Launch docs portal');
-    await expect(page).toHaveURL(/\/order-1$/);
+    await expect(page).toHaveURL(/\/@api\/order-1$/);
 
     await page.locator('[data-part="comment-trigger-action"][data-kind="branch"]').first().evaluate((element) => {
       (element as HTMLButtonElement).click();
@@ -254,7 +254,7 @@ test.describe('Task Lifecycle', () => {
 
     await page.reload();
 
-    await expect(page).toHaveURL(/\/order-1$/);
+    await expect(page).toHaveURL(/\/@api\/order-1$/);
     await expect(page.getByText('Branch 1')).toBeVisible();
     await expect(page.locator('kefine-thread-line strong').filter({ hasText: 'API migration' })).toBeVisible();
   });
@@ -264,7 +264,7 @@ test.describe('Task Lifecycle', () => {
     await gotoAndWaitForReady(page);
 
     await createTask(page, 'ProseKit branch toggle');
-    await expect(page).toHaveURL(/\/order-1$/);
+    await expect(page).toHaveURL(/\/@api\/order-1$/);
 
     const branchButton = page.getByTestId(`kefine-thread-action-branch-${exchangeNodeId}`);
     await branchButton.click();
@@ -293,7 +293,7 @@ test.describe('Task Lifecycle', () => {
     await gotoAndWaitForReady(page);
 
     await createTask(page, 'Task with inline comment');
-    await expect(page).toHaveURL(/\/order-1$/);
+    await expect(page).toHaveURL(/\/@api\/order-1$/);
 
     await page.getByTestId(`kefine-thread-action-comment-${exchangeNodeId}`).click();
     const commentForm = page.getByTestId(`kefine-thread-comment-form-${exchangeNodeId}`);
@@ -310,7 +310,7 @@ test.describe('Task Lifecycle', () => {
     await gotoAndWaitForReady(page);
 
     await createTask(page, 'Task with editable branch');
-    await expect(page).toHaveURL(/\/order-1$/);
+    await expect(page).toHaveURL(/\/@api\/order-1$/);
 
     const branchButton = page.getByTestId(`kefine-thread-action-branch-${exchangeNodeId}`);
     await branchButton.click();
@@ -335,7 +335,7 @@ test.describe('Task Lifecycle', () => {
     await gotoAndWaitForReady(page);
 
     await createTask(page, 'Parallel branch placement');
-    await expect(page).toHaveURL(/\/order-1$/);
+    await expect(page).toHaveURL(/\/@api\/order-1$/);
 
     await page.getByTestId(`kefine-thread-action-branch-left-${exchangeNodeId}`).click();
     const leftBranchEditor = page.getByTestId(`kefine-branch-editor-${exchangeNodeId}`);
@@ -364,7 +364,7 @@ test.describe('Task Lifecycle', () => {
     await gotoAndWaitForReady(page);
 
     await createTask(page, 'Persistent branch layout');
-    await expect(page).toHaveURL(/\/order-1$/);
+    await expect(page).toHaveURL(/\/@api\/order-1$/);
 
     await page.getByTestId(`kefine-thread-action-branch-${exchangeNodeId}`).click();
     const branchEditor = page.getByTestId(`kefine-branch-editor-${exchangeNodeId}`);
@@ -381,7 +381,7 @@ test.describe('Task Lifecycle', () => {
 
     await page.reload();
 
-    await expect(page).toHaveURL(/\/order-1$/);
+    await expect(page).toHaveURL(/\/@api\/order-1$/);
     await expect(page.getByTestId(`kefine-thread-branch-toggle-${exchangeNodeId}`)).toHaveAttribute(
       'aria-expanded',
       'false'
@@ -406,7 +406,7 @@ test.describe('Task Lifecycle', () => {
     await gotoAndWaitForReady(page);
 
     await createTask(page, 'Editor survives theme locale switches');
-    await expect(page).toHaveURL(/\/order-1$/);
+    await expect(page).toHaveURL(/\/@api\/order-1$/);
 
     await page.getByTestId(`kefine-thread-action-comment-${exchangeNodeId}`).click();
     const commentForm = page.getByTestId(`kefine-thread-comment-form-${exchangeNodeId}`);
@@ -435,7 +435,7 @@ test.describe('Task Lifecycle', () => {
     await gotoAndWaitForReady(page);
 
     await createTask(page, 'Keyboard accessible task tree');
-    await expect(page).toHaveURL(/\/order-1$/);
+    await expect(page).toHaveURL(/\/@api\/order-1$/);
 
     const nodeCopy = page.getByTestId(`kefine-task-node-copy-${exchangeNodeId}`);
     await nodeCopy.focus();

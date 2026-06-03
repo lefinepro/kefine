@@ -27,7 +27,6 @@
   const ROUTES_WITH_OWN_TOPBAR = new Set([
     '/',
     '/task/[id]',
-    '/order/[id]',
     '/[handle=at_handle]',
     '/[handle=at_handle]/[shareId]',
     '/[handle=at_handle]/[widget=kefine_widget]',

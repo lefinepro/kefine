@@ -100,11 +100,10 @@ const pages = [
   { file: 'translator-widget.png', route: '/@api/translate', waitFor: '[data-testid="kefine-translator-widget"]' },
   { file: 'music-widget.png', route: '/@api/music', waitFor: '[data-testid="kefine-music-widget"]' },
   { file: 'task-detail.png', route: '/task/order-1', waitFor: 'body' },
-  { file: 'order-detail.png', route: '/order/order-1', waitFor: 'body' },
   { file: 'shared-task.png', route: '/shared/tasks/order-1', waitFor: 'body' },
   {
     file: 'solutions.png',
-    route: '/order/order-1/solutions?task=Document%20current%20workspace%20pages',
+    route: '/order/order-1?task=Document%20current%20workspace%20pages',
     waitFor: '[data-testid="solution-list-page"]'
   },
   { file: 'solver-detail.png', route: '/order/order-1/solver/1', waitFor: 'lef-solver-page' },

@@ -951,7 +951,7 @@ initialized = true;
     if (first?.actorHandle && (first.shareId ?? first.id)) {
       return buildActorOrderPath(first.actorHandle, first.shareId ?? first.id);
     }
-    return `/order/go-proxy/solutions?task=${encodeURIComponent(solverSearchText)}`;
+    return `/order/go-proxy?task=${encodeURIComponent(solverSearchText)}`;
   });
 
   function isGoProxySearch(text: string): boolean {
@@ -985,7 +985,7 @@ initialized = true;
   }
 
   function orderSolutionsHref(order: OrderView): string {
-    return `/order/${encodeURIComponent(order.id)}/solutions?task=${encodeURIComponent(order.title || solverSearchText)}`;
+    return `/order/${encodeURIComponent(order.id)}?task=${encodeURIComponent(order.title || solverSearchText)}`;
   }
 
   function orderTaskHref(order: OrderView): string {
