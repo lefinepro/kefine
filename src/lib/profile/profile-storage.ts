@@ -18,14 +18,8 @@ import type { TaskAccessKind } from '$lib/types/user';
 import { normalizeProfileAccount } from '$lib/profile/profile-accounts';
 import { syncPromptVariables } from '$lib/templates/template-content';
 import {
-  buildProfilePath,
-  buildCanonicalServicePath,
-  buildProfileServicePath,
-  buildProfileTaskPath,
   deriveProfileUsername,
   deriveWalletProfileHandle,
-  isDefaultActorHandle,
-  normalizeProfileResourceSlug,
   normalizeProfileUsername
 } from '$lib/profile/profile-handles';
 

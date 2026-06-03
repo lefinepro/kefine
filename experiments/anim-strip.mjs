@@ -2,7 +2,7 @@
 // during the solver-row animation, for both light and dark themes.
 // Output: docs/screenshots/solver-rows-anim-strip-{light,dark}.png
 import { chromium } from 'playwright';
-import { readFileSync, mkdirSync } from 'node:fs';
+import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
