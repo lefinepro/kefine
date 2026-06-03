@@ -1,5 +1,6 @@
 import type { DraftOrder, OrderView } from '$lib/components/kefine/kefine-workflow';
 import type { KefineLocaleText } from '$lib/constants/kefine-locale';
+import { buildProfileTaskPath } from '$lib/profile/profile-handles';
 import { stripLocalePrefix } from '$lib/routing/kefine-locale-routing';
 
 export type TaskRouteView = 'result' | 'stages' | null;
@@ -7,6 +8,7 @@ export type TaskRouteView = 'result' | 'stages' | null;
 const GLOBAL_ORDER_PATH_PREFIX = '/orders/';
 const LEGACY_TASK_PATH_PREFIX = '/task/';
 const LEGACY_ORDER_PATH_PREFIX = '/order/';
+const CANONICAL_ACTOR_ORDER_PATH_PATTERN = /^\/@([^/]+)\/([^/#?]+)$/i;
 
 function extractOrderUuid(orderId: string): string | null {
   const normalized = orderId.trim();
@@ -43,6 +45,17 @@ export function shortenAuthLabel(value: string | null | undefined, maxLength = 1
   }
 
   return `${prefix}${body.slice(0, headLength)}…${body.slice(-tailLength)}`;
+}
+
+export function buildActorOrderPath(actorHandle: string, orderId: string): string {
+  const normalizedHandle = normalizeActorHandle(actorHandle);
+  const normalizedOrderId = orderId.trim();
+  if (!normalizedHandle || !normalizedOrderId) {
+    return '/';
+  }
+
+  const routeId = extractOrderUuid(normalizedOrderId) ?? normalizedOrderId;
+  return buildProfileTaskPath(normalizedHandle, routeId);
 }
 
 export function buildTaskRouteHash(orderId: string, view: TaskRouteView = null): string {
@@ -174,6 +187,16 @@ function parseTaskRouteValue(rawValue: string): { orderId: string; view: TaskRou
 }
 
 export function readTaskRouteStateFromLocation(location: Location): { orderId: string; view: TaskRouteView } | null {
+  const actorPath = stripLocalePrefix(location.pathname).replace(/\/+$/, '');
+  const actorMatch = actorPath.match(CANONICAL_ACTOR_ORDER_PATH_PATTERN);
+  const actorView = location.hash === '#result' ? 'result' : location.hash === '#stages' ? 'stages' : null;
+  if (actorMatch?.[2]) {
+    return {
+      orderId: decodeURIComponent(actorMatch[2]),
+      view: actorView
+    };
+  }
+
   const hash = location.hash.replace(/^#/, '').replace(/\/+$/, '');
   const hashTaskPrefix = GLOBAL_ORDER_PATH_PREFIX;
   const hashLegacyPrefixes = [LEGACY_TASK_PATH_PREFIX, LEGACY_ORDER_PATH_PREFIX];
@@ -192,16 +215,7 @@ export function readTaskRouteStateFromLocation(location: Location): { orderId: s
   }
 
   const prefix = taskPrefixes.find((candidate) => rawPath.startsWith(candidate)) ?? GLOBAL_ORDER_PATH_PREFIX;
-  const parsed = parseTaskRouteValue(rawPath.slice(prefix.length));
-
-  // Preserve the bare-hash result/stages view used by the canonical /order/[id] route.
-  const bareHashView: TaskRouteView =
-    location.hash === '#result' ? 'result' : location.hash === '#stages' ? 'stages' : null;
-  if (parsed && !parsed.view && bareHashView) {
-    return { ...parsed, view: bareHashView };
-  }
-
-  return parsed;
+  return parseTaskRouteValue(rawPath.slice(prefix.length));
 }
 
 export function normalizeDraftOrder(

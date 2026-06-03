@@ -21,6 +21,7 @@
   import { detectMusicExtractIntent } from '$lib/kefine/music-intent';
   import { detectWeatherIntent } from '$lib/kefine/weather-intent';
   import { detectTranslationIntent } from '$lib/kefine/translation-intent';
+  import { buildActorOrderPath } from '$lib/components/kefine/kefine-workspace-helpers';
   import { defaultMetrics } from '$lib/kefine/solutions-data';
   import { cubicOut } from 'svelte/easing';
   import { onMount, tick } from 'svelte';
@@ -948,7 +949,7 @@ initialized = true;
   const searchResultHref = $derived.by(() => {
     const first = matchedOrders[0];
     if (first?.actorHandle && (first.shareId ?? first.id)) {
-      return `/order/${encodeURIComponent(first.shareId ?? first.id)}`;
+      return buildActorOrderPath(first.actorHandle, first.shareId ?? first.id);
     }
     return `/order/go-proxy/solutions?task=${encodeURIComponent(solverSearchText)}`;
   });
@@ -988,7 +989,9 @@ initialized = true;
   }
 
   function orderTaskHref(order: OrderView): string {
-    return `/order/${encodeURIComponent(order.shareId ?? order.id)}`;
+    return order.actorHandle || order.ownerUsername
+      ? buildActorOrderPath(order.actorHandle ?? order.ownerUsername!, order.shareId ?? order.id)
+      : `/order/${order.id}`;
   }
 
   function openSolverList(event: MouseEvent, href: string) {

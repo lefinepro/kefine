@@ -29,6 +29,7 @@
     '/task/[id]',
     '/order/[id]',
     '/[handle=at_handle]',
+    '/[handle=at_handle]/[shareId]',
     '/[handle=at_handle]/[widget=kefine_widget]',
     // OAuth consent / integration pages render their own full-screen clean UI (no shared topbar)
     '/oauth/authorize'

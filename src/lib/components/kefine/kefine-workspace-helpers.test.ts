@@ -10,33 +10,33 @@ function loc(pathname: string, hash = ''): Location {
 }
 
 describe('readTaskRouteStateFromLocation', () => {
-  test('resolves the canonical /order/[id] route', () => {
-    expect(readTaskRouteStateFromLocation(loc('/order/order-1'))).toEqual({
+  test('resolves the canonical /@<handle>/<shareId> order route', () => {
+    expect(readTaskRouteStateFromLocation(loc('/@api/order-1'))).toEqual({
       orderId: 'order-1',
       view: null
     });
   });
 
   test('keeps the bare-hash result/stages view on the canonical route', () => {
-    expect(readTaskRouteStateFromLocation(loc('/order/order-1', '#result'))).toEqual({
+    expect(readTaskRouteStateFromLocation(loc('/@api/order-1', '#result'))).toEqual({
       orderId: 'order-1',
       view: 'result'
     });
-    expect(readTaskRouteStateFromLocation(loc('/order/order-1', '#stages'))).toEqual({
+    expect(readTaskRouteStateFromLocation(loc('/@api/order-1', '#stages'))).toEqual({
       orderId: 'order-1',
       view: 'stages'
     });
   });
 
-  test('resolves the hash navigation format with an inline view', () => {
-    expect(readTaskRouteStateFromLocation(loc('/order/order-1', '#/orders/order-1/stages'))).toEqual({
+  test('strips a locale prefix before matching the canonical route', () => {
+    expect(readTaskRouteStateFromLocation(loc('/ru/@api/order-1'))).toEqual({
       orderId: 'order-1',
-      view: 'stages'
+      view: null
     });
   });
 
-  test('strips a locale prefix before matching the order route', () => {
-    expect(readTaskRouteStateFromLocation(loc('/ru/order/order-1'))).toEqual({
+  test('still resolves the fallback /order/[id] route', () => {
+    expect(readTaskRouteStateFromLocation(loc('/order/order-1'))).toEqual({
       orderId: 'order-1',
       view: null
     });
@@ -49,15 +49,21 @@ describe('readTaskRouteStateFromLocation', () => {
     });
   });
 
-  test('no longer treats the removed actor-scoped routes as orders', () => {
-    // These routes were consolidated into /order/[id] and deleted.
-    expect(readTaskRouteStateFromLocation(loc('/@api/order-1'))).toBeNull();
+  test('resolves the hash navigation format with an inline view', () => {
+    expect(readTaskRouteStateFromLocation(loc('/order/order-1', '#/orders/order-1/stages'))).toEqual({
+      orderId: 'order-1',
+      view: 'stages'
+    });
+  });
+
+  test('no longer treats the removed actor-scoped /order(s)/[id] routes as orders', () => {
+    // `/@<handle>/order/<id>` and `/@<handle>/orders/<id>` were redundant with the
+    // canonical `/@<handle>/<shareId>` page and have been deleted.
     expect(readTaskRouteStateFromLocation(loc('/@api/order/order-1'))).toBeNull();
     expect(readTaskRouteStateFromLocation(loc('/@api/orders/order-1'))).toBeNull();
   });
 
-  test('does not parse a phantom order from a widget or profile route', () => {
-    expect(readTaskRouteStateFromLocation(loc('/@api/weather'))).toBeNull();
+  test('does not parse a phantom order from the profile root or home route', () => {
     expect(readTaskRouteStateFromLocation(loc('/@api'))).toBeNull();
     expect(readTaskRouteStateFromLocation(loc('/'))).toBeNull();
   });

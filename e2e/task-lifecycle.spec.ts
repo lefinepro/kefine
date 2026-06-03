@@ -187,7 +187,7 @@ test.describe('Task Lifecycle', () => {
       );
     });
 
-    await page.goto('/order/order-2');
+    await page.goto('/@api/order-2');
 
     await expect(page.locator('lef-solutions-list')).toHaveCount(0);
     const taskList = page.getByLabel('Tasks');
@@ -198,7 +198,7 @@ test.describe('Task Lifecycle', () => {
     await expect(taskList.getByText('Go Proxy Basic')).toBeVisible();
 
     await taskList.getByRole('button', { name: /api\/legacy-tooling/ }).click();
-    await expect(page).toHaveURL(/\/order\/order-1$/);
+    await expect(page).toHaveURL(/\/@api\/order-1$/);
     await expect(page.locator('kefine-thread-title').getByText('Previous parser task')).toBeVisible();
   });
 

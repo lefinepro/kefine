@@ -71,7 +71,7 @@ test.describe('Solver Pricing', () => {
       );
     });
 
-    await page.goto('/order/order-rust');
+    await page.goto('/@api/order-rust');
 
     await expect(page.locator('lef-solutions-list')).toHaveCount(0);
     const variants = page.getByTestId('task-solver-variants').locator('[data-variant]');
