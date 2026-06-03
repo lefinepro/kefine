@@ -12,7 +12,6 @@ const baseUrl = process.env.BASE_URL ?? `http://127.0.0.1:${port}`;
 const shouldStartServer = process.env.START_SERVER !== '0';
 
 const createdAt = '2026-06-03T12:00:00.000Z';
-const actorHandle = '@1234567890abcdef';
 
 const demoProfile = {
   id: 'profile-api',
@@ -102,9 +101,6 @@ const pages = [
   { file: 'music-widget.png', route: '/@api/music', waitFor: '[data-testid="kefine-music-widget"]' },
   { file: 'task-detail.png', route: '/task/order-1', waitFor: 'body' },
   { file: 'order-detail.png', route: '/order/order-1', waitFor: 'body' },
-  { file: 'profile-task.png', route: '/@api/order-1', waitFor: 'body' },
-  { file: 'actor-order.png', route: `/${actorHandle}/order/order-1`, waitFor: 'body' },
-  { file: 'actor-orders.png', route: `/${actorHandle}/orders/order-1`, waitFor: 'body' },
   { file: 'shared-task.png', route: '/shared/tasks/order-1', waitFor: 'body' },
   {
     file: 'solutions.png',

@@ -57,7 +57,6 @@
     toNumber
   } from '$lib/components/kefine/kefine-workflow';
   import {
-    buildActorOrderPath,
     createGeneratedWalletAvatar,
     mergeOrdersById,
     normalizeActorHandle,
@@ -574,8 +573,7 @@
     const isTaskRoute =
       getNormalizedInitialOrderId() !== null ||
       (browser &&
-        (/^\/task\//.test(stripLocalePrefix(window.location.pathname).replace(/\/+$/, '')) ||
-          /^\/@[^/]+\/order\/[^/]+/.test(stripLocalePrefix(window.location.pathname).replace(/\/+$/, ''))));
+        /^\/task\//.test(stripLocalePrefix(window.location.pathname).replace(/\/+$/, '')));
 
     if (isTaskRoute) {
       return title ? `${title} | Lefine` : 'Loading task | Lefine';
@@ -754,19 +752,13 @@
   const topbarSearchItems = $derived.by(() =>
     recentCreatedOrders.map((order) => {
       const orderRouteId = order.shareId?.trim() || order.id;
-      const actorHandle = order.actorHandle?.trim() || normalizedActorHandle;
 
       return {
         id: order.id,
         title: order.title?.trim() || order.id,
         subtitle: [order.solver, order.status, order.id].filter(Boolean).join(' · '),
         category: localeText.labels.task.replace(/:$/, ''),
-        href: localizeAppPath(
-          actorHandle
-            ? buildActorOrderPath(actorHandle, orderRouteId)
-            : `/order/${encodeURIComponent(orderRouteId)}`,
-          activeLocale
-        ),
+        href: localizeAppPath(`/order/${encodeURIComponent(orderRouteId)}`, activeLocale),
         actionLabel: localeText.labels.openOrderLink,
         icon: 'project' as const,
         keywords: [
@@ -1312,9 +1304,6 @@
       (step === 'executing' || step === 'payment') && currentOrder?.id
         ? currentOrder.shareId?.trim() || currentOrder.id
         : null;
-    const actorHandle =
-      currentOrder?.actorHandle?.trim() ||
-      getRouteActorHandleFallback();
 
     if (searchPageMode && step === 'create') {
       const searchUrl = new URL(buildSearchPageHref(searchPageMode), window.location.origin);
@@ -1329,8 +1318,8 @@
       return;
     }
 
-    if (orderRouteId && actorHandle) {
-      nextUrl.pathname = localizeAppPath(buildActorOrderPath(actorHandle, orderRouteId), activeLocale);
+    if (orderRouteId) {
+      nextUrl.pathname = localizeAppPath(`/order/${encodeURIComponent(orderRouteId)}`, activeLocale);
       nextUrl.search = '';
       nextUrl.hash =
         step === 'payment' && paymentStage === 'result-ready'
@@ -2694,11 +2683,10 @@
 
     if (browser && patch.shareId !== undefined) {
       const nextShareId = patch.shareId?.trim() || currentOrder.id;
-      const actorHandle = currentOrder.actorHandle?.trim() || getRouteActorHandleFallback();
 
-      if (actorHandle && nextShareId) {
+      if (nextShareId) {
         const nextUrl = new URL(window.location.href);
-        nextUrl.pathname = localizeAppPath(buildActorOrderPath(actorHandle, nextShareId), activeLocale);
+        nextUrl.pathname = localizeAppPath(`/order/${encodeURIComponent(nextShareId)}`, activeLocale);
         nextUrl.search = '';
 
         if (window.location.href !== nextUrl.toString()) {

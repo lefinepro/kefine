@@ -13,7 +13,7 @@
   import { loadGeneratedPrivateKeyCookie } from '$lib/auth/publickey-cookie';
   import { clearPasskeySession, loadPasskeySession, passkeySessionStore } from '$lib/auth/passkey-session';
   import { parseStoredOrders, type OrderView, type TaskAccessMode } from '$lib/components/kefine/kefine-workflow';
-  import { buildActorOrderPath, shortenAuthLabel } from '$lib/components/kefine/kefine-workspace-helpers';
+  import { shortenAuthLabel } from '$lib/components/kefine/kefine-workspace-helpers';
   import { resolvePublicRuntimeConfig } from '$lib/config/public-config';
   import { kefineLocale, kefineLocaleText, setKefineLocale, type KefineLocale } from '$lib/constants/kefine-locale';
   import {
@@ -195,8 +195,7 @@
   }
 
   function getTaskUrl(order: OrderView): string {
-    const handle = profile?.primaryHandle || profile?.username || requestedHandle;
-    return localizeAppPath(buildActorOrderPath(handle, order.shareId ?? order.id), activeLocale);
+    return localizeAppPath(`/order/${encodeURIComponent(order.shareId ?? order.id)}`, activeLocale);
   }
 
   function syncDraftStateFromProfile(nextProfile: Profile | null) {

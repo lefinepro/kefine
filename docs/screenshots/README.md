@@ -20,9 +20,6 @@ Set `START_SERVER=0 BASE_URL=http://127.0.0.1:5173` to use an already-running de
 | music-widget.png | `/@api/music` |
 | task-detail.png | `/task/order-1` |
 | order-detail.png | `/order/order-1` |
-| profile-task.png | `/@api/order-1` |
-| actor-order.png | `/@1234567890abcdef/order/order-1` |
-| actor-orders.png | `/@1234567890abcdef/orders/order-1` |
 | shared-task.png | `/shared/tasks/order-1` |
 | solutions.png | `/order/order-1/solutions?task=Document%20current%20workspace%20pages` |
 | solver-detail.png | `/order/order-1/solver/1` |

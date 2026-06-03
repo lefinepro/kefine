@@ -55,10 +55,6 @@ function buildOrganizationJsonLd(origin: string, publicConfig: KefinePublicRunti
   };
 }
 
-function isActorOrderPath(pathname: string): boolean {
-  return /^\/@[^/]+\/order\/[^/]+$/i.test(pathname);
-}
-
 export function getSeoMeta(url: URL, sourceConfig: unknown = DEFAULT_PUBLIC_RUNTIME_CONFIG): SeoMeta {
   const pathname = url.pathname.replace(/\/+$/, '') || '/';
   const publicConfig = resolvePublicRuntimeConfig(sourceConfig);
@@ -93,7 +89,6 @@ export function getSeoMeta(url: URL, sourceConfig: unknown = DEFAULT_PUBLIC_RUNT
     pathname === '/api/health' ||
     pathname.startsWith('/task/') ||
     pathname.startsWith('/order/') ||
-    isActorOrderPath(pathname) ||
     pathname.startsWith('/payment/') ||
     pathname.startsWith('/api/payment/') ||
     pathname.startsWith('/pay/') ||

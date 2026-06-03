@@ -32,7 +32,7 @@ test.describe('Topbar search', () => {
     await expect(result).toContainText('Need Redis backup script');
 
     await result.click();
-    await expect(page).toHaveURL(/(\/order\/order-1|\/@api\/order-1)$/);
+    await expect(page).toHaveURL(/\/order\/order-1$/);
   });
 
   test('surfaces developed widgets inline from the command palette', async ({ page }) => {
@@ -50,11 +50,12 @@ test.describe('Topbar search', () => {
     await expect(weatherResult).toBeVisible();
     await weatherResult.click();
 
-    // The widget renders inline without leaving the page.
+    // The widget renders inline without leaving the page: the URL stays on the
+    // current order workspace instead of navigating to a new route.
     const widgetHost = page.getByTestId('kefine-topbar-search-widget');
     await expect(widgetHost).toHaveAttribute('data-widget', 'weather');
     await expect(page.getByTestId('kefine-weather-widget')).toBeVisible();
-    await expect(page).not.toHaveURL(/\/order\//);
+    await expect(page).toHaveURL(/\/order\/order-1$/);
 
     // Back returns to the results list, keeping the palette open.
     await page.getByTestId('kefine-topbar-search-widget-back').click();
