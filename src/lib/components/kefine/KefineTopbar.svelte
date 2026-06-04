@@ -4,13 +4,14 @@
   import KefineClockWidget from '$lib/components/kefine/KefineClockWidget.svelte';
   import KefineTranslatorWidget from '$lib/components/kefine/KefineTranslatorWidget.svelte';
   import KefineMusicWidget from '$lib/components/kefine/KefineMusicWidget.svelte';
+  import KefineProxyConfigWidget from '$lib/components/kefine/KefineProxyConfigWidget.svelte';
   import KefineSearchInput from '$lib/components/kefine/KefineSearchInput.svelte';
   import { onMount, tick } from 'svelte';
   import { detectWeatherIntent } from '$lib/kefine/weather-intent';
   import { scheduleAfter } from '$lib/utils/helpers';
   import type { KefineLocale } from '$lib/constants/kefine-locale';
   import type { KefineTopbarIconName } from '$lib/components/kefine/KefineTopbarIcon.svelte';
-  import type { KefineSearchWidgetId } from '$lib/kefine/search-widgets';
+  import { KEFINE_SEARCH_WIDGET_IDS, type KefineSearchWidgetId } from '$lib/kefine/search-widgets';
   import type {
     TopbarSearchAction,
     TopbarSearchItem,
@@ -78,11 +79,13 @@
     searchDefaultQuery = '',
     initialWidget = null,
     showSearchWidgets = true,
+    searchWidgetIds = KEFINE_SEARCH_WIDGET_IDS,
     searchWidgetsLabel = 'Widgets',
     searchWeatherLabel = 'Weather',
     searchClockLabel = 'Clock',
     searchTranslatorLabel = 'Translator',
     searchMusicLabel = 'Music',
+    searchProxyLabel = 'Proxy',
     searchWidgetBackLabel = 'Back to results',
     socialLinks,
     showSocialLinks = false,
@@ -147,11 +150,19 @@
     /** Widget short link (e.g. `/@profile/weather`) that auto-opens this widget inline. */
     initialWidget?: KefineSearchWidgetId | null;
     showSearchWidgets?: boolean;
+    /**
+     * Which widgets this surface offers in the command palette, in display
+     * order. Profiles pass the widgets declared in their `social.org` so a
+     * widget only ever surfaces when a visitor's query matches it; other
+     * surfaces fall back to every built-in widget.
+     */
+    searchWidgetIds?: readonly KefineSearchWidgetId[];
     searchWidgetsLabel?: string;
     searchWeatherLabel?: string;
     searchClockLabel?: string;
     searchTranslatorLabel?: string;
     searchMusicLabel?: string;
+    searchProxyLabel?: string;
     searchWidgetBackLabel?: string;
     socialLinks: SocialLink[];
     showSocialLinks?: boolean;
@@ -213,8 +224,8 @@
       return [];
     }
 
-    return [
-      {
+    const definitions: Record<KefineSearchWidgetId, KefineTopbarSearchItem> = {
+      weather: {
         id: 'widget-weather',
         title: searchWeatherLabel,
         subtitle: searchWidgetsLabel,
@@ -223,7 +234,7 @@
         widget: 'weather',
         keywords: [searchWeatherLabel, 'weather', 'forecast', 'погода', 'прогноз', 'եղանակ']
       },
-      {
+      clock: {
         id: 'widget-clock',
         title: searchClockLabel,
         subtitle: searchWidgetsLabel,
@@ -232,7 +243,7 @@
         widget: 'clock',
         keywords: [searchClockLabel, 'clock', 'time', 'time zone', 'часы', 'время', 'ժամ', 'ժամացույց']
       },
-      {
+      translate: {
         id: 'widget-translate',
         title: searchTranslatorLabel,
         subtitle: searchWidgetsLabel,
@@ -241,16 +252,28 @@
         widget: 'translate',
         keywords: [searchTranslatorLabel, 'translate', 'translation', 'перевод', 'переводчик', 'թարգմանիչ']
       },
-      {
+      music: {
         id: 'widget-music',
         title: searchMusicLabel,
         subtitle: searchWidgetsLabel,
         category: searchWidgetsLabel,
         icon: 'music',
         widget: 'music',
-        keywords: [searchMusicLabel, 'music', 'audio', 'track', 'музыка', 'երաժշտություն']
+        keywords: [searchMusicLabel, 'music', 'audio', 'track', 'song', 'музыка', 'песня', 'երաժշտություն']
+      },
+      proxy: {
+        id: 'widget-proxy',
+        title: searchProxyLabel,
+        subtitle: searchWidgetsLabel,
+        category: searchWidgetsLabel,
+        icon: 'proxy',
+        widget: 'proxy',
+        keywords: [searchProxyLabel, 'proxy', 'vpn', 'vless', 'wireguard', 'прокси', 'впн', 'պրոքսի']
       }
-    ];
+    };
+
+    // Only surface the widgets this page offers, in their requested order.
+    return searchWidgetIds.map((id) => definitions[id]).filter(Boolean);
   });
   const builtInSearchItems = $derived.by((): KefineTopbarSearchItem[] => {
     const items: KefineTopbarSearchItem[] = [
@@ -296,6 +319,10 @@
 
     if (activeSearchWidget === 'music') {
       return searchMusicLabel;
+    }
+
+    if (activeSearchWidget === 'proxy') {
+      return searchProxyLabel;
     }
 
     return '';
@@ -979,6 +1006,8 @@
                 <KefineTranslatorWidget active query={searchQuery} />
               {:else if activeSearchWidget === 'music'}
                 <KefineMusicWidget active />
+              {:else if activeSearchWidget === 'proxy'}
+                <KefineProxyConfigWidget active />
               {/if}
             </kefine-search-widget>
           {:else}

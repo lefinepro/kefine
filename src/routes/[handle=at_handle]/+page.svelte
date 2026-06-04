@@ -5,7 +5,6 @@
   import KefineProfileHeaderEditor from '$lib/components/kefine/KefineProfileHeaderEditor.svelte';
   import KefineProfileSocialLinksCard from '$lib/components/kefine/KefineProfileSocialLinksCard.svelte';
   import KefineProfileSetupDots from '$lib/components/kefine/KefineProfileSetupDots.svelte';
-  import KefineProfileWidgets from '$lib/components/kefine/KefineProfileWidgets.svelte';
   import KefineProfileRepository from '$lib/components/kefine/KefineProfileRepository.svelte';
   import KefineTopbar from '$lib/components/kefine/KefineTopbar.svelte';
   import { onMount } from 'svelte';
@@ -21,8 +20,13 @@
   import {
     DEFAULT_PROFILE_TASKS_ORG,
     DEFAULT_PROFILE_WIDGETS_ORG,
-    buildProfileSocialOrg
+    buildProfileSocialOrg,
+    parseProfileWidgetBlocks
   } from '$lib/profile/profile-social-org';
+  import {
+    KEFINE_SEARCH_WIDGET_IDS,
+    type KefineSearchWidgetId
+  } from '$lib/kefine/search-widgets';
   import {
     addProfileBonus,
     buildProfilePath,
@@ -51,6 +55,20 @@
   // "Create task" result registered by KefineProfileRepository.
   const searchRequest = $derived($topbarSearchRequest);
   const searchItems = $derived($topbarSearchItems);
+  // The profile is rendered as a repository: its declared widgets are not shown
+  // statically, they are only surfaced through the command palette when the
+  // visitor types a matching query. Pass the org-declared widget set to the
+  // topbar so it offers exactly those (falling back to every widget when the
+  // profile declares none).
+  const profileWidgetIds = $derived.by<readonly KefineSearchWidgetId[]>(() => {
+    const declared = parseProfileWidgetBlocks(widgetsOrg);
+    const seen = new Set<KefineSearchWidgetId>();
+    for (const block of declared) {
+      seen.add(block.type);
+    }
+    const ordered = KEFINE_SEARCH_WIDGET_IDS.filter((id) => seen.has(id));
+    return ordered.length > 0 ? ordered : KEFINE_SEARCH_WIDGET_IDS;
+  });
   const passkeySession = $derived($passkeySessionStore);
   const BRAND_HOME_NAVIGATION_STORAGE_KEY = 'kefine-brand-home-navigation';
   const THEME_STORAGE_KEY = 'kefine-theme';
@@ -789,6 +807,8 @@
       searchClockLabel={localeText.topbar.searchClockLabel}
       searchTranslatorLabel={localeText.topbar.searchTranslatorLabel}
       searchMusicLabel={localeText.topbar.searchMusicLabel}
+      searchProxyLabel={localeText.topbar.searchProxyLabel}
+      searchWidgetIds={profileWidgetIds}
       searchWidgetBackLabel={localeText.topbar.searchWidgetBackLabel}
       searchHomeHref={buildLocaleHomePath(activeLocale)}
       initialSearchQuery={page.url.searchParams.get('q') ?? ''}
@@ -984,8 +1004,6 @@
                 {tasksOrg}
                 {isOwner}
               />
-
-              <KefineProfileWidgets {widgetsOrg} />
 
               {#if isOwner}
                 <label class="profile-field">

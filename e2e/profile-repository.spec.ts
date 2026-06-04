@@ -11,10 +11,20 @@ const SEED_TASKS_ORG = [
   '* IN PROGRESS Publish your first service',
   '* DONE Claim your handle'
 ].join('\n');
+// The profile declares widgets in Org block form, but they must NOT render
+// statically on the public profile — they are only surfaced through the command
+// palette when a visitor types a matching query.
+const SEED_WIDGETS_ORG = [
+  '#+begin_weather',
+  '#+end_weather',
+  '',
+  '#+begin_music',
+  '#+end_music'
+].join('\n');
 
 async function seedPublicProfile(page: import('@playwright/test').Page) {
   await page.addInitScript(
-    ({ handle, tasksOrg }) => {
+    ({ handle, tasksOrg, widgetsOrg }) => {
       const profile = {
         id: 'profile-demo',
         userId: 'user-demo',
@@ -31,11 +41,11 @@ async function seedPublicProfile(page: import('@playwright/test').Page) {
         followingCount: 0,
         createdAt: '2024-01-01T00:00:00.000Z',
         updatedAt: '2024-01-01T00:00:00.000Z',
-        metadata: { tasksOrg, profileSetupCompleted: true }
+        metadata: { tasksOrg, widgetsOrg, profileSetupCompleted: true }
       };
       window.localStorage.setItem('kefine-profiles-v1', JSON.stringify([profile]));
     },
-    { handle: SEED_HANDLE, tasksOrg: SEED_TASKS_ORG }
+    { handle: SEED_HANDLE, tasksOrg: SEED_TASKS_ORG, widgetsOrg: SEED_WIDGETS_ORG }
   );
 }
 
@@ -70,5 +80,38 @@ test.describe('Profile repository view', () => {
     const createTaskResult = page.getByTestId('kefine-topbar-search-result-create-task');
     await expect(createTaskResult).toBeVisible();
     await expect(createTaskResult).toContainText('Ship the landing page');
+  });
+
+  test('declared widgets are not shown statically but are surfaced by a matching query', async ({
+    page
+  }) => {
+    await seedPublicProfile(page);
+    await page.goto(`/@${SEED_HANDLE}`);
+
+    await expect(page.getByTestId('profile-repo')).toBeVisible();
+
+    // No widget renders statically on the public profile.
+    await expect(page.getByTestId('kefine-weather-widget')).toHaveCount(0);
+    await expect(page.getByTestId('kefine-music-widget')).toHaveCount(0);
+
+    // The declared weather widget only appears once the visitor searches for it.
+    await page.getByTestId('kefine-topbar-search-trigger').click();
+    await expect(page.getByTestId('kefine-topbar-search-dialog')).toBeVisible();
+    await page.getByTestId('kefine-topbar-search-input').fill('weather');
+
+    const weatherResult = page.getByTestId('kefine-topbar-search-result-widget-weather');
+    await expect(weatherResult).toBeVisible();
+    await weatherResult.click();
+
+    await expect(page.getByTestId('kefine-topbar-search-widget')).toHaveAttribute(
+      'data-widget',
+      'weather'
+    );
+    await expect(page.getByTestId('kefine-weather-widget')).toBeVisible();
+
+    // A widget the profile did not declare (translate) is not offered.
+    await page.getByTestId('kefine-topbar-search-widget-back').click();
+    await page.getByTestId('kefine-topbar-search-input').fill('translate');
+    await expect(page.getByTestId('kefine-topbar-search-result-widget-translate')).toHaveCount(0);
   });
 });

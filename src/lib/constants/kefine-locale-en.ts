@@ -40,6 +40,7 @@ export const KEFINE_TEXT_EN = {
     searchClockLabel: 'Clock',
     searchTranslatorLabel: 'Translator',
     searchMusicLabel: 'Music',
+    searchProxyLabel: 'Proxy / VPN',
     searchWidgetBackLabel: 'Back to results',
     socialLinks: {
       mastodon: {

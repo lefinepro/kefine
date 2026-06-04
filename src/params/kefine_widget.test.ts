@@ -10,6 +10,8 @@ describe('kefine_widget route matcher', () => {
     expect(match('translate')).toBe(true);
     expect(match('translator')).toBe(true);
     expect(match('music')).toBe(true);
+    expect(match('proxy')).toBe(true);
+    expect(match('vpn')).toBe(true);
   });
 
   it('does not match unrelated path segments (e.g. share ids)', () => {

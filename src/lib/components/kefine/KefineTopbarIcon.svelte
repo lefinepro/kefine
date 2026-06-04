@@ -13,6 +13,7 @@
     | 'clock'
     | 'translate'
     | 'music'
+    | 'proxy'
     | 'menu'
     | 'project'
     | 'copy'
@@ -113,6 +114,9 @@
     <path d="M9 17V6l9-2v9" />
     <circle cx="6.5" cy="17" r="2.5" />
     <circle cx="15.5" cy="15" r="2.5" />
+  {:else if name === 'proxy'}
+    <path d="M12 3.2 5 5.8v5c0 4 2.9 6.9 7 8 4.1-1.1 7-4 7-8v-5Z" />
+    <path d="m9.2 12 1.9 1.9 3.7-3.7" />
   {:else if name === 'menu'}
     <path d="M5 7h14" />
     <path d="M5 12h14" />

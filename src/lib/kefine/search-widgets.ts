@@ -2,14 +2,15 @@
  * Built-in widgets the command palette can surface inline on any page and that
  * are reachable through per-profile short links such as `/@profile/weather`.
  */
-export type KefineSearchWidgetId = 'weather' | 'clock' | 'translate' | 'music';
+export type KefineSearchWidgetId = 'weather' | 'clock' | 'translate' | 'music' | 'proxy';
 
 /** Canonical widget ids in their display order. */
 export const KEFINE_SEARCH_WIDGET_IDS: readonly KefineSearchWidgetId[] = [
   'weather',
   'clock',
   'translate',
-  'music'
+  'music',
+  'proxy'
 ];
 
 /**
@@ -25,7 +26,10 @@ const WIDGET_SLUG_ALIASES: Readonly<Record<string, KefineSearchWidgetId>> = {
   translate: 'translate',
   translator: 'translate',
   translation: 'translate',
-  music: 'music'
+  music: 'music',
+  track: 'music',
+  proxy: 'proxy',
+  vpn: 'proxy'
 };
 
 /**

@@ -34,6 +34,7 @@ export const KEFINE_TEXT_HY = {
     searchClockLabel: 'Ժամացույց',
     searchTranslatorLabel: 'Թարգմանիչ',
     searchMusicLabel: 'Երաժշտություն',
+    searchProxyLabel: 'Պրոքսի / VPN',
     searchWidgetBackLabel: 'Վերադառնալ արդյունքներ',
     theme: {
       auto: 'Ավտո',
