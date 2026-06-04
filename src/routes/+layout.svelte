@@ -288,6 +288,7 @@
     searchHomeLabel={localeText.topbar.searchHomeLabel}
     searchWidgetsLabel={localeText.topbar.searchWidgetsLabel}
     searchWeatherLabel={localeText.topbar.searchWeatherLabel}
+    searchClockLabel={localeText.topbar.searchClockLabel}
     searchTranslatorLabel={localeText.topbar.searchTranslatorLabel}
     searchMusicLabel={localeText.topbar.searchMusicLabel}
     searchWidgetBackLabel={localeText.topbar.searchWidgetBackLabel}

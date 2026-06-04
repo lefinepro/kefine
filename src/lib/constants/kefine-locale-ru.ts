@@ -37,6 +37,7 @@ export const KEFINE_TEXT_RU = {
     searchHomeLabel: 'Главная',
     searchWidgetsLabel: 'Виджеты',
     searchWeatherLabel: 'Погода',
+    searchClockLabel: 'Часы',
     searchTranslatorLabel: 'Переводчик',
     searchMusicLabel: 'Музыка',
     searchWidgetBackLabel: 'Назад к результатам',

@@ -10,6 +10,7 @@
     | 'email'
     | 'search'
     | 'weather'
+    | 'clock'
     | 'translate'
     | 'music'
     | 'menu'
@@ -99,6 +100,9 @@
     <path d="m5.4 4.4.9.9" />
     <path d="m13.5 4.4-.9.9" />
     <path d="M16.8 19.4a3 3 0 0 0 .2-6A4.2 4.2 0 0 0 8.9 14.3 3.2 3.2 0 0 0 9.2 19.4Z" />
+  {:else if name === 'clock'}
+    <circle cx="12" cy="12" r="8" />
+    <path d="M12 7.6V12l3 1.8" />
   {:else if name === 'translate'}
     <path d="M3.8 6h7.2" />
     <path d="M7.4 5.2v.8c0 3-1.9 5.4-4.4 6.5" />

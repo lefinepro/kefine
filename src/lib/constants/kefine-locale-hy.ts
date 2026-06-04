@@ -31,6 +31,7 @@ export const KEFINE_TEXT_HY = {
     searchHomeLabel: 'Գլխավոր',
     searchWidgetsLabel: 'Վիջեթներ',
     searchWeatherLabel: 'Եղանակ',
+    searchClockLabel: 'Ժամացույց',
     searchTranslatorLabel: 'Թարգմանիչ',
     searchMusicLabel: 'Երաժշտություն',
     searchWidgetBackLabel: 'Վերադառնալ արդյունքներ',

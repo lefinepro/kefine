@@ -1,6 +1,7 @@
 <script lang="ts">
   import KefineTopbarIcon from '$lib/components/kefine/KefineTopbarIcon.svelte';
   import KefineWeatherWidget from '$lib/components/kefine/KefineWeatherWidget.svelte';
+  import KefineClockWidget from '$lib/components/kefine/KefineClockWidget.svelte';
   import KefineTranslatorWidget from '$lib/components/kefine/KefineTranslatorWidget.svelte';
   import KefineMusicWidget from '$lib/components/kefine/KefineMusicWidget.svelte';
   import KefineSearchInput from '$lib/components/kefine/KefineSearchInput.svelte';
@@ -79,6 +80,7 @@
     showSearchWidgets = true,
     searchWidgetsLabel = 'Widgets',
     searchWeatherLabel = 'Weather',
+    searchClockLabel = 'Clock',
     searchTranslatorLabel = 'Translator',
     searchMusicLabel = 'Music',
     searchWidgetBackLabel = 'Back to results',
@@ -147,6 +149,7 @@
     showSearchWidgets?: boolean;
     searchWidgetsLabel?: string;
     searchWeatherLabel?: string;
+    searchClockLabel?: string;
     searchTranslatorLabel?: string;
     searchMusicLabel?: string;
     searchWidgetBackLabel?: string;
@@ -221,6 +224,15 @@
         keywords: [searchWeatherLabel, 'weather', 'forecast', 'погода', 'прогноз', 'եղանակ']
       },
       {
+        id: 'widget-clock',
+        title: searchClockLabel,
+        subtitle: searchWidgetsLabel,
+        category: searchWidgetsLabel,
+        icon: 'clock',
+        widget: 'clock',
+        keywords: [searchClockLabel, 'clock', 'time', 'time zone', 'часы', 'время', 'ժամ', 'ժամացույց']
+      },
+      {
         id: 'widget-translate',
         title: searchTranslatorLabel,
         subtitle: searchWidgetsLabel,
@@ -272,6 +284,10 @@
   const activeWidgetTitle = $derived.by(() => {
     if (activeSearchWidget === 'weather') {
       return searchWeatherLabel;
+    }
+
+    if (activeSearchWidget === 'clock') {
+      return searchClockLabel;
     }
 
     if (activeSearchWidget === 'translate') {
@@ -957,6 +973,8 @@
             >
               {#if activeSearchWidget === 'weather'}
                 <KefineWeatherWidget active query={weatherWidgetQuery} />
+              {:else if activeSearchWidget === 'clock'}
+                <KefineClockWidget active query={searchQuery} />
               {:else if activeSearchWidget === 'translate'}
                 <KefineTranslatorWidget active query={searchQuery} />
               {:else if activeSearchWidget === 'music'}
