@@ -1,6 +1,7 @@
 require "./spec_helper"
 require "aptok/testing"
 require "file_utils"
+require "http/server"
 require "../src/crater/relay_service"
 require "../src/crater/utils/config"
 
@@ -31,6 +32,49 @@ private def with_relay_config(services : Array(Hash(String, String)), &)
   ensure
     Dir.cd(previous)
     FileUtils.rm_rf(dir)
+  end
+end
+
+private record LocalInferenceDelivery,
+  path : String,
+  content_type : String?,
+  activity : Aptok::JsonMap
+
+private def with_local_inference_endpoint(&)
+  deliveries = Channel(LocalInferenceDelivery).new(1)
+  server = HTTP::Server.new do |context|
+    if context.request.method == "POST" && context.request.path == "/inference/inbox"
+      body = context.request.body.try(&.gets_to_end) || ""
+      deliveries.send(
+        LocalInferenceDelivery.new(
+          context.request.path,
+          context.request.headers["Content-Type"]?,
+          JSON.parse(body).as_h.as(Aptok::JsonMap)
+        )
+      )
+      context.response.status_code = 202
+      context.response.content_type = "application/json"
+      context.response.print({accepted: true, endpoint: "inference"}.to_json)
+    else
+      context.response.status_code = 404
+      context.response.content_type = "application/json"
+      context.response.print({error: "unexpected request"}.to_json)
+    end
+  end
+
+  address = server.bind_tcp("127.0.0.1", 0)
+  spawn do
+    begin
+      server.listen
+    rescue IO::Error
+      # The spec closes the server after the relay delivers to the local inbox.
+    end
+  end
+
+  begin
+    yield "http://#{address.address}:#{address.port}/inference/inbox", deliveries
+  ensure
+    server.close
   end
 end
 
@@ -110,6 +154,49 @@ describe "Lepos relay end-to-end fanout" do
       delivered_inboxes.size.should eq(2)
       delivered_inboxes.should contain("https://external.example/users/bot/inbox")
       delivered_inboxes.should contain("http://10.0.0.5/inbox")
+    end
+  end
+
+  it "posts relayed activity to a real local inference endpoint configured as an internal service" do
+    with_local_inference_endpoint do |inbox, deliveries|
+      local_actor = "http://127.0.0.1:4501/actor/inference"
+
+      with_relay_config([
+        {"id" => local_actor, "inbox" => inbox},
+      ]) do |config|
+        activity = Aptok.create(
+          "https://origin.example/activities/inference-request-1",
+          "https://origin.example/users/requester",
+          Aptok.note("https://origin.example/notes/inference-request-1", "Run local inference for this task"),
+          [Aptok::PUBLIC_COLLECTION]
+        )
+
+        sent = Lepos::RelayService.relay_activity(
+          activity,
+          config,
+          Aptok::MemoryKvStore.new,
+          Aptok::Transport.new(signature_enabled: false)
+        )
+
+        sent.size.should eq(1)
+        sent.first.recipient.id.should eq(local_actor)
+        sent.first.recipient.inbox.should eq(inbox)
+
+        delivery = select
+        when value = deliveries.receive
+          value
+        when timeout(2.seconds)
+          raise "Timed out waiting for local inference endpoint delivery"
+        end
+
+        delivery.path.should eq("/inference/inbox")
+        delivery.content_type.to_s.should contain("application/ld+json")
+        delivery.activity["id"].as_s.should eq("https://origin.example/activities/inference-request-1")
+        delivery.activity["type"].as_s.should eq("Create")
+        delivery.activity["actor"].as_s.should eq("https://origin.example/users/requester")
+        delivery.activity["to"].as_a.map(&.as_s).should contain(Aptok::PUBLIC_COLLECTION)
+        delivery.activity["object"].as_h["content"].as_s.should eq("Run local inference for this task")
+      end
     end
   end
 
