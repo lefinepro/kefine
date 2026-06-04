@@ -79,6 +79,7 @@
 <style>
   dialog {
     width: min(34rem, calc(100vw - 2rem));
+    max-height: calc(100dvh - 2rem);
     border: none;
     border-radius: 1.25rem;
     padding: 0;
@@ -92,6 +93,18 @@
 
   dialog[open] {
     animation: kefine-modal-enter 220ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  }
+
+  /* Keep tall centred modals within the viewport and scroll the body instead of
+     letting the top controls overflow above the screen edge. */
+  dialog[data-placement='center'][open] {
+    display: flex;
+    flex-direction: column;
+  }
+
+  dialog[data-placement='center'] > lef-modal-body {
+    min-height: 0;
+    overflow: auto;
   }
 
   dialog[data-tone='dark'] {

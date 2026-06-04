@@ -958,6 +958,33 @@ export const KEFINE_TEXT_HY = {
     taskNamePlaceholder: 'Առաջադրանքի անուն',
     slugPlaceholder: 'task-name',
     branchPatternPlaceholder: 'main կամ feature/*',
+    badges: {
+      best: 'Լավագույն',
+      bestTitle: 'Լավագույն լուծողն ընտրված չափանիշով',
+      deltaTitle: 'Հետ է մնում լավագույն լուծողից ընտրված չափանիշով'
+    },
+    solversModal: {
+      open: 'Համեմատել լուծողներին',
+      title: 'Լուծողների համեմատություն',
+      subtitle:
+        'Ընտրեք լուծող այս առաջադրանքի համար։ Առաջատարը ստանում է «Լավագույն» նշանը, մնացածը ցույց են տալիս հետ մնալն ընտրված չափանիշով։',
+      close: 'Փակել լուծողների համեմատությունը',
+      rankedBy: 'Դասավորել ըստ',
+      metricNames: {
+        efficiency: 'Արդյունավետություն',
+        success: 'Հաջողություն',
+        price: 'Գին',
+        speed: 'Արագություն'
+      },
+      metricHints: {
+        efficiency: 'Ավելի շատ հաջողություն մեկ դոլարի դիմաց',
+        success: 'Ամենաբարձր հաջողության տոկոսը',
+        price: 'Ամենացածր գինը',
+        speed: 'Ամենաարագ կատարումը'
+      },
+      plotsSubtitle: 'Կատարման ժամանակ, գին, հաջողության տոկոս և արժեք մեկ դոլարի դիմաց',
+      empty: 'Դեռ չկան լուծողներ համեմատելու համար։'
+    },
     cohortDialog: {
       title: 'Մատչելի solver cohort',
       description: 'Որոնեք solver cohort, օրինակ `vpn`, և ընտրեք մարդկանց, որոնց Lefine-ը պետք է առաջնահերթ տա։',
