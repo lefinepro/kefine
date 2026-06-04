@@ -109,6 +109,12 @@ export interface ProfileMetadata extends Record<string, unknown> {
   profileSetupCompleted?: boolean;
   cardBonusEligible?: boolean;
   sshPublicKey?: string;
+  /**
+   * Org-format widget document for the public workspace. Holds `#+begin_<widget>`
+   * blocks (weather, clock, …) that the profile screen renders inline and that
+   * the generated `social.org` document carries under its `* Widgets` section.
+   */
+  widgetsOrg?: string;
 }
 
 export interface Profile {

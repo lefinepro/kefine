@@ -5,6 +5,7 @@
   import KefineProfileHeaderEditor from '$lib/components/kefine/KefineProfileHeaderEditor.svelte';
   import KefineProfileSocialLinksCard from '$lib/components/kefine/KefineProfileSocialLinksCard.svelte';
   import KefineProfileSetupDots from '$lib/components/kefine/KefineProfileSetupDots.svelte';
+  import KefineProfileWidgets from '$lib/components/kefine/KefineProfileWidgets.svelte';
   import KefineTopbar from '$lib/components/kefine/KefineTopbar.svelte';
   import { onMount } from 'svelte';
   import type { Component } from 'svelte';
@@ -16,6 +17,10 @@
   import { shortenAuthLabel } from '$lib/components/kefine/kefine-workspace-helpers';
   import { resolvePublicRuntimeConfig } from '$lib/config/public-config';
   import { kefineLocale, kefineLocaleText, setKefineLocale, type KefineLocale } from '$lib/constants/kefine-locale';
+  import {
+    DEFAULT_PROFILE_WIDGETS_ORG,
+    buildProfileSocialOrg
+  } from '$lib/profile/profile-social-org';
   import {
     addProfileBonus,
     buildProfilePath,
@@ -59,6 +64,8 @@
   let referralPercent = $state(10);
   let socialLinks = $state<ProfileSocialLink[]>([]);
   let sshPublicKey = $state('');
+  let widgetsOrg = $state('');
+  let socialOrgState = $state<'idle' | 'copied'>('idle');
   let privateKey = $state('');
   let firstName = $state('');
   let surname = $state('');
@@ -202,6 +209,7 @@
       socialLinks = [createEmptySocialLink()];
     }
     sshPublicKey = typeof nextProfile?.metadata?.sshPublicKey === 'string' ? nextProfile.metadata.sshPublicKey : '';
+    widgetsOrg = typeof nextProfile?.metadata?.widgetsOrg === 'string' ? nextProfile.metadata.widgetsOrg : '';
     const nameParts = readProfileNameParts(nextProfile);
     firstName = nameParts.firstName;
     surname = nameParts.surname;
@@ -418,6 +426,74 @@
     await copyLink(privateKey, 'profile');
   }
 
+  // Build a `social.org` (org-social) document from the current draft so owners
+  // can copy or download it and push it elsewhere. Reflects unsaved edits.
+  function buildSocialOrgDocument(): string {
+    if (!profile) {
+      return '';
+    }
+
+    const fullName = `${firstName.trim()} ${surname.trim()}`.trim();
+    const profileUrl = browser && canonicalProfilePath
+      ? new URL(canonicalProfilePath, window.location.origin).toString()
+      : canonicalProfilePath;
+
+    return buildProfileSocialOrg(
+      {
+        displayName: fullName || profile.displayName,
+        primaryHandle: username || profile.primaryHandle,
+        bio,
+        avatarUrl: profile.avatarUrl,
+        socialLinks: socialLinks
+          .map((link) => ({ ...link, value: link.value.trim() }))
+          .filter((link) => link.value)
+      },
+      { profileUrl: profileUrl || undefined, widgetsOrg: widgetsOrg.trim() }
+    );
+  }
+
+  async function copySocialOrg() {
+    if (!browser || !navigator.clipboard) {
+      return;
+    }
+
+    const document = buildSocialOrgDocument();
+    if (!document) {
+      return;
+    }
+
+    await navigator.clipboard.writeText(document);
+    socialOrgState = 'copied';
+    window.setTimeout(() => {
+      if (socialOrgState === 'copied') {
+        socialOrgState = 'idle';
+      }
+    }, 1400);
+  }
+
+  function downloadSocialOrg() {
+    if (!browser) {
+      return;
+    }
+
+    const document = buildSocialOrgDocument();
+    if (!document) {
+      return;
+    }
+
+    const blob = new Blob([document], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = window.document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'social.org';
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function insertExampleWidgets() {
+    widgetsOrg = DEFAULT_PROFILE_WIDGETS_ORG;
+  }
+
   function resolveNextUsername(current: Profile): string {
     const normalized = normalizeProfileUsername(username);
     const otherProfiles = readProfiles(localStorage).filter((item) => item.id !== current.id);
@@ -466,7 +542,8 @@
       metadata: nextMetadata(current, {
         firstName: firstName.trim(),
         surname: surname.trim(),
-        sshPublicKey: sshPublicKey.trim()
+        sshPublicKey: sshPublicKey.trim(),
+        widgetsOrg: widgetsOrg.trim()
       })
     }));
 
@@ -870,6 +947,8 @@
               {/if}
             </lefine-box>
 
+            <KefineProfileWidgets {widgetsOrg} />
+
             <lefine-box class="profile-section">
               {#if isOwner}
                 <lefine-box class="profile-visibility-note" data-public={isPublic}>
@@ -925,6 +1004,31 @@
             </lefine-box>
 
             {#if isOwner}
+              <lefine-box class="profile-widgets-editor">
+                <lefine-box class="profile-links-head">
+                  <strong>{localeText.profile.widgetsTitle}</strong>
+                  <button type="button" class="profile-widgets-example" onclick={insertExampleWidgets}>
+                    {localeText.profile.widgetsInsertExample}
+                  </button>
+                </lefine-box>
+                <p class="profile-widgets-hint">{localeText.profile.widgetsHint}</p>
+                <textarea
+                  class="profile-widgets-input"
+                  bind:value={widgetsOrg}
+                  rows="6"
+                  spellcheck="false"
+                  placeholder={DEFAULT_PROFILE_WIDGETS_ORG}
+                ></textarea>
+                <lefine-box class="profile-widgets-actions">
+                  <button type="button" data-variant="ghost" onclick={copySocialOrg}>
+                    {socialOrgState === 'copied' ? localeText.profile.socialOrgCopied : localeText.profile.copySocialOrg}
+                  </button>
+                  <button type="button" data-variant="ghost" onclick={downloadSocialOrg}>
+                    {localeText.profile.downloadSocialOrg}
+                  </button>
+                </lefine-box>
+              </lefine-box>
+
               <footer class="profile-details__footer">
                 <button type="button" data-variant="primary" onclick={saveProfile}>{localeText.profile.save}</button>
               </footer>
@@ -1268,6 +1372,49 @@
 
   .profile-field textarea {
     width: 100%;
+  }
+
+  .profile-widgets-editor {
+    display: grid;
+    gap: 0.55rem;
+  }
+
+  .profile-widgets-hint {
+    margin: 0;
+    color: var(--kef-color-muted);
+    font-size: 0.82rem;
+    line-height: 1.45;
+  }
+
+  .profile-widgets-input {
+    width: 100%;
+    font-family: var(--kef-font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+    font-size: 0.82rem;
+    line-height: 1.5;
+    white-space: pre;
+    overflow-wrap: normal;
+  }
+
+  .profile-widgets-example {
+    margin-left: auto;
+    padding: 0.3rem 0.6rem;
+    border: 1px solid color-mix(in oklab, var(--kef-color-text) 12%, transparent);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--kef-color-text);
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: border-color var(--kef-motion-fast) var(--kef-ease-soft);
+  }
+
+  .profile-widgets-example:hover {
+    border-color: color-mix(in oklab, var(--kef-color-primary) 40%, transparent);
+  }
+
+  .profile-widgets-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
   }
 
   .profile-setup__footer,

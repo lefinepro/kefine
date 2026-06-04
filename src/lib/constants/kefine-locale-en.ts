@@ -288,6 +288,11 @@ export const KEFINE_TEXT_EN = {
       cloudy: 'Cloudy'
     }
   },
+  clockWidget: {
+    title: 'Time',
+    localLabel: 'Local time',
+    typeCityHint: 'Type a city name — Moscow, London, Tokyo, Gomel, Yerevan, or any other city.'
+  },
   defaults: {
     unknownSolver: 'Unknown solver',
     taskTitle: 'Lepo',
@@ -883,7 +888,14 @@ export const KEFINE_TEXT_EN = {
     templateNetPreview: 'Order remainder',
     templateLinkCopied: 'Service link copied',
     templateSlug: 'Service URL',
-    templateSlugHint: 'Optional. Leave empty to keep a UUID-style link.'
+    templateSlugHint: 'Optional. Leave empty to keep a UUID-style link.',
+    widgetsTitle: 'Workspace widgets',
+    widgetsInsertExample: 'Insert example',
+    widgetsHint:
+      'Add Org blocks to show live widgets on your public workspace. Use #+begin_clock / #+begin_weather with an optional city, e.g. "#+begin_clock Tokyo".',
+    copySocialOrg: 'Copy social.org',
+    socialOrgCopied: 'social.org copied',
+    downloadSocialOrg: 'Download social.org'
   },
   solversView: {
     tasksAside: 'Tasks',

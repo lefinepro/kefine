@@ -264,6 +264,11 @@ export const KEFINE_TEXT_HY = {
       cloudy: 'Ամպամած'
     }
   },
+  clockWidget: {
+    title: 'Ժամ',
+    localLabel: 'Տեղական ժամ',
+    typeCityHint: 'Մուտքագրեք քաղաքի անունը — Մոսկվա, Լոնդոն, Տոկիո, Գոմել, Երևան կամ որևէ այլ քաղաք։'
+  },
   defaults: {
     ...KEFINE_TEXT_EN.defaults,
     unknownSolver: 'Անհայտ solver',
@@ -857,7 +862,14 @@ export const KEFINE_TEXT_HY = {
     templateNetPreview: 'Պատվերի մնացորդ',
     templateLinkCopied: 'Ծառայության հղումը պատճենված է',
     templateSlug: 'Ծառայության URL',
-    templateSlugHint: 'Պարտադիր չէ։ Թողեք դատարկ՝ UUID ոճի հղումը պահպանելու համար։'
+    templateSlugHint: 'Պարտադիր չէ։ Թողեք դատարկ՝ UUID ոճի հղումը պահպանելու համար։',
+    widgetsTitle: 'Աշխատանքային վիջեթներ',
+    widgetsInsertExample: 'Տեղադրել օրինակ',
+    widgetsHint:
+      'Ավելացրեք Org բլոկներ՝ ձեր հանրային էջում կենդանի վիջեթներ ցուցադրելու համար։ Օգտագործեք #+begin_clock / #+begin_weather քաղաքով, օրինակ՝ «#+begin_clock Tokyo»։',
+    copySocialOrg: 'Պատճենել social.org',
+    socialOrgCopied: 'social.org-ը պատճենված է',
+    downloadSocialOrg: 'Ներբեռնել social.org'
   },
   solversView: {
     ...KEFINE_TEXT_EN.solversView,

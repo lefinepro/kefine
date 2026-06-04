@@ -288,6 +288,11 @@ export const KEFINE_TEXT_RU = {
       cloudy: 'Облачно'
     }
   },
+  clockWidget: {
+    title: 'Время',
+    localLabel: 'Местное время',
+    typeCityHint: 'Введите название города — Москва, Лондон, Токио, Гомель, Ереван или любой другой.'
+  },
   defaults: {
     unknownSolver: 'Неизвестный решатель',
     taskTitle: 'Lepo',
@@ -885,7 +890,14 @@ export const KEFINE_TEXT_RU = {
     templateNetPreview: 'Остаток заказа',
     templateLinkCopied: 'Ссылка сервиса скопирована',
     templateSlug: 'Адрес сервиса',
-    templateSlugHint: 'Необязательно. Оставьте пустым, чтобы сохранить UUID-ссылку.'
+    templateSlugHint: 'Необязательно. Оставьте пустым, чтобы сохранить UUID-ссылку.',
+    widgetsTitle: 'Виджеты рабочего пространства',
+    widgetsInsertExample: 'Вставить пример',
+    widgetsHint:
+      'Добавьте Org-блоки, чтобы показать живые виджеты в публичном пространстве. Используйте #+begin_clock / #+begin_weather с городом, например «#+begin_clock Tokyo».',
+    copySocialOrg: 'Скопировать social.org',
+    socialOrgCopied: 'social.org скопирован',
+    downloadSocialOrg: 'Скачать social.org'
   },
   solversView: {
     tasksAside: 'Задачи',
