@@ -43,7 +43,16 @@ test.describe('Auth Flows', () => {
     const tokenField = page.getByTestId('kefine-solver-profile-token');
     await expect(tokenField).toBeVisible();
     const token = await tokenField.inputValue();
-    expect(token).toMatch(/^lepos_solver_api_[a-z0-9]+$/);
+    expect(token).toMatch(/^lepos_solver_[a-z0-9]+$/);
+
+    // The solver (inbox identity) is created automatically with a random handle.
+    const solverHandle = (await page.getByTestId('kefine-solver-profile-handle').innerText()).trim();
+    expect(solverHandle).toMatch(/^@solver-[a-z0-9]{8}$/);
+
+    // The local inbox is derived from that random solver handle.
+    await expect(page.getByTestId('kefine-solver-profile-inbox')).toContainText(
+      `http://127.0.0.1:4501/solvers/${solverHandle.slice(1)}/inbox`
+    );
 
     await page.getByTestId('kefine-solver-profile-copy').click();
     await expect(page.getByTestId('kefine-solver-profile-copy')).toContainText('Token copied');
@@ -51,6 +60,7 @@ test.describe('Auth Flows', () => {
 
     await page.reload();
     await expect(page.getByTestId('kefine-solver-profile-token')).toHaveValue(token);
+    await expect(page.getByTestId('kefine-solver-profile-handle')).toHaveText(solverHandle);
   });
 
   test('privatekey dialog accepts multiline key text input', async ({ page }) => {

@@ -804,11 +804,12 @@ export const KEFINE_TEXT_RU = {
     solverProfileWorkspace: 'Workspace',
     solverProfileLocalSolver: 'Локальный solver',
     solverProfileConnectText:
-      'Создайте профиль solver для кода на вашем компьютере. Используйте токен в локальном сервисе, а inbox добавьте в конфигурацию Lepos relay.',
+      'Создайте профиль solver для кода на вашем компьютере. Solver создаётся автоматически со случайным именем и собственным inbox — используйте токен в локальном сервисе, чтобы подключить его к Lepos relay.',
     solverProfileNotConnected: 'Не подключён',
     solverProfileConnected: 'Подключён',
     createSolverProfile: 'Создать профиль solver',
     solverProfileToken: 'Токен подключения',
+    solverProfilePending: 'Создаётся при подключении',
     solverProfileEndpoint: 'Локальный inbox',
     solverProfileHeader: 'Auth header',
     solverProfileTokenHint: 'Токен создаётся в этом workspace, его можно скопировать в локальный solver.',

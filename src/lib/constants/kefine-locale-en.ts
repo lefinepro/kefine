@@ -802,11 +802,12 @@ export const KEFINE_TEXT_EN = {
     solverProfileWorkspace: 'Workspace',
     solverProfileLocalSolver: 'Local solver',
     solverProfileConnectText:
-      'Create a solver profile for code running on your computer. Use the token with your local service while its inbox is configured in the Lepos relay.',
+      'Create a solver profile for code running on your computer. A solver is created automatically with a random handle and its own inbox — use the token with your local service to connect it to the Lepos relay.',
     solverProfileNotConnected: 'Not connected',
     solverProfileConnected: 'Connected',
     createSolverProfile: 'Create solver profile',
     solverProfileToken: 'Connection token',
+    solverProfilePending: 'Created on connect',
     solverProfileEndpoint: 'Local inbox',
     solverProfileHeader: 'Auth header',
     solverProfileTokenHint: 'The token is created in this workspace and can be copied into your local solver.',
