@@ -82,9 +82,23 @@ test.describe('Task document page', () => {
     // Reviewer feedback: task identity moves into the shared search area, with
     // no extra solver header row on the overview document.
     await expect(page.locator('lef-solver-topbar')).toHaveCount(0);
-    await expect(page.getByTestId('kefine-topbar-search-context')).toContainText(
-      '@api/document-import task:Document import workflow'
-    );
+    const topbarContext = page.getByTestId('kefine-topbar-search-context');
+    await expect(topbarContext).toContainText('@api/document-import');
+    await expect(topbarContext).toContainText('task:Document import workflow');
+    const topbarContextSegments = page.getByTestId('kefine-topbar-search-context-segment');
+    await expect(topbarContextSegments).toHaveCount(2);
+    await expect(topbarContextSegments.nth(0)).toHaveAttribute('data-kind', 'project');
+    await expect(topbarContextSegments.nth(1)).toHaveAttribute('data-kind', 'task');
+    const titleAlignment = await documentPage.locator('lef-task-title-row').evaluate((row) => {
+      const checkbox = row.querySelector('input')?.getBoundingClientRect();
+      const title = row.querySelector('h1')?.getBoundingClientRect();
+      if (!checkbox || !title) {
+        return Number.POSITIVE_INFINITY;
+      }
+
+      return Math.abs((checkbox.top + checkbox.height / 2) - (title.top + title.height / 2));
+    });
+    expect(titleAlignment).toBeLessThanOrEqual(1);
     // The document is the first-step overview: no testing/source tabs or solver widget.
     await expect(page.locator('lef-view-tabs')).toHaveCount(0);
     await expect(page.locator('lef-task-panel')).toHaveCount(0);
@@ -96,6 +110,16 @@ test.describe('Task document page', () => {
     await expect(page.getByTestId('kefine-task-document-properties')).toContainText('42 USDC');
     await expect(page.getByTestId('kefine-task-document-properties')).not.toContainText('Document Solver');
     await expect(page.getByTestId('kefine-task-document-properties')).not.toContainText('@api/document-import');
+    const propertyGap = await documentPage.locator('lef-task-property').first().evaluate((row) => {
+      const label = row.querySelector('strong')?.getBoundingClientRect();
+      const value = row.querySelector('lef-task-property-value')?.getBoundingClientRect();
+      if (!label || !value) {
+        return Number.NEGATIVE_INFINITY;
+      }
+
+      return value.left - label.right;
+    });
+    expect(propertyGap).toBeGreaterThanOrEqual(8);
     await expect(page.getByRole('heading', { name: 'Description' })).toHaveCount(0);
     await expect(page.getByRole('heading', { name: 'Subtasks' })).toHaveCount(0);
     await expect(page.getByTestId('kefine-task-document-description')).toContainText('Import plan');

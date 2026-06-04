@@ -661,7 +661,7 @@
   }
 
   lef-task-title-row > input {
-    margin-top: 0.1rem;
+    align-self: center;
   }
 
   h1,
@@ -709,7 +709,7 @@
 
   lef-task-property {
     display: grid;
-    grid-template-columns: 1rem minmax(5.5rem, max-content) minmax(0, 1fr);
+    grid-template-columns: 1rem 5.5rem minmax(0, 1fr);
     align-items: center;
     gap: 0.55rem;
     min-height: 1.75rem;
@@ -883,7 +883,7 @@
     }
 
     lef-task-property {
-      grid-template-columns: 1rem minmax(4.5rem, max-content) minmax(0, 1fr);
+      grid-template-columns: 1rem 4.5rem minmax(0, 1fr);
     }
   }
 </style>
