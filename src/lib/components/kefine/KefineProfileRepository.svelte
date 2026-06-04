@@ -3,7 +3,11 @@
   import { kefineLocaleText } from '$lib/constants/kefine-locale';
   import { parseOrgTodos, type OrgTodoState } from '$lib/kefine/repo-docs';
   import { solverAvatarColor, solverInitials } from '$lib/kefine/solver-avatars';
-  import { requestTopbarSearch } from '$lib/kefine/topbar-search-context';
+  import {
+    requestTopbarSearch,
+    topbarSearchItems,
+    type TopbarSearchItem
+  } from '$lib/kefine/topbar-search-context';
 
   let {
     handle,
@@ -43,6 +47,45 @@
     if (state === 'IN PROGRESS') return localeText.solversView.todoInProgress;
     return localeText.solversView.todoOpen;
   }
+
+  function createTaskHref(query: string): string {
+    const task = query.trim();
+    if (!task) {
+      return '/';
+    }
+    const params = new URLSearchParams();
+    params.set('task', task);
+    return `/?${params.toString()}`;
+  }
+
+  // Mirror the solvers screen: typing a task in the README "new task" row opens
+  // the command palette with a "Create task" result that hands the query off to
+  // the home composer — a profile is a repository, so its tasks start the same
+  // way.
+  $effect(() => {
+    const items: TopbarSearchItem[] = [
+      {
+        id: 'create-task',
+        title: localeText.solversView.createTaskSearchTitle,
+        category: localeText.solversView.tasksAside,
+        actionLabel: localeText.solversView.createTaskSearchAction,
+        icon: 'project' as const,
+        keywords: [
+          localeText.solversView.createTaskSearchTitle,
+          localeText.profile.newTaskPlaceholder,
+          'create task',
+          'new task'
+        ],
+        hideWhenEmpty: true,
+        showForQuery: (query) => query.trim().length > 0,
+        subtitleFromQuery: (query) => query.trim(),
+        hrefFromQuery: createTaskHref
+      }
+    ];
+
+    topbarSearchItems.set(items);
+    return () => topbarSearchItems.set([]);
+  });
 
   function openNewTaskSearch() {
     const query = newTaskText.trim();

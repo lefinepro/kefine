@@ -42,8 +42,15 @@
     ProfileSocialLink
   } from '$lib/types/user';
   import { buildLocaleHomePath, localizeAppPath, readLocaleFromPathname } from '$lib/routing/kefine-locale-routing';
+  import { topbarSearchItems, topbarSearchRequest } from '$lib/kefine/topbar-search-context';
 
   const localeText = $derived($kefineLocaleText);
+  // The profile renders its own topbar (it is in ROUTES_WITH_OWN_TOPBAR), so it
+  // must consume the shared search stores itself for the repository view's "new
+  // task" row to open the command palette with a seeded query and the
+  // "Create task" result registered by KefineProfileRepository.
+  const searchRequest = $derived($topbarSearchRequest);
+  const searchItems = $derived($topbarSearchItems);
   const passkeySession = $derived($passkeySessionStore);
   const BRAND_HOME_NAVIGATION_STORAGE_KEY = 'kefine-brand-home-navigation';
   const THEME_STORAGE_KEY = 'kefine-theme';
@@ -785,6 +792,8 @@
       searchWidgetBackLabel={localeText.topbar.searchWidgetBackLabel}
       searchHomeHref={buildLocaleHomePath(activeLocale)}
       initialSearchQuery={page.url.searchParams.get('q') ?? ''}
+      searchRequest={searchRequest}
+      searchItems={searchItems}
       socialLinks={sidebarSocialLinks}
       showSocialLinks={false}
       legalLinks={sidebarLegalLinks}
