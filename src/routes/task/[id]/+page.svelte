@@ -1,8 +1,10 @@
 <script lang="ts">
   import { browser } from '$app/environment';
+  import { goto } from '$app/navigation';
   import { page as routePage } from '$app/state';
   import Icon from '@iconify/svelte';
   import { onMount } from 'svelte';
+  import SolutionTopbar from '$lib/components/kefine/SolutionTopbar.svelte';
   import {
     extractStatusPayload,
     ORDER_STORAGE_KEY,
@@ -70,6 +72,9 @@
   const taskInitial = $derived(resolveTaskInitial(order));
   const completionLabel = $derived(taskCompleted ? 'Completed' : 'Open');
   const workspaceHref = $derived(order ? buildWorkspaceHref(order, activeLocale) : '');
+  const backHref = $derived(workspaceHref || localizeAppPath('/', activeLocale));
+  const solverLabel = $derived(order?.solverName?.trim() || order?.solver?.trim() || '');
+  const projectLabel = $derived(order ? formatRepository(order) : '');
   const labels = $derived(order?.labels?.map((label) => label.trim()).filter(Boolean) ?? []);
   const propertyRows = $derived(resolvePropertyRows(order, activeLocale));
   const markdownBlocks = $derived(parseMarkdownBlocks(resolveTaskText(order)));
@@ -490,6 +495,16 @@
 
     return localizeAppPath(buildActorOrderPath(actorHandle, routeOrderId), locale);
   }
+
+  function goBack(event: MouseEvent) {
+    event.preventDefault();
+    if (browser && window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+
+    void goto(backHref);
+  }
 </script>
 
 <svelte:head>
@@ -497,14 +512,17 @@
 </svelte:head>
 
 <lef-task-document-page data-testid="kefine-task-document-page">
-  <lef-task-document-shell>
-    <lef-task-document-nav>
-      <a href={localizeAppPath('/', activeLocale)} data-part="brand">Lefine</a>
-      {#if workspaceHref}
-        <a href={workspaceHref} data-part="workspace">Workspace</a>
-      {/if}
-    </lef-task-document-nav>
+  <SolutionTopbar
+    title={order?.title ?? 'Task'}
+    author={solverLabel}
+    project={projectLabel}
+    backHref={backHref}
+    backLabel="Back"
+    onBack={goBack}
+    completed={taskCompleted}
+  />
 
+  <lef-task-document-shell>
     {#if loading && !order}
       <lef-task-empty-state>
         <h1>Loading task</h1>
@@ -637,51 +655,23 @@
 
 <style>
   lef-task-document-page {
-    display: block;
+    display: flex;
+    flex-direction: column;
     min-height: 100vh;
-    background: #f5f6f1;
-    color: #1d241e;
-    padding: 1.25rem 1rem 4rem;
+    background: var(--kef-bg);
+    color: var(--lefine-text);
   }
 
   lef-task-document-shell {
     display: grid;
     width: min(56rem, 100%);
     margin: 0 auto;
-    gap: 2.25rem;
-  }
-
-  lef-task-document-nav {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-  }
-
-  lef-task-document-nav a {
-    display: inline-flex;
-    min-height: 2.25rem;
-    align-items: center;
-    color: inherit;
-    font-weight: 700;
-  }
-
-  lef-task-document-nav a[data-part='brand'] {
-    font-family: var(--kef-font-family-brand);
-    font-size: 1.75rem;
-  }
-
-  lef-task-document-nav a[data-part='workspace'] {
-    border: 1px solid color-mix(in oklab, currentColor 18%, transparent);
-    border-radius: 8px;
-    padding: 0 0.75rem;
-    font-size: 0.875rem;
-    background: color-mix(in oklab, white 82%, transparent);
+    gap: 1.25rem;
+    padding: 1.25rem 1.5rem 4rem;
   }
 
   article,
   lef-task-empty-state,
-  lef-task-title-block,
   lef-task-title-copy,
   lef-task-markdown,
   lef-task-detail-block-list,
@@ -691,7 +681,7 @@
   }
 
   article {
-    gap: 1.8rem;
+    gap: 1.25rem;
   }
 
   lef-task-empty-state {
@@ -701,7 +691,12 @@
   }
 
   lef-task-title-block {
+    display: grid;
     gap: 0.9rem;
+    padding: 1rem 1.1rem 1.15rem;
+    background: var(--kef-bg-card);
+    border: 1px solid var(--kef-line);
+    border-radius: 0.7rem;
   }
 
   lef-task-title-row {
@@ -716,37 +711,41 @@
     width: 1.2rem;
     height: 1.2rem;
     margin: 0;
-    accent-color: #2f7d58;
+    accent-color: var(--kef-success, #5f7962);
   }
 
   lef-task-title-row > input {
-    margin-top: 2.1rem;
+    margin-top: 0.35rem;
   }
 
   lef-task-title-copy {
-    gap: 0.55rem;
+    gap: 0.5rem;
     min-width: 0;
   }
 
   lef-task-title-kicker {
     display: flex;
     align-items: center;
-    gap: 0.65rem;
-    color: #5f6c61;
-    font-size: 0.9rem;
+    gap: 0.6rem;
+    color: var(--lefine-text-soft);
+    font-size: 0.8rem;
     font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
   }
 
   lef-task-icon {
     display: inline-grid;
-    width: 2rem;
-    height: 2rem;
+    width: 1.85rem;
+    height: 1.85rem;
     place-items: center;
-    border: 1px solid color-mix(in oklab, #2f7d58 28%, transparent);
-    border-radius: 8px;
-    background: #e6f0e8;
-    color: #1e6040;
+    border: 1px solid color-mix(in oklab, var(--kef-success, #5f7962) 35%, transparent);
+    border-radius: 0.5rem;
+    background: color-mix(in oklab, var(--kef-success, #5f7962) 14%, var(--kef-bg-card));
+    color: var(--kef-success, #5f7962);
     font-weight: 800;
+    text-transform: none;
+    letter-spacing: 0;
   }
 
   h1,
@@ -756,37 +755,42 @@
   }
 
   h1 {
-    max-width: 18ch;
-    font-size: 2.25rem;
-    line-height: 1.08;
+    max-width: 24ch;
+    font-size: 1.7rem;
+    line-height: 1.15;
   }
 
   h2 {
-    font-size: 1rem;
+    font-size: 0.78rem;
     line-height: 1.25;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--lefine-text-soft);
+    font-weight: 700;
   }
 
   p {
-    max-width: 68ch;
-    color: #39443b;
+    max-width: 70ch;
+    color: var(--lefine-text-soft);
   }
 
   lef-task-label-list {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.45rem;
+    gap: 0.4rem;
     padding-left: 2.05rem;
   }
 
   lef-task-label-list lefine-text {
     display: inline-flex;
-    min-height: 1.55rem;
+    min-height: 1.5rem;
     align-items: center;
-    border-radius: 6px;
+    border-radius: 0.4rem;
     padding: 0 0.5rem;
-    background: #e7edf6;
-    color: #264a72;
-    font-size: 0.78rem;
+    background: var(--kef-bg-soft);
+    border: 1px solid var(--kef-line-soft);
+    color: var(--lefine-text-soft);
+    font-size: 0.75rem;
     font-weight: 700;
   }
 
@@ -794,9 +798,10 @@
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.2rem 1.25rem;
-    border-top: 1px solid #d7ddd3;
-    border-bottom: 1px solid #d7ddd3;
-    padding: 0.85rem 0;
+    padding: 0.95rem 1.1rem;
+    background: var(--kef-bg-card);
+    border: 1px solid var(--kef-line);
+    border-radius: 0.7rem;
   }
 
   lef-task-property {
@@ -805,14 +810,16 @@
     align-items: start;
     gap: 0.1rem 0.55rem;
     min-height: 2.65rem;
-    color: #4d5b50;
+    color: var(--lefine-text-soft);
     font-size: 0.9rem;
   }
 
   lef-task-property strong {
     grid-column: 2;
-    color: #6a756c;
-    font-size: 0.82rem;
+    color: var(--lefine-text-soft);
+    font-size: 0.74rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
   }
 
   lef-task-property-value {
@@ -820,13 +827,21 @@
     grid-column: 2;
     min-width: 0;
     overflow-wrap: anywhere;
-    color: #1f2a22;
-    font-weight: 650;
+    color: var(--lefine-text);
+    font-weight: 600;
+  }
+
+  lef-task-property-value a {
+    color: var(--kef-color-primary, var(--kef-primary));
   }
 
   section {
     display: grid;
-    gap: 0.8rem;
+    gap: 0.7rem;
+    padding: 1rem 1.1rem 1.15rem;
+    background: var(--kef-bg-card);
+    border: 1px solid var(--kef-line);
+    border-radius: 0.7rem;
   }
 
   lef-task-markdown {
@@ -835,16 +850,16 @@
 
   lef-task-markdown-heading {
     display: block;
-    color: #202820;
+    color: var(--lefine-text);
     font-weight: 800;
   }
 
   lef-task-markdown-heading[data-level='1'] {
-    font-size: 1.35rem;
+    font-size: 1.3rem;
   }
 
   lef-task-markdown-heading[data-level='2'] {
-    font-size: 1.15rem;
+    font-size: 1.1rem;
   }
 
   ul,
@@ -858,7 +873,7 @@
   ul li {
     position: relative;
     padding-left: 1rem;
-    color: #39443b;
+    color: var(--lefine-text-soft);
   }
 
   ul li::before {
@@ -868,7 +883,7 @@
     width: 0.35rem;
     height: 0.35rem;
     border-radius: 50%;
-    background: #2f7d58;
+    background: var(--kef-color-primary, var(--kef-primary));
     content: '';
   }
 
@@ -889,12 +904,13 @@
   }
 
   lef-task-subtask-copy strong {
-    font-size: 0.95rem;
+    font-size: 0.92rem;
+    color: var(--lefine-text);
   }
 
   lef-task-subtask-copy p {
-    color: #59665b;
-    font-size: 0.9rem;
+    color: var(--lefine-text-soft);
+    font-size: 0.88rem;
   }
 
   lef-task-markdown-code,
@@ -907,11 +923,12 @@
   lef-task-detail-heading lefine-text {
     display: inline-flex;
     justify-self: start;
-    border-radius: 6px;
+    border-radius: 0.4rem;
     padding: 0.1rem 0.45rem;
-    background: #ecdebd;
-    color: #6b4d1f;
-    font-size: 0.75rem;
+    background: var(--kef-bg-soft);
+    border: 1px solid var(--kef-line-soft);
+    color: var(--lefine-text-soft);
+    font-size: 0.72rem;
     font-weight: 800;
   }
 
@@ -919,11 +936,12 @@
     width: 100%;
     max-width: 100%;
     overflow: auto;
-    border-radius: 8px;
-    padding: 0.95rem;
-    background: #111719;
-    color: #edf5f1;
-    font-size: 0.875rem;
+    border-radius: 0.5rem;
+    padding: 0.9rem;
+    background: var(--kef-bg-soft);
+    border: 1px solid var(--kef-line-soft);
+    color: var(--lefine-text);
+    font-size: 0.85rem;
     line-height: 1.55;
   }
 
@@ -936,7 +954,7 @@
   }
 
   lef-task-detail-block {
-    border-left: 3px solid #6b8fc7;
+    border-left: 3px solid color-mix(in oklab, var(--kef-color-primary, #7a4b2a) 60%, var(--kef-line));
     padding-left: 0.9rem;
   }
 
@@ -944,61 +962,22 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    color: #2b3a31;
+    color: var(--lefine-text);
   }
 
   lef-task-detail-heading strong {
-    font-size: 0.95rem;
-  }
-
-  :global(:root[data-kefine-theme='dark']) lef-task-document-page {
-    background: #111413;
-    color: #edf1ea;
-  }
-
-  :global(:root[data-kefine-theme='dark']) lef-task-document-nav a[data-part='workspace'] {
-    background: #1d2420;
-  }
-
-  :global(:root[data-kefine-theme='dark']) lef-task-title-kicker,
-  :global(:root[data-kefine-theme='dark']) p,
-  :global(:root[data-kefine-theme='dark']) ul li,
-  :global(:root[data-kefine-theme='dark']) lef-task-property,
-  :global(:root[data-kefine-theme='dark']) lef-task-subtask-copy p {
-    color: #aeb8ad;
-  }
-
-  :global(:root[data-kefine-theme='dark']) lef-task-icon {
-    background: #1a2c23;
-    color: #97d5b4;
-  }
-
-  :global(:root[data-kefine-theme='dark']) lef-task-property-grid {
-    border-color: #2d3931;
-  }
-
-  :global(:root[data-kefine-theme='dark']) lef-task-property-value,
-  :global(:root[data-kefine-theme='dark']) lef-task-markdown-heading,
-  :global(:root[data-kefine-theme='dark']) lef-task-detail-heading {
-    color: #edf1ea;
+    font-size: 0.92rem;
   }
 
   @media (max-width: 720px) {
-    lef-task-document-page {
-      padding: 1rem 0.9rem 3rem;
-    }
-
     lef-task-document-shell {
-      gap: 1.5rem;
+      gap: 1rem;
+      padding: 1rem 0.9rem 3rem;
     }
 
     h1 {
       max-width: none;
-      font-size: 1.8rem;
-    }
-
-    lef-task-title-row > input {
-      margin-top: 2rem;
+      font-size: 1.5rem;
     }
 
     lef-task-property-grid {

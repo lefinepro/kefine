@@ -78,6 +78,14 @@ test.describe('Task document page', () => {
     await expect(documentPage).toBeVisible();
     await expect(documentPage.getByRole('heading', { name: 'Document import workflow' })).toBeVisible();
     await expect(documentPage.getByRole('checkbox', { name: 'Task completion' })).not.toBeChecked();
+
+    // Unified solver-style chrome: shared topbar plus the solver topbar breadcrumb.
+    await expect(page.locator('lef-solver-topbar')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Back' })).toBeVisible();
+    await expect(page.locator('lef-solver-topbar')).toContainText('Document Solver');
+    // The document is the first-step overview: no testing/source tabs or solver widget.
+    await expect(page.locator('lef-view-tabs')).toHaveCount(0);
+    await expect(page.locator('lef-task-panel')).toHaveCount(0);
     await expect(page.getByTestId('kefine-task-document-properties')).toContainText('Document Solver');
     await expect(page.getByTestId('kefine-task-document-properties')).toContainText('42 USDC');
     await expect(page.getByTestId('kefine-task-document-description')).toContainText('Import plan');

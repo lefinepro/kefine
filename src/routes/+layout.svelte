@@ -26,7 +26,6 @@
   const THEME_STORAGE_KEY = 'kefine-theme';
   const ROUTES_WITH_OWN_TOPBAR = new Set([
     '/',
-    '/task/[id]',
     '/[handle=at_handle]',
     '/[handle=at_handle]/[shareId]',
     '/[handle=at_handle]/[widget=kefine_widget]',
