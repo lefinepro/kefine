@@ -38,7 +38,9 @@ const demoProfile = {
     surname: 'Maintainer',
     profileSetupCompleted: true,
     profileSetupStep: 'done',
-    // Org-social widget blocks rendered inline on the public profile.
+    // Org-social widget blocks the profile declares. They are not rendered
+    // statically — they only surface from the command palette on a matching
+    // query (see experiments/capture-profile-repository.mjs).
     widgetsOrg: '#+begin_clock Tokyo\n#+end_clock\n\n#+begin_clock\n#+end_clock\n\n#+begin_weather\n#+end_weather'
   }
 };

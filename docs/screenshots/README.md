@@ -10,6 +10,12 @@ node experiments/capture-project-pages.mjs
 
 Set `START_SERVER=0 BASE_URL=http://127.0.0.1:5173` to use an already-running dev server.
 
+The profile-as-repository captures (issue #130) are regenerated separately with:
+
+```bash
+node experiments/capture-profile-repository.mjs
+```
+
 | File | Route |
 | --- | --- |
 | home.png | `/` |
@@ -26,3 +32,11 @@ Set `START_SERVER=0 BASE_URL=http://127.0.0.1:5173` to use an already-running de
 | oauth-authorize.png | `/oauth/authorize?client_id=octra&redirect_uri=https%3A%2F%2Foctra.example%2Foauth&state=demo` |
 | privacy.png | `/privacy` |
 | terms.png | `/terms` |
+
+Profile-as-repository captures (issue #130):
+
+| File | Description |
+| --- | --- |
+| profile-repository-public.png | Public profile rendered as a repository: README + task checklist + new-task row. No widgets are shown statically. |
+| profile-repository-checklist.png | Close-up of the profile task checklist. |
+| profile-widget-search.png | A declared widget (translator) surfaced from the command palette only when the visitor types a matching query. |
