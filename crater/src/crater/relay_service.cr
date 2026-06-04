@@ -61,6 +61,19 @@ module Lepos
       server(config, store).handle(context(config, transport), activity)
     end
 
+    # Internal relay subscribers wired up through `kefine.config.json`. They are
+    # delivered the same relayed activity as external API subscribers that joined
+    # via the ActivityPub follow handshake.
+    def self.internal_recipients(config : Utils::Config) : Array(::Aptok::Recipient)
+      config.relay_internal_services.map do |service|
+        ::Aptok::Recipient.new(service.id, service.inbox, [service.id], service.shared_inbox)
+      end
+    end
+
+    # Fan a relayed public activity out to both the stored external subscribers
+    # and the internal services configured in `kefine.config.json`, excluding the
+    # activity's origin and de-duplicating by delivery inbox. Returns the
+    # activities actually delivered.
     def self.relay_activity(
       activity : ::Aptok::JsonMap,
       config : Utils::Config,
@@ -68,7 +81,24 @@ module Lepos
       transport : ::Aptok::Transport = ::Aptok::Transport.new(signature_enabled: false),
       origins : Array(String) = [] of String,
     ) : Array(::Aptok::SentActivity)
-      server(config, store).relay(context(config, transport), activity, origins)
+      return [] of ::Aptok::SentActivity unless ::Aptok::Relay.relayable?(activity)
+
+      subs = subscriptions(config, store)
+      activity_id = activity["id"]?.try(&.as_s?)
+      return [] of ::Aptok::SentActivity if activity_id && subs.relayed?(activity_id)
+
+      all_origins = origins.dup
+      if all_origins.empty? && (origin = ::Aptok::Relay.actor_id(activity))
+        all_origins << origin
+      end
+
+      recipients = subs.recipients + internal_recipients(config)
+      targets = ::Aptok::Relay.fanout_recipients(recipients, all_origins)
+      return [] of ::Aptok::SentActivity if targets.empty?
+
+      sent = context(config, transport).send_activity(config.relay_actor_username, targets, activity)
+      subs.mark_relayed(activity_id) if activity_id
+      sent
     end
 
     def self.control_activity?(activity : ::Aptok::JsonMap, config : Utils::Config) : Bool
@@ -84,7 +114,7 @@ module Lepos
     end
 
     def self.followers_collection(config : Utils::Config, store : ::Aptok::KvStore = store(config)) : ::Aptok::JsonMap
-      actor_ids = subscriptions(config, store).actor_ids
+      actor_ids = (subscriptions(config, store).actor_ids + internal_recipients(config).map(&.id)).uniq
       ::Aptok::JsonMap{
         "@context"     => ::Aptok.json(::Aptok::ACTIVITYSTREAMS_CONTEXT),
         "id"           => ::Aptok.json(config.relay_followers),
@@ -95,15 +125,16 @@ module Lepos
     end
 
     def self.metadata(config : Utils::Config, store : ::Aptok::KvStore = store(config)) : ::Aptok::JsonMap
+      internal = internal_recipients(config)
       ::Aptok::JsonMap{
-        "relayActor"       => ::Aptok.json(config.relay_actor_id),
-        "relayInbox"       => ::Aptok.json(config.relay_inbox),
-        "relayOutbox"      => ::Aptok.json(config.relay_outbox),
-        "relayFollowers"   => ::Aptok.json(config.relay_followers),
-        "protocols"        => ::Aptok.json(["mastodon", "litepub"]),
-        "subscriberCount"  => ::Aptok.json(subscriptions(config, store).size),
-        "botCreateUrl"     => ::Aptok.json("#{config.crater_url}/api/bot/create"),
-        "botTokenRequired" => ::Aptok.json(!config.relay_bot_token.nil?),
+        "relayActor"             => ::Aptok.json(config.relay_actor_id),
+        "relayInbox"             => ::Aptok.json(config.relay_inbox),
+        "relayOutbox"            => ::Aptok.json(config.relay_outbox),
+        "relayFollowers"         => ::Aptok.json(config.relay_followers),
+        "protocols"              => ::Aptok.json(["mastodon", "litepub"]),
+        "subscriberCount"        => ::Aptok.json(subscriptions(config, store).size),
+        "internalServiceCount"   => ::Aptok.json(internal.size),
+        "internalServiceActors"  => ::Aptok.json(internal.map(&.id)),
       }
     end
 

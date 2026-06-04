@@ -3,6 +3,17 @@ require "uri"
 
 module Lepos
   module Utils
+    # An internal relay subscriber configured in `kefine.config.json`.
+    #
+    # Internal services (your own bots/solvers, typically reachable on a local
+    # IP) are wired up through configuration instead of the ActivityPub follow
+    # handshake, yet they receive the exact same relayed activity as external
+    # API subscribers that follow the relay actor over the network.
+    record RelayInternalService,
+      id : String,
+      inbox : String,
+      shared_inbox : String? = nil
+
     struct Config
       getter port : Int32
       getter host : String
@@ -23,7 +34,7 @@ module Lepos
       getter actor_private_key : String
       getter relay_actor_handle : String
       getter relay_display_name : String
-      getter relay_bot_token : String?
+      getter relay_internal_services : Array(RelayInternalService)
       getter frontend_url : String?
       getter google_oauth_client_id : String?
       getter google_oauth_client_secret : String?
@@ -56,7 +67,7 @@ module Lepos
         @actor_private_key : String,
         @relay_actor_handle : String,
         @relay_display_name : String,
-        @relay_bot_token : String?,
+        @relay_internal_services : Array(RelayInternalService),
         @frontend_url : String?,
         @google_oauth_client_id : String?,
         @google_oauth_client_secret : String?,
@@ -80,7 +91,6 @@ module Lepos
         relay = raw["relay"]?.try(&.as_h) || Hash(String, JSON::Any).new
         oauth = raw["oauth"]?.try(&.as_h) || Hash(String, JSON::Any).new
         email_auth = raw["emailAuth"]?.try(&.as_h) || Hash(String, JSON::Any).new
-        relay_bot_token = read_first_env(["LEPOS_BOT_TOKEN", "KEFINE_BOT_TOKEN"]) || read_optional_string(relay, "botToken") || read_optional_string(relay, "accessToken")
 
         crater_url = normalize_url(
           read_env_or_string(
@@ -112,7 +122,7 @@ module Lepos
           actor_private_key: read_env_or_string("KEFINE_PRIVATEKEY_DEFAULT", default_actor, "privateKey", read_string(default_actor, "privateKeyPem", "")),
           relay_actor_handle: read_string(relay, "actorHandle", "relay"),
           relay_display_name: read_string(relay, "displayName", "Lepos Relay"),
-          relay_bot_token: relay_bot_token,
+          relay_internal_services: read_relay_services(relay),
           frontend_url: read_env_or_optional_string("KEFINE_FRONTEND_URL", origins, "frontend"),
           google_oauth_client_id: read_env_or_optional_string("GOOGLE_CLIENT_ID", oauth, "googleClientId"),
           google_oauth_client_secret: read_env_or_optional_string("GOOGLE_CLIENT_SECRET", oauth, "googleClientSecret"),
@@ -146,13 +156,23 @@ module Lepos
         read_string(source, key, fallback)
       end
 
-      private def self.read_first_env(env_keys : Array(String)) : String?
-        env_keys.each do |env_key|
-          value = ENV[env_key]?.try(&.strip)
-          return value.not_nil! unless value.nil? || value.empty?
-        end
+      # Parse the optional `relay.services` array into internal relay
+      # subscribers. Each entry needs an `id` and an `inbox` (typically a local
+      # IP that exposes the service); entries missing either are skipped.
+      private def self.read_relay_services(relay : Hash(String, JSON::Any)) : Array(RelayInternalService)
+        entries = relay["services"]?.try(&.as_a?)
+        return [] of RelayInternalService unless entries
 
-        nil
+        entries.compact_map do |entry|
+          service = entry.as_h?
+          next unless service
+
+          id = read_optional_string(service, "id")
+          inbox = read_optional_string(service, "inbox")
+          next unless id && inbox
+
+          RelayInternalService.new(id, inbox, read_optional_string(service, "sharedInbox"))
+        end
       end
 
       private def self.read_optional_string(source : Hash(String, JSON::Any), key : String) : String?

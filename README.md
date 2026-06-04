@@ -97,7 +97,12 @@ Main sections:
   "relay": {
     "actorHandle": "relay",
     "displayName": "Lepos Relay",
-    "botToken": "change-me"
+    "services": [
+      {
+        "id": "http://127.0.0.1:4501/actor/internal-bot",
+        "inbox": "http://127.0.0.1:4501/inbox"
+      }
+    ]
   },
   "company": {
     "legalName": "Lefine",
@@ -112,8 +117,8 @@ Notes:
 - `backend.craterBaseUrl` is the crater base URL used by the SvelteKit proxy for order, payment, and passkey operations.
 - `backend.exchangeBaseUrl` is the exchange base URL crater uses for user IDs and payment links.
 - `backend.databaseUrl` is the Postgres connection string crater uses for orders, payment redemptions, passkey users, challenges, sessions, and outbox activity persistence.
-- `relay.actorHandle` and `relay.displayName` configure the Lepos ActivityPub relay actor exposed at `/actor/:handle`.
-- `relay.botToken`, `LEPOS_BOT_TOKEN`, or `KEFINE_BOT_TOKEN` enables bearer-token order creation through `/api/bot/create`; `/api/relay` returns the relay actor, inbox, followers, supported protocols, and bot create URL.
+- `relay.actorHandle` and `relay.displayName` configure the Lepos ActivityPub relay actor exposed at `/actor/:handle` and `/relay`.
+- `relay.services` lists internal services (your own bots/solvers, typically reachable on a local IP via `inbox`) that are wired into the relay through configuration. They receive the same relayed public activity as external API subscribers that join over the network by following the relay actor — the same experience, just configured instead of subscribed. `/api/relay` returns the relay actor, inbox, followers, supported protocols, and the configured internal services.
 - `features.repositories` controls the VCS/git repository feature.
 - `company.*` controls the new `/legal-information` company page. Empty optional fields are hidden automatically.
 

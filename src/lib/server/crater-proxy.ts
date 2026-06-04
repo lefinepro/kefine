@@ -4,7 +4,6 @@ import { buildCraterApiUrl } from '$lib/server/crater-api';
 type ProxyOptions = {
   errorMessage: string;
   context?: Record<string, string>;
-  forwardAuthorization?: boolean;
 };
 
 export async function proxyCraterRequest(
@@ -22,7 +21,6 @@ export async function proxyCraterRequest(
     const origin = request.headers.get('origin');
     const referer = request.headers.get('referer');
     const userAgent = request.headers.get('user-agent');
-    const authorization = request.headers.get('authorization');
 
     let body: BodyInit | undefined;
     let headers: Record<string, string> = {
@@ -51,10 +49,6 @@ export async function proxyCraterRequest(
 
     if (userAgent) {
       headers['User-Agent'] = userAgent;
-    }
-
-    if (options.forwardAuthorization && authorization) {
-      headers['Authorization'] = authorization;
     }
 
     if (request.method !== 'GET' && request.method !== 'HEAD') {

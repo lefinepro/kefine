@@ -2,7 +2,6 @@ require "kemal"
 require "json"
 require "log"
 require "../aptok"
-require "../order_queue"
 require "../relay_service"
 require "../utils/config"
 
@@ -36,11 +35,6 @@ module Lepos
         get "/api/relay" do |env|
           env.response.content_type = "application/json"
           RelayService.metadata(config).to_json
-        end
-
-        post "/api/bot/create" do |env|
-          env.response.content_type = "application/json"
-          handle_bot_create(env, config)
         end
       end
 
@@ -92,46 +86,6 @@ module Lepos
         Log.warn(exception: ex) { "[relay:followers] failed to render relay followers" }
         env.response.status_code = 502
         {error: "Failed to render relay followers", reason: ex.message}.to_json
-      end
-
-      private def self.handle_bot_create(env, config : Utils::Config)
-        unless bot_authorized?(env, config)
-          env.response.status_code = config.relay_bot_token.nil? ? 503 : 401
-          return({error: config.relay_bot_token.nil? ? "Bot token is not configured" : "Unauthorized bot token"}.to_json)
-        end
-
-        payload = begin
-          JSON.parse(env.request.body.try(&.gets_to_end) || "")
-        rescue ex : JSON::ParseException
-          env.response.status_code = 400
-          return({error: "Invalid request body", reason: ex.message}.to_json)
-        end
-
-        record = OrderQueue.submit_rest(payload, config)
-        env.response.status_code = 202
-        {
-          accepted:   true,
-          orderId:    record.id,
-          status:     record.status,
-          actor:      config.relay_actor_id,
-          inbox:      config.relay_inbox,
-          uiScenario: record.ui_scenario,
-        }.to_json
-      rescue ex : OrderQueue::BadRequest | OrderQueue::Error::InvalidActivity
-        env.response.status_code = 400
-        {error: ex.message}.to_json
-      rescue ex : Exception
-        Log.error(exception: ex) { "[relay:bot] failed to create bot order" }
-        env.response.status_code = 500
-        {error: "Failed to create bot order", reason: ex.message}.to_json
-      end
-
-      private def self.bot_authorized?(env, config : Utils::Config) : Bool
-        token = config.relay_bot_token
-        return false unless token
-
-        authorization = env.request.headers["Authorization"]?.to_s
-        authorization == "Bearer #{token}"
       end
 
       private def self.normalized_username(value : String) : String
