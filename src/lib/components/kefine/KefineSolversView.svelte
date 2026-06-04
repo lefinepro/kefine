@@ -1,9 +1,16 @@
 <script lang="ts">
   import { browser } from '$app/environment';
   import Icon from '@iconify/svelte';
-  import { defaultMetrics, type Solution } from '$lib/kefine/solutions-data';
+  import { defaultMetrics, type Solution, type SolutionMetric } from '$lib/kefine/solutions-data';
   import { kefineLocaleText } from '$lib/constants/kefine-locale';
   import KefineModal from '$lib/components/kefine/KefineModal.svelte';
+  import KefineSolverBadge from '$lib/components/kefine/KefineSolverBadge.svelte';
+  import KefineSolversModal from '$lib/components/kefine/KefineSolversModal.svelte';
+  import {
+    rankSolvers,
+    badgeForSolver,
+    type SolverRankingMetric
+  } from '$lib/kefine/solver-badges';
   import {
     buildSolverAvatars,
     solverAvatarColor,
@@ -164,6 +171,20 @@
   const metricsById = $derived(
     new Map(defaultMetrics.map((metric) => [metric.solverId, metric]))
   );
+
+  // Metrics for the solvers currently offered, kept in card order. Drives both
+  // the inline "Best / -x%" badges and the comparison modal.
+  const solverMetrics = $derived(
+    solutions
+      .map((solution) => metricsById.get(solution.id))
+      .filter((metric): metric is SolutionMetric => Boolean(metric))
+  );
+
+  // Default ranking mirrors the swap "best route" idea: the highest success
+  // rate wins. The comparison modal can switch this to price, speed or value.
+  let rankingMetric = $state<SolverRankingMetric>('success');
+  const solverBadges = $derived(rankSolvers(solverMetrics, rankingMetric));
+  let solversModalOpen = $state(false);
 
   function formatPrice(value: number | undefined): string {
     if (value === undefined || Number.isNaN(value)) return '—';
@@ -386,7 +407,16 @@
                           aria-hidden="true"
                         >{solverInitials(solution.solver)}</lef-solver-avatar>
                         <lef-task-variant-meta>
-                          <strong>{solution.solver}</strong>
+                          <lef-task-variant-name>
+                            <strong>{solution.solver}</strong>
+                            <KefineSolverBadge
+                              badge={badgeForSolver(solverBadges, solution.id)}
+                              bestLabel={localeText.solversView.badges.best}
+                              bestTitle={localeText.solversView.badges.bestTitle}
+                              deltaTitle={localeText.solversView.badges.deltaTitle}
+                              size="compact"
+                            />
+                          </lef-task-variant-name>
                           <small>{solution.title}</small>
                         </lef-task-variant-meta>
                         {#if variantMetric}
@@ -401,6 +431,17 @@
                       </button>
                     {/each}
                   </lef-task-variants>
+                  <lef-compare-row>
+                    <button
+                      type="button"
+                      class="compare-solvers"
+                      data-testid="open-solvers-compare"
+                      onclick={() => (solversModalOpen = true)}
+                    >
+                      <Icon icon="lucide:bar-chart-3" width="14" height="14" aria-hidden="true" />
+                      <lefine-text>{localeText.solversView.solversModal.open}</lefine-text>
+                    </button>
+                  </lef-compare-row>
                 {/if}
               </lef-repo-checklist-item>
             {/each}
@@ -507,7 +548,16 @@
                           aria-hidden="true"
                         >{solverInitials(solution.solver)}</lef-solver-avatar>
                         <lef-task-variant-meta>
-                          <strong>{solution.solver}</strong>
+                          <lef-task-variant-name>
+                            <strong>{solution.solver}</strong>
+                            <KefineSolverBadge
+                              badge={badgeForSolver(solverBadges, solution.id)}
+                              bestLabel={localeText.solversView.badges.best}
+                              bestTitle={localeText.solversView.badges.bestTitle}
+                              deltaTitle={localeText.solversView.badges.deltaTitle}
+                              size="compact"
+                            />
+                          </lef-task-variant-name>
                           <small>{solution.title}</small>
                         </lef-task-variant-meta>
                         {#if variantMetric}
@@ -522,6 +572,17 @@
                       </button>
                     {/each}
                   </lef-task-variants>
+                  <lef-compare-row>
+                    <button
+                      type="button"
+                      class="compare-solvers"
+                      data-testid="open-solvers-compare"
+                      onclick={() => (solversModalOpen = true)}
+                    >
+                      <Icon icon="lucide:bar-chart-3" width="14" height="14" aria-hidden="true" />
+                      <lefine-text>{localeText.solversView.solversModal.open}</lefine-text>
+                    </button>
+                  </lef-compare-row>
                 {/if}
               {:else if onSelectHistoryTask && !task.isActive}
                 <button
@@ -581,6 +642,15 @@
     </lef-repo-settings-dialog>
   </KefineModal>
 {/if}
+
+<KefineSolversModal
+  open={solversModalOpen}
+  onClose={() => (solversModalOpen = false)}
+  {solutions}
+  metrics={solverMetrics}
+  bind:ranking={rankingMetric}
+  {onViewSolution}
+/>
 
 <style>
   .solutions-page-container {
@@ -1080,6 +1150,18 @@
     white-space: nowrap;
   }
 
+  lef-task-variant-name {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    min-width: 0;
+  }
+
+  lef-task-variant-name strong {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+
   lef-task-variant-stats {
     display: grid;
     gap: 0.05rem;
@@ -1108,6 +1190,34 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  lef-compare-row {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 0.5rem;
+  }
+
+  .compare-solvers {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    appearance: none;
+    cursor: pointer;
+    padding: 0.32rem 0.7rem;
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: var(--lefine-text-soft);
+    background: var(--kef-bg-card);
+    border: 1px solid var(--kef-line-soft);
+    border-radius: 999px;
+    transition: border-color 160ms ease, color 160ms ease, background 160ms ease;
+  }
+
+  .compare-solvers:hover {
+    color: var(--lefine-text);
+    border-color: color-mix(in oklab, var(--kef-color-primary, #3a7afe) 40%, var(--kef-line));
+    background: color-mix(in oklab, var(--kef-color-primary, #3a7afe) 8%, var(--kef-bg-card));
   }
 
   lef-repo-settings-dialog {
