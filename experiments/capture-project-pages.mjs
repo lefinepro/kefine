@@ -99,8 +99,7 @@ const pages = [
   { file: 'weather-widget.png', route: '/@api/weather', waitFor: '[data-testid="kefine-weather-widget"]' },
   { file: 'translator-widget.png', route: '/@api/translate', waitFor: '[data-testid="kefine-translator-widget"]' },
   { file: 'music-widget.png', route: '/@api/music', waitFor: '[data-testid="kefine-music-widget"]' },
-  { file: 'task-detail.png', route: '/task/order-1', waitFor: 'body' },
-  { file: 'shared-task.png', route: '/shared/tasks/order-1', waitFor: 'body' },
+  { file: 'task-detail.png', route: '/task/order-1', waitFor: '[data-testid="kefine-task-document-page"]' },
   {
     file: 'solutions.png',
     route: '/@api/order-1?task=Document%20current%20workspace%20pages',

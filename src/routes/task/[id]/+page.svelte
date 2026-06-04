@@ -1,11 +1,1012 @@
 <script lang="ts">
-  import type { Component } from 'svelte';
-  let Workspace: Component<{ initialOrderId?: string }> | null = $state(null);
-  import('$lib/components/kefine/KefineWorkspace.svelte').then(m => Workspace = m.default);
+  import { browser } from '$app/environment';
+  import { page as routePage } from '$app/state';
+  import Icon from '@iconify/svelte';
+  import { onMount } from 'svelte';
+  import {
+    extractStatusPayload,
+    ORDER_STORAGE_KEY,
+    parseStoredOrders,
+    type NotebookBlockType,
+    type OrderNotebookBlock,
+    type OrderView,
+    type ProgressState
+  } from '$lib/components/kefine/kefine-workflow';
+  import { buildActorOrderPath } from '$lib/components/kefine/kefine-workspace-helpers';
+  import { resolveTaskDocumentContent } from '$lib/components/kefine/kefine-task-feed';
+  import { KEFINE_TEXT_EN } from '$lib/constants/kefine-locale-en';
+  import { KEFINE_TEXT_HY } from '$lib/constants/kefine-locale-hy';
+  import { KEFINE_TEXT_RU } from '$lib/constants/kefine-locale-ru';
+  import type { KefineLocale, KefineLocaleText } from '$lib/constants/kefine-locale';
+  import { localizeAppPath, readLocaleFromPathname } from '$lib/routing/kefine-locale-routing';
+
+  type MarkdownBlock =
+    | {
+        id: string;
+        type: 'heading';
+        level: number;
+        content: string;
+      }
+    | {
+        id: string;
+        type: 'paragraph';
+        content: string;
+      }
+    | {
+        id: string;
+        type: 'list';
+        items: string[];
+      }
+    | {
+        id: string;
+        type: 'code';
+        language: string;
+        content: string;
+      };
+
+  type PropertyRow = {
+    id: string;
+    label: string;
+    value: string;
+    icon: string;
+    href?: string;
+  };
+
+  type DetailBlock = OrderNotebookBlock & {
+    sourceTitle?: string;
+  };
 
   let { data }: { data: { initialOrderId: string } } = $props();
+
+  let order = $state<OrderView | null>(null);
+  let loading = $state(true);
+  let unavailable = $state(false);
+
+  const activeLocale = $derived(readLocaleFromPathname(routePage.url.pathname) ?? 'en');
+  const localeText = $derived(
+    (activeLocale === 'ru' ? KEFINE_TEXT_RU : activeLocale === 'hy' ? KEFINE_TEXT_HY : KEFINE_TEXT_EN) as unknown as KefineLocaleText
+  );
+  const taskCompleted = $derived(isTaskCompleted(order));
+  const taskInitial = $derived(resolveTaskInitial(order));
+  const completionLabel = $derived(taskCompleted ? 'Completed' : 'Open');
+  const workspaceHref = $derived(order ? buildWorkspaceHref(order, activeLocale) : '');
+  const labels = $derived(order?.labels?.map((label) => label.trim()).filter(Boolean) ?? []);
+  const propertyRows = $derived(resolvePropertyRows(order, activeLocale));
+  const markdownBlocks = $derived(parseMarkdownBlocks(resolveTaskText(order)));
+  const subtasks = $derived(order?.executionSteps ?? []);
+  const detailBlocks = $derived(resolveDetailBlocks(order));
+
+  onMount(() => {
+    void loadTask();
+  });
+
+  async function loadTask() {
+    if (!browser) {
+      return;
+    }
+
+    loading = true;
+    unavailable = false;
+
+    const storedOrder = readStoredOrder(data.initialOrderId);
+    if (storedOrder) {
+      order = storedOrder;
+    }
+
+    const remoteOrder = await fetchRemoteOrder(data.initialOrderId, storedOrder);
+    if (remoteOrder) {
+      order = mergeTaskOrder(storedOrder, remoteOrder);
+      loading = false;
+      unavailable = false;
+      return;
+    }
+
+    loading = false;
+    unavailable = !storedOrder;
+  }
+
+  function readStoredOrder(routeOrderId: string): OrderView | null {
+    try {
+      const orders = parseStoredOrders(localStorage.getItem(ORDER_STORAGE_KEY), localeText);
+      const normalized = routeOrderId.trim();
+      const decoded = decodeRouteValue(normalized);
+
+      return (
+        orders.find((item) => item.id === decoded) ||
+        orders.find((item) => item.shareId === decoded) ||
+        orders.find((item) => encodeURIComponent(item.id) === normalized) ||
+        orders.find((item) => item.shareId && encodeURIComponent(item.shareId) === normalized) ||
+        null
+      );
+    } catch {
+      return null;
+    }
+  }
+
+  async function fetchRemoteOrder(routeOrderId: string, fallbackOrder: OrderView | null): Promise<OrderView | null> {
+    try {
+      const response = await fetch(`/api/status/${encodeURIComponent(routeOrderId)}`, {
+        headers: {
+          Accept: 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const payload: unknown = await response.json();
+      return extractStatusPayload(
+        payload,
+        {
+          title: fallbackOrder?.title ?? '',
+          description: fallbackOrder?.description ?? '',
+          currency: fallbackOrder?.currency ?? localeText.defaults.defaultCurrency,
+          createdAt: fallbackOrder?.createdAt ?? new Date().toISOString()
+        },
+        localeText
+      );
+    } catch {
+      return null;
+    }
+  }
+
+  function mergeTaskOrder(storedOrder: OrderView | null, remoteOrder: OrderView): OrderView {
+    if (!storedOrder) {
+      return remoteOrder;
+    }
+
+    return {
+      ...storedOrder,
+      ...remoteOrder,
+      id: remoteOrder.id || storedOrder.id,
+      shareId: remoteOrder.shareId || storedOrder.shareId,
+      labels: remoteOrder.labels?.length ? remoteOrder.labels : storedOrder.labels,
+      executionSteps: remoteOrder.executionSteps?.length ? remoteOrder.executionSteps : storedOrder.executionSteps,
+      document: remoteOrder.document || storedOrder.document,
+      notebook: remoteOrder.notebook || storedOrder.notebook,
+      result: remoteOrder.result || storedOrder.result,
+      repository: remoteOrder.repository || storedOrder.repository
+    };
+  }
+
+  function decodeRouteValue(value: string): string {
+    try {
+      return decodeURIComponent(value);
+    } catch {
+      return value;
+    }
+  }
+
+  function resolveTaskText(currentOrder: OrderView | null): string {
+    const content = resolveTaskDocumentContent(currentOrder).trim();
+    if (content) {
+      return content;
+    }
+
+    return currentOrder?.description?.trim() || '';
+  }
+
+  function parseMarkdownBlocks(content: string): MarkdownBlock[] {
+    const blocks: MarkdownBlock[] = [];
+    const paragraph: string[] = [];
+    const listItems: string[] = [];
+    let codeLines: string[] | null = null;
+    let codeLanguage = '';
+
+    function nextId(type: string): string {
+      return `${type}-${blocks.length + 1}`;
+    }
+
+    function pushParagraph() {
+      const value = paragraph.join(' ').trim();
+      if (value) {
+        blocks.push({
+          id: nextId('paragraph'),
+          type: 'paragraph',
+          content: value
+        });
+      }
+      paragraph.length = 0;
+    }
+
+    function pushList() {
+      if (listItems.length > 0) {
+        blocks.push({
+          id: nextId('list'),
+          type: 'list',
+          items: [...listItems]
+        });
+      }
+      listItems.length = 0;
+    }
+
+    function pushCode() {
+      if (codeLines) {
+        blocks.push({
+          id: nextId('code'),
+          type: 'code',
+          language: codeLanguage,
+          content: codeLines.join('\n').trimEnd()
+        });
+      }
+      codeLines = null;
+      codeLanguage = '';
+    }
+
+    for (const rawLine of content.replace(/\r\n/g, '\n').split('\n')) {
+      const fence = rawLine.match(/^```([\w-]+)?\s*$/);
+      if (fence) {
+        if (codeLines) {
+          pushCode();
+        } else {
+          pushParagraph();
+          pushList();
+          codeLines = [];
+          codeLanguage = fence[1]?.trim() ?? '';
+        }
+        continue;
+      }
+
+      if (codeLines) {
+        codeLines.push(rawLine);
+        continue;
+      }
+
+      const line = rawLine.trim();
+      if (!line) {
+        pushParagraph();
+        pushList();
+        continue;
+      }
+
+      const heading = line.match(/^(#{1,4})\s+(.+)$/);
+      if (heading) {
+        pushParagraph();
+        pushList();
+        blocks.push({
+          id: nextId('heading'),
+          type: 'heading',
+          level: heading[1]?.length ?? 2,
+          content: heading[2]?.trim() ?? ''
+        });
+        continue;
+      }
+
+      const bullet = line.match(/^[-*]\s+(.+)$/);
+      if (bullet) {
+        pushParagraph();
+        listItems.push(bullet[1]?.trim() ?? '');
+        continue;
+      }
+
+      pushList();
+      paragraph.push(line);
+    }
+
+    pushParagraph();
+    pushList();
+    if (codeLines) {
+      pushCode();
+    }
+
+    return blocks;
+  }
+
+  function resolvePropertyRows(currentOrder: OrderView | null, locale: string): PropertyRow[] {
+    if (!currentOrder) {
+      return [];
+    }
+
+    const rows: PropertyRow[] = [
+      {
+        id: 'status',
+        label: 'Status',
+        value: formatStatus(currentOrder.status),
+        icon: 'lucide:circle-dot'
+      }
+    ];
+
+    appendRow(rows, {
+      id: 'solver',
+      label: 'Solver',
+      value: currentOrder.solverName || currentOrder.solver || '',
+      icon: 'lucide:user-round',
+      href: currentOrder.solverProfileUrl
+    });
+    appendRow(rows, {
+      id: 'price',
+      label: 'Price',
+      value: formatPrice(currentOrder.estimatedCost, currentOrder.currency),
+      icon: 'lucide:coins'
+    });
+    appendRow(rows, {
+      id: 'estimate',
+      label: 'Estimate',
+      value: currentOrder.executionEstimate ?? '',
+      icon: 'lucide:timer'
+    });
+    appendRow(rows, {
+      id: 'repository',
+      label: 'Repository',
+      value: formatRepository(currentOrder),
+      icon: 'lucide:git-branch',
+      href: currentOrder.repository?.projectUrl || currentOrder.repository?.repositoryUrl
+    });
+    appendRow(rows, {
+      id: 'owner',
+      label: 'Owner',
+      value: currentOrder.ownerDisplayName || currentOrder.ownerUsername || currentOrder.actorHandle || '',
+      icon: 'lucide:at-sign'
+    });
+    appendRow(rows, {
+      id: 'created',
+      label: 'Created',
+      value: formatDate(currentOrder.createdAt, locale),
+      icon: 'lucide:calendar'
+    });
+
+    return rows;
+  }
+
+  function appendRow(rows: PropertyRow[], row: PropertyRow) {
+    if (row.value.trim()) {
+      rows.push(row);
+    }
+  }
+
+  function resolveDetailBlocks(currentOrder: OrderView | null): DetailBlock[] {
+    if (!currentOrder) {
+      return [];
+    }
+
+    const notebookBlocks =
+      currentOrder.notebook?.steps.flatMap((step) =>
+        step.blocks.map((block) => ({
+          ...block,
+          sourceTitle: step.title
+        }))
+      ) ?? [];
+    const resultBlocks = currentOrder.result?.blocks.map((block) => ({
+      ...block,
+      sourceTitle: currentOrder.result?.title
+    })) ?? [];
+    const interimBlocks = currentOrder.interimResult?.blocks.map((block) => ({
+      ...block,
+      sourceTitle: currentOrder.interimResult?.title
+    })) ?? [];
+
+    return [...notebookBlocks, ...interimBlocks, ...resultBlocks].filter((block) => block.content.trim());
+  }
+
+  function isTaskCompleted(currentOrder: OrderView | null): boolean {
+    const normalized = currentOrder?.status?.toLowerCase() ?? '';
+    return normalized === 'completed' || normalized === 'done';
+  }
+
+  function isStateCompleted(state: ProgressState): boolean {
+    return state === 'completed';
+  }
+
+  function resolveTaskInitial(currentOrder: OrderView | null): string {
+    const icon = currentOrder?.taskIcon?.trim();
+    if (icon) {
+      return icon.slice(0, 2);
+    }
+
+    const title = currentOrder?.title?.trim();
+    return title ? title.slice(0, 1).toUpperCase() : 'T';
+  }
+
+  function formatStatus(value: string): string {
+    const normalized = value.trim().replaceAll(/[-_]+/g, ' ');
+    return normalized ? normalized.replace(/^\w/, (letter) => letter.toUpperCase()) : 'Queued';
+  }
+
+  function formatPrice(amount: number | undefined, currency: string | undefined): string {
+    if (amount === undefined) {
+      return '';
+    }
+
+    const normalizedAmount = Number.isInteger(amount) ? String(amount) : amount.toFixed(2).replace(/\.?0+$/, '');
+    return `${normalizedAmount} ${currency?.trim() || 'USD'}`;
+  }
+
+  function formatRepository(currentOrder: OrderView): string {
+    const repository = currentOrder.repository;
+    if (!repository) {
+      return '';
+    }
+
+    const owner = repository.ownerHandle?.replace(/^@+/, '').trim();
+    if (owner && repository.slug) {
+      return `@${owner}/${repository.slug}`;
+    }
+
+    return repository.slug || repository.name || repository.id;
+  }
+
+  function formatDate(value: string | undefined, locale: string): string {
+    if (!value) {
+      return '';
+    }
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return '';
+    }
+
+    return new Intl.DateTimeFormat(locale, {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    }).format(date);
+  }
+
+  function blockLabel(type: NotebookBlockType): string {
+    switch (type) {
+      case 'code':
+        return 'Code';
+      case 'output':
+        return 'Output';
+      case 'artifact':
+        return 'Artifact';
+      case 'diff':
+        return 'Diff';
+      case 'warning':
+        return 'Warning';
+      default:
+        return 'Note';
+    }
+  }
+
+  function blockIcon(type: NotebookBlockType): string {
+    switch (type) {
+      case 'code':
+        return 'lucide:square-code';
+      case 'output':
+        return 'lucide:terminal-square';
+      case 'artifact':
+        return 'lucide:paperclip';
+      case 'diff':
+        return 'lucide:file-diff';
+      case 'warning':
+        return 'lucide:triangle-alert';
+      default:
+        return 'lucide:file-text';
+    }
+  }
+
+  function isCodeLikeBlock(type: NotebookBlockType): boolean {
+    return type === 'code' || type === 'output' || type === 'diff';
+  }
+
+  function buildWorkspaceHref(currentOrder: OrderView, locale: KefineLocale): string {
+    const actorHandle = (currentOrder.actorHandle || currentOrder.ownerUsername || '').replace(/^@+/, '').trim();
+    const routeOrderId = currentOrder.shareId?.trim() || currentOrder.id.trim();
+    if (!actorHandle || !routeOrderId) {
+      return '';
+    }
+
+    return localizeAppPath(buildActorOrderPath(actorHandle, routeOrderId), locale);
+  }
 </script>
 
-{#if Workspace}
-  <Workspace initialOrderId={data.initialOrderId} />
-{/if}
+<svelte:head>
+  <title>{order ? `${order.title} | Lefine` : 'Task | Lefine'}</title>
+</svelte:head>
+
+<lef-task-document-page data-testid="kefine-task-document-page">
+  <lef-task-document-shell>
+    <lef-task-document-nav>
+      <a href={localizeAppPath('/', activeLocale)} data-part="brand">Lefine</a>
+      {#if workspaceHref}
+        <a href={workspaceHref} data-part="workspace">Workspace</a>
+      {/if}
+    </lef-task-document-nav>
+
+    {#if loading && !order}
+      <lef-task-empty-state>
+        <h1>Loading task</h1>
+      </lef-task-empty-state>
+    {:else if unavailable || !order}
+      <lef-task-empty-state>
+        <h1>Task not found</h1>
+        <p>This task is not available.</p>
+      </lef-task-empty-state>
+    {:else}
+      <article aria-label="Task document">
+        <lef-task-title-block>
+          <lef-task-title-row>
+            <input type="checkbox" aria-label="Task completion" checked={taskCompleted} disabled />
+            <lef-task-title-copy>
+              <lef-task-title-kicker>
+                <lef-task-icon>{taskInitial}</lef-task-icon>
+                <lefine-text>{completionLabel}</lefine-text>
+              </lef-task-title-kicker>
+              <h1>{order.title}</h1>
+            </lef-task-title-copy>
+          </lef-task-title-row>
+
+          {#if labels.length > 0}
+            <lef-task-label-list aria-label="Task labels">
+              {#each labels as label}
+                <lefine-text>{label}</lefine-text>
+              {/each}
+            </lef-task-label-list>
+          {/if}
+        </lef-task-title-block>
+
+        <lef-task-property-grid data-testid="kefine-task-document-properties">
+          {#each propertyRows as row}
+            <lef-task-property>
+              <Icon icon={row.icon} width="16" height="16" aria-hidden="true" />
+              <strong>{row.label}</strong>
+              <lef-task-property-value>
+                {#if row.href}
+                  <a href={row.href}>{row.value}</a>
+                {:else}
+                  {row.value}
+                {/if}
+              </lef-task-property-value>
+            </lef-task-property>
+          {/each}
+        </lef-task-property-grid>
+
+        <section aria-labelledby="task-description-heading" data-testid="kefine-task-document-description">
+          <h2 id="task-description-heading">Description</h2>
+          {#if markdownBlocks.length > 0}
+            <lef-task-markdown>
+              {#each markdownBlocks as block}
+                {#if block.type === 'heading'}
+                  <lef-task-markdown-heading data-level={block.level}>{block.content}</lef-task-markdown-heading>
+                {:else if block.type === 'paragraph'}
+                  <p>{block.content}</p>
+                {:else if block.type === 'list'}
+                  <ul>
+                    {#each block.items as item}
+                      <li>{item}</li>
+                    {/each}
+                  </ul>
+                {:else if block.type === 'code'}
+                  <lef-task-markdown-code>
+                    {#if block.language}
+                      <lefine-text>{block.language}</lefine-text>
+                    {/if}
+                    <pre><code>{block.content}</code></pre>
+                  </lef-task-markdown-code>
+                {/if}
+              {/each}
+            </lef-task-markdown>
+          {:else}
+            <p>No description.</p>
+          {/if}
+        </section>
+
+        {#if subtasks.length > 0}
+          <section aria-labelledby="task-subtasks-heading" data-testid="kefine-task-document-subtasks">
+            <h2 id="task-subtasks-heading">Subtasks</h2>
+            <ol>
+              {#each subtasks as subtask}
+                <li>
+                  <input
+                    type="checkbox"
+                    aria-label={subtask.title}
+                    checked={isStateCompleted(subtask.state)}
+                    disabled
+                  />
+                  <lef-task-subtask-copy>
+                    <strong>{subtask.title}</strong>
+                    {#if subtask.detail}
+                      <p>{subtask.detail}</p>
+                    {/if}
+                  </lef-task-subtask-copy>
+                </li>
+              {/each}
+            </ol>
+          </section>
+        {/if}
+
+        {#if detailBlocks.length > 0}
+          <section aria-labelledby="task-more-heading" data-testid="kefine-task-document-blocks">
+            <h2 id="task-more-heading">More</h2>
+            <lef-task-detail-block-list>
+              {#each detailBlocks as block}
+                <lef-task-detail-block data-kind={block.type}>
+                  <lef-task-detail-heading>
+                    <Icon icon={blockIcon(block.type)} width="16" height="16" aria-hidden="true" />
+                    <strong>{block.title || block.sourceTitle || blockLabel(block.type)}</strong>
+                    {#if block.language}
+                      <lefine-text>{block.language}</lefine-text>
+                    {/if}
+                  </lef-task-detail-heading>
+                  {#if isCodeLikeBlock(block.type)}
+                    <pre><code>{block.content}</code></pre>
+                  {:else}
+                    <p>{block.content}</p>
+                  {/if}
+                </lef-task-detail-block>
+              {/each}
+            </lef-task-detail-block-list>
+          </section>
+        {/if}
+      </article>
+    {/if}
+  </lef-task-document-shell>
+</lef-task-document-page>
+
+<style>
+  lef-task-document-page {
+    display: block;
+    min-height: 100vh;
+    background: #f5f6f1;
+    color: #1d241e;
+    padding: 1.25rem 1rem 4rem;
+  }
+
+  lef-task-document-shell {
+    display: grid;
+    width: min(56rem, 100%);
+    margin: 0 auto;
+    gap: 2.25rem;
+  }
+
+  lef-task-document-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  lef-task-document-nav a {
+    display: inline-flex;
+    min-height: 2.25rem;
+    align-items: center;
+    color: inherit;
+    font-weight: 700;
+  }
+
+  lef-task-document-nav a[data-part='brand'] {
+    font-family: var(--kef-font-family-brand);
+    font-size: 1.75rem;
+  }
+
+  lef-task-document-nav a[data-part='workspace'] {
+    border: 1px solid color-mix(in oklab, currentColor 18%, transparent);
+    border-radius: 8px;
+    padding: 0 0.75rem;
+    font-size: 0.875rem;
+    background: color-mix(in oklab, white 82%, transparent);
+  }
+
+  article,
+  lef-task-empty-state,
+  lef-task-title-block,
+  lef-task-title-copy,
+  lef-task-markdown,
+  lef-task-detail-block-list,
+  lef-task-detail-block,
+  lef-task-subtask-copy {
+    display: grid;
+  }
+
+  article {
+    gap: 1.8rem;
+  }
+
+  lef-task-empty-state {
+    min-height: 18rem;
+    align-content: center;
+    gap: 0.5rem;
+  }
+
+  lef-task-title-block {
+    gap: 0.9rem;
+  }
+
+  lef-task-title-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    gap: 0.85rem;
+  }
+
+  lef-task-title-row > input,
+  ol input {
+    width: 1.2rem;
+    height: 1.2rem;
+    margin: 0;
+    accent-color: #2f7d58;
+  }
+
+  lef-task-title-row > input {
+    margin-top: 2.1rem;
+  }
+
+  lef-task-title-copy {
+    gap: 0.55rem;
+    min-width: 0;
+  }
+
+  lef-task-title-kicker {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    color: #5f6c61;
+    font-size: 0.9rem;
+    font-weight: 700;
+  }
+
+  lef-task-icon {
+    display: inline-grid;
+    width: 2rem;
+    height: 2rem;
+    place-items: center;
+    border: 1px solid color-mix(in oklab, #2f7d58 28%, transparent);
+    border-radius: 8px;
+    background: #e6f0e8;
+    color: #1e6040;
+    font-weight: 800;
+  }
+
+  h1,
+  h2,
+  p {
+    margin: 0;
+  }
+
+  h1 {
+    max-width: 18ch;
+    font-size: 2.25rem;
+    line-height: 1.08;
+  }
+
+  h2 {
+    font-size: 1rem;
+    line-height: 1.25;
+  }
+
+  p {
+    max-width: 68ch;
+    color: #39443b;
+  }
+
+  lef-task-label-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    padding-left: 2.05rem;
+  }
+
+  lef-task-label-list lefine-text {
+    display: inline-flex;
+    min-height: 1.55rem;
+    align-items: center;
+    border-radius: 6px;
+    padding: 0 0.5rem;
+    background: #e7edf6;
+    color: #264a72;
+    font-size: 0.78rem;
+    font-weight: 700;
+  }
+
+  lef-task-property-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.2rem 1.25rem;
+    border-top: 1px solid #d7ddd3;
+    border-bottom: 1px solid #d7ddd3;
+    padding: 0.85rem 0;
+  }
+
+  lef-task-property {
+    display: grid;
+    grid-template-columns: 1rem minmax(0, 1fr);
+    align-items: start;
+    gap: 0.1rem 0.55rem;
+    min-height: 2.65rem;
+    color: #4d5b50;
+    font-size: 0.9rem;
+  }
+
+  lef-task-property strong {
+    grid-column: 2;
+    color: #6a756c;
+    font-size: 0.82rem;
+  }
+
+  lef-task-property-value {
+    display: block;
+    grid-column: 2;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    color: #1f2a22;
+    font-weight: 650;
+  }
+
+  section {
+    display: grid;
+    gap: 0.8rem;
+  }
+
+  lef-task-markdown {
+    gap: 0.85rem;
+  }
+
+  lef-task-markdown-heading {
+    display: block;
+    color: #202820;
+    font-weight: 800;
+  }
+
+  lef-task-markdown-heading[data-level='1'] {
+    font-size: 1.35rem;
+  }
+
+  lef-task-markdown-heading[data-level='2'] {
+    font-size: 1.15rem;
+  }
+
+  ul,
+  ol {
+    display: grid;
+    gap: 0.55rem;
+    margin: 0;
+    padding: 0;
+  }
+
+  ul li {
+    position: relative;
+    padding-left: 1rem;
+    color: #39443b;
+  }
+
+  ul li::before {
+    position: absolute;
+    top: 0.7rem;
+    left: 0;
+    width: 0.35rem;
+    height: 0.35rem;
+    border-radius: 50%;
+    background: #2f7d58;
+    content: '';
+  }
+
+  ol li {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    gap: 0.75rem;
+    padding: 0.35rem 0;
+  }
+
+  ol input {
+    margin-top: 0.15rem;
+  }
+
+  lef-task-subtask-copy {
+    gap: 0.15rem;
+  }
+
+  lef-task-subtask-copy strong {
+    font-size: 0.95rem;
+  }
+
+  lef-task-subtask-copy p {
+    color: #59665b;
+    font-size: 0.9rem;
+  }
+
+  lef-task-markdown-code,
+  lef-task-detail-block {
+    display: grid;
+    gap: 0.45rem;
+  }
+
+  lef-task-markdown-code > lefine-text,
+  lef-task-detail-heading lefine-text {
+    display: inline-flex;
+    justify-self: start;
+    border-radius: 6px;
+    padding: 0.1rem 0.45rem;
+    background: #ecdebd;
+    color: #6b4d1f;
+    font-size: 0.75rem;
+    font-weight: 800;
+  }
+
+  pre {
+    width: 100%;
+    max-width: 100%;
+    overflow: auto;
+    border-radius: 8px;
+    padding: 0.95rem;
+    background: #111719;
+    color: #edf5f1;
+    font-size: 0.875rem;
+    line-height: 1.55;
+  }
+
+  code {
+    font-family: 'Fira Mono', Consolas, Monaco, monospace;
+  }
+
+  lef-task-detail-block-list {
+    gap: 0.9rem;
+  }
+
+  lef-task-detail-block {
+    border-left: 3px solid #6b8fc7;
+    padding-left: 0.9rem;
+  }
+
+  lef-task-detail-heading {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #2b3a31;
+  }
+
+  lef-task-detail-heading strong {
+    font-size: 0.95rem;
+  }
+
+  :global(:root[data-kefine-theme='dark']) lef-task-document-page {
+    background: #111413;
+    color: #edf1ea;
+  }
+
+  :global(:root[data-kefine-theme='dark']) lef-task-document-nav a[data-part='workspace'] {
+    background: #1d2420;
+  }
+
+  :global(:root[data-kefine-theme='dark']) lef-task-title-kicker,
+  :global(:root[data-kefine-theme='dark']) p,
+  :global(:root[data-kefine-theme='dark']) ul li,
+  :global(:root[data-kefine-theme='dark']) lef-task-property,
+  :global(:root[data-kefine-theme='dark']) lef-task-subtask-copy p {
+    color: #aeb8ad;
+  }
+
+  :global(:root[data-kefine-theme='dark']) lef-task-icon {
+    background: #1a2c23;
+    color: #97d5b4;
+  }
+
+  :global(:root[data-kefine-theme='dark']) lef-task-property-grid {
+    border-color: #2d3931;
+  }
+
+  :global(:root[data-kefine-theme='dark']) lef-task-property-value,
+  :global(:root[data-kefine-theme='dark']) lef-task-markdown-heading,
+  :global(:root[data-kefine-theme='dark']) lef-task-detail-heading {
+    color: #edf1ea;
+  }
+
+  @media (max-width: 720px) {
+    lef-task-document-page {
+      padding: 1rem 0.9rem 3rem;
+    }
+
+    lef-task-document-shell {
+      gap: 1.5rem;
+    }
+
+    h1 {
+      max-width: none;
+      font-size: 1.8rem;
+    }
+
+    lef-task-title-row > input {
+      margin-top: 2rem;
+    }
+
+    lef-task-property-grid {
+      grid-template-columns: 1fr;
+    }
+
+    lef-task-property {
+      grid-template-columns: 1rem minmax(0, 1fr);
+    }
+  }
+</style>
