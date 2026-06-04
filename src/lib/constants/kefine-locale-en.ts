@@ -1003,6 +1003,33 @@ export const KEFINE_TEXT_EN = {
     taskNamePlaceholder: 'Task name',
     slugPlaceholder: 'task-name',
     branchPatternPlaceholder: 'main or feature/*',
+    badges: {
+      best: 'Best',
+      bestTitle: 'Best solver for the selected metric',
+      deltaTitle: 'Behind the best solver on the selected metric'
+    },
+    solversModal: {
+      open: 'Compare solvers',
+      title: 'Compare solvers',
+      subtitle:
+        'Pick a solver for this task. The leader earns a Best badge; the rest show how far behind they are on the selected metric.',
+      close: 'Close solver comparison',
+      rankedBy: 'Ranked by',
+      metricNames: {
+        efficiency: 'Efficiency',
+        success: 'Success',
+        price: 'Price',
+        speed: 'Speed'
+      },
+      metricHints: {
+        efficiency: 'Highest success per dollar',
+        success: 'Highest success rate',
+        price: 'Lowest price',
+        speed: 'Fastest run'
+      },
+      plotsSubtitle: 'Execution time, price, success rate & value per dollar',
+      empty: 'No solvers to compare yet.'
+    },
     cohortDialog: {
       title: 'Cheap solver cohort',
       description: 'Search a solver cohort like `vpn` and pick the people you want Lefine to prioritize.',
