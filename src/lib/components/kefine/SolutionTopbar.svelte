@@ -7,24 +7,20 @@
     project,
     slug,
     backHref,
-    backLabel,
     onBack,
     onMerge,
     isMerged = false,
-    isMerging = false,
-    completed = true
+    isMerging = false
   }: {
     title: string;
     author: string;
     project?: string;
     slug?: string;
     backHref: string;
-    backLabel?: string;
     onBack: (event: MouseEvent) => void;
     onMerge?: () => void;
     isMerged?: boolean;
     isMerging?: boolean;
-    completed?: boolean;
   } = $props();
 
   const localeText = $derived($kefineLocaleText);
@@ -32,7 +28,7 @@
 </script>
 
 <lef-solver-topbar>
-  <a class="lef-back-link" href={backHref} onclick={onBack} aria-label={backLabel ?? labels.backToSolutions} title={backLabel ?? labels.backToSolutions}>
+  <a class="lef-back-link" href={backHref} onclick={onBack} aria-label={labels.backToSolutions} title={labels.backToSolutions}>
     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
       <path d="M15 18l-6-6 6-6"></path>
     </svg>
@@ -61,16 +57,10 @@
     {/if}
     <lef-solver-separator aria-hidden="true">/</lef-solver-separator>
     <lef-solver-title-row>
-      <lef-solver-status data-completed={completed} aria-hidden="true">
-        {#if completed}
-          <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true">
-            <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0Zm3.78 5.97a.75.75 0 0 0-1.06-1.06L7 8.63 5.28 6.91a.75.75 0 1 0-1.06 1.06l2.25 2.25c.293.293.767.293 1.06 0l4.25-4.25Z"></path>
-          </svg>
-        {:else}
-          <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true">
-            <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0Zm0 1.5a6.5 6.5 0 1 1 0 13 6.5 6.5 0 0 1 0-13Zm0 3a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z"></path>
-          </svg>
-        {/if}
+      <lef-solver-status aria-hidden="true">
+        <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true">
+          <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0Zm3.78 5.97a.75.75 0 0 0-1.06-1.06L7 8.63 5.28 6.91a.75.75 0 1 0-1.06 1.06l2.25 2.25c.293.293.767.293 1.06 0l4.25-4.25Z"></path>
+        </svg>
       </lef-solver-status>
       <lef-solver-title>{title}</lef-solver-title>
       <lef-solver-author>{author}</lef-solver-author>
@@ -188,10 +178,6 @@
     align-items: center;
     color: var(--kef-success, #16a34a);
     flex: 0 0 auto;
-  }
-
-  lef-solver-status[data-completed='false'] {
-    color: var(--lefine-text-soft);
   }
 
   lef-solver-title {
