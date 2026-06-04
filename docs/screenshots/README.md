@@ -14,6 +14,7 @@ The profile-as-repository captures (issue #130) are regenerated separately with:
 
 ```bash
 node experiments/capture-profile-repository.mjs
+node experiments/capture-profile-owner.mjs
 ```
 
 | File | Route |
@@ -40,3 +41,4 @@ Profile-as-repository captures (issue #130):
 | profile-repository-public.png | Public profile rendered as a repository: README + task checklist + new-task row. No widgets are shown statically. |
 | profile-repository-checklist.png | Close-up of the profile task checklist. |
 | profile-widget-search.png | A declared widget (translator) surfaced from the command palette only when the visitor types a matching query. |
+| profile-owner-editor.png | Owner view: the flat repository panel followed by the editor — public/private lock chip, social/secret columns, and the restored bonus card wired to `/api/profile/bin-lookup`. |

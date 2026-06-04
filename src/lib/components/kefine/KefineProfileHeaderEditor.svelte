@@ -82,7 +82,7 @@
       </lef-profile-header-handle>
     {:else}
       <h1>{displayName}</h1>
-      <p>{canonicalProfilePath}</p>
+      <p>{canonicalProfilePath.replace(/^\//, '')}</p>
     {/if}
 
     {#if bio.trim()}

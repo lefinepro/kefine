@@ -182,14 +182,13 @@
     min-width: 0;
   }
 
+  /* The README is the most emphasized block, but flat: the handle and brief
+     carry the weight, with no card chrome around them (reviewer feedback). */
   lef-repo-readme {
     display: flex;
     flex-direction: column;
-    gap: 0.6rem;
-    padding: 0.9rem 1rem 1rem;
-    border: 1px solid var(--kef-line);
-    border-radius: 0.75rem;
-    background: var(--kef-bg-card);
+    gap: 0.55rem;
+    padding: 0.35rem 0.4rem 0.9rem;
   }
 
   lef-repo-readme-head {
@@ -198,9 +197,10 @@
 
   lef-repo-readme-head h2 {
     margin: 0;
-    font-size: 1.08rem;
+    font-size: 1.18rem;
     line-height: 1.25;
     font-weight: 700;
+    letter-spacing: -0.01em;
     color: var(--lefine-text);
   }
 
@@ -257,15 +257,15 @@
     gap: 0.6rem;
     min-height: 2.7rem;
     padding: 0.5rem 0.65rem;
-    border: 1px solid color-mix(in oklab, var(--kef-line) 55%, transparent);
+    border: 1px solid color-mix(in oklab, var(--kef-line) 28%, transparent);
     border-radius: 8px;
-    background: color-mix(in oklab, var(--kef-bg-card) 82%, transparent);
+    background: color-mix(in oklab, var(--kef-bg-card) 92%, transparent);
     color: var(--lefine-text);
   }
 
   lef-repo-checklist-item[data-state='create'] {
     border-style: dashed;
-    background: color-mix(in oklab, var(--kef-bg-card) 66%, transparent);
+    background: transparent;
   }
 
   lef-repo-checklist-item[data-state='create']:focus-within {

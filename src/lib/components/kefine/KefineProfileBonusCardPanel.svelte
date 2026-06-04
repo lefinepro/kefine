@@ -12,10 +12,10 @@
     cardNumber = $bindable(''),
     holderName = 'LEFINE',
     verifyLabel = 'Verify card',
-    skipLabel = 'Skip for now',
+    skipLabel = '',
     status,
     onVerify = () => {},
-    onSkip = () => {}
+    onSkip
   }: {
     mode?: 'setup' | 'summary';
     cardStepTitle?: string;
@@ -35,15 +35,10 @@
 
 {#if mode === 'setup'}
   <kefine-profile-bonus-panel data-mode="setup">
-    <kefine-profile-bonus-copy>
-      <small>{cardStepTitle}</small>
-      <h2>{bonusTitle}</h2>
-      <p>{bonusText}</p>
-    </kefine-profile-bonus-copy>
-
     <kefine-profile-bonus-card>
       <KefineProfileCardInput
         bind:cardNumber
+        eyebrow={cardStepTitle}
         title={bonusTitle}
         description={bonusText}
         {holderName}
@@ -77,7 +72,6 @@
 
 <style>
   kefine-profile-bonus-panel,
-  kefine-profile-bonus-copy,
   kefine-profile-bonus-card,
   kefine-profile-bonus-summary,
   kefine-profile-bonus-status {
@@ -85,14 +79,6 @@
     gap: 0.65rem;
   }
 
-  kefine-profile-bonus-panel[data-mode='setup'] {
-    grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
-    gap: 1rem;
-    align-items: start;
-  }
-
-  kefine-profile-bonus-copy,
-  kefine-profile-bonus-card,
   kefine-profile-bonus-summary,
   kefine-profile-bonus-status {
     padding: 1rem;
@@ -101,8 +87,6 @@
     border: 1px solid color-mix(in oklab, var(--kef-color-text, #3d3125) 8%, transparent);
   }
 
-  kefine-profile-bonus-copy h2,
-  kefine-profile-bonus-copy p,
   kefine-profile-bonus-summary strong,
   kefine-profile-bonus-summary p,
   kefine-profile-bonus-summary small,
@@ -112,7 +96,6 @@
     margin: 0;
   }
 
-  kefine-profile-bonus-copy small,
   kefine-profile-bonus-summary small,
   kefine-profile-bonus-status lefine-text,
   kefine-profile-bonus-status small {

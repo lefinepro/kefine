@@ -917,7 +917,7 @@ export const KEFINE_TEXT_EN = {
     tasksHint:
       'Your profile is a repository: list tasks as Org headings — #+TODO with * TODO, * IN PROGRESS or * DONE. They render as the public checklist.',
     tasksInsertExample: 'Insert example',
-    tasksOwnerHint: 'Edit these tasks in the private zone below.'
+    tasksOwnerHint: 'Edit these tasks in the editor below.'
   },
   solversView: {
     tasksAside: 'Tasks',

@@ -6,6 +6,7 @@
   import KefineProfileSocialLinksCard from '$lib/components/kefine/KefineProfileSocialLinksCard.svelte';
   import KefineProfileSetupDots from '$lib/components/kefine/KefineProfileSetupDots.svelte';
   import KefineProfileRepository from '$lib/components/kefine/KefineProfileRepository.svelte';
+  import KefineProfileBonusCardPanel from '$lib/components/kefine/KefineProfileBonusCardPanel.svelte';
   import KefineTopbar from '$lib/components/kefine/KefineTopbar.svelte';
   import { onMount } from 'svelte';
   import type { Component } from 'svelte';
@@ -46,7 +47,11 @@
     ProfileSocialLink
   } from '$lib/types/user';
   import { buildLocaleHomePath, localizeAppPath, readLocaleFromPathname } from '$lib/routing/kefine-locale-routing';
-  import { topbarSearchItems, topbarSearchRequest } from '$lib/kefine/topbar-search-context';
+  import {
+    topbarSearchItems,
+    topbarSearchRequest,
+    type TopbarSearchAction
+  } from '$lib/kefine/topbar-search-context';
 
   const localeText = $derived($kefineLocaleText);
   // The profile renders its own topbar (it is in ROUTES_WITH_OWN_TOPBAR), so it
@@ -100,6 +105,8 @@
   let leftNavExpanded = $state(false);
   let themeMode = $state<'light' | 'dark' | 'auto'>('auto');
   let systemPrefersDark = $state(false);
+  let cardNumber = $state('');
+  let editorElement = $state<HTMLElement | null>(null);
 
   const requestedHandle = $derived(page.params.handle ?? '');
   const activeLocale = $derived(readLocaleFromPathname(page.url.pathname) ?? 'en');
@@ -109,6 +116,41 @@
   const profileSearchQuery = $derived(page.url.searchParams.get('q') ?? '');
   const shouldRenderSearchWorkspace = $derived(Boolean(profileSearchQuery.trim()));
   const setupMetadata = $derived((profile?.metadata ?? {}) as ProfileMetadata);
+
+  // The profile is a repository, so the topbar search reads as the repo handle
+  // (`@demo`) instead of the generic prompt — the same contextual pill the
+  // solvers screen uses. Passing an `@`-prefixed placeholder turns the topbar
+  // search trigger into the project pill automatically.
+  const profileSearchSlug = $derived(
+    profile ? `@${(username || profile.primaryHandle).replace(/^@+/, '').trim()}` : ''
+  );
+  const cardHolderPreview = $derived(
+    `${firstName.trim()} ${surname.trim()}`.trim() || profile?.displayName || 'LEFINE'
+  );
+  // Route-scoped icon actions rendered beside the topbar search, mirroring the
+  // solvers screen: anyone can download the profile as `social.org`, and the
+  // owner gets a settings shortcut that jumps to the editor below.
+  const profileSearchActions = $derived.by<TopbarSearchAction[]>(() => {
+    const actions: TopbarSearchAction[] = [
+      {
+        id: 'profile-download',
+        label: localeText.profile.downloadSocialOrg,
+        icon: 'download',
+        testId: 'profile-social-download',
+        onClick: downloadSocialOrg
+      }
+    ];
+    if (isOwner) {
+      actions.push({
+        id: 'profile-settings',
+        label: localeText.profile.title,
+        icon: 'settings',
+        testId: 'profile-settings-trigger',
+        onClick: scrollToProfileEditor
+      });
+    }
+    return actions;
+  });
 
   const hasIdentityStepCompleted = $derived(
     Boolean(firstName.trim() || surname.trim() || profile?.displayName.trim() || username.trim())
@@ -723,6 +765,82 @@
     }
   }
 
+  function scrollToProfileEditor() {
+    editorElement?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // Verify a bank card's BIN against the Armenian-bank allowlist through the
+  // SvelteKit API route, which proxies binlist.net. A verified card unlocks the
+  // $100 workspace bonus that is granted once a social link is saved.
+  async function verifyProfileCard() {
+    if (!browser || !profile || !isOwner) {
+      return;
+    }
+
+    const digits = cardNumber.replace(/\D+/g, '');
+    if (digits.length < 6) {
+      return;
+    }
+
+    const response = await fetch('/api/profile/bin-lookup', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ cardNumber: digits })
+    }).catch(() => null);
+
+    if (!response) {
+      return;
+    }
+
+    const payload = (await response.json().catch(() => null)) as
+      | {
+          bin?: string;
+          scheme?: string | null;
+          cardType?: string | null;
+          bankName?: string | null;
+          countryAlpha2?: string | null;
+          countryName?: string | null;
+          isArmenianBank?: boolean;
+          bonusEligible?: boolean;
+          error?: string;
+        }
+      | null;
+
+    if (!payload || payload.error) {
+      return;
+    }
+
+    const verifiedAt = new Date().toISOString();
+    const updated = updateStoredProfile(localStorage, profile.id, (current) => ({
+      ...current,
+      cardVerification: {
+        status: payload.bonusEligible ? 'verified' : 'rejected',
+        bin: payload.bin ?? digits.slice(0, 8),
+        last4: digits.slice(-4),
+        scheme: payload.scheme ?? undefined,
+        cardType: payload.cardType ?? undefined,
+        bankName: payload.bankName ?? undefined,
+        countryAlpha2: payload.countryAlpha2 ?? undefined,
+        countryName: payload.countryName ?? undefined,
+        isArmenianBank: payload.isArmenianBank === true,
+        verifiedAt,
+        bonusGrantedAt: current.cardVerification?.bonusGrantedAt,
+        rejectionReason: payload.bonusEligible
+          ? undefined
+          : 'Card is not tied to an Armenian bank allowlist issuer.'
+      },
+      metadata: nextMetadata(current, {
+        cardBonusEligible: payload.bonusEligible === true
+      })
+    }));
+
+    if (updated) {
+      profile = updated;
+    }
+  }
+
   function followCurrentProfile() {
     if (!browser || !profile || !viewerProfile || viewerProfile.id === profile.id) {
       return;
@@ -797,7 +915,8 @@
       languageRussianLabel={localeText.topbar.languageRussian}
       languageArmenianLabel={localeText.topbar.languageArmenian}
       searchLabel={localeText.topbar.searchLabel}
-      searchPlaceholder={localeText.topbar.searchPlaceholder}
+      searchPlaceholder={profileSearchSlug || localeText.topbar.searchPlaceholder}
+      searchActions={profileSearchActions}
       searchResultsLabel={localeText.topbar.searchResultsLabel}
       searchEmptyLabel={localeText.topbar.searchEmptyLabel}
       searchOpenLabel={localeText.topbar.searchOpenLabel}
@@ -856,25 +975,6 @@
         void goto(buildLocaleHomePath(locale));
       }}
     />
-
-    {#if !(isOwner && onboardingStep)}
-      <KefineProfileHeaderEditor
-        bind:firstName
-        bind:surname
-        bind:username
-        isOwner={isOwner}
-        isSetup={isOwner}
-        displayName={profile.displayName}
-        canonicalProfilePath={canonicalProfilePath}
-        bio={bio}
-        firstNameLabel={localeText.profile.firstName}
-        surnameLabel={localeText.profile.surname}
-        usernameLabel={localeText.profile.username}
-        followLabel={!isOwner && viewerProfile ? (following ? localeText.profile.following : localeText.profile.follow) : ''}
-        onFollow={followCurrentProfile}
-        onFieldKeydown={blockStepSubmitOnEnter}
-      />
-    {/if}
 
     <lefine-box class:profile-layout={true} class:profile-layout--single={true}>
       <lefine-box class="profile-main" class:profile-main--setup={isOwner && onboardingStep === 'identity'}>
@@ -939,7 +1039,9 @@
               />
               <KefineProfileSetupDots currentStep={2} steps={[1, 2]} onSelect={(step) => goToOnboardingStep(step as 1 | 2)} />
               <lefine-box class="profile-links-head">
-                <button type="button" class="profile-links-add" aria-label={localeText.profile.addLink} onclick={addSocialLink}>+</button>
+                <button type="button" class="profile-plus" aria-label={localeText.profile.addLink} onclick={addSocialLink}>
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+                </button>
                 <strong>{localeText.profile.socialLinks}</strong>
               </lefine-box>
               <KefineProfileSocialLinksCard
@@ -959,44 +1061,11 @@
             </section>
           {/if}
         {:else}
-          <article class="profile-surface profile-details">
-            <lefine-box class="profile-section__head">
-              <lefine-box>
-                <strong>{localeText.profile.title}</strong>
-                <p>{profileSetupCompleted && isOwner ? localeText.profile.setupDone : localeText.profile.subtitle}</p>
-              </lefine-box>
-              {#if isOwner}
-                <button
-                  type="button"
-                  class="profile-visibility-toggle"
-                  data-public={isPublic}
-                  aria-label={isPublic ? localeText.profile.makePrivate : localeText.profile.makePublic}
-                  onclick={toggleProfileVisibility}
-                >
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    {#if isPublic}
-                      <path d="M7 10V8a5 5 0 0 1 10 0" />
-                      <rect x="5" y="10" width="14" height="10" rx="2" ry="2" />
-                    {:else}
-                      <path d="M8 10V8a4 4 0 1 1 8 0v2" />
-                      <rect x="5" y="10" width="14" height="10" rx="2" ry="2" />
-                    {/if}
-                  </svg>
-                  <lefine-text>{isPublic ? localeText.profile.publicStatus : localeText.profile.privateStatus}</lefine-text>
-                </button>
-              {/if}
-            </lefine-box>
-
-            <!-- Public zone: everything anyone visiting the workspace can see. -->
-            <lefine-box class="profile-zone profile-zone--public" data-public={isPublic}>
-              <lefine-box class="profile-zone__head">
-                <strong>{localeText.profile.publicZoneTitle}</strong>
-                <p>{localeText.profile.publicZoneHint}</p>
-              </lefine-box>
-
-              <!-- A profile is a repository: render the handle as a README and
-                   the profile tasks as a checklist, the same as the solvers
-                   screen. -->
+          <article class="profile-details">
+            <!-- A profile is a repository: one flat, emphasized panel with the
+                 handle as a README, the brief, and the tasks as a checklist —
+                 no extra frames, labels, or duplicated header. -->
+            <lefine-box class="profile-repo-panel">
               <KefineProfileRepository
                 handle={username || profile.primaryHandle}
                 {displayName}
@@ -1004,41 +1073,58 @@
                 {tasksOrg}
                 {isOwner}
               />
-
-              {#if isOwner}
-                <label class="profile-field">
-                  <lefine-text>{localeText.profile.bio}</lefine-text>
-                  <textarea bind:value={bio} rows="5"></textarea>
-                </label>
-              {/if}
-
-              <lefine-box class="profile-links-column">
-                <lefine-box class="profile-links-head">
-                  <button type="button" class="profile-links-add" aria-label={localeText.profile.addLink} onclick={addSocialLink}>+</button>
-                  <strong>{localeText.profile.socialLinks}</strong>
-                </lefine-box>
-                <KefineProfileSocialLinksCard
-                  bind:links={socialLinks}
-                  valuePlaceholder={localeText.profile.socialUrl}
-                  emptyText=""
-                  {isOwner}
-                />
-              </lefine-box>
             </lefine-box>
 
             {#if isOwner}
-              <!-- Private zone: owner-only data that never leaves the workspace. -->
-              <lefine-box class="profile-zone profile-zone--private">
-                <lefine-box class="profile-zone__head">
-                  <strong>{localeText.profile.privateZoneTitle}</strong>
-                  <p>{localeText.profile.privateZoneHint}</p>
+              <!-- Owner editor: lives below the public repository view. The lock
+                   chip is the single, polished public/private control. -->
+              <lef-profile-editor bind:this={editorElement} data-testid="profile-editor">
+                <lefine-box class="profile-editor__head" data-public={isPublic}>
+                  <lefine-box class="profile-editor__status">
+                    <strong>{isPublic ? localeText.profile.publicStatus : localeText.profile.privateStatus}</strong>
+                    <p>{isPublic ? localeText.profile.publicHint : localeText.profile.privateHint}</p>
+                  </lefine-box>
+                  <button
+                    type="button"
+                    class="profile-visibility-toggle"
+                    data-public={isPublic}
+                    aria-label={isPublic ? localeText.profile.makePrivate : localeText.profile.makePublic}
+                    title={isPublic ? localeText.profile.makePrivate : localeText.profile.makePublic}
+                    onclick={toggleProfileVisibility}
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      {#if isPublic}
+                        <path d="M7 10V8a5 5 0 0 1 10 0" />
+                        <rect x="5" y="10" width="14" height="10" rx="2" ry="2" />
+                      {:else}
+                        <path d="M8 10V8a4 4 0 1 1 8 0v2" />
+                        <rect x="5" y="10" width="14" height="10" rx="2" ry="2" />
+                      {/if}
+                    </svg>
+                  </button>
                 </lefine-box>
 
-                <lefine-box class="profile-visibility-note" data-public={isPublic}>
-                  <strong>{isPublic ? localeText.profile.publicStatus : localeText.profile.privateStatus}</strong>
-                  <p>{isPublic ? localeText.profile.publicHint : localeText.profile.privateHint}</p>
+                <label class="profile-field">
+                  <lefine-text>{localeText.profile.bio}</lefine-text>
+                  <textarea bind:value={bio} rows="4"></textarea>
+                </label>
+
+                <lefine-box class="profile-links-column">
+                  <lefine-box class="profile-links-head">
+                    <button type="button" class="profile-plus" aria-label={localeText.profile.addLink} onclick={addSocialLink}>
+                      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+                    </button>
+                    <strong>{localeText.profile.socialLinks}</strong>
+                  </lefine-box>
+                  <KefineProfileSocialLinksCard
+                    bind:links={socialLinks}
+                    valuePlaceholder={localeText.profile.socialUrl}
+                    emptyText=""
+                    {isOwner}
+                  />
                 </lefine-box>
 
+                <!-- Secret data: owner-only, never leaves the workspace. -->
                 <lefine-box class="profile-links-column">
                   <lefine-box class="profile-links-head">
                     <strong>{localeText.profile.secretData}</strong>
@@ -1099,11 +1185,38 @@
                     </button>
                   </lefine-box>
                 </lefine-box>
-              </lefine-box>
 
-              <footer class="profile-details__footer">
-                <button type="button" data-variant="primary" onclick={saveProfile}>{localeText.profile.save}</button>
-              </footer>
+                <!-- The animated bonus card: the brand art updates live as the
+                     owner types, and the BIN is verified against the Armenian
+                     bank allowlist through /api/profile/bin-lookup. -->
+                <KefineProfileBonusCardPanel
+                  bind:cardNumber
+                  cardStepTitle={localeText.profile.cardStepTitle}
+                  bonusTitle={localeText.profile.bonusTitle}
+                  bonusText={localeText.profile.bonusText}
+                  holderName={cardHolderPreview}
+                  verifyLabel={localeText.profile.verifyCard}
+                  status={profile.cardVerification}
+                  onVerify={verifyProfileCard}
+                />
+
+                <footer class="profile-details__footer">
+                  <button type="button" data-variant="primary" onclick={saveProfile}>{localeText.profile.save}</button>
+                </footer>
+              </lef-profile-editor>
+            {:else if viewerProfile}
+              <!-- Authenticated visitors keep a single, clean follow affordance. -->
+              <lefine-box class="profile-follow">
+                <button
+                  type="button"
+                  class="profile-follow__button"
+                  data-following={following}
+                  data-testid="profile-follow"
+                  onclick={followCurrentProfile}
+                >
+                  {following ? localeText.profile.following : localeText.profile.follow}
+                </button>
+              </lefine-box>
             {/if}
           </article>
 
@@ -1234,25 +1347,103 @@
     background: color-mix(in oklab, var(--kef-color-primary) 10%, var(--kef-color-bg-card));
   }
 
-  .profile-section__head,
-  .profile-toggle,
   .profile-details__footer {
     display: flex;
     gap: 0.75rem;
     align-items: center;
   }
 
-  .profile-section__head {
+  /* The profile is a repository: one flat, emphasized panel — no heavy frame,
+     just a hairline and a touch of warmth so it reads as the primary surface. */
+  .profile-repo-panel {
+    display: block;
+    padding: 1.1rem 1.2rem 1.25rem;
+    border-radius: 1rem;
+    background: color-mix(in oklab, var(--kef-color-primary) 6%, var(--kef-color-bg-card));
+    border: 1px solid color-mix(in oklab, var(--kef-color-text) 6%, transparent);
+  }
+
+  .profile-follow {
+    display: flex;
+    justify-content: flex-start;
+    margin-top: 0.4rem;
+  }
+
+  .profile-follow__button {
+    padding: 0.5rem 1.15rem;
+    border-radius: 0.75rem;
+    border: 1px solid color-mix(in oklab, var(--kef-color-primary) 38%, transparent);
+    background: color-mix(in oklab, var(--kef-color-primary) 12%, var(--kef-color-bg-card));
+    color: var(--kef-color-text);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 140ms ease, border-color 140ms ease;
+  }
+
+  .profile-follow__button:hover {
+    background: color-mix(in oklab, var(--kef-color-primary) 20%, var(--kef-color-bg-card));
+    border-color: color-mix(in oklab, var(--kef-color-primary) 52%, transparent);
+  }
+
+  .profile-follow__button[data-following='true'] {
+    background: transparent;
+    border-color: color-mix(in oklab, var(--kef-color-text) 16%, transparent);
+    color: var(--kef-color-muted);
+  }
+
+  /* Owner editor sits below the public repository view, separated by a hairline
+     rather than another framed panel. */
+  lef-profile-editor {
+    display: grid;
+    gap: 1.1rem;
+    margin-top: 0.4rem;
+    padding-top: 1.4rem;
+    border-top: 1px solid color-mix(in oklab, var(--kef-color-text) 8%, transparent);
+  }
+
+  .profile-editor__head {
+    display: flex;
+    align-items: center;
     justify-content: space-between;
+    gap: 1rem;
+    padding: 0.85rem 1rem;
+    border-radius: 0.85rem;
+    background: color-mix(in oklab, var(--kef-color-bg) 45%, var(--kef-color-bg-card));
+    border: 1px solid color-mix(in oklab, var(--kef-color-text) 8%, transparent);
+  }
+
+  .profile-editor__head[data-public='true'] {
+    background: color-mix(in oklab, var(--kef-color-primary) 9%, var(--kef-color-bg-card));
+    border-color: color-mix(in oklab, var(--kef-color-primary) 22%, transparent);
+  }
+
+  .profile-editor__status {
+    display: grid;
+    gap: 0.2rem;
+    min-width: 0;
+  }
+
+  .profile-editor__status strong {
+    font-size: 0.95rem;
+  }
+
+  .profile-editor__status p {
+    margin: 0;
+    color: var(--kef-color-muted);
+    font-size: 0.82rem;
+    line-height: 1.4;
   }
 
   .profile-visibility-toggle {
     display: inline-flex;
     align-items: center;
-    gap: 0.6rem;
-    padding: 0.7rem 0.9rem;
+    justify-content: center;
+    flex: none;
+    width: 2.6rem;
+    height: 2.6rem;
+    padding: 0;
     border: 1px solid color-mix(in oklab, var(--kef-color-text) 10%, transparent);
-    border-radius: 999px;
+    border-radius: 0.75rem;
     background: color-mix(in oklab, var(--kef-color-bg) 44%, var(--kef-color-bg-card));
     color: var(--kef-color-text);
     cursor: pointer;
@@ -1263,8 +1454,8 @@
   }
 
   .profile-visibility-toggle svg {
-    width: 1rem;
-    height: 1rem;
+    width: 1.05rem;
+    height: 1.05rem;
     stroke: currentColor;
     stroke-width: 1.8;
     fill: none;
@@ -1274,96 +1465,8 @@
 
   .profile-visibility-toggle[data-public='true'] {
     border-color: color-mix(in oklab, var(--kef-color-primary) 28%, transparent);
-    background: color-mix(in oklab, var(--kef-color-primary) 12%, var(--kef-color-bg-card));
-  }
-
-  .profile-zone {
-    display: grid;
-    gap: 0.9rem;
-    padding: 1rem 1.1rem 1.15rem;
-    border-radius: 1rem;
-    border: 1px solid color-mix(in oklab, var(--kef-color-text) 9%, transparent);
-  }
-
-  .profile-zone__head {
-    display: grid;
-    gap: 0.2rem;
-  }
-
-  .profile-zone__head strong {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.96rem;
-  }
-
-  .profile-zone__head strong::before {
-    content: '';
-    width: 0.55rem;
-    height: 0.55rem;
-    border-radius: 999px;
-    background: currentColor;
-  }
-
-  .profile-zone__head p {
-    margin: 0;
-    color: var(--kef-color-muted);
-    font-size: 0.85rem;
-  }
-
-  .profile-zone--public {
-    background: color-mix(in oklab, var(--kef-color-primary) 7%, var(--kef-color-bg-card));
-    border-color: color-mix(in oklab, var(--kef-color-primary) 22%, transparent);
-  }
-
-  .profile-zone--public .profile-zone__head strong {
-    color: color-mix(in oklab, var(--kef-color-text) 60%, var(--kef-color-primary));
-  }
-
-  .profile-zone--private {
-    background:
-      repeating-linear-gradient(
-        135deg,
-        color-mix(in oklab, var(--kef-color-text) 4%, transparent),
-        color-mix(in oklab, var(--kef-color-text) 4%, transparent) 8px,
-        transparent 8px,
-        transparent 16px
-      ),
-      color-mix(in oklab, var(--kef-color-bg) 55%, var(--kef-color-bg-card));
-    border-color: color-mix(in oklab, var(--kef-color-text) 16%, transparent);
-  }
-
-  .profile-zone--private .profile-zone__head strong {
-    color: color-mix(in oklab, var(--kef-color-text) 78%, var(--kef-color-warning, #e0a008));
-  }
-
-  .profile-visibility-note {
-    padding: 0.95rem 1rem;
-    border-radius: 1rem;
-    background: color-mix(in oklab, var(--kef-color-bg) 45%, var(--kef-color-bg-card));
-    border: 1px solid color-mix(in oklab, var(--kef-color-text) 8%, transparent);
-  }
-
-  .profile-visibility-note[data-public='true'] {
-    border-color: color-mix(in oklab, var(--kef-color-primary) 24%, transparent);
-    background: color-mix(in oklab, var(--kef-color-primary) 10%, var(--kef-color-bg-card));
-  }
-
-  .profile-visibility-note strong,
-  .profile-visibility-note p {
-    margin: 0;
-  }
-
-  .profile-visibility-note p {
-    color: var(--kef-color-muted);
-  }
-
-  .profile-section__head p {
-    margin: 0;
-  }
-
-  .profile-section__head p {
-    color: var(--kef-color-muted);
+    background: color-mix(in oklab, var(--kef-color-primary) 14%, var(--kef-color-bg-card));
+    color: color-mix(in oklab, var(--kef-color-text) 55%, var(--kef-color-primary));
   }
 
   .profile-step-surface,
@@ -1386,16 +1489,38 @@
     gap: 0.75rem;
   }
 
-  .profile-links-add {
-    width: 2rem;
-    height: 2rem;
-    border: 1px solid color-mix(in oklab, var(--kef-color-text) 10%, transparent);
-    border-radius: 999px;
-    background: color-mix(in oklab, var(--kef-color-bg) 45%, var(--kef-color-bg-card));
-    color: var(--kef-color-text);
+  /* A single, clean "plus" style shared by the new-task row and the add-link
+     button so the two pluses read as siblings (reviewer feedback). */
+  .profile-plus {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.9rem;
+    height: 1.9rem;
+    padding: 0;
+    border: 1px solid color-mix(in oklab, var(--kef-color-primary) 32%, var(--kef-color-text));
+    border-radius: 0.5rem;
+    background: color-mix(in oklab, var(--kef-color-primary) 11%, transparent);
+    color: var(--kef-color-primary);
     cursor: pointer;
-    font-size: 1.15rem;
-    line-height: 1;
+    transition:
+      border-color var(--kef-motion-fast) var(--kef-ease-soft),
+      background-color var(--kef-motion-fast) var(--kef-ease-soft);
+  }
+
+  .profile-plus:hover {
+    border-color: color-mix(in oklab, var(--kef-color-primary) 48%, transparent);
+    background: color-mix(in oklab, var(--kef-color-primary) 18%, transparent);
+  }
+
+  .profile-plus svg {
+    width: 1rem;
+    height: 1rem;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
   }
 
 
@@ -1491,8 +1616,7 @@
     gap: 0.4rem;
   }
 
-  .profile-field lefine-text,
-  .profile-section__head strong {
+  .profile-field lefine-text {
     font-size: 0.94rem;
   }
 
@@ -1561,10 +1685,6 @@
     max-width: 38rem;
   }
 
-  .profile-surface a {
-    color: inherit;
-  }
-
   @media (max-width: 980px) {
     .profile-layout,
     .profile-layout--single {
@@ -1590,10 +1710,9 @@
       padding-top: 5rem;
     }
 
-    .profile-section__head {
+    .profile-editor__head {
       align-items: flex-start;
       flex-direction: column;
     }
-
   }
 </style>
