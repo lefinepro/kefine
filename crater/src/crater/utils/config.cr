@@ -9,10 +9,15 @@ module Lepos
     # IP) are wired up through configuration instead of the ActivityPub follow
     # handshake, yet they receive the exact same relayed activity as external
     # API subscribers that follow the relay actor over the network.
+    #
+    # `token` is the optional solver bearer token. The service processes the
+    # messages relayed to its `inbox`, then returns the result by POSTing it to
+    # the platform's `/api/responses` endpoint authenticated with this token.
     record RelayInternalService,
       id : String,
       inbox : String,
-      shared_inbox : String? = nil
+      shared_inbox : String? = nil,
+      token : String? = nil
 
     struct Config
       getter port : Int32
@@ -171,7 +176,12 @@ module Lepos
           inbox = read_optional_string(service, "inbox")
           next unless id && inbox
 
-          RelayInternalService.new(id, inbox, read_optional_string(service, "sharedInbox"))
+          RelayInternalService.new(
+            id,
+            inbox,
+            read_optional_string(service, "sharedInbox"),
+            read_optional_string(service, "token")
+          )
         end
       end
 
@@ -269,6 +279,13 @@ module Lepos
 
       def relay_followers : String
         "#{relay_actor_id}/followers"
+      end
+
+      # Where a solver returns its results. The local service processes a
+      # relayed message and POSTs the response (OpenAI Responses shape for the
+      # initial provider) back here, authenticated with its bearer token.
+      def responses_endpoint : String
+        "#{crater_url}/api/responses"
       end
 
       def order_queue_inbox : String

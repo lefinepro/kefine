@@ -131,6 +131,7 @@ module Lepos
         "relayInbox"             => ::Aptok.json(config.relay_inbox),
         "relayOutbox"            => ::Aptok.json(config.relay_outbox),
         "relayFollowers"         => ::Aptok.json(config.relay_followers),
+        "responsesEndpoint"      => ::Aptok.json(config.responses_endpoint),
         "protocols"              => ::Aptok.json(["mastodon", "litepub"]),
         "subscriberCount"        => ::Aptok.json(subscriptions(config, store).size),
         "internalServiceCount"   => ::Aptok.json(internal.size),
