@@ -2,10 +2,16 @@
  * Built-in widgets the command palette can surface inline on any page and that
  * are reachable through per-profile short links such as `/@profile/weather`.
  */
-export type KefineSearchWidgetId = 'weather' | 'translate' | 'music';
+export type KefineSearchWidgetId = 'weather' | 'clock' | 'translate' | 'music' | 'proxy';
 
 /** Canonical widget ids in their display order. */
-export const KEFINE_SEARCH_WIDGET_IDS: readonly KefineSearchWidgetId[] = ['weather', 'translate', 'music'];
+export const KEFINE_SEARCH_WIDGET_IDS: readonly KefineSearchWidgetId[] = [
+  'weather',
+  'clock',
+  'translate',
+  'music',
+  'proxy'
+];
 
 /**
  * Slug aliases accepted in short-link URLs. Several human-friendly spellings map
@@ -15,10 +21,15 @@ export const KEFINE_SEARCH_WIDGET_IDS: readonly KefineSearchWidgetId[] = ['weath
 const WIDGET_SLUG_ALIASES: Readonly<Record<string, KefineSearchWidgetId>> = {
   weather: 'weather',
   forecast: 'weather',
+  clock: 'clock',
+  time: 'clock',
   translate: 'translate',
   translator: 'translate',
   translation: 'translate',
-  music: 'music'
+  music: 'music',
+  track: 'music',
+  proxy: 'proxy',
+  vpn: 'proxy'
 };
 
 /**

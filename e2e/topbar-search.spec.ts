@@ -69,5 +69,15 @@ test.describe('Topbar search', () => {
       'translate'
     );
     await expect(page.getByTestId('kefine-translator-widget')).toBeVisible();
+
+    // The proxy / VPN widget is reachable from the same palette by query.
+    await page.getByTestId('kefine-topbar-search-widget-back').click();
+    await page.getByTestId('kefine-topbar-search-input').fill('vpn');
+    await page.getByTestId('kefine-topbar-search-result-widget-proxy').click();
+    await expect(page.getByTestId('kefine-topbar-search-widget')).toHaveAttribute(
+      'data-widget',
+      'proxy'
+    );
+    await expect(page.getByTestId('kefine-proxy-widget')).toBeVisible();
   });
 });

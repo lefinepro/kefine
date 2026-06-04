@@ -287,8 +287,10 @@
     searchHomeLabel={localeText.topbar.searchHomeLabel}
     searchWidgetsLabel={localeText.topbar.searchWidgetsLabel}
     searchWeatherLabel={localeText.topbar.searchWeatherLabel}
+    searchClockLabel={localeText.topbar.searchClockLabel}
     searchTranslatorLabel={localeText.topbar.searchTranslatorLabel}
     searchMusicLabel={localeText.topbar.searchMusicLabel}
+    searchProxyLabel={localeText.topbar.searchProxyLabel}
     searchWidgetBackLabel={localeText.topbar.searchWidgetBackLabel}
     searchHomeHref={buildLocaleHomePath(activeLocale)}
     initialSearchQuery={page.url.searchParams.get('q') ?? ''}
