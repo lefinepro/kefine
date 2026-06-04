@@ -898,7 +898,14 @@ export const KEFINE_TEXT_RU = {
       'Добавьте Org-блоки, чтобы показать живые виджеты в публичном пространстве. Используйте #+begin_clock / #+begin_weather с городом, например «#+begin_clock Tokyo».',
     copySocialOrg: 'Скопировать social.org',
     socialOrgCopied: 'social.org скопирован',
-    downloadSocialOrg: 'Скачать social.org'
+    downloadSocialOrg: 'Скачать social.org',
+    widgetClockLabel: 'Часы',
+    widgetWeatherLabel: 'Погода',
+    widgetTypeHint: 'Тип объекта ActivityStreams',
+    publicZoneTitle: 'Публичный профиль',
+    publicZoneHint: 'Эту часть вашего workspace видят все.',
+    privateZoneTitle: 'Приватная зона',
+    privateZoneHint: 'Это видите и редактируете только вы. Это никогда не появляется в публичном workspace.'
   },
   solversView: {
     tasksAside: 'Задачи',

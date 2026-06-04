@@ -948,15 +948,15 @@
               {/if}
             </lefine-box>
 
-            <KefineProfileWidgets {widgetsOrg} />
+            <!-- Public zone: everything anyone visiting the workspace can see. -->
+            <lefine-box class="profile-zone profile-zone--public" data-public={isPublic}>
+              <lefine-box class="profile-zone__head">
+                <strong>{localeText.profile.publicZoneTitle}</strong>
+                <p>{localeText.profile.publicZoneHint}</p>
+              </lefine-box>
 
-            <lefine-box class="profile-section">
-              {#if isOwner}
-                <lefine-box class="profile-visibility-note" data-public={isPublic}>
-                  <strong>{isPublic ? localeText.profile.publicStatus : localeText.profile.privateStatus}</strong>
-                  <p>{isPublic ? localeText.profile.publicHint : localeText.profile.privateHint}</p>
-                </lefine-box>
-              {/if}
+              <KefineProfileWidgets {widgetsOrg} />
+
               <label class="profile-field">
                 <lefine-text>{localeText.profile.bio}</lefine-text>
                 {#if isOwner}
@@ -965,9 +965,7 @@
                   <textarea value={profile.bio || localeText.profile.subtitle} rows="5" disabled></textarea>
                 {/if}
               </label>
-            </lefine-box>
 
-            <lefine-box class="profile-grid-two">
               <lefine-box class="profile-links-column">
                 <lefine-box class="profile-links-head">
                   <button type="button" class="profile-links-add" aria-label={localeText.profile.addLink} onclick={addSocialLink}>+</button>
@@ -980,8 +978,21 @@
                   {isOwner}
                 />
               </lefine-box>
+            </lefine-box>
 
-              {#if isOwner}
+            {#if isOwner}
+              <!-- Private zone: owner-only data that never leaves the workspace. -->
+              <lefine-box class="profile-zone profile-zone--private">
+                <lefine-box class="profile-zone__head">
+                  <strong>{localeText.profile.privateZoneTitle}</strong>
+                  <p>{localeText.profile.privateZoneHint}</p>
+                </lefine-box>
+
+                <lefine-box class="profile-visibility-note" data-public={isPublic}>
+                  <strong>{isPublic ? localeText.profile.publicStatus : localeText.profile.privateStatus}</strong>
+                  <p>{isPublic ? localeText.profile.publicHint : localeText.profile.privateHint}</p>
+                </lefine-box>
+
                 <lefine-box class="profile-links-column">
                   <lefine-box class="profile-links-head">
                     <strong>{localeText.profile.secretData}</strong>
@@ -1000,33 +1011,30 @@
                     <textarea value={privateKey} rows="8" readonly placeholder={localeText.profile.privateKeyHint}></textarea>
                   </label>
                 </lefine-box>
-              {/if}
 
-            </lefine-box>
-
-            {#if isOwner}
-              <lefine-box class="profile-widgets-editor">
-                <lefine-box class="profile-links-head">
-                  <strong>{localeText.profile.widgetsTitle}</strong>
-                  <button type="button" class="profile-widgets-example" onclick={insertExampleWidgets}>
-                    {localeText.profile.widgetsInsertExample}
-                  </button>
-                </lefine-box>
-                <p class="profile-widgets-hint">{localeText.profile.widgetsHint}</p>
-                <textarea
-                  class="profile-widgets-input"
-                  bind:value={widgetsOrg}
-                  rows="6"
-                  spellcheck="false"
-                  placeholder={DEFAULT_PROFILE_WIDGETS_ORG}
-                ></textarea>
-                <lefine-box class="profile-widgets-actions">
-                  <button type="button" data-variant="ghost" onclick={copySocialOrg}>
-                    {socialOrgState === 'copied' ? localeText.profile.socialOrgCopied : localeText.profile.copySocialOrg}
-                  </button>
-                  <button type="button" data-variant="ghost" onclick={downloadSocialOrg}>
-                    {localeText.profile.downloadSocialOrg}
-                  </button>
+                <lefine-box class="profile-widgets-editor">
+                  <lefine-box class="profile-links-head">
+                    <strong>{localeText.profile.widgetsTitle}</strong>
+                    <button type="button" class="profile-widgets-example" onclick={insertExampleWidgets}>
+                      {localeText.profile.widgetsInsertExample}
+                    </button>
+                  </lefine-box>
+                  <p class="profile-widgets-hint">{localeText.profile.widgetsHint}</p>
+                  <textarea
+                    class="profile-widgets-input"
+                    bind:value={widgetsOrg}
+                    rows="6"
+                    spellcheck="false"
+                    placeholder={DEFAULT_PROFILE_WIDGETS_ORG}
+                  ></textarea>
+                  <lefine-box class="profile-widgets-actions">
+                    <button type="button" data-variant="ghost" onclick={copySocialOrg}>
+                      {socialOrgState === 'copied' ? localeText.profile.socialOrgCopied : localeText.profile.copySocialOrg}
+                    </button>
+                    <button type="button" data-variant="ghost" onclick={downloadSocialOrg}>
+                      {localeText.profile.downloadSocialOrg}
+                    </button>
+                  </lefine-box>
                 </lefine-box>
               </lefine-box>
 
@@ -1066,8 +1074,7 @@
 
   .profile-main,
   .profile-unavailable,
-  .profile-surface,
-  .profile-section {
+  .profile-surface {
     display: grid;
     gap: 0.9rem;
   }
@@ -1207,6 +1214,66 @@
     background: color-mix(in oklab, var(--kef-color-primary) 12%, var(--kef-color-bg-card));
   }
 
+  .profile-zone {
+    display: grid;
+    gap: 0.9rem;
+    padding: 1rem 1.1rem 1.15rem;
+    border-radius: 1rem;
+    border: 1px solid color-mix(in oklab, var(--kef-color-text) 9%, transparent);
+  }
+
+  .profile-zone__head {
+    display: grid;
+    gap: 0.2rem;
+  }
+
+  .profile-zone__head strong {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.96rem;
+  }
+
+  .profile-zone__head strong::before {
+    content: '';
+    width: 0.55rem;
+    height: 0.55rem;
+    border-radius: 999px;
+    background: currentColor;
+  }
+
+  .profile-zone__head p {
+    margin: 0;
+    color: var(--kef-color-muted);
+    font-size: 0.85rem;
+  }
+
+  .profile-zone--public {
+    background: color-mix(in oklab, var(--kef-color-primary) 7%, var(--kef-color-bg-card));
+    border-color: color-mix(in oklab, var(--kef-color-primary) 22%, transparent);
+  }
+
+  .profile-zone--public .profile-zone__head strong {
+    color: color-mix(in oklab, var(--kef-color-text) 60%, var(--kef-color-primary));
+  }
+
+  .profile-zone--private {
+    background:
+      repeating-linear-gradient(
+        135deg,
+        color-mix(in oklab, var(--kef-color-text) 4%, transparent),
+        color-mix(in oklab, var(--kef-color-text) 4%, transparent) 8px,
+        transparent 8px,
+        transparent 16px
+      ),
+      color-mix(in oklab, var(--kef-color-bg) 55%, var(--kef-color-bg-card));
+    border-color: color-mix(in oklab, var(--kef-color-text) 16%, transparent);
+  }
+
+  .profile-zone--private .profile-zone__head strong {
+    color: color-mix(in oklab, var(--kef-color-text) 78%, var(--kef-color-warning, #e0a008));
+  }
+
   .profile-visibility-note {
     padding: 0.95rem 1rem;
     border-radius: 1rem;
@@ -1238,8 +1305,7 @@
 
   .profile-step-surface,
   .profile-details,
-  .profile-links-column,
-  .profile-grid-two {
+  .profile-links-column {
     display: grid;
     gap: 1rem;
   }
@@ -1269,10 +1335,6 @@
     line-height: 1;
   }
 
-  .profile-grid-two {
-    grid-template-columns: minmax(0, 1.08fr) minmax(18rem, 0.92fr);
-    align-items: start;
-  }
 
   .profile-main--setup {
     min-height: calc(100vh - 20rem);
@@ -1442,8 +1504,7 @@
 
   @media (max-width: 980px) {
     .profile-layout,
-    .profile-layout--single,
-    .profile-grid-two {
+    .profile-layout--single {
       grid-template-columns: 1fr;
     }
 

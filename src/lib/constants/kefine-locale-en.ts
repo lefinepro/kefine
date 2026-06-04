@@ -896,7 +896,14 @@ export const KEFINE_TEXT_EN = {
       'Add Org blocks to show live widgets on your public workspace. Use #+begin_clock / #+begin_weather with an optional city, e.g. "#+begin_clock Tokyo".',
     copySocialOrg: 'Copy social.org',
     socialOrgCopied: 'social.org copied',
-    downloadSocialOrg: 'Download social.org'
+    downloadSocialOrg: 'Download social.org',
+    widgetClockLabel: 'Clock',
+    widgetWeatherLabel: 'Weather',
+    widgetTypeHint: 'ActivityStreams object type',
+    publicZoneTitle: 'Public profile',
+    publicZoneHint: 'Anyone can see this part of your workspace.',
+    privateZoneTitle: 'Private zone',
+    privateZoneHint: 'Only you can see and edit this. It never appears on your public workspace.'
   },
   solversView: {
     tasksAside: 'Tasks',

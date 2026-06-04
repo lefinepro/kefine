@@ -27,6 +27,37 @@ const WIDGET_TYPE_ALIASES: Readonly<Record<string, ProfileWidgetType>> = {
   time: 'clock'
 };
 
+/**
+ * Standard, typed description of a profile widget.
+ *
+ * Each widget is modelled as a separate object whose `objectType` follows the
+ * [ActivityStreams 2.0 vocabulary](https://www.w3.org/TR/activitystreams-vocabulary/#dfn-page):
+ * an embedded interactive widget is a `Page` ("Represents a Web Page"). Keeping
+ * the type alongside a stable `label` lets the profile render every widget in a
+ * single, standard block frame instead of bespoke per-widget chrome.
+ */
+export interface ProfileWidgetDefinition {
+  /** Canonical widget id. */
+  type: ProfileWidgetType;
+  /** ActivityStreams 2.0 object type for the embedded widget. */
+  objectType: 'Page';
+  /** Stable English label used as a fallback when no locale string is given. */
+  label: string;
+  /** The Org block keyword that produces this widget, e.g. `clock`. */
+  keyword: string;
+}
+
+/** Registry of the widgets that can appear on a profile, keyed by canonical id. */
+export const PROFILE_WIDGET_DEFINITIONS: Readonly<Record<ProfileWidgetType, ProfileWidgetDefinition>> = {
+  clock: { type: 'clock', objectType: 'Page', label: 'Clock', keyword: 'clock' },
+  weather: { type: 'weather', objectType: 'Page', label: 'Weather', keyword: 'weather' }
+};
+
+/** Look up the standard, typed definition for a widget. */
+export function describeProfileWidget(type: ProfileWidgetType): ProfileWidgetDefinition {
+  return PROFILE_WIDGET_DEFINITIONS[type];
+}
+
 /** A single widget block parsed from an Org document. */
 export interface ProfileWidgetBlock {
   /** Canonical widget id. */

@@ -870,7 +870,14 @@ export const KEFINE_TEXT_HY = {
       'Ավելացրեք Org բլոկներ՝ ձեր հանրային էջում կենդանի վիջեթներ ցուցադրելու համար։ Օգտագործեք #+begin_clock / #+begin_weather քաղաքով, օրինակ՝ «#+begin_clock Tokyo»։',
     copySocialOrg: 'Պատճենել social.org',
     socialOrgCopied: 'social.org-ը պատճենված է',
-    downloadSocialOrg: 'Ներբեռնել social.org'
+    downloadSocialOrg: 'Ներբեռնել social.org',
+    widgetClockLabel: 'Ժամացույց',
+    widgetWeatherLabel: 'Եղանակ',
+    widgetTypeHint: 'ActivityStreams օբյեկտի տեսակ',
+    publicZoneTitle: 'Հանրային պրոֆիլ',
+    publicZoneHint: 'Ձեր workspace-ի այս մասը տեսանելի է բոլորին։',
+    privateZoneTitle: 'Մասնավոր գոտի',
+    privateZoneHint: 'Սա տեսնում և խմբագրում եք միայն դուք։ Այն երբեք չի հայտնվում ձեր հանրային workspace-ում։'
   },
   solversView: {
     ...KEFINE_TEXT_EN.solversView,

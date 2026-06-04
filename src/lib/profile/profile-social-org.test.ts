@@ -1,10 +1,31 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_PROFILE_WIDGETS_ORG,
+  PROFILE_WIDGET_DEFINITIONS,
   buildProfileSocialOrg,
+  describeProfileWidget,
   parseProfileWidgetBlocks,
   type ProfileSocialOrgSource
 } from './profile-social-org';
+
+describe('profile widget definitions', () => {
+  it('models every widget as a typed ActivityStreams Page object', () => {
+    for (const type of ['clock', 'weather'] as const) {
+      const definition = describeProfileWidget(type);
+      expect(definition.type).toBe(type);
+      // The embedded widget is a Page per the ActivityStreams 2.0 vocabulary.
+      expect(definition.objectType).toBe('Page');
+      expect(definition.label).toBeTruthy();
+      expect(definition.keyword).toBe(type);
+    }
+  });
+
+  it('exposes a definition for each parsed widget type', () => {
+    for (const block of parseProfileWidgetBlocks(DEFAULT_PROFILE_WIDGETS_ORG)) {
+      expect(PROFILE_WIDGET_DEFINITIONS[block.type]).toBe(describeProfileWidget(block.type));
+    }
+  });
+});
 
 describe('parseProfileWidgetBlocks', () => {
   it('parses the issue shorthand block form', () => {
