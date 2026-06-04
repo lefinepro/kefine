@@ -109,7 +109,16 @@ export function parseProfileWidgetBlocks(src: string | null | undefined): Profil
           id: `widget-${open.type}-${blocks.length + 1}`
         });
         open = null;
+        continue;
       }
+
+      // When the header carries no argument (`#+begin_clock`), accept the first
+      // non-empty body line as the place so `#+begin_clock\nTokyo\n#+end_clock`
+      // works as naturally as `#+begin_clock Tokyo`.
+      if (!open.query && line) {
+        open.query = line;
+      }
+
       continue;
     }
 

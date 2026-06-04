@@ -34,6 +34,20 @@ describe('parseProfileWidgetBlocks', () => {
     expect(parseProfileWidgetBlocks(src).map((block) => block.type)).toEqual(['clock', 'weather']);
   });
 
+  it('accepts the place on a body line when the header carries no argument', () => {
+    const src = ['#+begin_clock', 'Tokyo', '#+end_clock'].join('\n');
+    expect(parseProfileWidgetBlocks(src)).toEqual([
+      { type: 'clock', query: 'Tokyo', id: 'widget-clock-1' }
+    ]);
+  });
+
+  it('prefers the header argument over body lines', () => {
+    const src = ['#+begin_clock Berlin', 'Tokyo', '#+end_clock'].join('\n');
+    expect(parseProfileWidgetBlocks(src)).toEqual([
+      { type: 'clock', query: 'Berlin', id: 'widget-clock-1' }
+    ]);
+  });
+
   it('ignores unknown blocks and unterminated blocks', () => {
     const src = ['#+begin_src js', "console.log('x')", '#+end_src', '#+begin_weather'].join('\n');
     expect(parseProfileWidgetBlocks(src)).toEqual([]);

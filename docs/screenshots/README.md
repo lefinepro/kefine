@@ -16,6 +16,7 @@ Set `START_SERVER=0 BASE_URL=http://127.0.0.1:5173` to use an already-running de
 | profile.png | `/@api` |
 | profile-search.png | `/@api?q=proxy%20server` |
 | weather-widget.png | `/@api/weather` |
+| clock-widget.png | `/@api/time` |
 | translator-widget.png | `/@api/translate` |
 | music-widget.png | `/@api/music` |
 | task-detail.png | `/task/order-1` |

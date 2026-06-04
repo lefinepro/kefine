@@ -37,7 +37,9 @@ const demoProfile = {
     firstName: 'API',
     surname: 'Maintainer',
     profileSetupCompleted: true,
-    profileSetupStep: 'done'
+    profileSetupStep: 'done',
+    // Org-social widget blocks rendered inline on the public profile.
+    widgetsOrg: '#+begin_clock Tokyo\n#+end_clock\n\n#+begin_clock\n#+end_clock\n\n#+begin_weather\n#+end_weather'
   }
 };
 
@@ -97,6 +99,7 @@ const pages = [
   { file: 'profile.png', route: '/@api', waitFor: '.profile-page' },
   { file: 'profile-search.png', route: '/@api?q=proxy%20server', waitFor: '[data-testid="kefine-search-page-results"]' },
   { file: 'weather-widget.png', route: '/@api/weather', waitFor: '[data-testid="kefine-weather-widget"]' },
+  { file: 'clock-widget.png', route: '/@api/time', waitFor: '[data-testid="kefine-clock-widget"]' },
   { file: 'translator-widget.png', route: '/@api/translate', waitFor: '[data-testid="kefine-translator-widget"]' },
   { file: 'music-widget.png', route: '/@api/music', waitFor: '[data-testid="kefine-music-widget"]' },
   { file: 'task-detail.png', route: '/task/order-1', waitFor: 'body' },
