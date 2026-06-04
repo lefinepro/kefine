@@ -809,6 +809,7 @@ export const KEFINE_TEXT_EN = {
     solverProfileToken: 'Connection token',
     solverProfilePending: 'Created on connect',
     solverProfileEndpoint: 'Local inbox',
+    solverProfileResponses: 'Responses endpoint',
     solverProfileHeader: 'Auth header',
     solverProfileTokenHint: 'The token is created in this workspace and can be copied into your local solver.',
     copySolverToken: 'Copy token',

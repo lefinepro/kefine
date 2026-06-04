@@ -92,6 +92,9 @@
   const solverAuthorizationHeader = $derived(
     solverProfileToken ? `Authorization: Bearer ${solverProfileToken}` : 'Authorization: Bearer lepos_solver_...'
   );
+  // Where the solver returns its results: it processes the message relayed to
+  // its inbox and POSTs the response (OpenAI Responses shape) back here.
+  const solverResponsesEndpoint = `${SOLVER_RELAY_ORIGIN}/api/responses`;
 
   const hasIdentityStepCompleted = $derived(
     Boolean(firstName.trim() || surname.trim() || profile?.displayName.trim() || username.trim())
@@ -969,6 +972,7 @@
                 solverHandle={solverProfileHandle}
                 token={solverProfileToken}
                 endpoint={solverProfileEndpoint}
+                responsesEndpoint={solverResponsesEndpoint}
                 authHeader={solverAuthorizationHeader}
                 created={solverProfileCreated}
                 copied={copyState === 'solver-token'}

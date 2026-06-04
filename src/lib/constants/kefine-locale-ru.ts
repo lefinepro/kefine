@@ -811,6 +811,7 @@ export const KEFINE_TEXT_RU = {
     solverProfileToken: 'Токен подключения',
     solverProfilePending: 'Создаётся при подключении',
     solverProfileEndpoint: 'Локальный inbox',
+    solverProfileResponses: 'Endpoint ответов',
     solverProfileHeader: 'Auth header',
     solverProfileTokenHint: 'Токен создаётся в этом workspace, его можно скопировать в локальный solver.',
     copySolverToken: 'Скопировать токен',

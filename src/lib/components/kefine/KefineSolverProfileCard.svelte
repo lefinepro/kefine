@@ -13,6 +13,7 @@
     createSolverProfile: string;
     solverProfileToken: string;
     solverProfileEndpoint: string;
+    solverProfileResponses: string;
     solverProfileHeader: string;
     solverProfilePending: string;
     solverProfileTokenHint: string;
@@ -26,6 +27,7 @@
     solverHandle: string;
     token: string;
     endpoint: string;
+    responsesEndpoint: string;
     authHeader: string;
     created: boolean;
     copied: boolean;
@@ -39,6 +41,7 @@
     solverHandle,
     token,
     endpoint,
+    responsesEndpoint,
     authHeader,
     created,
     copied,
@@ -117,6 +120,10 @@
     <lefine-box class="solver-config" data-testid="kefine-solver-profile-inbox">
       <lefine-text>{text.solverProfileEndpoint}</lefine-text>
       <code>{endpoint}</code>
+    </lefine-box>
+    <lefine-box class="solver-config" data-testid="kefine-solver-profile-responses">
+      <lefine-text>{text.solverProfileResponses}</lefine-text>
+      <code>{responsesEndpoint}</code>
     </lefine-box>
     <lefine-box class="solver-config">
       <lefine-text>{text.solverProfileHeader}</lefine-text>
