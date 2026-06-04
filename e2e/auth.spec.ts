@@ -54,6 +54,11 @@ test.describe('Auth Flows', () => {
       `http://127.0.0.1:4501/solvers/${solverHandle.slice(1)}/inbox`
     );
 
+    // The solver returns its processed results to the platform's /api/responses.
+    await expect(page.getByTestId('kefine-solver-profile-responses')).toContainText(
+      'http://127.0.0.1:4501/api/responses'
+    );
+
     await page.getByTestId('kefine-solver-profile-copy').click();
     await expect(page.getByTestId('kefine-solver-profile-copy')).toContainText('Token copied');
     await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(token);
