@@ -6,6 +6,7 @@
   import KefineProfileSocialLinksCard from '$lib/components/kefine/KefineProfileSocialLinksCard.svelte';
   import KefineProfileSetupDots from '$lib/components/kefine/KefineProfileSetupDots.svelte';
   import KefineTopbar from '$lib/components/kefine/KefineTopbar.svelte';
+  import Icon from '@iconify/svelte';
   import { onMount } from 'svelte';
   import type { Component } from 'svelte';
   import { disconnectAppKit } from '$lib/auth/appkit';
@@ -45,7 +46,7 @@
   let viewerProfile = $state<Profile | null>(null);
   let unavailable = $state(false);
   let following = $state(false);
-  let copyState = $state<'idle' | 'profile'>('idle');
+  let copyState = $state<'idle' | 'profile' | 'solver-token'>('idle');
   let Workspace: Component<{
     initialActorHandle?: string;
     initialSearchQuery?: string;
@@ -74,6 +75,23 @@
   const profileSearchQuery = $derived(page.url.searchParams.get('q') ?? '');
   const shouldRenderSearchWorkspace = $derived(Boolean(profileSearchQuery.trim()));
   const setupMetadata = $derived((profile?.metadata ?? {}) as ProfileMetadata);
+  const solverProfileToken = $derived(
+    typeof setupMetadata.solverProfileToken === 'string' ? setupMetadata.solverProfileToken.trim() : ''
+  );
+  const solverProfileHandle = $derived.by(() => {
+    const storedHandle = typeof setupMetadata.solverProfileHandle === 'string' ? setupMetadata.solverProfileHandle.trim() : '';
+    if (storedHandle) {
+      return storedHandle;
+    }
+
+    const baseHandle = profile?.primaryHandle || username || 'solver';
+    return `${normalizeProfileUsername(baseHandle)}-solver`;
+  });
+  const solverProfileCreated = $derived(Boolean(solverProfileToken));
+  const solverProfileEndpoint = 'http://127.0.0.1:4501/inference/inbox';
+  const solverAuthorizationHeader = $derived(
+    solverProfileToken ? `Authorization: Bearer ${solverProfileToken}` : 'Authorization: Bearer lepos_solver_...'
+  );
 
   const hasIdentityStepCompleted = $derived(
     Boolean(firstName.trim() || surname.trim() || profile?.displayName.trim() || username.trim())
@@ -396,7 +414,7 @@
     }
   }
 
-  async function copyLink(value: string, kind: 'profile') {
+  async function copyLink(value: string, kind: 'profile' | 'solver-token') {
     if (!browser || !navigator.clipboard) {
       return;
     }
@@ -416,6 +434,56 @@
     }
 
     await copyLink(privateKey, 'profile');
+  }
+
+  function createSolverTokenSuffix(): string {
+    if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+      return crypto.randomUUID().replace(/-/g, '');
+    }
+
+    return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 14)}`;
+  }
+
+  function createSolverProfile() {
+    if (!browser || !profile || !isOwner) {
+      return;
+    }
+
+    const updated = updateStoredProfile(localStorage, profile.id, (current) => {
+      const metadata = (current.metadata ?? {}) as ProfileMetadata;
+      const storedToken = typeof metadata.solverProfileToken === 'string' ? metadata.solverProfileToken.trim() : '';
+      const baseHandle = normalizeProfileUsername(current.primaryHandle || current.username || 'solver');
+      const storedHandle = typeof metadata.solverProfileHandle === 'string' ? metadata.solverProfileHandle.trim() : '';
+
+      return {
+        ...current,
+        metadata: nextMetadata(current, {
+          solverProfileId:
+            typeof metadata.solverProfileId === 'string' && metadata.solverProfileId.trim()
+              ? metadata.solverProfileId.trim()
+              : `solver-profile:${current.id}`,
+          solverProfileHandle: storedHandle || `${baseHandle}-solver`,
+          solverProfileToken: storedToken || `lepos_solver_${baseHandle}_${createSolverTokenSuffix()}`,
+          solverProfileCreatedAt:
+            typeof metadata.solverProfileCreatedAt === 'string' && metadata.solverProfileCreatedAt.trim()
+              ? metadata.solverProfileCreatedAt.trim()
+              : new Date().toISOString()
+        })
+      };
+    });
+
+    if (updated) {
+      profile = updated;
+      syncDraftStateFromProfile(updated);
+    }
+  }
+
+  async function copySolverToken() {
+    if (!solverProfileToken) {
+      return;
+    }
+
+    await copyLink(solverProfileToken, 'solver-token');
   }
 
   function resolveNextUsername(current: Profile): string {
@@ -887,6 +955,99 @@
               </label>
             </lefine-box>
 
+            {#if isOwner}
+              <lefine-box
+                class="profile-solver-profile"
+                data-active={solverProfileCreated}
+                data-testid="kefine-solver-profile-panel"
+              >
+                <lefine-box class="profile-solver-profile__head">
+                  <lefine-box>
+                    <strong>{localeText.profile.solverProfileTitle}</strong>
+                    <p>{localeText.profile.solverProfileSubtitle}</p>
+                  </lefine-box>
+                  <lefine-box class="profile-solver-profile__status" data-active={solverProfileCreated}>
+                    <Icon icon={solverProfileCreated ? 'lucide:check' : 'lucide:plug'} aria-hidden="true" />
+                    <lefine-text>
+                      {solverProfileCreated ? localeText.profile.solverProfileConnected : localeText.profile.solverProfileNotConnected}
+                    </lefine-text>
+                  </lefine-box>
+                </lefine-box>
+
+                <lefine-box class="profile-solver-connect" aria-label={localeText.profile.solverProfileConnection}>
+                  <lefine-box class="profile-solver-node">
+                    <lefine-box class="profile-solver-node__icon" aria-hidden="true">
+                      <Icon icon="lucide:user-round" />
+                    </lefine-box>
+                    <lefine-box>
+                      <lefine-text>{localeText.profile.solverProfileWorkspace}</lefine-text>
+                      <strong>@{profile.primaryHandle}</strong>
+                    </lefine-box>
+                  </lefine-box>
+                  <lefine-box class="profile-solver-link" aria-hidden="true">
+                    <Icon icon="lucide:arrow-right" />
+                  </lefine-box>
+                  <lefine-box class="profile-solver-node">
+                    <lefine-box class="profile-solver-node__icon" aria-hidden="true">
+                      <Icon icon="lucide:cpu" />
+                    </lefine-box>
+                    <lefine-box>
+                      <lefine-text>{localeText.profile.solverProfileLocalSolver}</lefine-text>
+                      <strong>@{solverProfileHandle}</strong>
+                    </lefine-box>
+                  </lefine-box>
+                </lefine-box>
+
+                <p class="profile-solver-profile__copy">{localeText.profile.solverProfileConnectText}</p>
+
+                {#if solverProfileToken}
+                  <lefine-box class="profile-solver-token-grid">
+                    <label class="profile-field">
+                      <lefine-text>{localeText.profile.solverProfileToken}</lefine-text>
+                      <input
+                        data-testid="kefine-solver-profile-token"
+                        value={solverProfileToken}
+                        readonly
+                        aria-label={localeText.profile.solverProfileToken}
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      data-variant="primary"
+                      data-testid="kefine-solver-profile-copy"
+                      onclick={copySolverToken}
+                      aria-label={copyState === 'solver-token' ? localeText.profile.solverTokenCopied : localeText.profile.copySolverToken}
+                    >
+                      <Icon icon={copyState === 'solver-token' ? 'lucide:check' : 'lucide:copy'} aria-hidden="true" />
+                      <lefine-text>{copyState === 'solver-token' ? localeText.profile.solverTokenCopied : localeText.profile.copySolverToken}</lefine-text>
+                    </button>
+                  </lefine-box>
+
+                  <lefine-box class="profile-solver-config">
+                    <lefine-text>{localeText.profile.solverProfileEndpoint}</lefine-text>
+                    <code>{solverProfileEndpoint}</code>
+                  </lefine-box>
+                  <lefine-box class="profile-solver-config">
+                    <lefine-text>{localeText.profile.solverProfileHeader}</lefine-text>
+                    <code>{solverAuthorizationHeader}</code>
+                  </lefine-box>
+                {:else}
+                  <lefine-box class="profile-solver-create-row">
+                    <button
+                      type="button"
+                      data-variant="primary"
+                      data-testid="kefine-solver-profile-create"
+                      onclick={createSolverProfile}
+                    >
+                      <Icon icon="lucide:key-round" aria-hidden="true" />
+                      <lefine-text>{localeText.profile.createSolverProfile}</lefine-text>
+                    </button>
+                    <small>{localeText.profile.solverProfileTokenHint}</small>
+                  </lefine-box>
+                {/if}
+              </lefine-box>
+            {/if}
+
             <lefine-box class="profile-grid-two">
               <lefine-box class="profile-links-column">
                 <lefine-box class="profile-links-head">
@@ -1123,6 +1284,170 @@
     color: var(--kef-color-muted);
   }
 
+  .profile-solver-profile,
+  .profile-solver-profile__head,
+  .profile-solver-connect,
+  .profile-solver-token-grid,
+  .profile-solver-create-row,
+  .profile-solver-config {
+    display: grid;
+    gap: 0.85rem;
+  }
+
+  .profile-solver-profile {
+    padding: 1rem;
+    border-radius: 1rem;
+    border: 1px solid color-mix(in oklab, var(--kef-color-primary) 18%, transparent);
+    background: color-mix(in oklab, var(--kef-color-bg) 38%, var(--kef-color-bg-card));
+    box-shadow: inset 0 1px 0 color-mix(in oklab, white 7%, transparent);
+  }
+
+  .profile-solver-profile[data-active='true'] {
+    border-color: color-mix(in oklab, var(--kef-color-primary) 32%, transparent);
+    background: color-mix(in oklab, var(--kef-color-primary) 8%, var(--kef-color-bg-card));
+  }
+
+  .profile-solver-profile__head {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+  }
+
+  .profile-solver-profile__head strong,
+  .profile-solver-profile__head p,
+  .profile-solver-profile__copy {
+    margin: 0;
+  }
+
+  .profile-solver-profile__head p,
+  .profile-solver-profile__copy,
+  .profile-solver-create-row small {
+    color: var(--kef-color-muted);
+  }
+
+  .profile-solver-profile__status,
+  .profile-solver-token-grid button,
+  .profile-solver-create-row button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+  }
+
+  .profile-solver-profile__status {
+    min-height: 2.25rem;
+    padding: 0.45rem 0.7rem;
+    border-radius: 999px;
+    border: 1px solid color-mix(in oklab, var(--kef-color-text) 10%, transparent);
+    background: color-mix(in oklab, var(--kef-color-bg-card) 76%, transparent);
+    color: var(--kef-color-muted);
+    white-space: nowrap;
+  }
+
+  .profile-solver-profile__status[data-active='true'] {
+    border-color: color-mix(in oklab, var(--kef-color-primary) 28%, transparent);
+    background: color-mix(in oklab, var(--kef-color-primary) 14%, transparent);
+    color: var(--kef-color-text);
+  }
+
+  .profile-solver-profile__status :global(svg),
+  .profile-solver-token-grid button :global(svg),
+  .profile-solver-create-row button :global(svg),
+  .profile-solver-node__icon :global(svg),
+  .profile-solver-link :global(svg) {
+    width: 1rem;
+    height: 1rem;
+    flex: 0 0 auto;
+  }
+
+  .profile-solver-connect {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+  }
+
+  .profile-solver-node {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+    min-height: 4.75rem;
+    padding: 0.8rem;
+    border-radius: 0.9rem;
+    border: 1px solid color-mix(in oklab, var(--kef-color-text) 8%, transparent);
+    background: color-mix(in oklab, var(--kef-color-bg-card) 78%, transparent);
+  }
+
+  .profile-solver-node__icon {
+    display: grid;
+    place-items: center;
+    width: 2.4rem;
+    aspect-ratio: 1;
+    border-radius: 0.75rem;
+    background: color-mix(in oklab, var(--kef-color-primary) 12%, var(--kef-color-bg-card));
+    color: var(--kef-color-text);
+    flex: 0 0 auto;
+  }
+
+  .profile-solver-node lefine-text,
+  .profile-solver-node strong,
+  .profile-solver-config code,
+  .profile-solver-token-grid input {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .profile-solver-node lefine-text,
+  .profile-solver-config lefine-text {
+    color: var(--kef-color-muted);
+    font-size: 0.82rem;
+  }
+
+  .profile-solver-node strong {
+    display: block;
+  }
+
+  .profile-solver-link {
+    display: grid;
+    place-items: center;
+    width: 2rem;
+    color: var(--kef-color-muted);
+  }
+
+  .profile-solver-token-grid {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+  }
+
+  .profile-solver-token-grid input,
+  .profile-solver-config {
+    border-radius: 0.85rem;
+    border: 1px solid color-mix(in oklab, var(--kef-color-text) 8%, transparent);
+    background: color-mix(in oklab, var(--kef-color-bg-card) 82%, transparent);
+  }
+
+  .profile-solver-token-grid input {
+    width: 100%;
+    min-height: 2.75rem;
+    padding: 0 0.85rem;
+    color: var(--kef-color-text);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+    font-size: 0.86rem;
+  }
+
+  .profile-solver-token-grid button,
+  .profile-solver-create-row button {
+    min-height: 2.75rem;
+  }
+
+  .profile-solver-config {
+    gap: 0.35rem;
+    padding: 0.75rem 0.85rem;
+  }
+
+  .profile-solver-config code {
+    color: var(--kef-color-text);
+    font-size: 0.84rem;
+  }
+
   .profile-section__head p {
     margin: 0;
   }
@@ -1321,6 +1646,21 @@
     .profile-section__head {
       align-items: flex-start;
       flex-direction: column;
+    }
+
+    .profile-solver-profile__head,
+    .profile-solver-connect,
+    .profile-solver-token-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .profile-solver-profile__status {
+      width: fit-content;
+    }
+
+    .profile-solver-link {
+      width: 100%;
+      transform: rotate(90deg);
     }
 
   }

@@ -109,6 +109,10 @@ export interface ProfileMetadata extends Record<string, unknown> {
   profileSetupCompleted?: boolean;
   cardBonusEligible?: boolean;
   sshPublicKey?: string;
+  solverProfileId?: string;
+  solverProfileHandle?: string;
+  solverProfileToken?: string;
+  solverProfileCreatedAt?: string;
 }
 
 export interface Profile {
