@@ -1,10 +1,8 @@
 <script lang="ts">
   import { browser } from '$app/environment';
-  import { goto } from '$app/navigation';
   import { page as routePage } from '$app/state';
   import Icon from '@iconify/svelte';
   import { onMount } from 'svelte';
-  import SolutionTopbar from '$lib/components/kefine/SolutionTopbar.svelte';
   import {
     extractStatusPayload,
     ORDER_STORAGE_KEY,
@@ -14,13 +12,13 @@
     type OrderView,
     type ProgressState
   } from '$lib/components/kefine/kefine-workflow';
-  import { buildActorOrderPath } from '$lib/components/kefine/kefine-workspace-helpers';
   import { resolveTaskDocumentContent } from '$lib/components/kefine/kefine-task-feed';
   import { KEFINE_TEXT_EN } from '$lib/constants/kefine-locale-en';
   import { KEFINE_TEXT_HY } from '$lib/constants/kefine-locale-hy';
   import { KEFINE_TEXT_RU } from '$lib/constants/kefine-locale-ru';
-  import type { KefineLocale, KefineLocaleText } from '$lib/constants/kefine-locale';
-  import { localizeAppPath, readLocaleFromPathname } from '$lib/routing/kefine-locale-routing';
+  import type { KefineLocaleText } from '$lib/constants/kefine-locale';
+  import { topbarSearchPlaceholderOverride } from '$lib/kefine/topbar-search-context';
+  import { readLocaleFromPathname } from '$lib/routing/kefine-locale-routing';
 
   type MarkdownBlock =
     | {
@@ -69,12 +67,7 @@
     (activeLocale === 'ru' ? KEFINE_TEXT_RU : activeLocale === 'hy' ? KEFINE_TEXT_HY : KEFINE_TEXT_EN) as unknown as KefineLocaleText
   );
   const taskCompleted = $derived(isTaskCompleted(order));
-  const taskInitial = $derived(resolveTaskInitial(order));
-  const completionLabel = $derived(taskCompleted ? 'Completed' : 'Open');
-  const workspaceHref = $derived(order ? buildWorkspaceHref(order, activeLocale) : '');
-  const backHref = $derived(workspaceHref || localizeAppPath('/', activeLocale));
-  const solverLabel = $derived(order?.solverName?.trim() || order?.solver?.trim() || '');
-  const projectLabel = $derived(order ? formatRepository(order) : '');
+  const taskSearchContext = $derived(order ? resolveTaskSearchContext(order) : '');
   const labels = $derived(order?.labels?.map((label) => label.trim()).filter(Boolean) ?? []);
   const propertyRows = $derived(resolvePropertyRows(order, activeLocale));
   const markdownBlocks = $derived(parseMarkdownBlocks(resolveTaskText(order)));
@@ -83,6 +76,11 @@
 
   onMount(() => {
     void loadTask();
+  });
+
+  $effect(() => {
+    topbarSearchPlaceholderOverride.set(taskSearchContext || null);
+    return () => topbarSearchPlaceholderOverride.set(null);
   });
 
   async function loadTask() {
@@ -305,20 +303,19 @@
 
     const rows: PropertyRow[] = [
       {
+        id: 'type',
+        label: 'Type',
+        value: resolveTaskKind(currentOrder),
+        icon: 'lucide:file-text'
+      },
+      {
         id: 'status',
         label: 'Status',
-        value: formatStatus(currentOrder.status),
+        value: formatCompletionStatus(currentOrder),
         icon: 'lucide:circle-dot'
       }
     ];
 
-    appendRow(rows, {
-      id: 'solver',
-      label: 'Solver',
-      value: currentOrder.solverName || currentOrder.solver || '',
-      icon: 'lucide:user-round',
-      href: currentOrder.solverProfileUrl
-    });
     appendRow(rows, {
       id: 'price',
       label: 'Price',
@@ -330,13 +327,6 @@
       label: 'Estimate',
       value: currentOrder.executionEstimate ?? '',
       icon: 'lucide:timer'
-    });
-    appendRow(rows, {
-      id: 'repository',
-      label: 'Repository',
-      value: formatRepository(currentOrder),
-      icon: 'lucide:git-branch',
-      href: currentOrder.repository?.projectUrl || currentOrder.repository?.repositoryUrl
     });
     appendRow(rows, {
       id: 'owner',
@@ -393,19 +383,12 @@
     return state === 'completed';
   }
 
-  function resolveTaskInitial(currentOrder: OrderView | null): string {
-    const icon = currentOrder?.taskIcon?.trim();
-    if (icon) {
-      return icon.slice(0, 2);
-    }
-
-    const title = currentOrder?.title?.trim();
-    return title ? title.slice(0, 1).toUpperCase() : 'T';
+  function resolveTaskKind(currentOrder: OrderView): string {
+    return resolveTaskText(currentOrder).trim() ? 'Document' : 'Task';
   }
 
-  function formatStatus(value: string): string {
-    const normalized = value.trim().replaceAll(/[-_]+/g, ' ');
-    return normalized ? normalized.replace(/^\w/, (letter) => letter.toUpperCase()) : 'Queued';
+  function formatCompletionStatus(currentOrder: OrderView): string {
+    return isTaskCompleted(currentOrder) ? 'Completed' : 'Open';
   }
 
   function formatPrice(amount: number | undefined, currency: string | undefined): string {
@@ -429,6 +412,13 @@
     }
 
     return repository.slug || repository.name || repository.id;
+  }
+
+  function resolveTaskSearchContext(currentOrder: OrderView): string {
+    const project = formatRepository(currentOrder);
+    return [project, currentOrder.title.trim() ? `task:${currentOrder.title.trim()}` : '']
+      .filter(Boolean)
+      .join(' ');
   }
 
   function formatDate(value: string | undefined, locale: string): string {
@@ -485,26 +475,6 @@
   function isCodeLikeBlock(type: NotebookBlockType): boolean {
     return type === 'code' || type === 'output' || type === 'diff';
   }
-
-  function buildWorkspaceHref(currentOrder: OrderView, locale: KefineLocale): string {
-    const actorHandle = (currentOrder.actorHandle || currentOrder.ownerUsername || '').replace(/^@+/, '').trim();
-    const routeOrderId = currentOrder.shareId?.trim() || currentOrder.id.trim();
-    if (!actorHandle || !routeOrderId) {
-      return '';
-    }
-
-    return localizeAppPath(buildActorOrderPath(actorHandle, routeOrderId), locale);
-  }
-
-  function goBack(event: MouseEvent) {
-    event.preventDefault();
-    if (browser && window.history.length > 1) {
-      window.history.back();
-      return;
-    }
-
-    void goto(backHref);
-  }
 </script>
 
 <svelte:head>
@@ -512,16 +482,6 @@
 </svelte:head>
 
 <lef-task-document-page data-testid="kefine-task-document-page">
-  <SolutionTopbar
-    title={order?.title ?? 'Task'}
-    author={solverLabel}
-    project={projectLabel}
-    backHref={backHref}
-    backLabel="Back"
-    onBack={goBack}
-    completed={taskCompleted}
-  />
-
   <lef-task-document-shell>
     {#if loading && !order}
       <lef-task-empty-state>
@@ -537,13 +497,7 @@
         <lef-task-title-block>
           <lef-task-title-row>
             <input type="checkbox" aria-label="Task completion" checked={taskCompleted} disabled />
-            <lef-task-title-copy>
-              <lef-task-title-kicker>
-                <lef-task-icon>{taskInitial}</lef-task-icon>
-                <lefine-text>{completionLabel}</lefine-text>
-              </lef-task-title-kicker>
-              <h1>{order.title}</h1>
-            </lef-task-title-copy>
+            <h1>{order.title}</h1>
           </lef-task-title-row>
 
           {#if labels.length > 0}
@@ -571,8 +525,7 @@
           {/each}
         </lef-task-property-grid>
 
-        <section aria-labelledby="task-description-heading" data-testid="kefine-task-document-description">
-          <h2 id="task-description-heading">Description</h2>
+        <section aria-label="Description" data-testid="kefine-task-document-description">
           {#if markdownBlocks.length > 0}
             <lef-task-markdown>
               {#each markdownBlocks as block}
@@ -602,8 +555,7 @@
         </section>
 
         {#if subtasks.length > 0}
-          <section aria-labelledby="task-subtasks-heading" data-testid="kefine-task-document-subtasks">
-            <h2 id="task-subtasks-heading">Subtasks</h2>
+          <section aria-label="Subtasks" data-testid="kefine-task-document-subtasks">
             <ol>
               {#each subtasks as subtask}
                 <li>
@@ -626,8 +578,7 @@
         {/if}
 
         {#if detailBlocks.length > 0}
-          <section aria-labelledby="task-more-heading" data-testid="kefine-task-document-blocks">
-            <h2 id="task-more-heading">More</h2>
+          <section aria-label="More" data-testid="kefine-task-document-blocks">
             <lef-task-detail-block-list>
               {#each detailBlocks as block}
                 <lef-task-detail-block data-kind={block.type}>
@@ -664,15 +615,14 @@
 
   lef-task-document-shell {
     display: grid;
-    width: min(56rem, 100%);
+    width: min(52rem, 100%);
     margin: 0 auto;
-    gap: 1.25rem;
-    padding: 1.25rem 1.5rem 4rem;
+    gap: 1.1rem;
+    padding: 2rem 1.5rem 4rem;
   }
 
   article,
   lef-task-empty-state,
-  lef-task-title-copy,
   lef-task-markdown,
   lef-task-detail-block-list,
   lef-task-detail-block,
@@ -692,18 +642,14 @@
 
   lef-task-title-block {
     display: grid;
-    gap: 0.9rem;
-    padding: 1rem 1.1rem 1.15rem;
-    background: var(--kef-bg-card);
-    border: 1px solid var(--kef-line);
-    border-radius: 0.7rem;
+    gap: 0.75rem;
   }
 
   lef-task-title-row {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
-    align-items: start;
-    gap: 0.85rem;
+    align-items: center;
+    gap: 0.75rem;
   }
 
   lef-task-title-row > input,
@@ -715,58 +661,18 @@
   }
 
   lef-task-title-row > input {
-    margin-top: 0.35rem;
-  }
-
-  lef-task-title-copy {
-    gap: 0.5rem;
-    min-width: 0;
-  }
-
-  lef-task-title-kicker {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    color: var(--lefine-text-soft);
-    font-size: 0.8rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-  }
-
-  lef-task-icon {
-    display: inline-grid;
-    width: 1.85rem;
-    height: 1.85rem;
-    place-items: center;
-    border: 1px solid color-mix(in oklab, var(--kef-success, #5f7962) 35%, transparent);
-    border-radius: 0.5rem;
-    background: color-mix(in oklab, var(--kef-success, #5f7962) 14%, var(--kef-bg-card));
-    color: var(--kef-success, #5f7962);
-    font-weight: 800;
-    text-transform: none;
-    letter-spacing: 0;
+    margin-top: 0.1rem;
   }
 
   h1,
-  h2,
   p {
     margin: 0;
   }
 
   h1 {
-    max-width: 24ch;
-    font-size: 1.7rem;
+    max-width: 32ch;
+    font-size: 1.85rem;
     line-height: 1.15;
-  }
-
-  h2 {
-    font-size: 0.78rem;
-    line-height: 1.25;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--lefine-text-soft);
-    font-weight: 700;
   }
 
   p {
@@ -778,7 +684,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 0.4rem;
-    padding-left: 2.05rem;
+    padding-left: 1.95rem;
   }
 
   lef-task-label-list lefine-text {
@@ -797,25 +703,21 @@
   lef-task-property-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.2rem 1.25rem;
-    padding: 0.95rem 1.1rem;
-    background: var(--kef-bg-card);
-    border: 1px solid var(--kef-line);
-    border-radius: 0.7rem;
+    gap: 0.45rem 1.5rem;
+    padding: 0.2rem 0 0.4rem;
   }
 
   lef-task-property {
     display: grid;
-    grid-template-columns: 1rem minmax(0, 1fr);
-    align-items: start;
-    gap: 0.1rem 0.55rem;
-    min-height: 2.65rem;
+    grid-template-columns: 1rem minmax(5.5rem, max-content) minmax(0, 1fr);
+    align-items: center;
+    gap: 0.55rem;
+    min-height: 1.75rem;
     color: var(--lefine-text-soft);
     font-size: 0.9rem;
   }
 
   lef-task-property strong {
-    grid-column: 2;
     color: var(--lefine-text-soft);
     font-size: 0.74rem;
     text-transform: uppercase;
@@ -824,7 +726,6 @@
 
   lef-task-property-value {
     display: block;
-    grid-column: 2;
     min-width: 0;
     overflow-wrap: anywhere;
     color: var(--lefine-text);
@@ -837,11 +738,8 @@
 
   section {
     display: grid;
-    gap: 0.7rem;
-    padding: 1rem 1.1rem 1.15rem;
-    background: var(--kef-bg-card);
-    border: 1px solid var(--kef-line);
-    border-radius: 0.7rem;
+    gap: 0.8rem;
+    padding: 0.35rem 0 0;
   }
 
   lef-task-markdown {
@@ -985,7 +883,7 @@
     }
 
     lef-task-property {
-      grid-template-columns: 1rem minmax(0, 1fr);
+      grid-template-columns: 1rem minmax(4.5rem, max-content) minmax(0, 1fr);
     }
   }
 </style>

@@ -901,7 +901,9 @@
           {:else}
             <KefineTopbarIcon name="search" size={18} />
           {/if}
-          <lefine-text data-part="search-placeholder">{visibleSearchPlaceholder}</lefine-text>
+          {#if !contextualSearchPlaceholder}
+            <lefine-text data-part="search-placeholder">{visibleSearchPlaceholder}</lefine-text>
+          {/if}
           <lefine-kbd data-part="search-shortcut">{searchShortcutLabel}</lefine-kbd>
         </button>
         {#if searchActions.length > 0}
@@ -1126,7 +1128,11 @@
   }
 
   button[data-part='search-trigger'][data-context='project'] {
-    grid-template-columns: minmax(0, max-content) minmax(5rem, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  button[data-part='search-trigger'][data-context='project'] [data-part='search-context'] {
+    max-width: 100%;
   }
 
   kefine-topbar-search-actions {
@@ -1172,7 +1178,7 @@
     display: inline-flex;
     align-items: center;
     min-width: 0;
-    max-width: 14rem;
+    max-width: min(22rem, 100%);
     padding: 0.24rem 0.48rem;
     border-radius: calc(var(--kef-radius-sm) + 0.08rem);
     background: color-mix(in oklab, var(--kef-primary) 18%, var(--kef-bg-card));

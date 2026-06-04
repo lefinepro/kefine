@@ -79,15 +79,25 @@ test.describe('Task document page', () => {
     await expect(documentPage.getByRole('heading', { name: 'Document import workflow' })).toBeVisible();
     await expect(documentPage.getByRole('checkbox', { name: 'Task completion' })).not.toBeChecked();
 
-    // Unified solver-style chrome: shared topbar plus the solver topbar breadcrumb.
-    await expect(page.locator('lef-solver-topbar')).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Back' })).toBeVisible();
-    await expect(page.locator('lef-solver-topbar')).toContainText('Document Solver');
+    // Reviewer feedback: task identity moves into the shared search area, with
+    // no extra solver header row on the overview document.
+    await expect(page.locator('lef-solver-topbar')).toHaveCount(0);
+    await expect(page.getByTestId('kefine-topbar-search-context')).toContainText(
+      '@api/document-import task:Document import workflow'
+    );
     // The document is the first-step overview: no testing/source tabs or solver widget.
     await expect(page.locator('lef-view-tabs')).toHaveCount(0);
     await expect(page.locator('lef-task-panel')).toHaveCount(0);
-    await expect(page.getByTestId('kefine-task-document-properties')).toContainText('Document Solver');
+    await expect(page.locator('lef-task-title-kicker')).toHaveCount(0);
+    await expect(page.getByTestId('kefine-task-document-properties')).toContainText('Type');
+    await expect(page.getByTestId('kefine-task-document-properties')).toContainText('Document');
+    await expect(page.getByTestId('kefine-task-document-properties')).toContainText('Status');
+    await expect(page.getByTestId('kefine-task-document-properties')).toContainText('Open');
     await expect(page.getByTestId('kefine-task-document-properties')).toContainText('42 USDC');
+    await expect(page.getByTestId('kefine-task-document-properties')).not.toContainText('Document Solver');
+    await expect(page.getByTestId('kefine-task-document-properties')).not.toContainText('@api/document-import');
+    await expect(page.getByRole('heading', { name: 'Description' })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Subtasks' })).toHaveCount(0);
     await expect(page.getByTestId('kefine-task-document-description')).toContainText('Import plan');
     await expect(page.getByTestId('kefine-task-document-description')).toContainText('Parse CSV input');
     await expect(page.locator('lef-task-markdown-code code')).toContainText('pnpm test -- task-document');
