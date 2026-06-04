@@ -18,13 +18,20 @@
 import type { ProfileSocialLink } from '$lib/types/user';
 
 /** Widget types that can be embedded in a profile's Org document. */
-export type ProfileWidgetType = 'weather' | 'clock';
+export type ProfileWidgetType = 'weather' | 'clock' | 'translate' | 'music' | 'proxy';
 
 const WIDGET_TYPE_ALIASES: Readonly<Record<string, ProfileWidgetType>> = {
   weather: 'weather',
   forecast: 'weather',
   clock: 'clock',
-  time: 'clock'
+  time: 'clock',
+  translate: 'translate',
+  translator: 'translate',
+  translation: 'translate',
+  music: 'music',
+  track: 'music',
+  proxy: 'proxy',
+  vpn: 'proxy'
 };
 
 /**
@@ -50,7 +57,10 @@ export interface ProfileWidgetDefinition {
 /** Registry of the widgets that can appear on a profile, keyed by canonical id. */
 export const PROFILE_WIDGET_DEFINITIONS: Readonly<Record<ProfileWidgetType, ProfileWidgetDefinition>> = {
   clock: { type: 'clock', objectType: 'Page', label: 'Clock', keyword: 'clock' },
-  weather: { type: 'weather', objectType: 'Page', label: 'Weather', keyword: 'weather' }
+  weather: { type: 'weather', objectType: 'Page', label: 'Weather', keyword: 'weather' },
+  translate: { type: 'translate', objectType: 'Page', label: 'Translate', keyword: 'translate' },
+  music: { type: 'music', objectType: 'Page', label: 'Music', keyword: 'music' },
+  proxy: { type: 'proxy', objectType: 'Page', label: 'Proxy', keyword: 'proxy' }
 };
 
 /** Look up the standard, typed definition for a widget. */
@@ -81,7 +91,16 @@ export const DEFAULT_PROFILE_WIDGETS_ORG = `#+begin_clock
 #+end_clock
 
 #+begin_weather
-#+end_weather`;
+#+end_weather
+
+#+begin_translate
+#+end_translate
+
+#+begin_music
+#+end_music
+
+#+begin_proxy
+#+end_proxy`;
 
 // Order matters: the `widget`/`block` wrappers and the dynamic-block form are
 // tried before the generic `#+begin_<name>` rule so that `#+begin_widget

@@ -1,8 +1,15 @@
 <script lang="ts">
   import KefineWeatherWidget from '$lib/components/kefine/KefineWeatherWidget.svelte';
   import KefineClockWidget from '$lib/components/kefine/KefineClockWidget.svelte';
+  import KefineTranslatorWidget from '$lib/components/kefine/KefineTranslatorWidget.svelte';
+  import KefineMusicWidget from '$lib/components/kefine/KefineMusicWidget.svelte';
+  import KefineProxyConfigWidget from '$lib/components/kefine/KefineProxyConfigWidget.svelte';
   import { kefineLocaleText } from '$lib/constants/kefine-locale';
-  import { describeProfileWidget, parseProfileWidgetBlocks } from '$lib/profile/profile-social-org';
+  import {
+    describeProfileWidget,
+    parseProfileWidgetBlocks,
+    type ProfileWidgetType
+  } from '$lib/profile/profile-social-org';
 
   let { widgetsOrg = '' }: { widgetsOrg?: string | null } = $props();
 
@@ -26,8 +33,19 @@
     return query.trim() ? `weather ${query.trim()}` : 'weather';
   }
 
-  function widgetLabel(type: 'weather' | 'clock'): string {
-    return type === 'clock' ? localeText.profile.widgetClockLabel : localeText.profile.widgetWeatherLabel;
+  function widgetLabel(type: ProfileWidgetType): string {
+    switch (type) {
+      case 'clock':
+        return localeText.profile.widgetClockLabel;
+      case 'weather':
+        return localeText.profile.widgetWeatherLabel;
+      case 'translate':
+        return localeText.profile.widgetTranslateLabel;
+      case 'music':
+        return localeText.profile.widgetMusicLabel;
+      case 'proxy':
+        return localeText.profile.widgetProxyLabel;
+    }
   }
 </script>
 
@@ -46,6 +64,12 @@
             <KefineClockWidget active query={block.query} />
           {:else if block.type === 'weather'}
             <KefineWeatherWidget active query={weatherQuery(block.query)} />
+          {:else if block.type === 'translate'}
+            <KefineTranslatorWidget active query={block.query} />
+          {:else if block.type === 'music'}
+            <KefineMusicWidget active />
+          {:else if block.type === 'proxy'}
+            <KefineProxyConfigWidget active />
           {/if}
         </kefine-widget-block-body>
       </kefine-widget-block>

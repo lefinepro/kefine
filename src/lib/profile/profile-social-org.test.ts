@@ -10,7 +10,7 @@ import {
 
 describe('profile widget definitions', () => {
   it('models every widget as a typed ActivityStreams Page object', () => {
-    for (const type of ['clock', 'weather'] as const) {
+    for (const type of ['clock', 'weather', 'translate', 'music', 'proxy'] as const) {
       const definition = describeProfileWidget(type);
       expect(definition.type).toBe(type);
       // The embedded widget is a Page per the ActivityStreams 2.0 vocabulary.
@@ -55,6 +55,22 @@ describe('parseProfileWidgetBlocks', () => {
     expect(parseProfileWidgetBlocks(src).map((block) => block.type)).toEqual(['clock', 'weather']);
   });
 
+  it('resolves the returned widget aliases (translator, track, vpn)', () => {
+    const src = [
+      '#+begin_translator en es',
+      '#+end_translator',
+      '#+begin_track',
+      '#+end_track',
+      '#+begin_vpn',
+      '#+end_vpn'
+    ].join('\n');
+    expect(parseProfileWidgetBlocks(src)).toEqual([
+      { type: 'translate', query: 'en es', id: 'widget-translate-1' },
+      { type: 'music', query: '', id: 'widget-music-2' },
+      { type: 'proxy', query: '', id: 'widget-proxy-3' }
+    ]);
+  });
+
   it('accepts the place on a body line when the header carries no argument', () => {
     const src = ['#+begin_clock', 'Tokyo', '#+end_clock'].join('\n');
     expect(parseProfileWidgetBlocks(src)).toEqual([
@@ -82,10 +98,13 @@ describe('parseProfileWidgetBlocks', () => {
     expect(parseProfileWidgetBlocks(null)).toEqual([]);
   });
 
-  it('parses the default widget document into a clock and a weather widget', () => {
+  it('parses the default widget document into all returned widgets', () => {
     expect(parseProfileWidgetBlocks(DEFAULT_PROFILE_WIDGETS_ORG).map((block) => block.type)).toEqual([
       'clock',
-      'weather'
+      'weather',
+      'translate',
+      'music',
+      'proxy'
     ]);
   });
 });
