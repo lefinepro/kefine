@@ -2,7 +2,7 @@ version: 2.0
 shards:
   aptok:
     git: https://github.com/lion-lef/aptok.git
-    version: 0.2.0+git.commit.4a2484ee4eb92aff12a72a53e73fdb4801252f40
+    version: 0.3.0+git.commit.05152dad0ae38b06eb2aef5e5dd5eee4cdad7995
 
   backtracer:
     git: https://github.com/sija/backtracer.cr.git
@@ -35,4 +35,3 @@ shards:
   sqlite3:
     git: https://github.com/crystal-lang/crystal-sqlite3.git
     version: 0.21.0
-

@@ -21,6 +21,9 @@ module Lepos
       getter actor_handle : String
       getter actor_display_name : String
       getter actor_private_key : String
+      getter relay_actor_handle : String
+      getter relay_display_name : String
+      getter relay_bot_token : String?
       getter frontend_url : String?
       getter google_oauth_client_id : String?
       getter google_oauth_client_secret : String?
@@ -51,6 +54,9 @@ module Lepos
         @actor_handle : String,
         @actor_display_name : String,
         @actor_private_key : String,
+        @relay_actor_handle : String,
+        @relay_display_name : String,
+        @relay_bot_token : String?,
         @frontend_url : String?,
         @google_oauth_client_id : String?,
         @google_oauth_client_secret : String?,
@@ -61,7 +67,7 @@ module Lepos
         @maddy_smtp_username : String?,
         @maddy_smtp_password : String?,
         @maddy_from_email : String?,
-        @maddy_from_name : String?
+        @maddy_from_name : String?,
       )
       end
 
@@ -71,8 +77,10 @@ module Lepos
         origins = raw["origins"]?.try(&.as_h) || Hash(String, JSON::Any).new
         payment = raw["payment"]?.try(&.as_h) || Hash(String, JSON::Any).new
         default_actor = raw["defaultActor"]?.try(&.as_h) || Hash(String, JSON::Any).new
+        relay = raw["relay"]?.try(&.as_h) || Hash(String, JSON::Any).new
         oauth = raw["oauth"]?.try(&.as_h) || Hash(String, JSON::Any).new
         email_auth = raw["emailAuth"]?.try(&.as_h) || Hash(String, JSON::Any).new
+        relay_bot_token = read_first_env(["LEPOS_BOT_TOKEN", "KEFINE_BOT_TOKEN"]) || read_optional_string(relay, "botToken") || read_optional_string(relay, "accessToken")
 
         crater_url = normalize_url(
           read_env_or_string(
@@ -102,6 +110,9 @@ module Lepos
           actor_handle: read_string(default_actor, "handle", "staff"),
           actor_display_name: read_string(default_actor, "displayName", "Staff"),
           actor_private_key: read_env_or_string("KEFINE_PRIVATEKEY_DEFAULT", default_actor, "privateKey", read_string(default_actor, "privateKeyPem", "")),
+          relay_actor_handle: read_string(relay, "actorHandle", "relay"),
+          relay_display_name: read_string(relay, "displayName", "Lepos Relay"),
+          relay_bot_token: relay_bot_token,
           frontend_url: read_env_or_optional_string("KEFINE_FRONTEND_URL", origins, "frontend"),
           google_oauth_client_id: read_env_or_optional_string("GOOGLE_CLIENT_ID", oauth, "googleClientId"),
           google_oauth_client_secret: read_env_or_optional_string("GOOGLE_CLIENT_SECRET", oauth, "googleClientSecret"),
@@ -133,6 +144,15 @@ module Lepos
         return value.not_nil! unless value.nil? || value.empty?
 
         read_string(source, key, fallback)
+      end
+
+      private def self.read_first_env(env_keys : Array(String)) : String?
+        env_keys.each do |env_key|
+          value = ENV[env_key]?.try(&.strip)
+          return value.not_nil! unless value.nil? || value.empty?
+        end
+
+        nil
       end
 
       private def self.read_optional_string(source : Hash(String, JSON::Any), key : String) : String?
@@ -208,6 +228,27 @@ module Lepos
 
       def actor_outbox : String
         "#{actor_id}/outbox"
+      end
+
+      def relay_actor_id : String
+        "#{crater_url}/actor/#{relay_actor_username}"
+      end
+
+      def relay_actor_username : String
+        normalized = relay_actor_handle.downcase.gsub(/[^a-z0-9._-]+/, "-").gsub(/^[._-]+|[._-]+$/, "")
+        normalized.empty? ? "relay" : normalized
+      end
+
+      def relay_inbox : String
+        "#{relay_actor_id}/inbox"
+      end
+
+      def relay_outbox : String
+        "#{relay_actor_id}/outbox"
+      end
+
+      def relay_followers : String
+        "#{relay_actor_id}/followers"
       end
 
       def order_queue_inbox : String

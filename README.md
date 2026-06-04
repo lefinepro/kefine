@@ -94,6 +94,11 @@ Main sections:
     "exchangeBaseUrl": "https://lefine.pro/exchange",
     "databaseUrl": "postgresql://kefine:kefine@localhost:5432/kefine"
   },
+  "relay": {
+    "actorHandle": "relay",
+    "displayName": "Lepos Relay",
+    "botToken": "change-me"
+  },
   "company": {
     "legalName": "Lefine",
     "email": "order@lefine.pro"
@@ -107,6 +112,8 @@ Notes:
 - `backend.craterBaseUrl` is the crater base URL used by the SvelteKit proxy for order, payment, and passkey operations.
 - `backend.exchangeBaseUrl` is the exchange base URL crater uses for user IDs and payment links.
 - `backend.databaseUrl` is the Postgres connection string crater uses for orders, payment redemptions, passkey users, challenges, sessions, and outbox activity persistence.
+- `relay.actorHandle` and `relay.displayName` configure the Lepos ActivityPub relay actor exposed at `/actor/:handle`.
+- `relay.botToken`, `LEPOS_BOT_TOKEN`, or `KEFINE_BOT_TOKEN` enables bearer-token order creation through `/api/bot/create`; `/api/relay` returns the relay actor, inbox, followers, supported protocols, and bot create URL.
 - `features.repositories` controls the VCS/git repository feature.
 - `company.*` controls the new `/legal-information` company page. Empty optional fields are hidden automatically.
 
