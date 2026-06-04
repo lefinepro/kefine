@@ -31,8 +31,10 @@ export const KEFINE_TEXT_HY = {
     searchHomeLabel: 'Գլխավոր',
     searchWidgetsLabel: 'Վիջեթներ',
     searchWeatherLabel: 'Եղանակ',
+    searchClockLabel: 'Ժամացույց',
     searchTranslatorLabel: 'Թարգմանիչ',
     searchMusicLabel: 'Երաժշտություն',
+    searchProxyLabel: 'Պրոքսի / VPN',
     searchWidgetBackLabel: 'Վերադառնալ արդյունքներ',
     theme: {
       auto: 'Ավտո',
@@ -263,6 +265,11 @@ export const KEFINE_TEXT_HY = {
       rain: 'Անձրև',
       cloudy: 'Ամպամած'
     }
+  },
+  clockWidget: {
+    title: 'Ժամ',
+    localLabel: 'Տեղական ժամ',
+    typeCityHint: 'Մուտքագրեք քաղաքի անունը — Մոսկվա, Լոնդոն, Տոկիո, Գոմել, Երևան կամ որևէ այլ քաղաք։'
   },
   defaults: {
     ...KEFINE_TEXT_EN.defaults,
@@ -770,6 +777,24 @@ export const KEFINE_TEXT_HY = {
     privateKeyHint: 'Ձեր գեներացված workspace private key-ը կհայտնվի այստեղ։',
     copyPrivateKey: 'Պատճենել private key-ը',
     privateKeyCopied: 'Private key-ը պատճենված է',
+    solverProfileTitle: 'Solver profile',
+    solverProfileSubtitle: 'Միացրեք տեղական OpenAI Responses endpoint-ը այս workspace-ին։',
+    solverProfileConnection: 'Solver-ի միացում',
+    solverProfileWorkspace: 'Workspace',
+    solverProfileLocalSolver: 'Տեղական solver',
+    solverProfileConnectText:
+      'Ստեղծեք solver profile ձեր համակարգչում աշխատող կոդի համար։ Solver-ը ստեղծվում է ավտոմատ՝ պատահական handle-ով և սեփական inbox-ով։ Օգտագործեք token-ը տեղական service-ում և crater-openai-ի OpenAI Responses contract-ը։',
+    solverProfileNotConnected: 'Միացված չէ',
+    solverProfileConnected: 'Միացված է',
+    createSolverProfile: 'Ստեղծել solver profile',
+    solverProfileToken: 'Connection token',
+    solverProfilePending: 'Ստեղծվում է միացման ժամանակ',
+    solverProfileEndpoint: 'Տեղական inbox',
+    solverProfileResponses: 'OpenAI Responses endpoint',
+    solverProfileHeader: 'Auth header',
+    solverProfileTokenHint: 'Token-ը ստեղծվում է այս workspace-ում և կարող է պատճենվել տեղական solver-ի մեջ։',
+    copySolverToken: 'Պատճենել token-ը',
+    solverTokenCopied: 'Token-ը պատճենված է',
     socialLabel: 'Պիտակ',
     socialUrl: 'URL',
     addLink: 'Ավելացնել հղում',
@@ -857,7 +882,34 @@ export const KEFINE_TEXT_HY = {
     templateNetPreview: 'Պատվերի մնացորդ',
     templateLinkCopied: 'Ծառայության հղումը պատճենված է',
     templateSlug: 'Ծառայության URL',
-    templateSlugHint: 'Պարտադիր չէ։ Թողեք դատարկ՝ UUID ոճի հղումը պահպանելու համար։'
+    templateSlugHint: 'Պարտադիր չէ։ Թողեք դատարկ՝ UUID ոճի հղումը պահպանելու համար։',
+    widgetsTitle: 'Աշխատանքային վիջեթներ',
+    widgetsInsertExample: 'Տեղադրել օրինակ',
+    widgetsHint:
+      'Ավելացրեք Org բլոկներ՝ ձեր հանրային էջում կենդանի վիջեթներ ցուցադրելու համար՝ #+begin_clock, #+begin_weather, #+begin_translate, #+begin_music և #+begin_proxy։ Ժամացույցն ու եղանակը ընդունում են քաղաք, օրինակ՝ «#+begin_clock Tokyo»։',
+    copySocialOrg: 'Պատճենել social.org',
+    socialOrgCopied: 'social.org-ը պատճենված է',
+    downloadSocialOrg: 'Ներբեռնել social.org',
+    widgetClockLabel: 'Ժամացույց',
+    widgetWeatherLabel: 'Եղանակ',
+    widgetTranslateLabel: 'Թարգմանիչ',
+    widgetMusicLabel: 'Երաժշտություն',
+    widgetProxyLabel: 'Պրոքսի',
+    widgetTypeHint: 'ActivityStreams օբյեկտի տեսակ',
+    publicZoneTitle: 'Հանրային պրոֆիլ',
+    publicZoneHint: 'Ձեր workspace-ի այս մասը տեսանելի է բոլորին։',
+    privateZoneTitle: 'Մասնավոր գոտի',
+    privateZoneHint: 'Սա տեսնում և խմբագրում եք միայն դուք։ Այն երբեք չի հայտնվում ձեր հանրային workspace-ում։',
+    repoReadmeAria: 'Պրոֆիլի README',
+    repoChecklistAria: 'Պրոֆիլի առաջադրանքներ',
+    newTaskPlaceholder: 'Նոր առաջադրանք',
+    newTaskAria: 'Նոր առաջադրանք',
+    openTaskSearch: 'Փնտրել այս առաջադրանքը',
+    tasksTitle: 'Պրոֆիլի առաջադրանքներ',
+    tasksHint:
+      'Ձեր պրոֆիլը պահոց է. թվարկեք առաջադրանքները որպես Org վերնագրեր՝ * TODO, * IN PROGRESS կամ * DONE։ Դրանք ցուցադրվում են որպես հանրային ստուգաթերթ։',
+    tasksInsertExample: 'Տեղադրել օրինակ',
+    tasksOwnerHint: 'Խմբագրեք այս առաջադրանքները ստորև՝ մասնավոր գոտում։'
   },
   solversView: {
     ...KEFINE_TEXT_EN.solversView,

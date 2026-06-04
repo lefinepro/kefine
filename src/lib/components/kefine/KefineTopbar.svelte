@@ -1,15 +1,17 @@
 <script lang="ts">
   import KefineTopbarIcon from '$lib/components/kefine/KefineTopbarIcon.svelte';
   import KefineWeatherWidget from '$lib/components/kefine/KefineWeatherWidget.svelte';
+  import KefineClockWidget from '$lib/components/kefine/KefineClockWidget.svelte';
   import KefineTranslatorWidget from '$lib/components/kefine/KefineTranslatorWidget.svelte';
   import KefineMusicWidget from '$lib/components/kefine/KefineMusicWidget.svelte';
+  import KefineProxyConfigWidget from '$lib/components/kefine/KefineProxyConfigWidget.svelte';
   import KefineSearchInput from '$lib/components/kefine/KefineSearchInput.svelte';
   import { onMount, tick } from 'svelte';
   import { detectWeatherIntent } from '$lib/kefine/weather-intent';
   import { scheduleAfter } from '$lib/utils/helpers';
   import type { KefineLocale } from '$lib/constants/kefine-locale';
   import type { KefineTopbarIconName } from '$lib/components/kefine/KefineTopbarIcon.svelte';
-  import type { KefineSearchWidgetId } from '$lib/kefine/search-widgets';
+  import { KEFINE_SEARCH_WIDGET_IDS, type KefineSearchWidgetId } from '$lib/kefine/search-widgets';
   import type {
     TopbarSearchAction,
     TopbarSearchItem,
@@ -33,6 +35,12 @@
   };
 
   export type KefineTopbarSearchItem = TopbarSearchItem;
+
+  type SearchContextSegment = {
+    id: string;
+    label: string;
+    kind: 'project' | 'task' | 'default';
+  };
 
   let {
     brandLabel,
@@ -77,10 +85,13 @@
     searchDefaultQuery = '',
     initialWidget = null,
     showSearchWidgets = true,
+    searchWidgetIds = KEFINE_SEARCH_WIDGET_IDS,
     searchWidgetsLabel = 'Widgets',
     searchWeatherLabel = 'Weather',
+    searchClockLabel = 'Clock',
     searchTranslatorLabel = 'Translator',
     searchMusicLabel = 'Music',
+    searchProxyLabel = 'Proxy',
     searchWidgetBackLabel = 'Back to results',
     socialLinks,
     showSocialLinks = false,
@@ -145,10 +156,19 @@
     /** Widget short link (e.g. `/@profile/weather`) that auto-opens this widget inline. */
     initialWidget?: KefineSearchWidgetId | null;
     showSearchWidgets?: boolean;
+    /**
+     * Which widgets this surface offers in the command palette, in display
+     * order. Profiles pass the widgets declared in their `social.org` so a
+     * widget only ever surfaces when a visitor's query matches it; other
+     * surfaces fall back to every built-in widget.
+     */
+    searchWidgetIds?: readonly KefineSearchWidgetId[];
     searchWidgetsLabel?: string;
     searchWeatherLabel?: string;
+    searchClockLabel?: string;
     searchTranslatorLabel?: string;
     searchMusicLabel?: string;
+    searchProxyLabel?: string;
     searchWidgetBackLabel?: string;
     socialLinks: SocialLink[];
     showSocialLinks?: boolean;
@@ -202,6 +222,7 @@
   const contextualSearchPlaceholder = $derived(
     searchPlaceholder.trim().startsWith('@') ? searchPlaceholder.trim() : ''
   );
+  const contextualSearchSegments = $derived(parseContextualSearchPlaceholder(contextualSearchPlaceholder));
   const visibleSearchPlaceholder = $derived(
     contextualSearchPlaceholder ? searchLabel : searchPlaceholder
   );
@@ -210,8 +231,8 @@
       return [];
     }
 
-    return [
-      {
+    const definitions: Record<KefineSearchWidgetId, KefineTopbarSearchItem> = {
+      weather: {
         id: 'widget-weather',
         title: searchWeatherLabel,
         subtitle: searchWidgetsLabel,
@@ -220,7 +241,16 @@
         widget: 'weather',
         keywords: [searchWeatherLabel, 'weather', 'forecast', 'погода', 'прогноз', 'եղանակ']
       },
-      {
+      clock: {
+        id: 'widget-clock',
+        title: searchClockLabel,
+        subtitle: searchWidgetsLabel,
+        category: searchWidgetsLabel,
+        icon: 'clock',
+        widget: 'clock',
+        keywords: [searchClockLabel, 'clock', 'time', 'time zone', 'часы', 'время', 'ժամ', 'ժամացույց']
+      },
+      translate: {
         id: 'widget-translate',
         title: searchTranslatorLabel,
         subtitle: searchWidgetsLabel,
@@ -229,16 +259,28 @@
         widget: 'translate',
         keywords: [searchTranslatorLabel, 'translate', 'translation', 'перевод', 'переводчик', 'թարգմանիչ']
       },
-      {
+      music: {
         id: 'widget-music',
         title: searchMusicLabel,
         subtitle: searchWidgetsLabel,
         category: searchWidgetsLabel,
         icon: 'music',
         widget: 'music',
-        keywords: [searchMusicLabel, 'music', 'audio', 'track', 'музыка', 'երաժշտություն']
+        keywords: [searchMusicLabel, 'music', 'audio', 'track', 'song', 'музыка', 'песня', 'երաժշտություն']
+      },
+      proxy: {
+        id: 'widget-proxy',
+        title: searchProxyLabel,
+        subtitle: searchWidgetsLabel,
+        category: searchWidgetsLabel,
+        icon: 'proxy',
+        widget: 'proxy',
+        keywords: [searchProxyLabel, 'proxy', 'vpn', 'vless', 'wireguard', 'прокси', 'впн', 'պրոքսի']
       }
-    ];
+    };
+
+    // Only surface the widgets this page offers, in their requested order.
+    return searchWidgetIds.map((id) => definitions[id]).filter(Boolean);
   });
   const builtInSearchItems = $derived.by((): KefineTopbarSearchItem[] => {
     const items: KefineTopbarSearchItem[] = [
@@ -274,12 +316,20 @@
       return searchWeatherLabel;
     }
 
+    if (activeSearchWidget === 'clock') {
+      return searchClockLabel;
+    }
+
     if (activeSearchWidget === 'translate') {
       return searchTranslatorLabel;
     }
 
     if (activeSearchWidget === 'music') {
       return searchMusicLabel;
+    }
+
+    if (activeSearchWidget === 'proxy') {
+      return searchProxyLabel;
     }
 
     return '';
@@ -436,6 +486,32 @@
 
   function getSearchItemHref(item: KefineTopbarSearchItem) {
     return item.hrefFromQuery?.(searchQuery.trim()) || item.href || '';
+  }
+
+  function parseContextualSearchPlaceholder(value: string): SearchContextSegment[] {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return [];
+    }
+
+    const taskSeparator = ' task:';
+    const taskStart = trimmed.indexOf(taskSeparator);
+    if (taskStart > 0) {
+      const project = trimmed.slice(0, taskStart).trim();
+      const task = trimmed.slice(taskStart + taskSeparator.length).trim();
+      return [
+        ...(project ? [{ id: 'project', label: project, kind: 'project' as const }] : []),
+        ...(task ? [{ id: 'task', label: `task:${task}`, kind: 'task' as const }] : [])
+      ];
+    }
+
+    return [
+      {
+        id: 'context',
+        label: trimmed,
+        kind: trimmed.startsWith('@') ? 'project' : 'default'
+      }
+    ];
   }
 
   async function openSearchDialog(options?: { query?: string; widget?: KefineSearchWidgetId | null }) {
@@ -896,12 +972,22 @@
         >
           {#if contextualSearchPlaceholder}
             <lefine-text data-part="search-context" data-testid="kefine-topbar-search-context">
-              {contextualSearchPlaceholder}
+              {#each contextualSearchSegments as segment (segment.id)}
+                <kefine-topbar-search-context-segment
+                  data-part="search-context-segment"
+                  data-kind={segment.kind}
+                  data-testid="kefine-topbar-search-context-segment"
+                >
+                  {segment.label}
+                </kefine-topbar-search-context-segment>
+              {/each}
             </lefine-text>
           {:else}
             <KefineTopbarIcon name="search" size={18} />
           {/if}
-          <lefine-text data-part="search-placeholder">{visibleSearchPlaceholder}</lefine-text>
+          {#if !contextualSearchPlaceholder}
+            <lefine-text data-part="search-placeholder">{visibleSearchPlaceholder}</lefine-text>
+          {/if}
           <lefine-kbd data-part="search-shortcut">{searchShortcutLabel}</lefine-kbd>
         </button>
         {#if searchActions.length > 0}
@@ -957,10 +1043,14 @@
             >
               {#if activeSearchWidget === 'weather'}
                 <KefineWeatherWidget active query={weatherWidgetQuery} />
+              {:else if activeSearchWidget === 'clock'}
+                <KefineClockWidget active query={searchQuery} />
               {:else if activeSearchWidget === 'translate'}
                 <KefineTranslatorWidget active query={searchQuery} />
               {:else if activeSearchWidget === 'music'}
                 <KefineMusicWidget active />
+              {:else if activeSearchWidget === 'proxy'}
+                <KefineProxyConfigWidget active />
               {/if}
             </kefine-search-widget>
           {:else}
@@ -1126,7 +1216,11 @@
   }
 
   button[data-part='search-trigger'][data-context='project'] {
-    grid-template-columns: minmax(0, max-content) minmax(5rem, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  button[data-part='search-trigger'][data-context='project'] [data-part='search-context'] {
+    max-width: 100%;
   }
 
   kefine-topbar-search-actions {
@@ -1171,12 +1265,23 @@
   button[data-part='search-trigger'] [data-part='search-context'] {
     display: inline-flex;
     align-items: center;
+    gap: 0.28rem;
     min-width: 0;
-    max-width: 14rem;
+    max-width: min(22rem, 100%);
+    color: var(--lefine-text);
+    overflow: hidden;
+  }
+
+  button[data-part='search-trigger'] [data-part='search-context-segment'] {
+    display: inline-flex;
+    align-items: center;
+    min-width: 0;
+    max-width: 100%;
     padding: 0.24rem 0.48rem;
+    border: var(--kef-border-width-soft) solid color-mix(in oklab, var(--kef-line) 74%, transparent);
     border-radius: calc(var(--kef-radius-sm) + 0.08rem);
-    background: color-mix(in oklab, var(--kef-primary) 18%, var(--kef-bg-card));
-    color: color-mix(in oklab, var(--kef-primary) 82%, var(--lefine-text));
+    background: color-mix(in oklab, var(--kef-bg-card) 88%, var(--kef-bg-soft));
+    color: color-mix(in oklab, var(--lefine-text) 88%, var(--kef-primary));
     font-size: 0.83rem;
     font-weight: 760;
     line-height: 1;
@@ -1184,6 +1289,18 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  button[data-part='search-trigger'] [data-part='search-context-segment'][data-kind='project'] {
+    border-color: color-mix(in oklab, var(--kef-primary) 32%, var(--kef-line));
+    background: color-mix(in oklab, var(--kef-primary) 13%, var(--kef-bg-card));
+    color: color-mix(in oklab, var(--kef-primary) 72%, var(--lefine-text));
+  }
+
+  button[data-part='search-trigger'] [data-part='search-context-segment'][data-kind='task'] {
+    border-color: color-mix(in oklab, var(--kef-success, var(--kef-color-success)) 26%, var(--kef-line));
+    background: color-mix(in oklab, var(--kef-success, var(--kef-color-success)) 11%, var(--kef-bg-card));
+    color: color-mix(in oklab, var(--kef-success, var(--kef-color-success)) 66%, var(--lefine-text));
   }
 
   button[data-part='search-trigger'] [data-part='search-placeholder'] {
@@ -1780,6 +1897,11 @@
     }
 
     button[data-part='search-trigger'][data-context='project'] [data-part='search-context'] {
+      max-width: 100%;
+      gap: 0.22rem;
+    }
+
+    button[data-part='search-trigger'][data-context='project'] [data-part='search-context-segment'] {
       max-width: 100%;
       padding-inline: 0.4rem;
     }

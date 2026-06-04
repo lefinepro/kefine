@@ -49,6 +49,7 @@
     <input
       class="profile-payment-card__number"
       type="text"
+      data-testid="profile-card-number"
       bind:value={cardNumber}
       inputmode="numeric"
       maxlength="19"
@@ -64,13 +65,19 @@
         {skipLabel}
       </button>
     {/if}
-    <button type="button" data-variant="primary" onclick={onVerify} disabled={verifyDisabled}>
+    <button
+      type="button"
+      data-variant="primary"
+      data-testid="profile-card-verify"
+      onclick={onVerify}
+      disabled={verifyDisabled}
+    >
       {verifyLabel}
     </button>
   </lefine-box>
 
   {#if status}
-    <lefine-box class="profile-card-status" data-status={status.status}>
+    <lefine-box class="profile-card-status" data-testid="profile-card-status" data-status={status.status}>
       <strong>{status.bankName ?? localeText.profile.unknownBank}</strong>
       <lefine-text>{status.countryName ?? localeText.profile.unknownCountry} · BIN {status.bin}</lefine-text>
       {#if status.rejectionReason}

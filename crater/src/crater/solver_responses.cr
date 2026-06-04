@@ -1,5 +1,7 @@
 require "json"
+require "random/secure"
 require "aptok/federation/federation"
+require "crater_openai"
 require "./aptok"
 require "./utils/config"
 
@@ -53,6 +55,10 @@ module Lepos
       solver : Utils::RelayInternalService,
       config : Utils::Config,
     ) : ::Aptok::JsonMap
+      if normalized = normalize_openai_request(payload)
+        return build_openai_request_result(payload, normalized, solver, config)
+      end
+
       output_text = extract_output_text(payload)
       model = string_field(payload, "model")
       status = string_field(payload, "status") || "completed"
@@ -72,6 +78,14 @@ module Lepos
         "outputText" => ::Aptok.json(output_text),
         "activity"   => ::Aptok.json(activity),
       }
+    end
+
+    # OpenAI Responses request payloads are normalized by the dedicated
+    # crater-openai project. Lepos only accepts that OpenAI shape here.
+    def self.normalize_openai_request(payload : ::Aptok::JsonMap) : ::CraterOpenAI::NormalizedOpenAIRequest?
+      return nil unless payload.has_key?("input")
+
+      ::CraterOpenAI::OpenAINormalizer.new.from_responses(payload)
     end
 
     # Assemble the assistant text from an OpenAI Responses payload. Prefers the
@@ -126,6 +140,30 @@ module Lepos
       trimmed.empty? ? nil : trimmed
     end
 
+    private def self.build_openai_request_result(
+      payload : ::Aptok::JsonMap,
+      normalized : ::CraterOpenAI::NormalizedOpenAIRequest,
+      solver : Utils::RelayInternalService,
+      config : Utils::Config,
+    ) : ::Aptok::JsonMap
+      response_id = string_field(payload, "id")
+      request_id = extract_request_id(payload)
+      activity = build_ticket_activity(solver, config, response_id, request_id, normalized)
+
+      ::Aptok::JsonMap{
+        "accepted"   => ::Aptok.json(true),
+        "provider"   => ::Aptok.json(PROVIDER),
+        "solver"     => ::Aptok.json(solver.id),
+        "responseId" => ::Aptok.json(response_id),
+        "requestId"  => ::Aptok.json(request_id),
+        "model"      => ::Aptok.json(normalized.model),
+        "status"     => ::Aptok.json("accepted"),
+        "title"      => ::Aptok.json(normalized.title),
+        "inputText"  => ::Aptok.json(normalized.content),
+        "activity"   => ::Aptok.json(activity),
+      }
+    end
+
     private def self.build_activity(
       solver : Utils::RelayInternalService,
       config : Utils::Config,
@@ -142,6 +180,37 @@ module Lepos
       activity = ::Aptok.create(activity_id, solver.id, note)
       activity["inReplyTo"] = ::Aptok.json(request_id) if request_id
       activity
+    end
+
+    private def self.build_ticket_activity(
+      solver : Utils::RelayInternalService,
+      config : Utils::Config,
+      response_id : String?,
+      request_id : String?,
+      normalized : ::CraterOpenAI::NormalizedOpenAIRequest,
+    ) : ::Aptok::JsonMap
+      suffix = response_id || ::Random::Secure.hex(10)
+      ticket_id = "#{solver.id}/responses/#{suffix}/ticket"
+      ticket = ::Aptok.forgefed_ticket(
+        ticket_id,
+        normalized.title,
+        normalized.content,
+        assignee: presence(normalized.assignee),
+        attributed_to: presence(normalized.attributed_to) || solver.id,
+      )
+      ticket["inReplyTo"] = ::Aptok.json(request_id) if request_id
+
+      activity_id = "#{ticket_id}/activity"
+      activity = ::Aptok.create(activity_id, solver.id, ticket, [::Aptok::PUBLIC_COLLECTION], config.relay_actor_id)
+      activity["inReplyTo"] = ::Aptok.json(request_id) if request_id
+      activity
+    end
+
+    private def self.presence(value : String?) : String?
+      return nil unless value
+
+      stripped = value.strip
+      stripped.empty? ? nil : stripped
     end
   end
 end

@@ -8,14 +8,19 @@ import {
 describe('normalizeSearchWidgetId', () => {
   it('maps canonical slugs to their widget id', () => {
     expect(normalizeSearchWidgetId('weather')).toBe('weather');
+    expect(normalizeSearchWidgetId('clock')).toBe('clock');
     expect(normalizeSearchWidgetId('translate')).toBe('translate');
     expect(normalizeSearchWidgetId('music')).toBe('music');
+    expect(normalizeSearchWidgetId('proxy')).toBe('proxy');
   });
 
   it('accepts human-friendly aliases', () => {
     expect(normalizeSearchWidgetId('forecast')).toBe('weather');
+    expect(normalizeSearchWidgetId('time')).toBe('clock');
     expect(normalizeSearchWidgetId('translator')).toBe('translate');
     expect(normalizeSearchWidgetId('translation')).toBe('translate');
+    expect(normalizeSearchWidgetId('track')).toBe('music');
+    expect(normalizeSearchWidgetId('vpn')).toBe('proxy');
   });
 
   it('is case-insensitive and trims whitespace', () => {
@@ -41,8 +46,12 @@ describe('isSearchWidgetSlug', () => {
   it('is true for known widget slugs and aliases', () => {
     expect(isSearchWidgetSlug('weather')).toBe(true);
     expect(isSearchWidgetSlug('forecast')).toBe(true);
+    expect(isSearchWidgetSlug('clock')).toBe(true);
+    expect(isSearchWidgetSlug('time')).toBe(true);
     expect(isSearchWidgetSlug('translator')).toBe(true);
     expect(isSearchWidgetSlug('music')).toBe(true);
+    expect(isSearchWidgetSlug('proxy')).toBe(true);
+    expect(isSearchWidgetSlug('vpn')).toBe(true);
   });
 
   it('is false for anything else', () => {

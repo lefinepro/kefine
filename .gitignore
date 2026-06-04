@@ -49,3 +49,4 @@ playwright-report/
 
 # Local CI investigation logs
 ci-logs/
+experiments/shots/

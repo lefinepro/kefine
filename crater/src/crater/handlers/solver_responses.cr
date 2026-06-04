@@ -38,6 +38,9 @@ module Lepos
         result = Lepos::SolverResponses.build_result(payload, solver, config)
         env.response.status_code = 202
         result.to_json
+      rescue ex : ::CraterOpenAI::ValidationError
+        env.response.status_code = 400
+        {error: "Invalid OpenAI Responses payload", reason: ex.message}.to_json
       rescue ex : Exception
         Log.warn(exception: ex) { "[solver:responses] failed to process solver response" }
         env.response.status_code = 502

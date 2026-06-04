@@ -60,6 +60,27 @@ private def openai_response(request_id : String, text : String) : Hash(String, J
   ).as_h
 end
 
+private def openai_responses_request(request_id : String, title : String, text : String) : Hash(String, JSON::Any)
+  JSON.parse(
+    {
+      "model"    => "gpt-4.1-mini",
+      "input"    => [
+        {
+          "role"    => "user",
+          "content" => [
+            {"type" => "input_text", "text" => text},
+          ],
+        },
+      ],
+      "metadata" => {
+        "request_id"   => request_id,
+        "title"        => title,
+        "attributedTo" => "https://origin.example/users/requester",
+      },
+    }.to_json
+  ).as_h
+end
+
 describe "Lepos solver responses" do
   it "parses the bearer token out of an Authorization header" do
     Lepos::SolverResponses.bearer_token("Bearer lepos_solver_abc").should eq("lepos_solver_abc")
@@ -133,6 +154,36 @@ describe "Lepos solver responses" do
       object["type"].as_s.should eq("Note")
       object["content"].as_s.should eq("The fix is ready.")
       object["attributedTo"].as_s.should eq("https://relay.test/actor/solver")
+    end
+  end
+
+  it "uses crater-openai to normalize OpenAI Responses model input into a relayable ticket" do
+    with_solver_config([
+      {"id" => "https://relay.test/actor/solver", "inbox" => "http://127.0.0.1:4501/solvers/solver-x2yedlfg/inbox", "token" => "lepos_solver_secret"},
+    ]) do |config|
+      solver = Lepos::SolverResponses.authenticate(config, "Bearer lepos_solver_secret").not_nil!
+      payload = openai_responses_request(
+        "https://origin.example/activities/task-2",
+        "Fix issue 133",
+        "Connect the local solver through the relay."
+      ).as(Aptok::JsonMap)
+
+      result = Lepos::SolverResponses.build_result(payload, solver, config)
+
+      result["provider"].as_s.should eq("openai")
+      result["model"].as_s.should eq("gpt-4.1-mini")
+      result["title"].as_s.should eq("Fix issue 133")
+      result["inputText"].as_s.should contain("Connect the local solver through the relay.")
+      result["requestId"].as_s.should eq("https://origin.example/activities/task-2")
+
+      activity = result["activity"].as_h
+      activity["type"].as_s.should eq("Create")
+      activity["actor"].as_s.should eq("https://relay.test/actor/solver")
+      object = activity["object"].as_h
+      object["type"].as_s.should eq("Ticket")
+      object["name"].as_s.should eq("Fix issue 133")
+      object["content"].as_s.should contain("Connect the local solver through the relay.")
+      object["attributedTo"].as_s.should eq("https://origin.example/users/requester")
     end
   end
 

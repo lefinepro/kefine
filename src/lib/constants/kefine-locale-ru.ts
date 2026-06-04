@@ -37,8 +37,10 @@ export const KEFINE_TEXT_RU = {
     searchHomeLabel: 'Главная',
     searchWidgetsLabel: 'Виджеты',
     searchWeatherLabel: 'Погода',
+    searchClockLabel: 'Часы',
     searchTranslatorLabel: 'Переводчик',
     searchMusicLabel: 'Музыка',
+    searchProxyLabel: 'Прокси / VPN',
     searchWidgetBackLabel: 'Назад к результатам',
     socialLinks: {
       mastodon: {
@@ -287,6 +289,11 @@ export const KEFINE_TEXT_RU = {
       rain: 'Дождь',
       cloudy: 'Облачно'
     }
+  },
+  clockWidget: {
+    title: 'Время',
+    localLabel: 'Местное время',
+    typeCityHint: 'Введите название города — Москва, Лондон, Токио, Гомель, Ереван или любой другой.'
   },
   defaults: {
     unknownSolver: 'Неизвестный решатель',
@@ -799,19 +806,19 @@ export const KEFINE_TEXT_RU = {
     copyPrivateKey: 'Скопировать приватный ключ',
     privateKeyCopied: 'Приватный ключ скопирован',
     solverProfileTitle: 'Профиль solver',
-    solverProfileSubtitle: 'Подключите локальный inference endpoint к этому workspace.',
+    solverProfileSubtitle: 'Подключите локальный OpenAI Responses endpoint к этому workspace.',
     solverProfileConnection: 'Подключение solver',
     solverProfileWorkspace: 'Workspace',
     solverProfileLocalSolver: 'Локальный solver',
     solverProfileConnectText:
-      'Создайте профиль solver для кода на вашем компьютере. Solver создаётся автоматически со случайным именем и собственным inbox — используйте токен в локальном сервисе, чтобы подключить его к Lepos relay.',
+      'Создайте профиль solver для кода на вашем компьютере. Solver создаётся автоматически со случайным именем и собственным inbox. Используйте токен в локальном сервисе и контракт OpenAI Responses из crater-openai.',
     solverProfileNotConnected: 'Не подключён',
     solverProfileConnected: 'Подключён',
     createSolverProfile: 'Создать профиль solver',
     solverProfileToken: 'Токен подключения',
     solverProfilePending: 'Создаётся при подключении',
     solverProfileEndpoint: 'Локальный inbox',
-    solverProfileResponses: 'Endpoint ответов',
+    solverProfileResponses: 'OpenAI Responses endpoint',
     solverProfileHeader: 'Auth header',
     solverProfileTokenHint: 'Токен создаётся в этом workspace, его можно скопировать в локальный solver.',
     copySolverToken: 'Скопировать токен',
@@ -903,7 +910,34 @@ export const KEFINE_TEXT_RU = {
     templateNetPreview: 'Остаток заказа',
     templateLinkCopied: 'Ссылка сервиса скопирована',
     templateSlug: 'Адрес сервиса',
-    templateSlugHint: 'Необязательно. Оставьте пустым, чтобы сохранить UUID-ссылку.'
+    templateSlugHint: 'Необязательно. Оставьте пустым, чтобы сохранить UUID-ссылку.',
+    widgetsTitle: 'Виджеты рабочего пространства',
+    widgetsInsertExample: 'Вставить пример',
+    widgetsHint:
+      'Добавьте Org-блоки, чтобы показать живые виджеты в публичном пространстве: #+begin_clock, #+begin_weather, #+begin_translate, #+begin_music и #+begin_proxy. Часы и погода принимают город, например «#+begin_clock Tokyo».',
+    copySocialOrg: 'Скопировать social.org',
+    socialOrgCopied: 'social.org скопирован',
+    downloadSocialOrg: 'Скачать social.org',
+    widgetClockLabel: 'Часы',
+    widgetWeatherLabel: 'Погода',
+    widgetTranslateLabel: 'Перевод',
+    widgetMusicLabel: 'Музыка',
+    widgetProxyLabel: 'Прокси',
+    widgetTypeHint: 'Тип объекта ActivityStreams',
+    publicZoneTitle: 'Публичный профиль',
+    publicZoneHint: 'Эту часть вашего workspace видят все.',
+    privateZoneTitle: 'Приватная зона',
+    privateZoneHint: 'Это видите и редактируете только вы. Это никогда не появляется в публичном workspace.',
+    repoReadmeAria: 'README профиля',
+    repoChecklistAria: 'Задачи профиля',
+    newTaskPlaceholder: 'Новая задача',
+    newTaskAria: 'Новая задача',
+    openTaskSearch: 'Найти эту задачу',
+    tasksTitle: 'Задачи профиля',
+    tasksHint:
+      'Ваш профиль — это репозиторий: перечислите задачи как Org-заголовки — * TODO, * IN PROGRESS или * DONE. Они отображаются в публичном чек-листе.',
+    tasksInsertExample: 'Вставить пример',
+    tasksOwnerHint: 'Редактируйте эти задачи в приватной зоне ниже.'
   },
   solversView: {
     tasksAside: 'Задачи',

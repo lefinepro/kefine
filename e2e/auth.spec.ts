@@ -36,7 +36,7 @@ test.describe('Auth Flows', () => {
 
     const solverPanel = page.getByTestId('kefine-solver-profile-panel');
     await expect(solverPanel).toBeVisible();
-    await expect(solverPanel).toContainText('Connect a local inference endpoint');
+    await expect(solverPanel).toContainText('Connect a local OpenAI Responses endpoint');
 
     await page.getByTestId('kefine-solver-profile-create').click();
 

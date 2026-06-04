@@ -37,8 +37,10 @@ export const KEFINE_TEXT_EN = {
     searchHomeLabel: 'Home',
     searchWidgetsLabel: 'Widgets',
     searchWeatherLabel: 'Weather',
+    searchClockLabel: 'Clock',
     searchTranslatorLabel: 'Translator',
     searchMusicLabel: 'Music',
+    searchProxyLabel: 'Proxy / VPN',
     searchWidgetBackLabel: 'Back to results',
     socialLinks: {
       mastodon: {
@@ -287,6 +289,11 @@ export const KEFINE_TEXT_EN = {
       rain: 'Rain',
       cloudy: 'Cloudy'
     }
+  },
+  clockWidget: {
+    title: 'Time',
+    localLabel: 'Local time',
+    typeCityHint: 'Type a city name — Moscow, London, Tokyo, Gomel, Yerevan, or any other city.'
   },
   defaults: {
     unknownSolver: 'Unknown solver',
@@ -797,19 +804,19 @@ export const KEFINE_TEXT_EN = {
     copyPrivateKey: 'Copy private key',
     privateKeyCopied: 'Private key copied',
     solverProfileTitle: 'Solver profile',
-    solverProfileSubtitle: 'Connect a local inference endpoint to this workspace.',
+    solverProfileSubtitle: 'Connect a local OpenAI Responses endpoint to this workspace.',
     solverProfileConnection: 'Solver connection',
     solverProfileWorkspace: 'Workspace',
     solverProfileLocalSolver: 'Local solver',
     solverProfileConnectText:
-      'Create a solver profile for code running on your computer. A solver is created automatically with a random handle and its own inbox — use the token with your local service to connect it to the Lepos relay.',
+      'Create a solver profile for code running on your computer. A solver is created automatically with a random handle and its own inbox. Use the token with your local service and the OpenAI Responses contract from crater-openai.',
     solverProfileNotConnected: 'Not connected',
     solverProfileConnected: 'Connected',
     createSolverProfile: 'Create solver profile',
     solverProfileToken: 'Connection token',
     solverProfilePending: 'Created on connect',
     solverProfileEndpoint: 'Local inbox',
-    solverProfileResponses: 'Responses endpoint',
+    solverProfileResponses: 'OpenAI Responses endpoint',
     solverProfileHeader: 'Auth header',
     solverProfileTokenHint: 'The token is created in this workspace and can be copied into your local solver.',
     copySolverToken: 'Copy token',
@@ -901,7 +908,34 @@ export const KEFINE_TEXT_EN = {
     templateNetPreview: 'Order remainder',
     templateLinkCopied: 'Service link copied',
     templateSlug: 'Service URL',
-    templateSlugHint: 'Optional. Leave empty to keep a UUID-style link.'
+    templateSlugHint: 'Optional. Leave empty to keep a UUID-style link.',
+    widgetsTitle: 'Workspace widgets',
+    widgetsInsertExample: 'Insert example',
+    widgetsHint:
+      'Add Org blocks to show live widgets on your public workspace: #+begin_clock, #+begin_weather, #+begin_translate, #+begin_music and #+begin_proxy. Clock and weather take an optional place, e.g. "#+begin_clock Tokyo".',
+    copySocialOrg: 'Copy social.org',
+    socialOrgCopied: 'social.org copied',
+    downloadSocialOrg: 'Download social.org',
+    widgetClockLabel: 'Clock',
+    widgetWeatherLabel: 'Weather',
+    widgetTranslateLabel: 'Translate',
+    widgetMusicLabel: 'Music',
+    widgetProxyLabel: 'Proxy',
+    widgetTypeHint: 'ActivityStreams object type',
+    publicZoneTitle: 'Public profile',
+    publicZoneHint: 'Anyone can see this part of your workspace.',
+    privateZoneTitle: 'Private zone',
+    privateZoneHint: 'Only you can see and edit this. It never appears on your public workspace.',
+    repoReadmeAria: 'Profile README',
+    repoChecklistAria: 'Profile tasks',
+    newTaskPlaceholder: 'New task',
+    newTaskAria: 'New task',
+    openTaskSearch: 'Search for this task',
+    tasksTitle: 'Profile tasks',
+    tasksHint:
+      'Your profile is a repository: list tasks as Org headings — #+TODO with * TODO, * IN PROGRESS or * DONE. They render as the public checklist.',
+    tasksInsertExample: 'Insert example',
+    tasksOwnerHint: 'Edit these tasks in the editor below.'
   },
   solversView: {
     tasksAside: 'Tasks',

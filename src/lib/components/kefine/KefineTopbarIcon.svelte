@@ -10,8 +10,10 @@
     | 'email'
     | 'search'
     | 'weather'
+    | 'clock'
     | 'translate'
     | 'music'
+    | 'proxy'
     | 'menu'
     | 'project'
     | 'copy'
@@ -99,6 +101,9 @@
     <path d="m5.4 4.4.9.9" />
     <path d="m13.5 4.4-.9.9" />
     <path d="M16.8 19.4a3 3 0 0 0 .2-6A4.2 4.2 0 0 0 8.9 14.3 3.2 3.2 0 0 0 9.2 19.4Z" />
+  {:else if name === 'clock'}
+    <circle cx="12" cy="12" r="8" />
+    <path d="M12 7.6V12l3 1.8" />
   {:else if name === 'translate'}
     <path d="M3.8 6h7.2" />
     <path d="M7.4 5.2v.8c0 3-1.9 5.4-4.4 6.5" />
@@ -109,6 +114,9 @@
     <path d="M9 17V6l9-2v9" />
     <circle cx="6.5" cy="17" r="2.5" />
     <circle cx="15.5" cy="15" r="2.5" />
+  {:else if name === 'proxy'}
+    <path d="M12 3.2 5 5.8v5c0 4 2.9 6.9 7 8 4.1-1.1 7-4 7-8v-5Z" />
+    <path d="m9.2 12 1.9 1.9 3.7-3.7" />
   {:else if name === 'menu'}
     <path d="M5 7h14" />
     <path d="M5 12h14" />
