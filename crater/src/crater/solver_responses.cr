@@ -1,7 +1,7 @@
 require "json"
 require "random/secure"
 require "aptok/federation/federation"
-require "crater_openai"
+require "crater-openai/crater_openai"
 require "./aptok"
 require "./utils/config"
 
