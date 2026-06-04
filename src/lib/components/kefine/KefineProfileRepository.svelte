@@ -182,13 +182,17 @@
     min-width: 0;
   }
 
-  /* The README is the most emphasized block, but flat: the handle and brief
-     carry the weight, with no card chrome around them (reviewer feedback). */
+  /* The README is the one emphasized surface: a single, flat panel holding the
+     handle and brief — the same quiet card the solution screen uses for its
+     readme, with the checklist floating beneath it (reviewer: "flatter"). */
   lef-repo-readme {
     display: flex;
     flex-direction: column;
-    gap: 0.55rem;
-    padding: 0.35rem 0.4rem 0.9rem;
+    gap: 0.5rem;
+    padding: 1rem 1.15rem 1.05rem;
+    border-radius: 0.85rem;
+    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 5%, var(--kef-bg-card));
+    border: 1px solid color-mix(in oklab, var(--kef-line) 20%, transparent);
   }
 
   lef-repo-readme-head {
@@ -250,6 +254,8 @@
     color: var(--kef-color-primary, #c89a5a);
   }
 
+  /* Checklist rows are flat: a faint fill, no border, so they read as a list on
+     the page rather than a stack of framed cards (reviewer: "flatter"). */
   lef-repo-checklist-item {
     display: grid;
     grid-template-columns: 18px minmax(0, 1fr) auto;
@@ -257,14 +263,14 @@
     gap: 0.6rem;
     min-height: 2.7rem;
     padding: 0.5rem 0.65rem;
-    border: 1px solid color-mix(in oklab, var(--kef-line) 28%, transparent);
+    border: 0;
     border-radius: 8px;
-    background: color-mix(in oklab, var(--kef-bg-card) 92%, transparent);
+    background: color-mix(in oklab, var(--kef-color-primary, #c89a5a) 4%, transparent);
     color: var(--lefine-text);
   }
 
   lef-repo-checklist-item[data-state='create'] {
-    border-style: dashed;
+    border: 1px dashed color-mix(in oklab, var(--kef-line) 38%, transparent);
     background: transparent;
   }
 

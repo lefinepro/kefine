@@ -1062,18 +1062,17 @@
           {/if}
         {:else}
           <article class="profile-details">
-            <!-- A profile is a repository: one flat, emphasized panel with the
-                 handle as a README, the brief, and the tasks as a checklist —
-                 no extra frames, labels, or duplicated header. -->
-            <lefine-box class="profile-repo-panel">
-              <KefineProfileRepository
-                handle={username || profile.primaryHandle}
-                {displayName}
-                {bio}
-                {tasksOrg}
-                {isOwner}
-              />
-            </lefine-box>
+            <!-- A profile is a repository: no enclosing frame at all. The README
+                 block carries its own subtle surface and the tasks float as a
+                 flat checklist directly on the page — exactly like the solution
+                 screen (reviewer: "make it flatter"). -->
+            <KefineProfileRepository
+              handle={username || profile.primaryHandle}
+              {displayName}
+              {bio}
+              {tasksOrg}
+              {isOwner}
+            />
 
             {#if isOwner}
               <!-- Owner editor: lives below the public repository view. The lock
@@ -1351,16 +1350,6 @@
     display: flex;
     gap: 0.75rem;
     align-items: center;
-  }
-
-  /* The profile is a repository: one flat, emphasized panel — no heavy frame,
-     just a hairline and a touch of warmth so it reads as the primary surface. */
-  .profile-repo-panel {
-    display: block;
-    padding: 1.1rem 1.2rem 1.25rem;
-    border-radius: 1rem;
-    background: color-mix(in oklab, var(--kef-color-primary) 6%, var(--kef-color-bg-card));
-    border: 1px solid color-mix(in oklab, var(--kef-color-text) 6%, transparent);
   }
 
   .profile-follow {
