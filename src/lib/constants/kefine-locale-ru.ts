@@ -908,7 +908,17 @@ export const KEFINE_TEXT_RU = {
     publicZoneTitle: 'Публичный профиль',
     publicZoneHint: 'Эту часть вашего workspace видят все.',
     privateZoneTitle: 'Приватная зона',
-    privateZoneHint: 'Это видите и редактируете только вы. Это никогда не появляется в публичном workspace.'
+    privateZoneHint: 'Это видите и редактируете только вы. Это никогда не появляется в публичном workspace.',
+    repoReadmeAria: 'README профиля',
+    repoChecklistAria: 'Задачи профиля',
+    newTaskPlaceholder: 'Новая задача',
+    newTaskAria: 'Новая задача',
+    openTaskSearch: 'Найти эту задачу',
+    tasksTitle: 'Задачи профиля',
+    tasksHint:
+      'Ваш профиль — это репозиторий: перечислите задачи как Org-заголовки — * TODO, * IN PROGRESS или * DONE. Они отображаются в публичном чек-листе.',
+    tasksInsertExample: 'Вставить пример',
+    tasksOwnerHint: 'Редактируйте эти задачи в приватной зоне ниже.'
   },
   solversView: {
     tasksAside: 'Задачи',

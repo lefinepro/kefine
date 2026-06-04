@@ -102,6 +102,17 @@ export const DEFAULT_PROFILE_WIDGETS_ORG = `#+begin_clock
 #+begin_proxy
 #+end_proxy`;
 
+/**
+ * Default profile task list. A profile is a repository: the README is the
+ * identity/bio and the tasks are an Org TODO list, mirroring the solvers
+ * screen. Owners edit these `* TODO`/`* IN PROGRESS`/`* DONE` headings and the
+ * public profile renders them as a checklist.
+ */
+export const DEFAULT_PROFILE_TASKS_ORG = `* TODO Introduce yourself in the bio
+* TODO Add a link people can follow
+* IN PROGRESS Publish your first service
+* DONE Claim your handle`;
+
 // Order matters: the `widget`/`block` wrappers and the dynamic-block form are
 // tried before the generic `#+begin_<name>` rule so that `#+begin_widget
 // weather` resolves to the `weather` widget rather than a block literally named
@@ -204,6 +215,8 @@ export interface BuildProfileSocialOrgOptions {
   profileUrl?: string;
   /** Override the widget document; defaults to `metadata.widgetsOrg`. */
   widgetsOrg?: string;
+  /** Override the task document; defaults to `metadata.tasksOrg`. */
+  tasksOrg?: string;
 }
 
 function escapeHeaderValue(value: string): string {
@@ -216,6 +229,15 @@ function readWidgetsOrg(source: ProfileSocialOrgSource, options?: BuildProfileSo
   }
 
   const fromMetadata = source.metadata?.['widgetsOrg'];
+  return typeof fromMetadata === 'string' ? fromMetadata : '';
+}
+
+function readTasksOrg(source: ProfileSocialOrgSource, options?: BuildProfileSocialOrgOptions): string {
+  if (typeof options?.tasksOrg === 'string') {
+    return options.tasksOrg;
+  }
+
+  const fromMetadata = source.metadata?.['tasksOrg'];
   return typeof fromMetadata === 'string' ? fromMetadata : '';
 }
 
@@ -272,6 +294,15 @@ export function buildProfileSocialOrg(
     lines.push('');
     lines.push('* Widgets');
     lines.push(widgetsOrg);
+  }
+
+  // A profile is a repository: its tasks are an Org TODO list. The headings are
+  // already top-level `* TODO`/`* DONE` items, so they are appended verbatim and
+  // read back by `parseOrgTodos`.
+  const tasksOrg = readTasksOrg(source, options).trim();
+  if (tasksOrg) {
+    lines.push('');
+    lines.push(tasksOrg);
   }
 
   lines.push('');

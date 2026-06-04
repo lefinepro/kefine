@@ -6,6 +6,7 @@
   import KefineProfileSocialLinksCard from '$lib/components/kefine/KefineProfileSocialLinksCard.svelte';
   import KefineProfileSetupDots from '$lib/components/kefine/KefineProfileSetupDots.svelte';
   import KefineProfileWidgets from '$lib/components/kefine/KefineProfileWidgets.svelte';
+  import KefineProfileRepository from '$lib/components/kefine/KefineProfileRepository.svelte';
   import KefineTopbar from '$lib/components/kefine/KefineTopbar.svelte';
   import { onMount } from 'svelte';
   import type { Component } from 'svelte';
@@ -18,6 +19,7 @@
   import { resolvePublicRuntimeConfig } from '$lib/config/public-config';
   import { kefineLocale, kefineLocaleText, setKefineLocale, type KefineLocale } from '$lib/constants/kefine-locale';
   import {
+    DEFAULT_PROFILE_TASKS_ORG,
     DEFAULT_PROFILE_WIDGETS_ORG,
     buildProfileSocialOrg
   } from '$lib/profile/profile-social-org';
@@ -65,6 +67,7 @@
   let socialLinks = $state<ProfileSocialLink[]>([]);
   let sshPublicKey = $state('');
   let widgetsOrg = $state('');
+  let tasksOrg = $state('');
   let socialOrgState = $state<'idle' | 'copied'>('idle');
   let privateKey = $state('');
   let firstName = $state('');
@@ -210,6 +213,8 @@
     }
     sshPublicKey = typeof nextProfile?.metadata?.sshPublicKey === 'string' ? nextProfile.metadata.sshPublicKey : '';
     widgetsOrg = typeof nextProfile?.metadata?.widgetsOrg === 'string' ? nextProfile.metadata.widgetsOrg : '';
+    tasksOrg =
+      typeof nextProfile?.metadata?.tasksOrg === 'string' ? nextProfile.metadata.tasksOrg : DEFAULT_PROFILE_TASKS_ORG;
     const nameParts = readProfileNameParts(nextProfile);
     firstName = nameParts.firstName;
     surname = nameParts.surname;
@@ -448,7 +453,7 @@
           .map((link) => ({ ...link, value: link.value.trim() }))
           .filter((link) => link.value)
       },
-      { profileUrl: profileUrl || undefined, widgetsOrg: widgetsOrg.trim() }
+      { profileUrl: profileUrl || undefined, widgetsOrg: widgetsOrg.trim(), tasksOrg: tasksOrg.trim() }
     );
   }
 
@@ -492,6 +497,10 @@
 
   function insertExampleWidgets() {
     widgetsOrg = DEFAULT_PROFILE_WIDGETS_ORG;
+  }
+
+  function insertExampleTasks() {
+    tasksOrg = DEFAULT_PROFILE_TASKS_ORG;
   }
 
   function resolveNextUsername(current: Profile): string {
@@ -543,7 +552,8 @@
         firstName: firstName.trim(),
         surname: surname.trim(),
         sshPublicKey: sshPublicKey.trim(),
-        widgetsOrg: widgetsOrg.trim()
+        widgetsOrg: widgetsOrg.trim(),
+        tasksOrg: tasksOrg.trim()
       })
     }));
 
@@ -955,16 +965,25 @@
                 <p>{localeText.profile.publicZoneHint}</p>
               </lefine-box>
 
+              <!-- A profile is a repository: render the handle as a README and
+                   the profile tasks as a checklist, the same as the solvers
+                   screen. -->
+              <KefineProfileRepository
+                handle={username || profile.primaryHandle}
+                {displayName}
+                {bio}
+                {tasksOrg}
+                {isOwner}
+              />
+
               <KefineProfileWidgets {widgetsOrg} />
 
-              <label class="profile-field">
-                <lefine-text>{localeText.profile.bio}</lefine-text>
-                {#if isOwner}
+              {#if isOwner}
+                <label class="profile-field">
+                  <lefine-text>{localeText.profile.bio}</lefine-text>
                   <textarea bind:value={bio} rows="5"></textarea>
-                {:else}
-                  <textarea value={profile.bio || localeText.profile.subtitle} rows="5" disabled></textarea>
-                {/if}
-              </label>
+                </label>
+              {/if}
 
               <lefine-box class="profile-links-column">
                 <lefine-box class="profile-links-head">
@@ -1010,6 +1029,23 @@
                     </lefine-box>
                     <textarea value={privateKey} rows="8" readonly placeholder={localeText.profile.privateKeyHint}></textarea>
                   </label>
+                </lefine-box>
+
+                <lefine-box class="profile-widgets-editor">
+                  <lefine-box class="profile-links-head">
+                    <strong>{localeText.profile.tasksTitle}</strong>
+                    <button type="button" class="profile-widgets-example" onclick={insertExampleTasks}>
+                      {localeText.profile.tasksInsertExample}
+                    </button>
+                  </lefine-box>
+                  <p class="profile-widgets-hint">{localeText.profile.tasksHint}</p>
+                  <textarea
+                    class="profile-widgets-input"
+                    bind:value={tasksOrg}
+                    rows="6"
+                    spellcheck="false"
+                    placeholder={DEFAULT_PROFILE_TASKS_ORG}
+                  ></textarea>
                 </lefine-box>
 
                 <lefine-box class="profile-widgets-editor">

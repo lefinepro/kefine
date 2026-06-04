@@ -906,7 +906,17 @@ export const KEFINE_TEXT_EN = {
     publicZoneTitle: 'Public profile',
     publicZoneHint: 'Anyone can see this part of your workspace.',
     privateZoneTitle: 'Private zone',
-    privateZoneHint: 'Only you can see and edit this. It never appears on your public workspace.'
+    privateZoneHint: 'Only you can see and edit this. It never appears on your public workspace.',
+    repoReadmeAria: 'Profile README',
+    repoChecklistAria: 'Profile tasks',
+    newTaskPlaceholder: 'New task',
+    newTaskAria: 'New task',
+    openTaskSearch: 'Search for this task',
+    tasksTitle: 'Profile tasks',
+    tasksHint:
+      'Your profile is a repository: list tasks as Org headings — #+TODO with * TODO, * IN PROGRESS or * DONE. They render as the public checklist.',
+    tasksInsertExample: 'Insert example',
+    tasksOwnerHint: 'Edit these tasks in the private zone below.'
   },
   solversView: {
     tasksAside: 'Tasks',

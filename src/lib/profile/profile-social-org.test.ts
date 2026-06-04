@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  DEFAULT_PROFILE_TASKS_ORG,
   DEFAULT_PROFILE_WIDGETS_ORG,
   PROFILE_WIDGET_DEFINITIONS,
   buildProfileSocialOrg,
@@ -7,6 +8,7 @@ import {
   parseProfileWidgetBlocks,
   type ProfileSocialOrgSource
 } from './profile-social-org';
+import { parseOrgTodos } from '$lib/kefine/repo-docs';
 
 describe('profile widget definitions', () => {
   it('models every widget as a typed ActivityStreams Page object', () => {
@@ -170,5 +172,39 @@ describe('buildProfileSocialOrg', () => {
     expect(parseProfileWidgetBlocks(org)).toEqual([
       { type: 'weather', query: 'Berlin', id: 'widget-weather-1' }
     ]);
+  });
+
+  it('embeds the task list before the Posts heading and round-trips it', () => {
+    const org = buildProfileSocialOrg(
+      { ...baseProfile, metadata: { tasksOrg: DEFAULT_PROFILE_TASKS_ORG } },
+      {}
+    );
+    // The task headings precede the always-present Posts heading.
+    expect(org.indexOf('* TODO Introduce yourself in the bio')).toBeGreaterThan(-1);
+    expect(org.indexOf('* TODO Introduce yourself in the bio')).toBeLessThan(org.indexOf('* Posts'));
+    // The embedded tasks parse back as an Org TODO checklist — a profile is a repository.
+    const todos = parseOrgTodos(org);
+    expect(todos.map((todo) => todo.state)).toEqual(['TODO', 'TODO', 'IN PROGRESS', 'DONE']);
+    expect(todos.at(-1)?.done).toBe(true);
+  });
+
+  it('prefers the tasksOrg option over metadata', () => {
+    const org = buildProfileSocialOrg(
+      { ...baseProfile, metadata: { tasksOrg: '* TODO from metadata' } },
+      { tasksOrg: '* DONE from option' }
+    );
+    expect(org).toContain('* DONE from option');
+    expect(org).not.toContain('* TODO from metadata');
+  });
+
+  it('omits the task section when no tasks are present', () => {
+    const org = buildProfileSocialOrg(baseProfile, {});
+    expect(parseOrgTodos(org)).toEqual([]);
+  });
+
+  it('seeds the default task list as a valid Org TODO checklist', () => {
+    const todos = parseOrgTodos(DEFAULT_PROFILE_TASKS_ORG);
+    expect(todos).toHaveLength(4);
+    expect(todos.filter((todo) => todo.done)).toHaveLength(1);
   });
 });

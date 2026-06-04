@@ -115,6 +115,13 @@ export interface ProfileMetadata extends Record<string, unknown> {
    * the generated `social.org` document carries under its `* Widgets` section.
    */
   widgetsOrg?: string;
+  /**
+   * Org-format task list for the public workspace. Holds `* TODO`/`* IN
+   * PROGRESS`/`* DONE` headings that the profile renders as a checklist — a
+   * profile is a repository — and that the generated `social.org` document
+   * carries alongside its posts.
+   */
+  tasksOrg?: string;
 }
 
 export interface Profile {

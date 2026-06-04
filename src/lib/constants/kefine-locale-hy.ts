@@ -880,7 +880,17 @@ export const KEFINE_TEXT_HY = {
     publicZoneTitle: 'Հանրային պրոֆիլ',
     publicZoneHint: 'Ձեր workspace-ի այս մասը տեսանելի է բոլորին։',
     privateZoneTitle: 'Մասնավոր գոտի',
-    privateZoneHint: 'Սա տեսնում և խմբագրում եք միայն դուք։ Այն երբեք չի հայտնվում ձեր հանրային workspace-ում։'
+    privateZoneHint: 'Սա տեսնում և խմբագրում եք միայն դուք։ Այն երբեք չի հայտնվում ձեր հանրային workspace-ում։',
+    repoReadmeAria: 'Պրոֆիլի README',
+    repoChecklistAria: 'Պրոֆիլի առաջադրանքներ',
+    newTaskPlaceholder: 'Նոր առաջադրանք',
+    newTaskAria: 'Նոր առաջադրանք',
+    openTaskSearch: 'Փնտրել այս առաջադրանքը',
+    tasksTitle: 'Պրոֆիլի առաջադրանքներ',
+    tasksHint:
+      'Ձեր պրոֆիլը պահոց է. թվարկեք առաջադրանքները որպես Org վերնագրեր՝ * TODO, * IN PROGRESS կամ * DONE։ Դրանք ցուցադրվում են որպես հանրային ստուգաթերթ։',
+    tasksInsertExample: 'Տեղադրել օրինակ',
+    tasksOwnerHint: 'Խմբագրեք այս առաջադրանքները ստորև՝ մասնավոր գոտում։'
   },
   solversView: {
     ...KEFINE_TEXT_EN.solversView,
