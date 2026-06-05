@@ -1,6 +1,6 @@
 # Screenshots
 
-Generated current page captures for issue #126 and follow-up screenshot requests.
+Generated current page captures for issue #126.
 
 Regenerate from the repository root with:
 
@@ -10,7 +10,11 @@ node experiments/capture-project-pages.mjs
 
 Set `START_SERVER=0 BASE_URL=http://127.0.0.1:5173` to use an already-running dev server.
 
-Set `SCREENSHOT_FILE=created-task.png` to refresh only the created-task screen.
+The created-task capture for issue #141 is regenerated separately with:
+
+```bash
+node experiments/capture-created-task.mjs
+```
 
 The profile-as-repository captures (issue #130) are regenerated separately with:
 
@@ -22,7 +26,6 @@ node experiments/capture-profile-owner.mjs
 | File | Route |
 | --- | --- |
 | home.png | `/` |
-| created-task.png | `/@api/order-1` |
 | profile.png | `/@api` |
 | profile-search.png | `/@api?q=proxy%20server` |
 | weather-widget.png | `/@api/weather` |

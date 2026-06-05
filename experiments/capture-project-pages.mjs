@@ -10,7 +10,6 @@ const outDir = path.resolve(root, 'docs', 'screenshots');
 const port = process.env.PORT ?? '5177';
 const baseUrl = process.env.BASE_URL ?? `http://127.0.0.1:${port}`;
 const shouldStartServer = process.env.START_SERVER !== '0';
-const selectedScreenshotFile = process.env.SCREENSHOT_FILE?.trim() ?? '';
 
 const createdAt = '2026-06-03T12:00:00.000Z';
 
@@ -97,58 +96,8 @@ const demoOrder = {
   }
 };
 
-const createdTaskOrder = {
-  ...demoOrder,
-  status: 'running',
-  title: 'Optimize database queries',
-  description: 'Identify slow SQL paths, tune indexes, and prepare a concise handoff for review.',
-  labels: ['database', 'performance'],
-  estimatedCost: 0,
-  currency: 'USD',
-  progressPercent: 67,
-  isClosedCompleted: false,
-  isPublicTask: false,
-  repository: {
-    ...demoOrder.repository,
-    slug: 'database-queries',
-    visibility: 'private'
-  },
-  result: null,
-  executionSteps: [
-    {
-      id: 'step-1',
-      title: 'Profile slow queries',
-      detail: 'Collect traces and rank the highest-cost requests.',
-      state: 'completed'
-    },
-    {
-      id: 'step-2',
-      title: 'Tune indexes',
-      detail: 'Adjust schema and verify the query plans.',
-      state: 'active'
-    },
-    {
-      id: 'step-3',
-      title: 'Prepare delivery notes',
-      detail: 'Document before/after latency and rollout steps.',
-      state: 'upcoming'
-    }
-  ],
-  document: {
-    format: 'markdown',
-    content: '# Optimize database queries\n\nIdentify slow SQL paths, tune indexes, and prepare a concise handoff for review.'
-  }
-};
-
 const pages = [
   { file: 'home.png', route: '/', waitFor: '[data-testid="kefine-task-input"]' },
-  {
-    file: 'created-task.png',
-    route: '/@api/order-1',
-    waitFor: '[data-testid="kefine-price-metric"]',
-    viewport: { width: 1365, height: 1020 },
-    order: createdTaskOrder
-  },
   { file: 'profile.png', route: '/@api', waitFor: '.profile-page' },
   { file: 'profile-search.png', route: '/@api?q=proxy%20server', waitFor: '[data-testid="kefine-search-page-results"]' },
   { file: 'weather-widget.png', route: '/@api/weather', waitFor: '[data-testid="kefine-weather-widget"]' },
@@ -289,7 +238,7 @@ async function stopServer(child) {
   });
 }
 
-async function installRoutes(page, order = demoOrder) {
+async function installRoutes(page) {
   await page.route('**/api/health', async (route) => {
     await route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' });
   });
@@ -300,33 +249,32 @@ async function installRoutes(page, order = demoOrder) {
       contentType: 'application/json',
       body: JSON.stringify({
         accepted: true,
-        orderId: order.id,
-        status: order.status,
-        solver: order.solver,
+        orderId: demoOrder.id,
+        status: demoOrder.status,
+        solver: demoOrder.solver,
         paymentUrl: null
       })
     });
   });
 
   await page.route('**/api/order/**', async (route) => {
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(orderPayload(order)) });
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(orderPayload(demoOrder)) });
   });
 
   await page.route('**/status/**', async (route) => {
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(orderPayload(order)) });
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(orderPayload(demoOrder)) });
   });
 }
 
 async function capturePage(browser, pageSpec) {
-  const order = pageSpec.order ?? demoOrder;
   const context = await browser.newContext({
-    viewport: pageSpec.viewport ?? { width: 1365, height: 900 },
+    viewport: { width: 1365, height: 900 },
     deviceScaleFactor: 1,
     colorScheme: 'light'
   });
-  await context.addInitScript(seedStorage, { profile: demoProfile, order });
+  await context.addInitScript(seedStorage, { profile: demoProfile, order: demoOrder });
   const page = await context.newPage();
-  await installRoutes(page, order);
+  await installRoutes(page);
   await page.goto(new URL(pageSpec.route, baseUrl).toString(), { waitUntil: 'domcontentloaded' });
   await page.waitForSelector(pageSpec.waitFor);
   await page.waitForTimeout(900);
@@ -340,7 +288,7 @@ function writeReadme() {
   const lines = [
     '# Screenshots',
     '',
-    'Generated current page captures for issue #126 and follow-up screenshot requests.',
+    'Generated current page captures for issue #126.',
     '',
     'Regenerate from the repository root with:',
     '',
@@ -349,8 +297,6 @@ function writeReadme() {
     '```',
     '',
     'Set `START_SERVER=0 BASE_URL=http://127.0.0.1:5173` to use an already-running dev server.',
-    '',
-    'Set `SCREENSHOT_FILE=created-task.png` to refresh only the created-task screen.',
     '',
     'The profile-as-repository captures (issue #130) are regenerated separately with:',
     '',
@@ -378,19 +324,8 @@ function writeReadme() {
 let server = null;
 
 try {
-  const selectedPages = selectedScreenshotFile
-    ? pages.filter((page) => page.file === selectedScreenshotFile)
-    : pages;
-  if (selectedScreenshotFile && selectedPages.length === 0) {
-    throw new Error(`Unknown screenshot file: ${selectedScreenshotFile}`);
-  }
-
+  rmSync(outDir, { recursive: true, force: true });
   mkdirSync(outDir, { recursive: true });
-  if (!selectedScreenshotFile) {
-    for (const page of pages) {
-      rmSync(path.join(outDir, page.file), { force: true });
-    }
-  }
 
   if (shouldStartServer) {
     if (!existsSync(path.join(root, 'node_modules'))) {
@@ -401,13 +336,11 @@ try {
   }
 
   const browser = await chromium.launch();
-  for (const pageSpec of selectedPages) {
+  for (const pageSpec of pages) {
     await capturePage(browser, pageSpec);
   }
   await browser.close();
-  if (!selectedScreenshotFile) {
-    writeReadme();
-  }
+  writeReadme();
 } finally {
   if (server) {
     await stopServer(server);
