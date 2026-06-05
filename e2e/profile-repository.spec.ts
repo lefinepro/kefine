@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 // A profile is a repository: the public profile renders the handle as a README
 // header. Tasks, however, are private — the checklist and the "new task" row only
@@ -25,7 +25,7 @@ const SEED_WIDGETS_ORG = [
   '#+end_weather'
 ].join('\n');
 
-async function seedPublicProfile(page: import('@playwright/test').Page) {
+async function seedPublicProfile(page: Page) {
   await page.addInitScript(
     ({ handle, tasksOrg, widgetsOrg }) => {
       const profile = {
@@ -47,6 +47,53 @@ async function seedPublicProfile(page: import('@playwright/test').Page) {
         metadata: { tasksOrg, widgetsOrg, profileSetupCompleted: true }
       };
       window.localStorage.setItem('kefine-profiles-v1', JSON.stringify([profile]));
+    },
+    { handle: SEED_HANDLE, tasksOrg: SEED_TASKS_ORG, widgetsOrg: SEED_WIDGETS_ORG }
+  );
+}
+
+async function seedOwnerProfile(page: Page) {
+  await page.addInitScript(
+    ({ handle, tasksOrg, widgetsOrg }) => {
+      const profile = {
+        id: 'profile-demo',
+        userId: 'user-demo',
+        username: handle,
+        primaryHandle: handle,
+        primaryHandleType: 'email',
+        displayName: 'Demo Builder',
+        bio: 'Building reliable solver flows.',
+        isPublic: true,
+        socialLinks: [
+          {
+            id: 'social-github',
+            type: 'github',
+            label: 'GitHub',
+            value: 'https://github.com/demo'
+          }
+        ],
+        referralPercent: 10,
+        bonusBalanceUsd: 0,
+        followersCount: 0,
+        followingCount: 0,
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+        metadata: { tasksOrg, widgetsOrg, profileSetupCompleted: true }
+      };
+      window.localStorage.setItem('kefine-profiles-v1', JSON.stringify([profile]));
+      window.localStorage.setItem(
+        'auth-session',
+        JSON.stringify({
+          address: null,
+          chainId: null,
+          email: 'demo@example.test',
+          userId: 'user-demo',
+          handle,
+          displayName: 'Demo Builder',
+          authType: 'email',
+          connectedAt: Date.now()
+        })
+      );
     },
     { handle: SEED_HANDLE, tasksOrg: SEED_TASKS_ORG, widgetsOrg: SEED_WIDGETS_ORG }
   );
@@ -84,5 +131,26 @@ test.describe('Profile repository view', () => {
     await expect(page.getByTestId('profile-widgets')).toBeVisible();
     await expect(page.getByTestId('profile-widget')).toHaveCount(2);
     await expect(page.getByTestId('kefine-music-widget')).toBeVisible();
+  });
+
+  test('keeps owner social link editor rows compact', async ({ page }) => {
+    await seedOwnerProfile(page);
+    await page.goto(`/@${SEED_HANDLE}`);
+
+    await expect(page.getByTestId('profile-editor')).toBeVisible();
+    const socialInput = page.getByTestId('profile-social-link-input').first();
+    await expect(socialInput).toHaveValue('https://github.com/demo');
+
+    const metrics = await socialInput.evaluate((element) => {
+      const inputStyle = window.getComputedStyle(element);
+      const row = element.closest('[data-testid="profile-social-link-row"]') as HTMLElement | null;
+      return {
+        fontSize: Number.parseFloat(inputStyle.fontSize),
+        rowHeight: row?.getBoundingClientRect().height ?? 0
+      };
+    });
+
+    expect(metrics.fontSize).toBeLessThanOrEqual(15);
+    expect(metrics.rowHeight).toBeLessThanOrEqual(44);
   });
 });
