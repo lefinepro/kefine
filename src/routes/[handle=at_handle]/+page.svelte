@@ -8,6 +8,7 @@
   import KefineProfileRepository from '$lib/components/kefine/KefineProfileRepository.svelte';
   import KefineProfileWidgets from '$lib/components/kefine/KefineProfileWidgets.svelte';
   import KefineTopbar from '$lib/components/kefine/KefineTopbar.svelte';
+  import KefineTopbarIcon from '$lib/components/kefine/KefineTopbarIcon.svelte';
   import { onMount } from 'svelte';
   import type { Component } from 'svelte';
   import { disconnectAppKit } from '$lib/auth/appkit';
@@ -103,22 +104,44 @@
     profile ? `@${(username || profile.primaryHandle).replace(/^@+/, '').trim()}` : ''
   );
   // Route-scoped icon actions rendered beside the topbar search, mirroring the
-  // solvers screen: anyone can download the profile as `social.org`, and the
-  // owner gets a settings shortcut that jumps to the editor below.
+  // solvers screen: social.org exports live in one compact menu, and the owner
+  // gets a settings shortcut that jumps to the editor below.
   const profileSearchActions = $derived.by<TopbarSearchAction[]>(() => {
     const actions: TopbarSearchAction[] = [
       {
-        id: 'profile-download',
-        label: localeText.profile.downloadSocialOrg,
+        id: 'profile-social-org',
+        label: localeText.profile.socialOrgActions,
         icon: 'download',
-        testId: 'profile-social-download',
-        onClick: downloadSocialOrg
+        testId: 'profile-social-menu-trigger',
+        menuItems: [
+          {
+            id: 'profile-social-open',
+            label: localeText.profile.openPublicProfile,
+            icon: 'open',
+            testId: 'profile-social-open',
+            onClick: openPublicProfile
+          },
+          {
+            id: 'profile-social-copy',
+            label: socialOrgState === 'copied' ? localeText.profile.socialOrgCopied : localeText.profile.copySocialOrg,
+            icon: 'copy',
+            testId: 'profile-social-copy',
+            onClick: copySocialOrg
+          },
+          {
+            id: 'profile-social-download',
+            label: localeText.profile.downloadSocialOrg,
+            icon: 'download',
+            testId: 'profile-social-download',
+            onClick: downloadSocialOrg
+          }
+        ]
       }
     ];
     if (isOwner) {
       actions.push({
         id: 'profile-settings',
-        label: localeText.profile.title,
+        label: localeText.profile.profileSettingsTitle,
         icon: 'settings',
         testId: 'profile-settings-trigger',
         onClick: scrollToProfileEditor
@@ -521,6 +544,22 @@
     anchor.download = 'social.org';
     anchor.click();
     URL.revokeObjectURL(url);
+  }
+
+  function openPublicProfile() {
+    if (!browser || !canonicalProfilePath) {
+      return;
+    }
+
+    window.open(new URL(canonicalProfilePath, window.location.origin).toString(), '_blank', 'noopener,noreferrer');
+  }
+
+  function selectProfileTheme(theme: 'light' | 'dark' | 'auto') {
+    themeMode = theme;
+  }
+
+  function selectProfileLocale(locale: KefineLocale) {
+    setKefineLocale(locale);
   }
 
   function resolveNextUsername(current: Profile): string {
@@ -961,8 +1000,8 @@
                   </button>
                 </lefine-box>
 
-                <!-- Public zone: everything here is visible on the public
-                     workspace, including repository SSH public keys. -->
+                <!-- Public zone: structured fields that shape the public
+                     workspace. Owner-only controls live in the settings zone. -->
                 <lef-profile-zone data-zone="public">
                   <lefine-box class="profile-zone__head">
                     <strong>{localeText.profile.publicZoneTitle}</strong>
@@ -983,32 +1022,110 @@
                       {isOwner}
                     />
                   </lefine-box>
+                </lef-profile-zone>
 
-                  <lefine-box class="profile-links-column">
-                    <label class="profile-field">
-                      <lefine-text>{localeText.profile.sshPublicKeys}</lefine-text>
-                      <textarea
-                        data-testid="profile-ssh-public-keys"
-                        bind:value={sshPublicKeys}
-                        rows="5"
-                        placeholder={localeText.profile.sshPublicKeysHint}
-                      ></textarea>
-                    </label>
+                <lef-profile-zone data-zone="settings" data-testid="profile-settings-panel">
+                  <lefine-box class="profile-zone__head">
+                    <strong>{localeText.profile.profileSettingsTitle}</strong>
+                    <p>{localeText.profile.profileSettingsHint}</p>
+                  </lefine-box>
+
+                  <lefine-box class="profile-settings-grid">
+                    <lefine-box class="profile-links-column">
+                      <label class="profile-field">
+                        <lefine-text>{localeText.profile.sshPublicKeys}</lefine-text>
+                        <textarea
+                          data-testid="profile-ssh-public-keys"
+                          bind:value={sshPublicKeys}
+                          rows="5"
+                          placeholder={localeText.profile.sshPublicKeysHint}
+                        ></textarea>
+                      </label>
+                    </lefine-box>
+
+                    <lefine-box class="profile-settings-group" data-testid="profile-theme-settings">
+                      <lefine-text>{localeText.profile.themeSettings}</lefine-text>
+                      <lefine-box
+                        class="profile-settings-options"
+                        role="group"
+                        aria-label={localeText.profile.themeSettings}
+                      >
+                        <button
+                          type="button"
+                          class="profile-settings-option"
+                          data-active={themeMode === 'auto'}
+                          data-testid="profile-theme-option-auto"
+                          onclick={() => selectProfileTheme('auto')}
+                        >
+                          <KefineTopbarIcon name="theme-auto" size={16} />
+                          <lefine-text>{localeText.topbar.theme.auto}</lefine-text>
+                        </button>
+                        <button
+                          type="button"
+                          class="profile-settings-option"
+                          data-active={themeMode === 'light'}
+                          data-testid="profile-theme-option-light"
+                          onclick={() => selectProfileTheme('light')}
+                        >
+                          <KefineTopbarIcon name="theme-light" size={16} />
+                          <lefine-text>{localeText.topbar.theme.light}</lefine-text>
+                        </button>
+                        <button
+                          type="button"
+                          class="profile-settings-option"
+                          data-active={themeMode === 'dark'}
+                          data-testid="profile-theme-option-dark"
+                          onclick={() => selectProfileTheme('dark')}
+                        >
+                          <KefineTopbarIcon name="theme-dark" size={16} />
+                          <lefine-text>{localeText.topbar.theme.dark}</lefine-text>
+                        </button>
+                      </lefine-box>
+                    </lefine-box>
+
+                    <lefine-box class="profile-settings-group" data-testid="profile-language-settings">
+                      <lefine-text>{localeText.profile.languageSettings}</lefine-text>
+                      <lefine-box
+                        class="profile-settings-options"
+                        role="group"
+                        aria-label={localeText.profile.languageSettings}
+                      >
+                        <button
+                          type="button"
+                          class="profile-settings-option"
+                          data-active={$kefineLocale === 'en'}
+                          data-testid="profile-locale-option-en"
+                          onclick={() => selectProfileLocale('en')}
+                        >
+                          <KefineTopbarIcon name="flag-en" size={16} />
+                          <lefine-text>{localeText.topbar.languageEnglish}</lefine-text>
+                        </button>
+                        <button
+                          type="button"
+                          class="profile-settings-option"
+                          data-active={$kefineLocale === 'ru'}
+                          data-testid="profile-locale-option-ru"
+                          onclick={() => selectProfileLocale('ru')}
+                        >
+                          <KefineTopbarIcon name="flag-ru" size={16} />
+                          <lefine-text>{localeText.topbar.languageRussian}</lefine-text>
+                        </button>
+                        <button
+                          type="button"
+                          class="profile-settings-option"
+                          data-active={$kefineLocale === 'hy'}
+                          data-testid="profile-locale-option-hy"
+                          onclick={() => selectProfileLocale('hy')}
+                        >
+                          <KefineTopbarIcon name="flag-hy" size={16} />
+                          <lefine-text>{localeText.topbar.languageArmenian}</lefine-text>
+                        </button>
+                      </lefine-box>
+                    </lefine-box>
                   </lefine-box>
                 </lef-profile-zone>
 
                 <footer class="profile-details__footer">
-                  <!-- The social.org document is exported from the live profile
-                       state; the raw Org editors were removed in favour of the
-                       structured fields above and the inline widgets. -->
-                  <lefine-box class="profile-details__export">
-                    <button type="button" data-variant="ghost" onclick={copySocialOrg}>
-                      {socialOrgState === 'copied' ? localeText.profile.socialOrgCopied : localeText.profile.copySocialOrg}
-                    </button>
-                    <button type="button" data-variant="ghost" onclick={downloadSocialOrg}>
-                      {localeText.profile.downloadSocialOrg}
-                    </button>
-                  </lefine-box>
                   <button type="button" data-variant="primary" onclick={saveProfile}>{localeText.profile.save}</button>
                 </footer>
               </lef-profile-editor>
@@ -1243,6 +1360,70 @@
     line-height: 1.4;
   }
 
+  .profile-settings-grid,
+  .profile-settings-group {
+    display: grid;
+    gap: 0.7rem;
+    min-width: 0;
+  }
+
+  .profile-settings-grid {
+    grid-template-columns: minmax(16rem, 1fr) minmax(13rem, 0.82fr) minmax(13rem, 0.82fr);
+    align-items: start;
+  }
+
+  .profile-settings-group > lefine-text {
+    color: color-mix(in oklab, var(--kef-color-text) 78%, transparent);
+    font-size: 0.94rem;
+    font-weight: 650;
+    line-height: 1.1;
+  }
+
+  .profile-settings-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.38rem;
+    min-width: 0;
+  }
+
+  .profile-settings-option {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.38rem;
+    min-height: 2.25rem;
+    max-width: 100%;
+    padding: 0.42rem 0.56rem;
+    border: 1px solid color-mix(in oklab, var(--kef-color-text) 10%, transparent);
+    border-radius: 0.5rem;
+    background: color-mix(in oklab, var(--kef-color-bg) 42%, transparent);
+    color: color-mix(in oklab, var(--kef-color-text) 82%, transparent);
+    font: inherit;
+    font-size: 0.84rem;
+    font-weight: 650;
+    line-height: 1;
+    letter-spacing: 0;
+    cursor: pointer;
+    transition:
+      border-color var(--kef-motion-fast) var(--kef-ease-soft),
+      background-color var(--kef-motion-fast) var(--kef-ease-soft),
+      color var(--kef-motion-fast) var(--kef-ease-soft);
+  }
+
+  .profile-settings-option lefine-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .profile-settings-option:hover,
+  .profile-settings-option[data-active='true'] {
+    border-color: color-mix(in oklab, var(--kef-color-primary) 34%, transparent);
+    background: color-mix(in oklab, var(--kef-color-primary) 11%, var(--kef-color-bg-card));
+    color: color-mix(in oklab, var(--kef-color-text) 58%, var(--kef-color-primary));
+  }
+
   .profile-editor__status {
     display: grid;
     gap: 0.2rem;
@@ -1441,6 +1622,8 @@
 
   .profile-field textarea {
     width: 100%;
+    overflow-x: auto;
+    white-space: pre;
   }
 
   .profile-setup__footer,
@@ -1453,13 +1636,7 @@
   }
 
   .profile-details__footer {
-    justify-content: space-between;
-  }
-
-  .profile-details__export {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
+    justify-content: flex-end;
   }
 
   .profile-setup__footer--spread {
@@ -1502,6 +1679,10 @@
     .profile-editor__head {
       align-items: flex-start;
       flex-direction: column;
+    }
+
+    .profile-settings-grid {
+      grid-template-columns: 1fr;
     }
   }
 </style>

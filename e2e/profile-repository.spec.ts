@@ -117,7 +117,7 @@ async function seedOwnerProfile(page: Page) {
   );
 }
 
-test.describe('Profile repository view', () => {
+test.describe('Profile repository public view', () => {
   test('renders the handle as a README and keeps tasks private in the public view', async ({
     page
   }) => {
@@ -150,7 +150,9 @@ test.describe('Profile repository view', () => {
     await expect(page.getByTestId('profile-widget')).toHaveCount(2);
     await expect(page.getByTestId('kefine-music-widget')).toBeVisible();
   });
+});
 
+test.describe('Profile repository owner editor', () => {
   test('keeps owner social link editor rows compact', async ({ page }) => {
     await seedOwnerProfile(page);
     await page.goto(`/@${SEED_HANDLE}`);
@@ -172,18 +174,44 @@ test.describe('Profile repository view', () => {
     expect(metrics.rowHeight).toBeLessThanOrEqual(44);
   });
 
-  test('moves SSH public keys into the public editor and removes private key fields', async ({
+  test('moves SSH public keys into owner settings and removes private key fields', async ({
     page
   }) => {
     await seedOwnerProfile(page);
     await page.goto(`/@${SEED_HANDLE}`);
 
     await expect(page.getByTestId('profile-editor')).toBeVisible();
-    const publicZone = page.locator('lef-profile-zone[data-zone="public"]');
-    await expect(publicZone.getByTestId('profile-ssh-public-keys')).toHaveValue(SEED_SSH_PUBLIC_KEYS);
+    const settingsZone = page.locator('lef-profile-zone[data-zone="settings"]');
+    await expect(settingsZone.getByTestId('profile-ssh-public-keys')).toHaveValue(SEED_SSH_PUBLIC_KEYS);
     await expect(page.locator('lef-profile-zone[data-zone="private"]')).toHaveCount(0);
     await expect(page.getByText('Private key', { exact: true })).toHaveCount(0);
     await expect(page.getByText('Short info', { exact: true })).toHaveCount(0);
+  });
+
+  test('keeps profile export in a header menu and exposes owner settings controls', async ({
+    page
+  }) => {
+    await seedOwnerProfile(page);
+    await page.goto(`/@${SEED_HANDLE}`);
+
+    await expect(page.getByTestId('profile-editor')).toBeVisible();
+    await expect(page.getByTestId('profile-social-download')).toHaveCount(0);
+
+    await page.getByTestId('profile-social-menu-trigger').click();
+    await expect(page.getByTestId('profile-social-open')).toBeVisible();
+    await expect(page.getByTestId('profile-social-copy')).toBeVisible();
+    await expect(page.getByTestId('profile-social-download')).toBeVisible();
+
+    await expect(page.getByTestId('profile-settings-panel')).toBeVisible();
+    await expect(page.getByTestId('profile-theme-settings')).toBeVisible();
+    await expect(page.getByTestId('profile-language-settings')).toBeVisible();
+    await expect(page.getByTestId('profile-ssh-public-keys')).toBeVisible();
+
+    await page.getByTestId('profile-theme-option-dark').click();
+    await expect(page.locator('html')).toHaveAttribute('data-kefine-theme', 'dark');
+
+    await page.getByTestId('profile-locale-option-ru').click();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'ru');
   });
 
   test('saves multiple SSH public keys as a plural payload', async ({ page }) => {

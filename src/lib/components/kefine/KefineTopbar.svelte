@@ -14,6 +14,7 @@
   import { KEFINE_SEARCH_WIDGET_IDS, type KefineSearchWidgetId } from '$lib/kefine/search-widgets';
   import type {
     TopbarSearchAction,
+    TopbarSearchActionMenuItem,
     TopbarSearchItem,
     TopbarSearchRequest
   } from '$lib/kefine/topbar-search-context';
@@ -213,9 +214,11 @@
   let localePickerOpen = $state(false);
   let cancelAuthClick: (() => void) | null = null;
   let searchDialog: HTMLDialogElement | null = $state(null);
+  let searchShellElement: HTMLElement | null = $state(null);
   let searchQuery = $state('');
   let selectedSearchIndex = $state(0);
   let searchOpen = $state(false);
+  let openSearchActionMenuId = $state<string | null>(null);
   let searchFocusRequest = $state(0);
   let activeSearchWidget = $state<KefineSearchWidgetId | null>(null);
   const searchShortcutLabel = 'Ctrl K';
@@ -412,6 +415,43 @@
     });
   });
 
+  $effect(() => {
+    if (!openSearchActionMenuId) {
+      return;
+    }
+
+    if (!searchActions.some((action) => action.id === openSearchActionMenuId)) {
+      openSearchActionMenuId = null;
+    }
+  });
+
+  $effect(() => {
+    if (typeof window === 'undefined' || !openSearchActionMenuId) {
+      return;
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      const target = event.target as Node | null;
+      if (!searchShellElement?.contains(target)) {
+        openSearchActionMenuId = null;
+      }
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        openSearchActionMenuId = null;
+      }
+    }
+
+    window.addEventListener('pointerdown', handlePointerDown);
+    window.addEventListener('keydown', handleEscape);
+
+    return () => {
+      window.removeEventListener('pointerdown', handlePointerDown);
+      window.removeEventListener('keydown', handleEscape);
+    };
+  });
+
   function handleBrandClick() {
     cancelBrandClick?.();
     cancelBrandClick = scheduleAfter(220, () => {
@@ -486,6 +526,32 @@
 
   function getSearchItemHref(item: KefineTopbarSearchItem) {
     return item.hrefFromQuery?.(searchQuery.trim()) || item.href || '';
+  }
+
+  function hasSearchActionMenu(action: TopbarSearchAction) {
+    return (action.menuItems?.length ?? 0) > 0;
+  }
+
+  function getSearchActionMenuTestId(action: TopbarSearchAction) {
+    return action.testId ? `${action.testId}-menu` : undefined;
+  }
+
+  function handleSearchActionClick(action: TopbarSearchAction) {
+    if (hasSearchActionMenu(action)) {
+      openSearchActionMenuId = openSearchActionMenuId === action.id ? null : action.id;
+      themePickerOpen = false;
+      localePickerOpen = false;
+      onExpandedChange(false);
+      return;
+    }
+
+    openSearchActionMenuId = null;
+    void action.onClick?.();
+  }
+
+  function activateSearchActionMenuItem(item: TopbarSearchActionMenuItem) {
+    openSearchActionMenuId = null;
+    void item.onClick();
   }
 
   function parseContextualSearchPlaceholder(value: string): SearchContextSegment[] {
@@ -958,7 +1024,7 @@
     </nav>
 
     {#if showSearch}
-      <kefine-topbar-search-shell>
+      <kefine-topbar-search-shell bind:this={searchShellElement}>
         <button
           type="button"
           data-part="search-trigger"
@@ -993,17 +1059,43 @@
         {#if searchActions.length > 0}
           <kefine-topbar-search-actions>
             {#each searchActions as action (action.id)}
-              <button
-                type="button"
-                data-part="search-action"
-                data-testid={action.testId}
-                data-icon={action.icon}
-                aria-label={action.label}
-                title={action.label}
-                onclick={() => void action.onClick()}
-              >
-                <KefineTopbarIcon name={action.icon} size={18} />
-              </button>
+              <kefine-topbar-search-action-slot>
+                <button
+                  type="button"
+                  data-part="search-action"
+                  data-testid={action.testId}
+                  data-icon={action.icon}
+                  aria-label={action.label}
+                  aria-haspopup={hasSearchActionMenu(action) ? 'menu' : undefined}
+                  aria-expanded={hasSearchActionMenu(action) ? openSearchActionMenuId === action.id : undefined}
+                  title={action.label}
+                  onclick={() => handleSearchActionClick(action)}
+                >
+                  <KefineTopbarIcon name={action.icon} size={18} />
+                </button>
+                {#if hasSearchActionMenu(action) && openSearchActionMenuId === action.id}
+                  <kefine-topbar-search-action-menu
+                    role="menu"
+                    aria-label={action.label}
+                    data-testid={getSearchActionMenuTestId(action)}
+                  >
+                    {#each action.menuItems ?? [] as item (item.id)}
+                      <button
+                        type="button"
+                        data-part="search-action-menu-item"
+                        data-testid={item.testId}
+                        role="menuitem"
+                        onclick={() => activateSearchActionMenuItem(item)}
+                      >
+                        {#if item.icon}
+                          <KefineTopbarIcon name={item.icon} size={16} />
+                        {/if}
+                        <lefine-text>{item.label}</lefine-text>
+                      </button>
+                    {/each}
+                  </kefine-topbar-search-action-menu>
+                {/if}
+              </kefine-topbar-search-action-slot>
             {/each}
           </kefine-topbar-search-actions>
         {/if}
@@ -1230,6 +1322,11 @@
     flex: 0 0 auto;
   }
 
+  kefine-topbar-search-action-slot {
+    position: relative;
+    display: inline-flex;
+  }
+
   button[data-part='search-action'] {
     display: inline-grid;
     place-items: center;
@@ -1255,11 +1352,68 @@
     box-shadow: none;
   }
 
-  button[data-part='search-action']:hover {
+  button[data-part='search-action']:hover,
+  button[data-part='search-action'][aria-expanded='true'] {
     border-color: color-mix(in oklab, var(--kef-primary) 34%, var(--kef-border));
     background: color-mix(in oklab, var(--kef-primary) 8%, var(--kef-bg-card));
     color: color-mix(in oklab, var(--kef-primary) 92%, #4f3d30);
     box-shadow: 0 10px 22px color-mix(in oklab, var(--lefine-text) 6%, transparent);
+  }
+
+  kefine-topbar-search-action-menu {
+    position: absolute;
+    top: calc(100% + 0.45rem);
+    right: 0;
+    z-index: 8;
+    display: grid;
+    gap: 0.2rem;
+    width: min(16rem, calc(100vw - 1rem));
+    padding: 0.35rem;
+    border: var(--kef-border-width-soft) solid color-mix(in oklab, var(--kef-border) 72%, transparent);
+    border-radius: calc(var(--kef-radius-ui) - 0.06rem);
+    background: color-mix(in oklab, var(--kef-bg-card) 96%, var(--kef-bg));
+    color: var(--lefine-text);
+    box-shadow:
+      0 18px 42px color-mix(in oklab, #302219 16%, transparent),
+      inset 0 1px 0 color-mix(in oklab, white 14%, transparent);
+  }
+
+  button[data-part='search-action-menu-item'] {
+    display: grid;
+    grid-template-columns: 1.1rem minmax(0, 1fr);
+    align-items: center;
+    gap: 0.55rem;
+    min-height: 2.3rem;
+    width: 100%;
+    padding: 0.48rem 0.6rem;
+    border: 0;
+    border-radius: calc(var(--kef-radius-sm) + 0.02rem);
+    background: transparent;
+    color: color-mix(in oklab, var(--lefine-text) 86%, transparent);
+    font: inherit;
+    font-size: 0.88rem;
+    font-weight: 650;
+    line-height: 1.1;
+    letter-spacing: 0;
+    text-align: left;
+    cursor: pointer;
+    transition:
+      background-color var(--kef-motion-fast) var(--kef-ease-soft),
+      color var(--kef-motion-fast) var(--kef-ease-soft);
+  }
+
+  button[data-part='search-action-menu-item'] lefine-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  button[data-part='search-action-menu-item']:hover,
+  button[data-part='search-action-menu-item']:focus-visible {
+    background: color-mix(in oklab, var(--kef-primary) 9%, var(--kef-bg-card));
+    color: color-mix(in oklab, var(--kef-primary) 88%, var(--lefine-text));
+    outline: none;
   }
 
   button[data-part='search-trigger'] [data-part='search-context'] {
