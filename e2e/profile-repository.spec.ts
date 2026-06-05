@@ -1,9 +1,12 @@
 import { expect, test } from '@playwright/test';
 
 // A profile is a repository: the public profile renders the handle as a README
-// header and the profile tasks as an Org TODO checklist, mirroring the solvers
-// screen. We seed a public profile into local storage and visit it as an
-// anonymous viewer to exercise the public repository view.
+// header. Tasks, however, are private — the checklist and the "new task" row only
+// render for the owner, so an anonymous viewer sees the README without any task
+// list. Widgets the owner declares in the profile's Org document render directly
+// inside the public profile (not behind the command palette). We seed a public
+// profile into local storage and visit it as an anonymous viewer to exercise the
+// public repository view.
 const SEED_HANDLE = 'demo';
 const SEED_TASKS_ORG = [
   '* TODO Introduce yourself in the bio',
@@ -11,15 +14,15 @@ const SEED_TASKS_ORG = [
   '* IN PROGRESS Publish your first service',
   '* DONE Claim your handle'
 ].join('\n');
-// The profile declares widgets in Org block form, but they must NOT render
-// statically on the public profile — they are only surfaced through the command
-// palette when a visitor types a matching query.
+// The profile declares two widgets in Org block form; both must render inline on
+// the public profile. The music widget renders deterministically whenever it is
+// active (no network or geolocation), so it anchors the inline-rendering check.
 const SEED_WIDGETS_ORG = [
-  '#+begin_weather',
-  '#+end_weather',
-  '',
   '#+begin_music',
-  '#+end_music'
+  '#+end_music',
+  '',
+  '#+begin_weather',
+  '#+end_weather'
 ].join('\n');
 
 async function seedPublicProfile(page: import('@playwright/test').Page) {
@@ -50,7 +53,9 @@ async function seedPublicProfile(page: import('@playwright/test').Page) {
 }
 
 test.describe('Profile repository view', () => {
-  test('renders the handle as a README and the tasks as a checklist', async ({ page }) => {
+  test('renders the handle as a README and keeps tasks private in the public view', async ({
+    page
+  }) => {
     await seedPublicProfile(page);
     await page.goto(`/@${SEED_HANDLE}`);
 
@@ -59,59 +64,25 @@ test.describe('Profile repository view', () => {
     await expect(page.getByTestId('profile-readme-title')).toContainText(`@${SEED_HANDLE}`);
     await expect(page.getByTestId('profile-brief')).toContainText('Building reliable solver flows.');
 
-    // The seeded task list has four items spanning every TODO state.
-    const items = page.getByTestId('profile-checklist-item');
-    await expect(items).toHaveCount(4);
-    await expect(items.nth(0)).toHaveAttribute('data-state', 'todo');
-    await expect(items.nth(2)).toHaveAttribute('data-state', 'in-progress');
-    await expect(items.last()).toHaveAttribute('data-state', 'done');
+    // Tasks are private: the public view never renders the checklist, the task
+    // items, or the "new task" row, even though the profile declares tasks.
+    await expect(page.getByTestId('profile-checklist')).toHaveCount(0);
+    await expect(page.getByTestId('profile-checklist-item')).toHaveCount(0);
+    await expect(page.getByTestId('profile-new-task-row')).toHaveCount(0);
+    await expect(page.getByTestId('profile-new-task-input')).toHaveCount(0);
   });
 
-  test('new-task row deeplinks into the topbar search to create a task', async ({ page }) => {
-    await seedPublicProfile(page);
-    await page.goto(`/@${SEED_HANDLE}`);
-
-    await expect(page.getByTestId('profile-new-task-row')).toBeVisible();
-    await page.getByTestId('profile-new-task-input').fill('Ship the landing page');
-    await page.getByTestId('profile-new-task-input').press('Enter');
-
-    await expect(page.getByTestId('kefine-topbar-search-dialog')).toBeVisible();
-    await expect(page.getByTestId('kefine-topbar-search-input')).toHaveValue('Ship the landing page');
-    const createTaskResult = page.getByTestId('kefine-topbar-search-result-create-task');
-    await expect(createTaskResult).toBeVisible();
-    await expect(createTaskResult).toContainText('Ship the landing page');
-  });
-
-  test('declared widgets are not shown statically but are surfaced by a matching query', async ({
-    page
-  }) => {
+  test('renders declared widgets directly inside the public profile', async ({ page }) => {
     await seedPublicProfile(page);
     await page.goto(`/@${SEED_HANDLE}`);
 
     await expect(page.getByTestId('profile-repo')).toBeVisible();
 
-    // No widget renders statically on the public profile.
-    await expect(page.getByTestId('kefine-weather-widget')).toHaveCount(0);
-    await expect(page.getByTestId('kefine-music-widget')).toHaveCount(0);
-
-    // The declared weather widget only appears once the visitor searches for it.
-    await page.getByTestId('kefine-topbar-search-trigger').click();
-    await expect(page.getByTestId('kefine-topbar-search-dialog')).toBeVisible();
-    await page.getByTestId('kefine-topbar-search-input').fill('weather');
-
-    const weatherResult = page.getByTestId('kefine-topbar-search-result-widget-weather');
-    await expect(weatherResult).toBeVisible();
-    await weatherResult.click();
-
-    await expect(page.getByTestId('kefine-topbar-search-widget')).toHaveAttribute(
-      'data-widget',
-      'weather'
-    );
-    await expect(page.getByTestId('kefine-weather-widget')).toBeVisible();
-
-    // A widget the profile did not declare (translate) is not offered.
-    await page.getByTestId('kefine-topbar-search-widget-back').click();
-    await page.getByTestId('kefine-topbar-search-input').fill('translate');
-    await expect(page.getByTestId('kefine-topbar-search-result-widget-translate')).toHaveCount(0);
+    // Widgets live directly inside the profile (not behind the command palette):
+    // both declared blocks render statically, and the music widget — which needs
+    // no network or geolocation — is visible inline.
+    await expect(page.getByTestId('profile-widgets')).toBeVisible();
+    await expect(page.getByTestId('profile-widget')).toHaveCount(2);
+    await expect(page.getByTestId('kefine-music-widget')).toBeVisible();
   });
 });

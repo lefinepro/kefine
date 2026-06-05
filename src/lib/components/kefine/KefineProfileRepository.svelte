@@ -61,8 +61,13 @@
   // Mirror the solvers screen: typing a task in the README "new task" row opens
   // the command palette with a "Create task" result that hands the query off to
   // the home composer — a profile is a repository, so its tasks start the same
-  // way.
+  // way. Tasks are private: only the owner sees the checklist and the new-task
+  // row, so the create-task palette item is only registered for the owner.
   $effect(() => {
+    if (!isOwner) {
+      return;
+    }
+
     const items: TopbarSearchItem[] = [
       {
         id: 'create-task',
@@ -116,6 +121,9 @@
     {/if}
   </lef-repo-readme>
 
+  {#if isOwner}
+  <!-- Tasks are private: the checklist and the new-task row only render for the
+       owner so a profile's task list never leaks into the public view. -->
   <lef-repo-checklist aria-label={localeText.profile.repoChecklistAria} data-testid="profile-checklist">
     {#each todos as todo (todo.id)}
       {@const statusKind = todoStatusKind(todo.state)}
@@ -169,7 +177,6 @@
       </lef-todo-solver-cell>
     </lef-repo-checklist-item>
   </lef-repo-checklist>
-  {#if isOwner}
     <lef-profile-repo-note>{localeText.profile.tasksOwnerHint}</lef-profile-repo-note>
   {/if}
 </lef-profile-repo>
