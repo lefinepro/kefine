@@ -770,13 +770,8 @@ export const KEFINE_TEXT_HY = {
     publicHint: 'Workspace-ը հիմա հանրային է։ Այն կարող են գտնել, հետևել և օգտագործել առաջադրանքներ ներգրավելու համար։',
     privateHint: 'Workspace-ը փակ է։ Բացեք կողպեքը՝ այն հանրային դարձնելու և առաջադրանքներ ներգրավելու համար։',
     socialLinks: 'Սոցիալական հղումներ',
-    secretData: 'Գաղտնի տվյալներ',
-    sshPublicKey: 'SSH հանրային բանալի',
-    sshPublicKeyHint: 'Տեղադրեք SSH հանրային բանալին, որը պետք է թույլատրվի repo download և clone access-ի համար։',
-    privateKey: 'Private key',
-    privateKeyHint: 'Ձեր գեներացված workspace private key-ը կհայտնվի այստեղ։',
-    copyPrivateKey: 'Պատճենել private key-ը',
-    privateKeyCopied: 'Private key-ը պատճենված է',
+    sshPublicKeys: 'SSH հանրային բանալիներ',
+    sshPublicKeysHint: 'Տեղադրեք մեկ SSH հանրային բանալի յուրաքանչյուր տողում՝ repo download և clone access-ի համար։',
     socialLabel: 'Պիտակ',
     socialUrl: 'URL',
     addLink: 'Ավելացնել հղում',
@@ -879,9 +874,7 @@ export const KEFINE_TEXT_HY = {
     widgetProxyLabel: 'Պրոքսի',
     widgetTypeHint: 'ActivityStreams օբյեկտի տեսակ',
     publicZoneTitle: 'Հանրային պրոֆիլ',
-    publicZoneHint: 'Ձեր workspace-ի այս մասը տեսանելի է բոլորին։',
-    privateZoneTitle: 'Մասնավոր գոտի',
-    privateZoneHint: 'Սա տեսնում և խմբագրում եք միայն դուք։ Այն երբեք չի հայտնվում ձեր հանրային workspace-ում։',
+    publicZoneHint: 'Հանրային պրոֆիլի տվյալներ և SSH հանրային բանալիներ repo access-ի համար։',
     repoReadmeAria: 'Պրոֆիլի README',
     repoChecklistAria: 'Պրոֆիլի առաջադրանքներ',
     newTaskPlaceholder: 'Նոր առաջադրանք',
@@ -891,7 +884,7 @@ export const KEFINE_TEXT_HY = {
     tasksHint:
       'Ձեր պրոֆիլը պահոց է. թվարկեք առաջադրանքները որպես Org վերնագրեր՝ * TODO, * IN PROGRESS կամ * DONE։ Դրանք ցուցադրվում են որպես հանրային ստուգաթերթ։',
     tasksInsertExample: 'Տեղադրել օրինակ',
-    tasksOwnerHint: 'Խմբագրեք այս առաջադրանքները ստորև՝ մասնավոր գոտում։'
+    tasksOwnerHint: 'Այս առաջադրանքները փակ են և տեսանելի են միայն workspace-ի տիրոջը։'
   },
   solversView: {
     ...KEFINE_TEXT_EN.solversView,

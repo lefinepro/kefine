@@ -24,6 +24,10 @@ const SEED_WIDGETS_ORG = [
   '#+begin_weather',
   '#+end_weather'
 ].join('\n');
+const SEED_SSH_PUBLIC_KEYS = [
+  'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDemoKeyOne demo-one',
+  'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDemoKeyTwo demo-two'
+].join('\n');
 
 async function seedPublicProfile(page: Page) {
   await page.addInitScript(
@@ -48,13 +52,17 @@ async function seedPublicProfile(page: Page) {
       };
       window.localStorage.setItem('kefine-profiles-v1', JSON.stringify([profile]));
     },
-    { handle: SEED_HANDLE, tasksOrg: SEED_TASKS_ORG, widgetsOrg: SEED_WIDGETS_ORG }
+    {
+      handle: SEED_HANDLE,
+      tasksOrg: SEED_TASKS_ORG,
+      widgetsOrg: SEED_WIDGETS_ORG
+    }
   );
 }
 
 async function seedOwnerProfile(page: Page) {
   await page.addInitScript(
-    ({ handle, tasksOrg, widgetsOrg }) => {
+    ({ handle, tasksOrg, widgetsOrg, sshPublicKeys }) => {
       const profile = {
         id: 'profile-demo',
         userId: 'user-demo',
@@ -78,7 +86,12 @@ async function seedOwnerProfile(page: Page) {
         followingCount: 0,
         createdAt: '2024-01-01T00:00:00.000Z',
         updatedAt: '2024-01-01T00:00:00.000Z',
-        metadata: { tasksOrg, widgetsOrg, profileSetupCompleted: true }
+        metadata: {
+          tasksOrg,
+          widgetsOrg,
+          profileSetupCompleted: true,
+          sshPublicKeys: sshPublicKeys.split('\n')
+        }
       };
       window.localStorage.setItem('kefine-profiles-v1', JSON.stringify([profile]));
       window.localStorage.setItem(
@@ -95,7 +108,12 @@ async function seedOwnerProfile(page: Page) {
         })
       );
     },
-    { handle: SEED_HANDLE, tasksOrg: SEED_TASKS_ORG, widgetsOrg: SEED_WIDGETS_ORG }
+    {
+      handle: SEED_HANDLE,
+      tasksOrg: SEED_TASKS_ORG,
+      widgetsOrg: SEED_WIDGETS_ORG,
+      sshPublicKeys: SEED_SSH_PUBLIC_KEYS
+    }
   );
 }
 
@@ -152,5 +170,54 @@ test.describe('Profile repository view', () => {
 
     expect(metrics.fontSize).toBeLessThanOrEqual(15);
     expect(metrics.rowHeight).toBeLessThanOrEqual(44);
+  });
+
+  test('moves SSH public keys into the public editor and removes private key fields', async ({
+    page
+  }) => {
+    await seedOwnerProfile(page);
+    await page.goto(`/@${SEED_HANDLE}`);
+
+    await expect(page.getByTestId('profile-editor')).toBeVisible();
+    const publicZone = page.locator('lef-profile-zone[data-zone="public"]');
+    await expect(publicZone.getByTestId('profile-ssh-public-keys')).toHaveValue(SEED_SSH_PUBLIC_KEYS);
+    await expect(page.locator('lef-profile-zone[data-zone="private"]')).toHaveCount(0);
+    await expect(page.getByText('Private key', { exact: true })).toHaveCount(0);
+    await expect(page.getByText('Short info', { exact: true })).toHaveCount(0);
+  });
+
+  test('saves multiple SSH public keys as a plural payload', async ({ page }) => {
+    let sshPayload: { publicKeys?: string[] } | null = null;
+    await page.route(`**/actor/${SEED_HANDLE}/keys/ssh`, async (route) => {
+      sshPayload = route.request().postDataJSON() as { publicKeys?: string[] };
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          actorHandle: SEED_HANDLE,
+          publicKey: sshPayload.publicKeys?.[0] ?? '',
+          publicKeys: sshPayload.publicKeys ?? []
+        })
+      });
+    });
+
+    await seedOwnerProfile(page);
+    await page.goto(`/@${SEED_HANDLE}`);
+
+    const publicKeys = page.getByTestId('profile-ssh-public-keys');
+    await publicKeys.fill(`${SEED_SSH_PUBLIC_KEYS}\n${SEED_SSH_PUBLIC_KEYS.split('\n')[0]}`);
+    await page.getByRole('button', { name: 'Save workspace' }).click();
+
+    await expect
+      .poll(() => sshPayload?.publicKeys?.length ?? 0)
+      .toBe(2);
+    expect(sshPayload?.publicKeys).toEqual(SEED_SSH_PUBLIC_KEYS.split('\n'));
+
+    const storedMetadata = await page.evaluate(() => {
+      const [profile] = JSON.parse(window.localStorage.getItem('kefine-profiles-v1') ?? '[]');
+      return profile?.metadata;
+    });
+    expect(storedMetadata.sshPublicKeys).toEqual(SEED_SSH_PUBLIC_KEYS.split('\n'));
+    expect(storedMetadata.sshPublicKey).toBe(SEED_SSH_PUBLIC_KEYS.split('\n')[0]);
   });
 });

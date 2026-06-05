@@ -12,7 +12,6 @@
   import type { Component } from 'svelte';
   import { disconnectAppKit } from '$lib/auth/appkit';
   import { authState, clearAuthState, hydrateAuthStateFromSession } from '$lib/auth/auth-store.svelte.js';
-  import { loadGeneratedPrivateKeyCookie, saveGeneratedPrivateKeyCookie } from '$lib/auth/publickey-cookie';
   import { clearPasskeySession, loadPasskeySession, passkeySessionStore } from '$lib/auth/passkey-session';
   import { parseStoredOrders } from '$lib/components/kefine/kefine-workflow';
   import { shortenAuthLabel } from '$lib/components/kefine/kefine-workspace-helpers';
@@ -64,7 +63,6 @@
   let viewerProfile = $state<Profile | null>(null);
   let unavailable = $state(false);
   let following = $state(false);
-  let copyState = $state<'idle' | 'profile'>('idle');
   let Workspace: Component<{
     initialActorHandle?: string;
     initialSearchQuery?: string;
@@ -77,11 +75,10 @@
   let isPublic = $state(false);
   let referralPercent = $state(10);
   let socialLinks = $state<ProfileSocialLink[]>([]);
-  let sshPublicKey = $state('');
+  let sshPublicKeys = $state('');
   let widgetsOrg = $state('');
   let tasksOrg = $state('');
   let socialOrgState = $state<'idle' | 'copied'>('idle');
-  let privateKey = $state('');
   let firstName = $state('');
   let surname = $state('');
   let leftNavExpanded = $state(false);
@@ -239,6 +236,28 @@
     return { id, type: 'website', label: 'Website', value: '' };
   }
 
+  function normalizeSshPublicKeyText(value: string): string[] {
+    const seen = new Set<string>();
+    return value
+      .split(/\r?\n/)
+      .map((key) => key.trim().replace(/\s+/g, ' '))
+      .filter((key) => {
+        if (!key || seen.has(key)) {
+          return false;
+        }
+        seen.add(key);
+        return true;
+      });
+  }
+
+  function readProfileSshPublicKeys(metadata: ProfileMetadata | undefined): string[] {
+    const keys = Array.isArray(metadata?.sshPublicKeys)
+      ? metadata.sshPublicKeys.filter((key): key is string => typeof key === 'string')
+      : [];
+    const legacyKey = typeof metadata?.sshPublicKey === 'string' ? metadata.sshPublicKey : '';
+    return normalizeSshPublicKeyText([...keys, legacyKey].join('\n'));
+  }
+
   function syncDraftStateFromProfile(nextProfile: Profile | null) {
     displayName = nextProfile?.displayName ?? '';
     username = nextProfile?.primaryHandle ?? '';
@@ -249,33 +268,13 @@
     if (viewerProfile && nextProfile && viewerProfile.id === nextProfile.id && socialLinks.length === 0) {
       socialLinks = [createEmptySocialLink()];
     }
-    sshPublicKey = typeof nextProfile?.metadata?.sshPublicKey === 'string' ? nextProfile.metadata.sshPublicKey : '';
+    sshPublicKeys = readProfileSshPublicKeys(nextProfile?.metadata as ProfileMetadata | undefined).join('\n');
     widgetsOrg = typeof nextProfile?.metadata?.widgetsOrg === 'string' ? nextProfile.metadata.widgetsOrg : '';
     tasksOrg =
       typeof nextProfile?.metadata?.tasksOrg === 'string' ? nextProfile.metadata.tasksOrg : DEFAULT_PROFILE_TASKS_ORG;
     const nameParts = readProfileNameParts(nextProfile);
     firstName = nameParts.firstName;
     surname = nameParts.surname;
-  }
-
-  function syncPrivateKeyState() {
-    if (!browser) {
-      privateKey = '';
-      return;
-    }
-
-    // The private key is generated automatically as a string and persisted so it
-    // stays stable across reloads. Owners never type it; they only copy it from
-    // the private settings zone. A missing or empty cookie is (re)seeded here.
-    const stored = loadGeneratedPrivateKeyCookie();
-    if (stored && stored.trim()) {
-      privateKey = stored;
-      return;
-    }
-
-    const generated = createRandomSlug(48);
-    saveGeneratedPrivateKeyCookie(generated);
-    privateKey = generated;
   }
 
   function buildDefaultActorProfile(): Profile | null {
@@ -351,7 +350,6 @@
     mediaQuery.addEventListener('change', handleThemePreferenceChange);
     hydrateAuthStateFromSession();
     loadPasskeySession();
-    syncPrivateKeyState();
 
     return () => {
       mediaQuery.removeEventListener('change', handleThemePreferenceChange);
@@ -372,8 +370,6 @@
     if (!browser) {
       return;
     }
-
-    syncPrivateKeyState();
 
     const currentPasskeySession = passkeySession;
     const userId = currentPasskeySession?.userId || authState.userId?.trim() || authState.email?.trim().toLowerCase() || authState.address?.trim();
@@ -433,24 +429,24 @@
     socialLinks = socialLinks.filter((link) => link.id !== id);
   }
 
-  async function syncSshPublicKey(handle: string, publicKey: string) {
+  async function syncSshPublicKeys(handle: string, publicKeys: string[]) {
     if (!browser) {
       return;
     }
 
     const url = `/actor/${encodeURIComponent(handle)}/keys/ssh`;
-    if (publicKey.trim()) {
+    if (publicKeys.length > 0) {
       const response = await fetch(url, {
         method: 'PUT',
         headers: {
           'content-type': 'application/json'
         },
         body: JSON.stringify({
-          publicKey: publicKey.trim()
+          publicKeys
         })
       });
       if (!response.ok) {
-        throw new Error('Failed to save SSH public key on the server.');
+        throw new Error('Failed to save SSH public keys on the server.');
       }
       return;
     }
@@ -459,44 +455,8 @@
       method: 'DELETE'
     });
     if (!response.ok) {
-      throw new Error('Failed to delete SSH public key on the server.');
+      throw new Error('Failed to delete SSH public keys on the server.');
     }
-  }
-
-  async function copyLink(value: string, kind: 'profile') {
-    if (!browser || !navigator.clipboard) {
-      return;
-    }
-
-    await navigator.clipboard.writeText(value);
-    copyState = kind;
-    window.setTimeout(() => {
-      if (copyState === kind) {
-        copyState = 'idle';
-      }
-    }, 1400);
-  }
-
-  async function copyPrivateKey() {
-    if (!privateKey.trim()) {
-      return;
-    }
-
-    await copyLink(privateKey, 'profile');
-  }
-
-  function createRandomSlug(length: number): string {
-    const alphabet = 'abcdefghijklmnopqrstuvwxyz0123456789';
-    if (typeof crypto !== 'undefined' && 'getRandomValues' in crypto) {
-      const values = crypto.getRandomValues(new Uint32Array(length));
-      return Array.from(values, (value) => alphabet[value % alphabet.length]).join('');
-    }
-
-    let slug = '';
-    while (slug.length < length) {
-      slug += Math.random().toString(36).slice(2);
-    }
-    return slug.slice(0, length);
   }
 
   // Build a `social.org` (org-social) document from the current draft so owners
@@ -593,6 +553,7 @@
 
     const nextHandle = resolveNextUsername(profile);
     const fullName = `${firstName.trim()} ${surname.trim()}`.trim();
+    const normalizedSshPublicKeys = normalizeSshPublicKeyText(sshPublicKeys);
     const updated = updateStoredProfile(localStorage, profile.id, (current) => ({
       ...current,
       username: nextHandle,
@@ -611,14 +572,15 @@
       metadata: nextMetadata(current, {
         firstName: firstName.trim(),
         surname: surname.trim(),
-        sshPublicKey: sshPublicKey.trim(),
+        sshPublicKey: normalizedSshPublicKeys[0] ?? undefined,
+        sshPublicKeys: normalizedSshPublicKeys,
         widgetsOrg: widgetsOrg.trim(),
         tasksOrg: tasksOrg.trim()
       })
     }));
 
     if (updated) {
-      await syncSshPublicKey(updated.primaryHandle, sshPublicKey.trim());
+      await syncSshPublicKeys(updated.primaryHandle, normalizedSshPublicKeys);
       syncOwnedOrderHandles(updated.id, updated.primaryHandle);
       profile = updated;
       await navigateToProfileHandle(updated.primaryHandle);
@@ -1000,18 +962,12 @@
                 </lefine-box>
 
                 <!-- Public zone: everything here is visible on the public
-                     workspace. Keeping it separate from the private settings
-                     below makes the public/private split explicit and consistent. -->
+                     workspace, including repository SSH public keys. -->
                 <lef-profile-zone data-zone="public">
                   <lefine-box class="profile-zone__head">
                     <strong>{localeText.profile.publicZoneTitle}</strong>
                     <p>{localeText.profile.publicZoneHint}</p>
                   </lefine-box>
-
-                  <label class="profile-field">
-                    <lefine-text>{localeText.profile.bio}</lefine-text>
-                    <textarea bind:value={bio} rows="4"></textarea>
-                  </label>
 
                   <lefine-box class="profile-links-column">
                     <lefine-box class="profile-links-head">
@@ -1027,33 +983,16 @@
                       {isOwner}
                     />
                   </lefine-box>
-                </lef-profile-zone>
-
-                <!-- Private zone (settings): owner-only secrets that never leave
-                     the workspace — the SSH key and the auto-generated private key. -->
-                <lef-profile-zone data-zone="private">
-                  <lefine-box class="profile-zone__head">
-                    <strong>{localeText.profile.privateZoneTitle}</strong>
-                    <p>{localeText.profile.privateZoneHint}</p>
-                  </lefine-box>
 
                   <lefine-box class="profile-links-column">
-                    <lefine-box class="profile-links-head">
-                      <strong>{localeText.profile.secretData}</strong>
-                    </lefine-box>
                     <label class="profile-field">
-                      <lefine-text>{localeText.profile.sshPublicKey}</lefine-text>
-                      <textarea bind:value={sshPublicKey} rows="6" placeholder={localeText.profile.sshPublicKeyHint}></textarea>
-                    </label>
-                    <label class="profile-field">
-                      <lefine-box class="profile-secret-field-head">
-                        <lefine-text>{localeText.profile.privateKey}</lefine-text>
-                        <button type="button" data-variant="ghost" onclick={copyPrivateKey} disabled={!privateKey.trim()}>
-                          {copyState === 'profile' ? localeText.profile.privateKeyCopied : localeText.profile.copyPrivateKey}
-                        </button>
-                      </lefine-box>
-                      <!-- Auto-generated as a string; the owner only copies it. -->
-                      <textarea value={privateKey} rows="8" readonly placeholder={localeText.profile.privateKeyHint}></textarea>
+                      <lefine-text>{localeText.profile.sshPublicKeys}</lefine-text>
+                      <textarea
+                        data-testid="profile-ssh-public-keys"
+                        bind:value={sshPublicKeys}
+                        rows="5"
+                        placeholder={localeText.profile.sshPublicKeysHint}
+                      ></textarea>
                     </label>
                   </lefine-box>
                 </lef-profile-zone>
@@ -1276,9 +1215,8 @@
     border-color: color-mix(in oklab, var(--kef-color-primary) 22%, transparent);
   }
 
-  /* Public and private zones share the same quiet card so the editor reads as
-     two clearly separated halves: what visitors see, and the owner-only
-     settings. The private zone is tinted to reinforce the boundary. */
+  /* Public profile settings share the same quiet surface as the visibility
+     control, without adding another nested card. */
   lef-profile-zone {
     display: grid;
     gap: 0.85rem;
@@ -1286,11 +1224,6 @@
     border-radius: 0.85rem;
     border: 1px solid color-mix(in oklab, var(--kef-color-text) 8%, transparent);
     background: color-mix(in oklab, var(--kef-color-bg) 45%, var(--kef-color-bg-card));
-  }
-
-  lef-profile-zone[data-zone='private'] {
-    background: color-mix(in oklab, var(--kef-color-text) 4%, var(--kef-color-bg-card));
-    border-color: color-mix(in oklab, var(--kef-color-text) 12%, transparent);
   }
 
   .profile-zone__head {
@@ -1372,13 +1305,6 @@
   .profile-links-head {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-  }
-
-  .profile-secret-field-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
     gap: 0.75rem;
   }
 

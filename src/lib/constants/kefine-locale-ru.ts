@@ -798,13 +798,8 @@ export const KEFINE_TEXT_RU = {
     publicHint: 'Workspace теперь публичный. Его можно находить, на него можно подписываться и через него можно привлекать задачи.',
     privateHint: 'Workspace приватный. Откройте замок, чтобы сделать его публичным и привлекать задачи.',
     socialLinks: 'Социальные ссылки',
-    secretData: 'Секретные данные',
-    sshPublicKey: 'Публичный SSH-ключ',
-    sshPublicKeyHint: 'Вставьте публичный SSH-ключ, который нужно авторизовать для скачивания и clone доступа к репозиториям.',
-    privateKey: 'Приватный ключ',
-    privateKeyHint: 'Здесь будет показан сгенерированный приватный ключ workspace.',
-    copyPrivateKey: 'Скопировать приватный ключ',
-    privateKeyCopied: 'Приватный ключ скопирован',
+    sshPublicKeys: 'Публичные SSH-ключи',
+    sshPublicKeysHint: 'Вставьте по одному публичному SSH-ключу на строку для скачивания и clone доступа к репозиториям.',
     socialLabel: 'Название',
     socialUrl: 'Ссылка',
     addLink: 'Добавить ссылку',
@@ -907,9 +902,7 @@ export const KEFINE_TEXT_RU = {
     widgetProxyLabel: 'Прокси',
     widgetTypeHint: 'Тип объекта ActivityStreams',
     publicZoneTitle: 'Публичный профиль',
-    publicZoneHint: 'Эту часть вашего workspace видят все.',
-    privateZoneTitle: 'Приватная зона',
-    privateZoneHint: 'Это видите и редактируете только вы. Это никогда не появляется в публичном workspace.',
+    publicZoneHint: 'Публичные данные профиля и публичные SSH-ключи для доступа к репозиториям.',
     repoReadmeAria: 'README профиля',
     repoChecklistAria: 'Задачи профиля',
     newTaskPlaceholder: 'Новая задача',
@@ -919,7 +912,7 @@ export const KEFINE_TEXT_RU = {
     tasksHint:
       'Ваш профиль — это репозиторий: перечислите задачи как Org-заголовки — * TODO, * IN PROGRESS или * DONE. Они отображаются в публичном чек-листе.',
     tasksInsertExample: 'Вставить пример',
-    tasksOwnerHint: 'Редактируйте эти задачи в приватной зоне ниже.'
+    tasksOwnerHint: 'Эти задачи приватные и видны только владельцу workspace.'
   },
   solversView: {
     tasksAside: 'Задачи',

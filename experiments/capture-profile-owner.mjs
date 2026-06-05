@@ -1,14 +1,12 @@
 import { spawn } from 'node:child_process';
-import { existsSync, mkdirSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
 
-// Captures the OWNER view of the profile-as-repository (issue #130): the flat
-// repository panel followed by the redesigned owner editor — the single polished
-// public/private lock chip, the "two pluses" social/secret columns, and the
-// restored animated bonus card wired to /api/profile/bin-lookup. This is the
-// surface that carries most of the reviewer's refinement feedback.
+// Captures the OWNER view of the profile-as-repository: the flat repository
+// panel followed by the public editor with compact social links and public SSH
+// keys. Private-key profile fields are intentionally absent.
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '..');
@@ -29,7 +27,7 @@ const demoProfile = {
   email: 'demo@lefine.pro',
   bio: 'Freelance Go and SwiftUI builder. I ship reliable solver flows.',
   isPublic: true,
-  socialLinks: [{ id: 'link-1', label: 'GitHub', url: 'https://github.com/demo' }],
+  socialLinks: [{ id: 'link-1', label: 'GitHub', value: 'https://github.com/demo' }],
   referralPercent: 10,
   bonusBalanceUsd: 0,
   followersCount: 0,
@@ -39,6 +37,10 @@ const demoProfile = {
   metadata: {
     profileSetupCompleted: true,
     profileSetupStep: 'done',
+    sshPublicKeys: [
+      'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDemoKeyOne demo-one',
+      'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDemoKeyTwo demo-two'
+    ],
     tasksOrg: [
       '* TODO Introduce yourself in the bio',
       '* TODO Add a link people can follow',
@@ -157,10 +159,14 @@ try {
   await page.waitForSelector('[data-testid="profile-editor"]');
   await page.waitForTimeout(800);
 
-  // 1. Full owner view — flat repo panel + redesigned editor + bonus card.
+  // Full owner view — flat repo panel + public editor with compact social rows
+  // and plural SSH public keys.
   const overview = path.join(outDir, 'profile-owner-editor.png');
   await page.screenshot({ path: overview, fullPage: true });
   console.log(`saved ${path.relative(root, overview)}`);
+  const prOverview = path.join(outDir, 'owner-profile.png');
+  copyFileSync(overview, prOverview);
+  console.log(`saved ${path.relative(root, prOverview)}`);
 
   await browser.close();
 } finally {

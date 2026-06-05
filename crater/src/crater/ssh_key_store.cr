@@ -1,10 +1,15 @@
 require "db"
+require "json"
 require "pg"
+require "set"
 
 require "./utils/config"
 
 module Lepos
   module SshKeyStore
+    TABLE_NAME        = "actor_ssh_public_keys"
+    LEGACY_TABLE_NAME = "actor_ssh_keys"
+
     class KeyRecord
       property actor_handle : String
       property public_key : String
@@ -30,6 +35,19 @@ module Lepos
       end
     end
 
+    private def self.migrate_legacy_table(config : Utils::Config) : Nil
+      db = database(config)
+      db.exec <<-SQL
+        INSERT INTO #{TABLE_NAME} (actor_handle, public_key, created_at, updated_at)
+        SELECT actor_handle, public_key, created_at, updated_at
+        FROM #{LEGACY_TABLE_NAME}
+        WHERE public_key IS NOT NULL AND public_key <> ''
+        ON CONFLICT (actor_handle, public_key) DO NOTHING
+      SQL
+    rescue DB::Error
+      # Fresh installations do not have the legacy single-key table.
+    end
+
     private def self.setup(config : Utils::Config) : Nil
       db = database(config)
       return if @@ready
@@ -38,14 +56,16 @@ module Lepos
         return if @@ready
 
         db.exec <<-SQL
-          CREATE TABLE IF NOT EXISTS actor_ssh_keys (
-            actor_handle TEXT PRIMARY KEY,
+          CREATE TABLE IF NOT EXISTS #{TABLE_NAME} (
+            actor_handle TEXT NOT NULL,
             public_key TEXT NOT NULL,
             created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL
+            updated_at TEXT NOT NULL,
+            PRIMARY KEY (actor_handle, public_key)
           )
         SQL
 
+        migrate_legacy_table(config)
         @@ready = true
       end
     end
@@ -64,6 +84,26 @@ module Lepos
       raise ArgumentError.new("SSH public key body is invalid.") if parts[1].strip.empty?
 
       parts.join(" ")
+    end
+
+    private def self.normalize_public_keys(values : Array(String)) : Array(String)
+      seen = Set(String).new
+      normalized_keys = [] of String
+
+      values.each do |value|
+        value.lines.each do |line|
+          stripped = line.strip
+          next if stripped.empty?
+
+          key = normalize_public_key(stripped)
+          next if seen.includes?(key)
+
+          seen.add(key)
+          normalized_keys << key
+        end
+      end
+
+      normalized_keys
     end
 
     private def self.hydrate_record(row : {String, String, String, String}) : KeyRecord
@@ -118,45 +158,58 @@ module Lepos
     end
 
     def self.find_by_actor(actor_handle : String, config : Utils::Config = Utils::Config.load) : KeyRecord?
+      list_by_actor(actor_handle, config).first?
+    end
+
+    def self.list_by_actor(actor_handle : String, config : Utils::Config = Utils::Config.load) : Array(KeyRecord)
       setup(config)
-      row = database(config).query_one?(
-        "SELECT actor_handle, public_key, created_at, updated_at FROM actor_ssh_keys WHERE actor_handle = $1",
+      database(config).query_all(
+        "SELECT actor_handle, public_key, created_at, updated_at FROM #{TABLE_NAME} WHERE actor_handle = $1 ORDER BY created_at ASC, public_key ASC",
         normalize_handle(actor_handle),
         as: {String, String, String, String}
-      )
-      row ? hydrate_record(row) : nil
+      ).map { |row| hydrate_record(row) }
     end
 
     def self.list(config : Utils::Config = Utils::Config.load) : Array(KeyRecord)
       setup(config)
       database(config).query_all(
-        "SELECT actor_handle, public_key, created_at, updated_at FROM actor_ssh_keys ORDER BY actor_handle ASC",
+        "SELECT actor_handle, public_key, created_at, updated_at FROM #{TABLE_NAME} ORDER BY actor_handle ASC, created_at ASC, public_key ASC",
         as: {String, String, String, String}
       ).map { |row| hydrate_record(row) }
     end
 
-    def self.upsert_for_actor(actor_handle : String, public_key : String, config : Utils::Config = Utils::Config.load) : KeyRecord
+    def self.replace_for_actor(actor_handle : String, public_keys : Array(String), config : Utils::Config = Utils::Config.load) : Array(KeyRecord)
       setup(config)
       now = current_time
       normalized_actor = normalize_handle(actor_handle)
-      normalized_key = normalize_public_key(public_key)
+      normalized_keys = normalize_public_keys(public_keys)
+      db = database(config)
 
-      database(config).exec <<-SQL, normalized_actor, normalized_key, now, now
-        INSERT INTO actor_ssh_keys (actor_handle, public_key, created_at, updated_at)
-        VALUES ($1, $2, $3, $4)
-        ON CONFLICT (actor_handle) DO UPDATE SET
-          public_key = EXCLUDED.public_key,
-          updated_at = EXCLUDED.updated_at
-      SQL
+      db.exec("DELETE FROM #{TABLE_NAME} WHERE actor_handle = $1", normalized_actor)
+      normalized_keys.each do |public_key|
+        db.exec <<-SQL, normalized_actor, public_key, now, now
+          INSERT INTO #{TABLE_NAME} (actor_handle, public_key, created_at, updated_at)
+          VALUES ($1, $2, $3, $4)
+          ON CONFLICT (actor_handle, public_key) DO UPDATE SET
+            updated_at = EXCLUDED.updated_at
+        SQL
+      end
 
       rewrite_authorized_keys(config)
-      find_by_actor(normalized_actor, config).not_nil!
+      list_by_actor(normalized_actor, config)
+    end
+
+    def self.upsert_for_actor(actor_handle : String, public_key : String, config : Utils::Config = Utils::Config.load) : KeyRecord
+      records = replace_for_actor(actor_handle, [public_key], config)
+      raise ArgumentError.new("SSH public key is required.") if records.empty?
+
+      records.first
     end
 
     def self.delete_for_actor(actor_handle : String, config : Utils::Config = Utils::Config.load) : Bool
       setup(config)
       normalized_actor = normalize_handle(actor_handle)
-      result = database(config).exec("DELETE FROM actor_ssh_keys WHERE actor_handle = $1", normalized_actor)
+      result = database(config).exec("DELETE FROM #{TABLE_NAME} WHERE actor_handle = $1", normalized_actor)
       rewrite_authorized_keys(config)
       result.rows_affected > 0
     end
@@ -167,13 +220,22 @@ module Lepos
       end
     end
 
-    def self.to_json_payload(record : KeyRecord) : Hash(String, JSON::Any)
+    def self.to_json_payload(actor_handle : String, records : Array(KeyRecord)) : Hash(String, JSON::Any)
+      public_keys = records.map(&.public_key)
+      created_at = records.map(&.created_at).min? || current_time
+      updated_at = records.map(&.updated_at).max? || created_at
+
       {
-        "actorHandle" => JSON::Any.new(record.actor_handle),
-        "publicKey"   => JSON::Any.new(record.public_key),
-        "createdAt"   => JSON::Any.new(record.created_at),
-        "updatedAt"   => JSON::Any.new(record.updated_at),
+        "actorHandle" => JSON::Any.new(records.first?.try(&.actor_handle) || normalize_handle(actor_handle)),
+        "publicKey"   => JSON::Any.new(public_keys.first? || ""),
+        "publicKeys"  => JSON::Any.new(public_keys.map { |public_key| JSON::Any.new(public_key) }),
+        "createdAt"   => JSON::Any.new(created_at),
+        "updatedAt"   => JSON::Any.new(updated_at),
       }
+    end
+
+    def self.to_json_payload(record : KeyRecord) : Hash(String, JSON::Any)
+      to_json_payload(record.actor_handle, [record])
     end
   end
 end

@@ -796,13 +796,8 @@ export const KEFINE_TEXT_EN = {
     publicHint: 'Your workspace is public now. People can discover it, follow it, and use it to attract tasks.',
     privateHint: 'Your workspace is private. Open the lock to make it public and attract tasks.',
     socialLinks: 'Social links',
-    secretData: 'Secret data',
-    sshPublicKey: 'SSH public key',
-    sshPublicKeyHint: 'Paste the public SSH key that should be authorized for repository download and clone access.',
-    privateKey: 'Private key',
-    privateKeyHint: 'Your generated workspace private key will appear here.',
-    copyPrivateKey: 'Copy private key',
-    privateKeyCopied: 'Private key copied',
+    sshPublicKeys: 'SSH public keys',
+    sshPublicKeysHint: 'Paste one public SSH key per line for repository download and clone access.',
     socialLabel: 'Label',
     socialUrl: 'URL',
     addLink: 'Add link',
@@ -905,9 +900,7 @@ export const KEFINE_TEXT_EN = {
     widgetProxyLabel: 'Proxy',
     widgetTypeHint: 'ActivityStreams object type',
     publicZoneTitle: 'Public profile',
-    publicZoneHint: 'Anyone can see this part of your workspace.',
-    privateZoneTitle: 'Private zone',
-    privateZoneHint: 'Only you can see and edit this. It never appears on your public workspace.',
+    publicZoneHint: 'Public profile data and public SSH keys for repository access.',
     repoReadmeAria: 'Profile README',
     repoChecklistAria: 'Profile tasks',
     newTaskPlaceholder: 'New task',
@@ -917,7 +910,7 @@ export const KEFINE_TEXT_EN = {
     tasksHint:
       'Your profile is a repository: list tasks as Org headings — #+TODO with * TODO, * IN PROGRESS or * DONE. They render as the public checklist.',
     tasksInsertExample: 'Insert example',
-    tasksOwnerHint: 'Edit these tasks in the editor below.'
+    tasksOwnerHint: 'These tasks are private and only visible to the workspace owner.'
   },
   solversView: {
     tasksAside: 'Tasks',
