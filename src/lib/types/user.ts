@@ -109,10 +109,6 @@ export interface ProfileMetadata extends Record<string, unknown> {
   profileSetupCompleted?: boolean;
   cardBonusEligible?: boolean;
   sshPublicKey?: string;
-  solverProfileId?: string;
-  solverProfileHandle?: string;
-  solverProfileToken?: string;
-  solverProfileCreatedAt?: string;
   /**
    * Org-format widget document for the public workspace. Holds `#+begin_<widget>`
    * blocks (weather, clock, …) that the profile screen renders inline and that
