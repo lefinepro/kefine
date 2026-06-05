@@ -4,6 +4,8 @@ require "./crater/aptok"
 require "./crater/handlers/webfinger"
 require "./crater/handlers/nodeinfo"
 require "./crater/handlers/actor"
+require "./crater/handlers/relay"
+require "./crater/handlers/solver_responses"
 require "./crater/handlers/inbox"
 require "./crater/handlers/outbox"
 require "./crater/handlers/orders"
@@ -57,6 +59,8 @@ module Lepos
     Handlers::WebFinger.register(config)
     Handlers::NodeInfo.register(config)
     Handlers::Actor.register(config)
+    Handlers::Relay.register(config)
+    Handlers::SolverResponses.register(config)
 
     # Aptok-backed federation inbox/outbox
     Handlers::Inbox.register(config)

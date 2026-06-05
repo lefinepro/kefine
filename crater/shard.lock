@@ -2,11 +2,15 @@ version: 2.0
 shards:
   aptok:
     git: https://github.com/lion-lef/aptok.git
-    version: 0.2.0+git.commit.4a2484ee4eb92aff12a72a53e73fdb4801252f40
+    version: 0.3.0+git.commit.05152dad0ae38b06eb2aef5e5dd5eee4cdad7995
 
   backtracer:
     git: https://github.com/sija/backtracer.cr.git
     version: 1.2.4
+
+  crater-openai:
+    git: https://github.com/lefinepro/crater-openai.git
+    version: 0.2.0+git.commit.d0919008d6cb53c492e5014e847010706898db93
 
   db:
     git: https://github.com/crystal-lang/crystal-db.git
@@ -32,7 +36,14 @@ shards:
     git: https://github.com/cogniframework/rcl.cr.git
     version: 1.0.0+git.commit.3e02abdbd86feceaa310a249c19cfc099afcb660
 
+  secp256k1:
+    git: https://github.com/q9f/secp256k1.cr.git
+    version: 0.5.0
+
+  sha3:
+    git: https://github.com/oscarbarrett/crystal-sha3.git
+    version: 0.3.2
+
   sqlite3:
     git: https://github.com/crystal-lang/crystal-sqlite3.git
     version: 0.21.0
-

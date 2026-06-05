@@ -21,6 +21,7 @@ export async function proxyCraterRequest(
     const origin = request.headers.get('origin');
     const referer = request.headers.get('referer');
     const userAgent = request.headers.get('user-agent');
+    const authorization = request.headers.get('authorization');
 
     let body: BodyInit | undefined;
     let headers: Record<string, string> = {
@@ -49,6 +50,12 @@ export async function proxyCraterRequest(
 
     if (userAgent) {
       headers['User-Agent'] = userAgent;
+    }
+
+    if (authorization) {
+      // Forward the solver bearer token so the platform can authenticate the
+      // service posting back to `/api/responses`.
+      headers['Authorization'] = authorization;
     }
 
     if (request.method !== 'GET' && request.method !== 'HEAD') {

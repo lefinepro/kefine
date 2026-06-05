@@ -1,6 +1,8 @@
 require "./spec_helper"
+require "aptok/testing"
 require "../src/crater/order_queue"
 require "../src/crater/forgefed_store"
+require "../src/crater/relay_service"
 require "../src/crater/utils/config"
 
 private def test_config : Lepos::Utils::Config
@@ -24,6 +26,11 @@ describe "Lepos Aptok federation payloads" do
     self_link["rel"].as_s.should eq("self")
     self_link["type"].as_s.should eq("application/activity+json")
     self_link["href"].as_s.should eq(config.actor_id)
+
+    relay_jrd = Lepos::AptokPayload.webfinger_jrd("acct:#{config.relay_actor_username}@#{config.domain}", config)
+    relay_link = relay_jrd["links"].as_a.first.as_h
+    relay_link["href"].as_s.should eq(config.relay_actor_id)
+    relay_jrd["aliases"].as_a.map(&.as_s).should contain(config.relay_actor_id)
 
     well_known = Lepos::AptokPayload.nodeinfo_well_known(config)
     nodeinfo_link = well_known["links"].as_a.first.as_h
@@ -50,6 +57,81 @@ describe "Lepos Aptok federation payloads" do
     actor.inbox.should eq(config.actor_inbox)
     actor.outbox.should eq(config.actor_outbox)
     actor.shared_inbox.should eq("#{config.crater_url}/inbox")
+  end
+
+  it "builds a relay actor document with Aptok relay vocabulary" do
+    config = test_config
+
+    actor_json = Lepos::AptokPayload.actor_json(config.relay_actor_username, config)
+    actor = Aptok::Vocab::Actor.from_json_ld(actor_json)
+
+    actor.id.should eq(config.relay_actor_id)
+    actor.type.should eq("Application")
+    actor.preferred_username.should eq(config.relay_actor_username)
+    actor.inbox.should eq(config.relay_inbox)
+    actor.outbox.should eq(config.relay_outbox)
+    actor.followers.should eq(config.relay_followers)
+    actor.shared_inbox.should eq("#{config.crater_url}/inbox")
+  end
+
+  it "classifies Mastodon relay follows as relay subscriptions" do
+    config = test_config
+    follow = Aptok::Relay.subscribe(
+      "https://remote.example/activities/follow-relay",
+      "https://remote.example/users/bot",
+      config.relay_actor_id
+    )
+
+    Aptok::Relay.subscription_protocol(follow, config.relay_actor_id).should eq(Aptok::Relay::Protocol::Mastodon)
+    Lepos::RelayService.control_activity?(follow, config).should be_true
+  end
+
+  it "stores relay subscribers and fans public activities out without echoing to the origin" do
+    config = test_config
+    store = Aptok::MemoryKvStore.new
+    transport = Aptok::CaptureTransport.new
+
+    origin_actor = Aptok.actor(
+      "Application",
+      "https://remote.example/users/origin",
+      "origin",
+      "https://remote.example/users/origin/inbox",
+      "https://remote.example/users/origin/outbox"
+    )
+    subscriber_actor = Aptok.actor(
+      "Application",
+      "https://subscriber.example/users/bot",
+      "subscriber",
+      "https://subscriber.example/users/bot/inbox",
+      "https://subscriber.example/users/bot/outbox"
+    )
+
+    [origin_actor, subscriber_actor].each do |actor_json|
+      actor_id = actor_json["id"].as_s
+      follow = Aptok::Relay.subscribe(
+        "#{actor_id}/activities/follow-relay",
+        actor_id,
+        config.relay_actor_id
+      )
+      follow["actor"] = Aptok.json(actor_json)
+
+      result = Lepos::RelayService.handle_control(follow, config, store, transport)
+      result.subscribed?.should be_true
+    end
+
+    Lepos::RelayService.subscriptions(config, store).size.should eq(2)
+
+    activity = Aptok.create(
+      "https://remote.example/activities/create-1",
+      origin_actor["id"].as_s,
+      Aptok.note("https://remote.example/notes/1", "Relay this task"),
+      [Aptok::PUBLIC_COLLECTION]
+    )
+
+    sent = Lepos::RelayService.relay_activity(activity, config, store, transport)
+    sent.size.should eq(1)
+    sent.first.recipient.id.should eq(subscriber_actor["id"].as_s)
+    sent.first.recipient.inbox.should eq(subscriber_actor["inbox"].as_s)
   end
 
   it "builds order activities with Aptok Create and ForgeFed Ticket payloads" do

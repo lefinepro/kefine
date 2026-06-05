@@ -94,6 +94,17 @@ Main sections:
     "exchangeBaseUrl": "https://lefine.pro/exchange",
     "databaseUrl": "postgresql://kefine:kefine@localhost:5432/kefine"
   },
+  "relay": {
+    "actorHandle": "relay",
+    "displayName": "Lepos Relay",
+    "services": [
+      {
+        "id": "http://127.0.0.1:4501/actor/internal-bot",
+        "inbox": "http://127.0.0.1:4501/inbox",
+        "token": "lepos_solver_change_me"
+      }
+    ]
+  },
   "company": {
     "legalName": "Lefine",
     "email": "order@lefine.pro"
@@ -107,6 +118,9 @@ Notes:
 - `backend.craterBaseUrl` is the crater base URL used by the SvelteKit proxy for order, payment, and passkey operations.
 - `backend.exchangeBaseUrl` is the exchange base URL crater uses for user IDs and payment links.
 - `backend.databaseUrl` is the Postgres connection string crater uses for orders, payment redemptions, passkey users, challenges, sessions, and outbox activity persistence.
+- `relay.actorHandle` and `relay.displayName` configure the Lepos ActivityPub relay actor exposed at `/actor/:handle` and `/relay`.
+- `relay.services` lists internal services (your own bots/solvers, typically reachable on a local IP via `inbox`) that are wired into the relay through configuration. They receive the same relayed public activity as external API subscribers that join over the network by following the relay actor — the same experience, just configured instead of subscribed. `/api/relay` returns the relay actor, inbox, followers, supported protocols, the configured internal services, and `responsesEndpoint` (where solvers return results).
+- `relay.services[].token` is the optional solver bearer token. A solver processes the message relayed to its `inbox`, runs inference, and returns the result by POSTing it back to `/api/responses` with an `Authorization: Bearer <token>` header. Crater owns the processing layer: it authenticates the configured solver by this token, normalizes the response, and builds a relayable result activity attributed to the solver. The only provider shape supported initially is OpenAI Responses, using the [`lefinepro/crater-openai`](https://github.com/lefinepro/crater-openai) model contract: payloads with `model` + `input` are normalized through `CraterOpenAI::OpenAINormalizer`, while result payloads may include `output_text` or `output[].content[].text` plus `metadata.request_id` linking the result back to the relayed task. A service configured without a `token` still relays, but cannot post results back.
 - `features.repositories` controls the VCS/git repository feature.
 - `company.*` controls the new `/legal-information` company page. Empty optional fields are hidden automatically.
 

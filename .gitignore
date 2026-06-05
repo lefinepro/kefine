@@ -34,6 +34,8 @@ experiments/frames/
 experiments/tmp/
 experiments/*.log
 experiments/*.png
+experiments/*.tar.gz
+experiments/crystal-*/
 
 # Playwright MCP scratch
 .playwright-mcp/

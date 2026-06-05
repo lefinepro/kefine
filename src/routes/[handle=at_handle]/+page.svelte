@@ -8,6 +8,7 @@
   import KefineProfileRepository from '$lib/components/kefine/KefineProfileRepository.svelte';
   import KefineProfileBonusCardPanel from '$lib/components/kefine/KefineProfileBonusCardPanel.svelte';
   import KefineTopbar from '$lib/components/kefine/KefineTopbar.svelte';
+  import KefineSolverProfileCard from '$lib/components/kefine/KefineSolverProfileCard.svelte';
   import { onMount } from 'svelte';
   import type { Component } from 'svelte';
   import { disconnectAppKit } from '$lib/auth/appkit';
@@ -82,7 +83,7 @@
   let viewerProfile = $state<Profile | null>(null);
   let unavailable = $state(false);
   let following = $state(false);
-  let copyState = $state<'idle' | 'profile'>('idle');
+  let copyState = $state<'idle' | 'profile' | 'solver-token'>('idle');
   let Workspace: Component<{
     initialActorHandle?: string;
     initialSearchQuery?: string;
@@ -116,6 +117,26 @@
   const profileSearchQuery = $derived(page.url.searchParams.get('q') ?? '');
   const shouldRenderSearchWorkspace = $derived(Boolean(profileSearchQuery.trim()));
   const setupMetadata = $derived((profile?.metadata ?? {}) as ProfileMetadata);
+  const SOLVER_RELAY_ORIGIN = 'http://127.0.0.1:4501';
+  const solverProfileToken = $derived(
+    typeof setupMetadata.solverProfileToken === 'string' ? setupMetadata.solverProfileToken.trim() : ''
+  );
+  // The local solver is created automatically with a random handle, so the
+  // handle only exists once the profile has been created.
+  const solverProfileHandle = $derived(
+    typeof setupMetadata.solverProfileHandle === 'string' ? setupMetadata.solverProfileHandle.trim() : ''
+  );
+  const solverProfileCreated = $derived(Boolean(solverProfileToken));
+  // The inbox is the auto-created solver's actor inbox, derived from its random handle.
+  const solverProfileEndpoint = $derived(
+    solverProfileHandle ? `${SOLVER_RELAY_ORIGIN}/solvers/${solverProfileHandle}/inbox` : `${SOLVER_RELAY_ORIGIN}/solvers/.../inbox`
+  );
+  const solverAuthorizationHeader = $derived(
+    solverProfileToken ? `Authorization: Bearer ${solverProfileToken}` : 'Authorization: Bearer lepos_solver_...'
+  );
+  // Where the solver returns its results: it processes the message relayed to
+  // its inbox and POSTs the response (OpenAI Responses shape) back here.
+  const solverResponsesEndpoint = `${SOLVER_RELAY_ORIGIN}/api/responses`;
 
   // The profile is a repository, so the topbar search reads as the repo handle
   // (`@demo`) instead of the generic prompt — the same contextual pill the
@@ -476,7 +497,7 @@
     }
   }
 
-  async function copyLink(value: string, kind: 'profile') {
+  async function copyLink(value: string, kind: 'profile' | 'solver-token') {
     if (!browser || !navigator.clipboard) {
       return;
     }
@@ -496,6 +517,63 @@
     }
 
     await copyLink(privateKey, 'profile');
+  }
+
+  function createRandomSolverSlug(length: number): string {
+    const alphabet = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    if (typeof crypto !== 'undefined' && 'getRandomValues' in crypto) {
+      const values = crypto.getRandomValues(new Uint32Array(length));
+      return Array.from(values, (value) => alphabet[value % alphabet.length]).join('');
+    }
+
+    let slug = '';
+    while (slug.length < length) {
+      slug += Math.random().toString(36).slice(2);
+    }
+    return slug.slice(0, length);
+  }
+
+  function createSolverProfile() {
+    if (!browser || !profile || !isOwner) {
+      return;
+    }
+
+    const updated = updateStoredProfile(localStorage, profile.id, (current) => {
+      const metadata = (current.metadata ?? {}) as ProfileMetadata;
+      const storedToken = typeof metadata.solverProfileToken === 'string' ? metadata.solverProfileToken.trim() : '';
+      const storedHandle = typeof metadata.solverProfileHandle === 'string' ? metadata.solverProfileHandle.trim() : '';
+      // The solver (its inbox identity) is created automatically with a random handle.
+      const randomHandle = `solver-${createRandomSolverSlug(8)}`;
+
+      return {
+        ...current,
+        metadata: nextMetadata(current, {
+          solverProfileId:
+            typeof metadata.solverProfileId === 'string' && metadata.solverProfileId.trim()
+              ? metadata.solverProfileId.trim()
+              : `solver-profile:${current.id}`,
+          solverProfileHandle: storedHandle || randomHandle,
+          solverProfileToken: storedToken || `lepos_solver_${createRandomSolverSlug(32)}`,
+          solverProfileCreatedAt:
+            typeof metadata.solverProfileCreatedAt === 'string' && metadata.solverProfileCreatedAt.trim()
+              ? metadata.solverProfileCreatedAt.trim()
+              : new Date().toISOString()
+        })
+      };
+    });
+
+    if (updated) {
+      profile = updated;
+      syncDraftStateFromProfile(updated);
+    }
+  }
+
+  async function copySolverToken() {
+    if (!solverProfileToken) {
+      return;
+    }
+
+    await copyLink(solverProfileToken, 'solver-token');
   }
 
   // Build a `social.org` (org-social) document from the current draft so owners
@@ -1107,6 +1185,20 @@
                   <lefine-text>{localeText.profile.bio}</lefine-text>
                   <textarea bind:value={bio} rows="4"></textarea>
                 </label>
+
+                <KefineSolverProfileCard
+                  text={localeText.profile}
+                  workspaceHandle={profile.primaryHandle}
+                  solverHandle={solverProfileHandle}
+                  token={solverProfileToken}
+                  endpoint={solverProfileEndpoint}
+                  responsesEndpoint={solverResponsesEndpoint}
+                  authHeader={solverAuthorizationHeader}
+                  created={solverProfileCreated}
+                  copied={copyState === 'solver-token'}
+                  onCreate={createSolverProfile}
+                  onCopy={copySolverToken}
+                />
 
                 <lefine-box class="profile-links-column">
                   <lefine-box class="profile-links-head">
