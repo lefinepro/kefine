@@ -85,7 +85,7 @@
   let leftNavExpanded = $state(false);
   let themeMode = $state<'light' | 'dark' | 'auto'>('auto');
   let systemPrefersDark = $state(false);
-  let editorElement = $state<HTMLElement | null>(null);
+  let profileSettingsOpen = $state(false);
 
   const requestedHandle = $derived(page.params.handle ?? '');
   const activeLocale = $derived(readLocaleFromPathname(page.url.pathname) ?? 'en');
@@ -105,7 +105,7 @@
   );
   // Route-scoped icon actions rendered beside the topbar search, mirroring the
   // solvers screen: social.org exports live in one compact menu, and the owner
-  // gets a settings shortcut that jumps to the editor below.
+  // gets a settings shortcut that opens the profile settings modal.
   const profileSearchActions = $derived.by<TopbarSearchAction[]>(() => {
     const actions: TopbarSearchAction[] = [
       {
@@ -144,7 +144,7 @@
         label: localeText.profile.profileSettingsTitle,
         icon: 'settings',
         testId: 'profile-settings-trigger',
-        onClick: scrollToProfileEditor
+        onClick: openProfileSettings
       });
     }
     return actions;
@@ -562,6 +562,26 @@
     setKefineLocale(locale);
   }
 
+  function openProfileSettings() {
+    profileSettingsOpen = true;
+  }
+
+  function closeProfileSettings() {
+    profileSettingsOpen = false;
+  }
+
+  function handleProfileSettingsBackdrop(event: MouseEvent) {
+    if (event.currentTarget === event.target) {
+      closeProfileSettings();
+    }
+  }
+
+  function handleProfileSettingsKeydown(event: KeyboardEvent) {
+    if (event.key === 'Escape') {
+      closeProfileSettings();
+    }
+  }
+
   function resolveNextUsername(current: Profile): string {
     const normalized = normalizeProfileUsername(username);
     const otherProfiles = readProfiles(localStorage).filter((item) => item.id !== current.id);
@@ -733,10 +753,6 @@
     }
   }
 
-  function scrollToProfileEditor() {
-    editorElement?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-
   function followCurrentProfile() {
     if (!browser || !profile || !viewerProfile || viewerProfile.id === profile.id) {
       return;
@@ -872,6 +888,134 @@
       }}
     />
 
+    {#if isOwner && profileSettingsOpen}
+      <lefine-box
+        class="profile-settings-modal"
+        data-testid="profile-settings-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="profile-settings-title"
+        tabindex="-1"
+        onclick={handleProfileSettingsBackdrop}
+        onkeydown={handleProfileSettingsKeydown}
+      >
+        <lef-profile-zone data-zone="settings" data-testid="profile-settings-panel">
+          <lefine-box class="profile-settings-modal__head">
+            <lefine-box class="profile-zone__head">
+              <strong id="profile-settings-title">{localeText.profile.profileSettingsTitle}</strong>
+              <p>{localeText.profile.profileSettingsHint}</p>
+            </lefine-box>
+            <button
+              type="button"
+              class="profile-settings-modal__close"
+              data-testid="profile-settings-close"
+              aria-label={localeText.profile.profileSettingsTitle}
+              onclick={closeProfileSettings}
+            ></button>
+          </lefine-box>
+
+          <lefine-box class="profile-settings-grid">
+            <lefine-box class="profile-links-column">
+              <label class="profile-field">
+                <lefine-text>{localeText.profile.sshPublicKeys}</lefine-text>
+                <textarea
+                  data-testid="profile-ssh-public-keys"
+                  bind:value={sshPublicKeys}
+                  rows="5"
+                  placeholder={localeText.profile.sshPublicKeysHint}
+                ></textarea>
+              </label>
+            </lefine-box>
+
+            <lefine-box class="profile-settings-group" data-testid="profile-theme-settings">
+              <lefine-text>{localeText.profile.themeSettings}</lefine-text>
+              <lefine-box
+                class="profile-settings-options"
+                role="group"
+                aria-label={localeText.profile.themeSettings}
+              >
+                <button
+                  type="button"
+                  class="profile-settings-option"
+                  data-active={themeMode === 'auto'}
+                  data-testid="profile-theme-option-auto"
+                  onclick={() => selectProfileTheme('auto')}
+                >
+                  <KefineTopbarIcon name="theme-auto" size={16} />
+                  <lefine-text>{localeText.topbar.theme.auto}</lefine-text>
+                </button>
+                <button
+                  type="button"
+                  class="profile-settings-option"
+                  data-active={themeMode === 'light'}
+                  data-testid="profile-theme-option-light"
+                  onclick={() => selectProfileTheme('light')}
+                >
+                  <KefineTopbarIcon name="theme-light" size={16} />
+                  <lefine-text>{localeText.topbar.theme.light}</lefine-text>
+                </button>
+                <button
+                  type="button"
+                  class="profile-settings-option"
+                  data-active={themeMode === 'dark'}
+                  data-testid="profile-theme-option-dark"
+                  onclick={() => selectProfileTheme('dark')}
+                >
+                  <KefineTopbarIcon name="theme-dark" size={16} />
+                  <lefine-text>{localeText.topbar.theme.dark}</lefine-text>
+                </button>
+              </lefine-box>
+            </lefine-box>
+
+            <lefine-box class="profile-settings-group" data-testid="profile-language-settings">
+              <lefine-text>{localeText.profile.languageSettings}</lefine-text>
+              <lefine-box
+                class="profile-settings-options"
+                role="group"
+                aria-label={localeText.profile.languageSettings}
+              >
+                <button
+                  type="button"
+                  class="profile-settings-option"
+                  data-active={$kefineLocale === 'en'}
+                  data-testid="profile-locale-option-en"
+                  onclick={() => selectProfileLocale('en')}
+                >
+                  <KefineTopbarIcon name="flag-en" size={16} />
+                  <lefine-text>{localeText.topbar.languageEnglish}</lefine-text>
+                </button>
+                <button
+                  type="button"
+                  class="profile-settings-option"
+                  data-active={$kefineLocale === 'ru'}
+                  data-testid="profile-locale-option-ru"
+                  onclick={() => selectProfileLocale('ru')}
+                >
+                  <KefineTopbarIcon name="flag-ru" size={16} />
+                  <lefine-text>{localeText.topbar.languageRussian}</lefine-text>
+                </button>
+                <button
+                  type="button"
+                  class="profile-settings-option"
+                  data-active={$kefineLocale === 'hy'}
+                  data-testid="profile-locale-option-hy"
+                  onclick={() => selectProfileLocale('hy')}
+                >
+                  <KefineTopbarIcon name="flag-hy" size={16} />
+                  <lefine-text>{localeText.topbar.languageArmenian}</lefine-text>
+                </button>
+              </lefine-box>
+            </lefine-box>
+          </lefine-box>
+
+          <footer class="profile-settings-modal__footer">
+            <button type="button" onclick={closeProfileSettings}>{localeText.profile.profileSettingsTitle}</button>
+            <button type="button" data-variant="primary" onclick={saveProfile}>{localeText.profile.save}</button>
+          </footer>
+        </lef-profile-zone>
+      </lefine-box>
+    {/if}
+
     <lefine-box class:profile-layout={true} class:profile-layout--single={true}>
       <lefine-box class="profile-main" class:profile-main--setup={isOwner && onboardingStep === 'identity'}>
         {#if isOwner && onboardingStep}
@@ -974,7 +1118,7 @@
             {#if isOwner}
               <!-- Owner editor: lives below the public repository view. The lock
                    chip is the single, polished public/private control. -->
-              <lef-profile-editor bind:this={editorElement} data-testid="profile-editor">
+              <lef-profile-editor data-testid="profile-editor">
                 <lefine-box class="profile-editor__head" data-public={isPublic}>
                   <lefine-box class="profile-editor__status">
                     <strong>{isPublic ? localeText.profile.publicStatus : localeText.profile.privateStatus}</strong>
@@ -1021,107 +1165,6 @@
                       emptyText=""
                       {isOwner}
                     />
-                  </lefine-box>
-                </lef-profile-zone>
-
-                <lef-profile-zone data-zone="settings" data-testid="profile-settings-panel">
-                  <lefine-box class="profile-zone__head">
-                    <strong>{localeText.profile.profileSettingsTitle}</strong>
-                    <p>{localeText.profile.profileSettingsHint}</p>
-                  </lefine-box>
-
-                  <lefine-box class="profile-settings-grid">
-                    <lefine-box class="profile-links-column">
-                      <label class="profile-field">
-                        <lefine-text>{localeText.profile.sshPublicKeys}</lefine-text>
-                        <textarea
-                          data-testid="profile-ssh-public-keys"
-                          bind:value={sshPublicKeys}
-                          rows="5"
-                          placeholder={localeText.profile.sshPublicKeysHint}
-                        ></textarea>
-                      </label>
-                    </lefine-box>
-
-                    <lefine-box class="profile-settings-group" data-testid="profile-theme-settings">
-                      <lefine-text>{localeText.profile.themeSettings}</lefine-text>
-                      <lefine-box
-                        class="profile-settings-options"
-                        role="group"
-                        aria-label={localeText.profile.themeSettings}
-                      >
-                        <button
-                          type="button"
-                          class="profile-settings-option"
-                          data-active={themeMode === 'auto'}
-                          data-testid="profile-theme-option-auto"
-                          onclick={() => selectProfileTheme('auto')}
-                        >
-                          <KefineTopbarIcon name="theme-auto" size={16} />
-                          <lefine-text>{localeText.topbar.theme.auto}</lefine-text>
-                        </button>
-                        <button
-                          type="button"
-                          class="profile-settings-option"
-                          data-active={themeMode === 'light'}
-                          data-testid="profile-theme-option-light"
-                          onclick={() => selectProfileTheme('light')}
-                        >
-                          <KefineTopbarIcon name="theme-light" size={16} />
-                          <lefine-text>{localeText.topbar.theme.light}</lefine-text>
-                        </button>
-                        <button
-                          type="button"
-                          class="profile-settings-option"
-                          data-active={themeMode === 'dark'}
-                          data-testid="profile-theme-option-dark"
-                          onclick={() => selectProfileTheme('dark')}
-                        >
-                          <KefineTopbarIcon name="theme-dark" size={16} />
-                          <lefine-text>{localeText.topbar.theme.dark}</lefine-text>
-                        </button>
-                      </lefine-box>
-                    </lefine-box>
-
-                    <lefine-box class="profile-settings-group" data-testid="profile-language-settings">
-                      <lefine-text>{localeText.profile.languageSettings}</lefine-text>
-                      <lefine-box
-                        class="profile-settings-options"
-                        role="group"
-                        aria-label={localeText.profile.languageSettings}
-                      >
-                        <button
-                          type="button"
-                          class="profile-settings-option"
-                          data-active={$kefineLocale === 'en'}
-                          data-testid="profile-locale-option-en"
-                          onclick={() => selectProfileLocale('en')}
-                        >
-                          <KefineTopbarIcon name="flag-en" size={16} />
-                          <lefine-text>{localeText.topbar.languageEnglish}</lefine-text>
-                        </button>
-                        <button
-                          type="button"
-                          class="profile-settings-option"
-                          data-active={$kefineLocale === 'ru'}
-                          data-testid="profile-locale-option-ru"
-                          onclick={() => selectProfileLocale('ru')}
-                        >
-                          <KefineTopbarIcon name="flag-ru" size={16} />
-                          <lefine-text>{localeText.topbar.languageRussian}</lefine-text>
-                        </button>
-                        <button
-                          type="button"
-                          class="profile-settings-option"
-                          data-active={$kefineLocale === 'hy'}
-                          data-testid="profile-locale-option-hy"
-                          onclick={() => selectProfileLocale('hy')}
-                        >
-                          <KefineTopbarIcon name="flag-hy" size={16} />
-                          <lefine-text>{localeText.topbar.languageArmenian}</lefine-text>
-                        </button>
-                      </lefine-box>
-                    </lefine-box>
                   </lefine-box>
                 </lef-profile-zone>
 
@@ -1304,6 +1347,71 @@
     background: transparent;
     border-color: color-mix(in oklab, var(--kef-color-text) 16%, transparent);
     color: var(--kef-color-muted);
+  }
+
+  .profile-settings-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    display: grid;
+    place-items: start center;
+    padding: clamp(4.75rem, 9vh, 6rem) 1rem 1.5rem;
+    background: color-mix(in oklab, black 42%, transparent);
+    overflow: auto;
+  }
+
+  .profile-settings-modal > lef-profile-zone {
+    width: min(58rem, 100%);
+    max-height: calc(100vh - 7rem);
+    overflow: auto;
+    box-shadow: 0 24px 70px color-mix(in oklab, black 28%, transparent);
+  }
+
+  .profile-settings-modal__head,
+  .profile-settings-modal__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .profile-settings-modal__close {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 2.35rem;
+    height: 2.35rem;
+    padding: 0;
+    border: 1px solid color-mix(in oklab, var(--kef-color-text) 10%, transparent);
+    border-radius: 0.6rem;
+    background: color-mix(in oklab, var(--kef-color-bg) 42%, transparent);
+    color: var(--kef-color-text);
+    cursor: pointer;
+  }
+
+  .profile-settings-modal__close::before,
+  .profile-settings-modal__close::after {
+    content: '';
+    position: absolute;
+    width: 0.9rem;
+    height: 1.5px;
+    border-radius: 999px;
+    background: currentColor;
+  }
+
+  .profile-settings-modal__close::before {
+    transform: rotate(45deg);
+  }
+
+  .profile-settings-modal__close::after {
+    transform: rotate(-45deg);
+  }
+
+  .profile-settings-modal__footer {
+    justify-content: flex-end;
+    flex-wrap: wrap;
   }
 
   /* Owner editor sits below the public repository view, separated by a hairline

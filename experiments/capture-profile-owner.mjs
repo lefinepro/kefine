@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
 
 // Captures the OWNER view of the profile-as-repository: the flat repository
-// panel, the header social.org menu, and the owner settings panel with public
+// panel, the header social.org menu, and the header settings modal with public
 // SSH keys. Private-key profile fields are intentionally absent.
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -158,10 +158,11 @@ try {
   await page.goto(new URL('/@demo', baseUrl).toString(), { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('[data-testid="profile-editor"]');
   await page.getByTestId('profile-social-menu-trigger').click();
+  await page.getByTestId('profile-settings-trigger').click();
   await page.waitForTimeout(800);
 
   // Full owner view: flat repo panel, export menu, compact social rows, and
-  // owner settings with plural SSH public keys.
+  // header settings modal with plural SSH public keys.
   const overview = path.join(outDir, 'profile-owner-editor.png');
   await page.screenshot({ path: overview, fullPage: true });
   console.log(`saved ${path.relative(root, overview)}`);

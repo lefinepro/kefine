@@ -181,6 +181,8 @@ test.describe('Profile repository owner editor', () => {
     await page.goto(`/@${SEED_HANDLE}`);
 
     await expect(page.getByTestId('profile-editor')).toBeVisible();
+    await expect(page.getByTestId('profile-settings-panel')).toHaveCount(0);
+    await page.getByTestId('profile-settings-trigger').click();
     const settingsZone = page.locator('lef-profile-zone[data-zone="settings"]');
     await expect(settingsZone.getByTestId('profile-ssh-public-keys')).toHaveValue(SEED_SSH_PUBLIC_KEYS);
     await expect(page.locator('lef-profile-zone[data-zone="private"]')).toHaveCount(0);
@@ -202,6 +204,9 @@ test.describe('Profile repository owner editor', () => {
     await expect(page.getByTestId('profile-social-copy')).toBeVisible();
     await expect(page.getByTestId('profile-social-download')).toBeVisible();
 
+    await expect(page.getByTestId('profile-settings-panel')).toHaveCount(0);
+    await page.getByTestId('profile-settings-trigger').click();
+    await expect(page.getByTestId('profile-settings-modal')).toBeVisible();
     await expect(page.getByTestId('profile-settings-panel')).toBeVisible();
     await expect(page.getByTestId('profile-theme-settings')).toBeVisible();
     await expect(page.getByTestId('profile-language-settings')).toBeVisible();
@@ -232,9 +237,10 @@ test.describe('Profile repository owner editor', () => {
     await seedOwnerProfile(page);
     await page.goto(`/@${SEED_HANDLE}`);
 
+    await page.getByTestId('profile-settings-trigger').click();
     const publicKeys = page.getByTestId('profile-ssh-public-keys');
     await publicKeys.fill(`${SEED_SSH_PUBLIC_KEYS}\n${SEED_SSH_PUBLIC_KEYS.split('\n')[0]}`);
-    await page.getByRole('button', { name: 'Save workspace' }).click();
+    await page.getByTestId('profile-settings-panel').getByRole('button', { name: 'Save workspace' }).click();
 
     await expect
       .poll(() => sshPayload?.publicKeys?.length ?? 0)
