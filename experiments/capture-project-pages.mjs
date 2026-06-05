@@ -298,9 +298,25 @@ function writeReadme() {
     '',
     'Set `START_SERVER=0 BASE_URL=http://127.0.0.1:5173` to use an already-running dev server.',
     '',
+    'The profile-as-repository captures (issue #130) are regenerated separately with:',
+    '',
+    '```bash',
+    'node experiments/capture-profile-repository.mjs',
+    'node experiments/capture-profile-owner.mjs',
+    '```',
+    '',
     '| File | Route |',
     '| --- | --- |',
-    ...pages.map((page) => `| ${page.file} | \`${page.route}\` |`)
+    ...pages.map((page) => `| ${page.file} | \`${page.route}\` |`),
+    '',
+    'Profile-as-repository captures (issue #130):',
+    '',
+    '| File | Description |',
+    '| --- | --- |',
+    '| profile-repository-public.png | Public profile rendered as a repository: README + task checklist + new-task row. No widgets are shown statically. |',
+    '| profile-repository-checklist.png | Close-up of the profile task checklist. |',
+    '| profile-widget-search.png | A declared widget (translator) surfaced from the command palette only when the visitor types a matching query. |',
+    '| profile-owner-editor.png | Owner view: the flat repository panel followed by the editor — public/private lock chip, social/secret columns, and the restored bonus card wired to `/api/profile/bin-lookup`. |'
   ];
   writeFileSync(path.join(outDir, 'README.md'), `${lines.join('\n')}\n`);
 }

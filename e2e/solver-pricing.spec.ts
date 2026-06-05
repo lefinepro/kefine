@@ -75,7 +75,7 @@ test.describe('Solver Pricing', () => {
     await mockOrderApi(page);
     await seedRustOrder(page);
 
-    await page.goto('/@api/order-rust');
+    await page.goto('/#/orders/order-rust');
 
     await expect(page.locator('lef-solutions-list')).toHaveCount(0);
     const variants = page.getByTestId('task-solver-variants').locator('[data-variant]');
@@ -89,7 +89,7 @@ test.describe('Solver Pricing', () => {
     await mockOrderApi(page);
     await seedRustOrder(page);
 
-    await page.goto('/@api/order-rust');
+    await page.goto('/#/orders/order-rust');
 
     // Inline badges: ranked by success rate (higher is better), the top solver
     // (id 4, 90%) earns the green "Best" badge while the weakest (id 1, 78%)

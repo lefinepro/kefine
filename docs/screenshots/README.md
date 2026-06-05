@@ -10,6 +10,12 @@ node experiments/capture-project-pages.mjs
 
 Set `START_SERVER=0 BASE_URL=http://127.0.0.1:5173` to use an already-running dev server.
 
+The created-task capture for issue #141 is regenerated separately with:
+
+```bash
+node experiments/capture-created-task.mjs
+```
+
 The profile-as-repository captures (issue #130) are regenerated separately with:
 
 ```bash
@@ -26,6 +32,7 @@ node experiments/capture-profile-owner.mjs
 | clock-widget.png | `/@api/time` |
 | translator-widget.png | `/@api/translate` |
 | music-widget.png | `/@api/music` |
+| created-task.png | `/@api/order-1` |
 | task-detail.png | `/task/order-1` |
 | solutions.png | `/@api/order-1?task=Document%20current%20workspace%20pages` |
 | solver-detail.png | `/order/order-1/solver/1` |

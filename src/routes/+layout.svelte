@@ -27,7 +27,6 @@
   const ROUTES_WITH_OWN_TOPBAR = new Set([
     '/',
     '/[handle=at_handle]',
-    '/[handle=at_handle]/[shareId]',
     '/[handle=at_handle]/[widget=kefine_widget]',
     // OAuth consent / integration pages render their own full-screen clean UI (no shared topbar)
     '/oauth/authorize'
@@ -53,10 +52,7 @@
   const canonicalUrl = $derived(`${requestOrigin}${seo.canonicalPath}`);
   const imageUrl = $derived(`${requestOrigin}${seo.imagePath}`);
   const routeId = $derived(page.route.id ?? '');
-  const isCanonicalSolversRoute = $derived(
-    routeId === '/[handle=at_handle]/[shareId]' && page.url.searchParams.has('task')
-  );
-  const showSharedTopbar = $derived(!ROUTES_WITH_OWN_TOPBAR.has(routeId) || isCanonicalSolversRoute);
+  const showSharedTopbar = $derived(!ROUTES_WITH_OWN_TOPBAR.has(routeId));
   const sidebarSocialLinks = $derived([
     {
       id: 'mastodon' as const,
