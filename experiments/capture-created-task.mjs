@@ -194,7 +194,7 @@ try {
   await context.addInitScript(seedStorage, { profile: demoProfile, order: createdTaskOrder });
   const page = await context.newPage();
   await installRoutes(page);
-  await page.goto(new URL('/order/order-1', baseUrl).toString(), { waitUntil: 'domcontentloaded' });
+  await page.goto(new URL('/@api/order-1', baseUrl).toString(), { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('[data-testid="solution-list-page"]');
   await page.waitForTimeout(900);
   const output = path.join(outDir, 'created-task.png');

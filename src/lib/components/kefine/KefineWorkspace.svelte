@@ -58,6 +58,7 @@
   } from '$lib/components/kefine/kefine-workflow';
   import {
     buildActorOrderPath,
+    buildTaskRouteHash,
     createGeneratedWalletAvatar,
     mergeOrdersById,
     normalizeActorHandle,
@@ -173,6 +174,15 @@
 
   function getRouteActorHandleFallback() {
     return getNormalizedInitialActorHandle() ?? normalizedActorHandle ?? null;
+  }
+
+  function isHashOrderRouteActive() {
+    if (!browser) {
+      return false;
+    }
+
+    const path = stripLocalePrefix(window.location.pathname).replace(/\/+$/, '') || '/';
+    return path === '/' && window.location.hash.replace(/^#/, '').startsWith('/orders/');
   }
 
   function applyActorIdentityFallback(
@@ -1023,46 +1033,7 @@
       })();
     }
 
-    const routeState = readTaskRouteState();
-    const routeOrderId = routeState?.orderId || getNormalizedInitialOrderId();
-    if (routeOrderId) {
-      isHydratingRoute = true;
-      const localRouteOrder = findLocalOrderByRouteValue(routeOrderId, loadedOrders);
-      if (localRouteOrder) {
-        showOrderFlow(localRouteOrder, routeState?.view ?? null);
-        void (async () => {
-          try {
-            if (localRouteOrder.status === 'completed') {
-              return;
-            }
-
-            const updated = await requestOrderFromStatus(localRouteOrder.id, {
-              title: localRouteOrder.title,
-              description: localRouteOrder.description,
-              currency: localRouteOrder.currency,
-              createdAt: localRouteOrder.createdAt
-            });
-
-            if (updated) {
-              const nextOrderWithActor = applyActorIdentityFallback(
-                {
-                  ...localRouteOrder,
-                  ...updated,
-                  id: localRouteOrder.id
-                },
-                localRouteOrder
-              );
-              currentOrder = nextOrderWithActor;
-              upsertOrder(nextOrderWithActor);
-            }
-          } finally {
-            isHydratingRoute = false;
-          }
-        })();
-      } else {
-        void openOrderById(routeOrderId, routeState?.view ?? null, loadedOrders);
-      }
-    } else {
+    if (!hydrateTaskRouteFromLocation(loadedOrders)) {
       restoreCloneDraftPrefill();
     }
 
@@ -1072,12 +1043,16 @@
     const handleThemePreferenceChange = (event: MediaQueryListEvent) => {
       systemPrefersDark = event.matches;
     };
+    const handleTaskRouteHashChange = () => {
+      void hydrateTaskRouteFromLocation(loadCreatedOrders());
+    };
 
     const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
     themeMode = storedTheme === 'dark' || storedTheme === 'light' || storedTheme === 'auto' ? storedTheme : 'auto';
     document.documentElement.setAttribute('data-kefine-theme', resolvedTheme);
     document.documentElement.setAttribute('lang', $kefineLocale);
     mediaQuery.addEventListener('change', handleThemePreferenceChange);
+    window.addEventListener('hashchange', handleTaskRouteHashChange);
 
     const syncReownAuthState = async () => {
       const { readReownAccountState } = await loadAppKitModule();
@@ -1138,6 +1113,7 @@
     return () => {
       cancelIdleReownSetup();
       mediaQuery.removeEventListener('change', handleThemePreferenceChange);
+      window.removeEventListener('hashchange', handleTaskRouteHashChange);
       cancelReownSubscription?.();
       pollAbortController?.abort();
       activePollTokens.clear();
@@ -1325,6 +1301,28 @@
         safeReplaceState(nextUrl, page.state);
       }
       searchPageUrlHasQuery = Boolean(searchPageQuery.trim());
+      return;
+    }
+
+    if (isHashOrderRouteActive() && !orderRouteId) {
+      return;
+    }
+
+    if (orderRouteId && isHashOrderRouteActive()) {
+      nextUrl.pathname = buildLocaleHomePath(activeLocale);
+      nextUrl.search = '';
+      nextUrl.hash = buildTaskRouteHash(
+        orderRouteId,
+        step === 'payment' && paymentStage === 'result-ready'
+          ? 'result'
+          : step === 'executing' && stagePreviewOpen
+            ? 'stages'
+            : null
+      ).replace(/^#/, '');
+
+      if (window.location.href !== nextUrl.toString()) {
+        safeReplaceState(nextUrl, page.state);
+      }
       return;
     }
 
@@ -1795,6 +1793,53 @@
   function readTaskRouteState() {
     if (!browser) return null;
     return readTaskRouteStateFromLocation(window.location);
+  }
+
+  function hydrateTaskRouteFromLocation(knownOrders: OrderView[] = createdOrders) {
+    const routeState = readTaskRouteState();
+    const routeOrderId = routeState?.orderId || getNormalizedInitialOrderId();
+    if (!routeOrderId) {
+      return false;
+    }
+
+    isHydratingRoute = true;
+    const localRouteOrder = findLocalOrderByRouteValue(routeOrderId, knownOrders);
+    if (localRouteOrder) {
+      showOrderFlow(localRouteOrder, routeState?.view ?? null);
+      void (async () => {
+        try {
+          if (localRouteOrder.status === 'completed') {
+            return;
+          }
+
+          const updated = await requestOrderFromStatus(localRouteOrder.id, {
+            title: localRouteOrder.title,
+            description: localRouteOrder.description,
+            currency: localRouteOrder.currency,
+            createdAt: localRouteOrder.createdAt
+          });
+
+          if (updated) {
+            const nextOrderWithActor = applyActorIdentityFallback(
+              {
+                ...localRouteOrder,
+                ...updated,
+                id: localRouteOrder.id
+              },
+              localRouteOrder
+            );
+            currentOrder = nextOrderWithActor;
+            upsertOrder(nextOrderWithActor);
+          }
+        } finally {
+          isHydratingRoute = false;
+        }
+      })();
+    } else {
+      void openOrderById(routeOrderId, routeState?.view ?? null, knownOrders);
+    }
+
+    return true;
   }
 
   function showOrderFlow(order: OrderView, preferredView: 'result' | 'stages' | null = null) {
@@ -2695,7 +2740,16 @@
       const nextShareId = patch.shareId?.trim() || currentOrder.id;
       const actorHandle = currentOrder.actorHandle?.trim() || getRouteActorHandleFallback();
 
-      if (actorHandle && nextShareId) {
+      if (nextShareId && isHashOrderRouteActive()) {
+        const nextUrl = new URL(window.location.href);
+        nextUrl.pathname = buildLocaleHomePath(activeLocale);
+        nextUrl.search = '';
+        nextUrl.hash = buildTaskRouteHash(nextShareId).replace(/^#/, '');
+
+        if (window.location.href !== nextUrl.toString()) {
+          replaceState(nextUrl, page.state);
+        }
+      } else if (actorHandle && nextShareId) {
         const nextUrl = new URL(window.location.href);
         nextUrl.pathname = localizeAppPath(buildActorOrderPath(actorHandle, nextShareId), activeLocale);
         nextUrl.search = '';

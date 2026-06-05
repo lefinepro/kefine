@@ -289,8 +289,7 @@ export async function createTask(page: Page, title: string) {
       });
       if (!order) return null;
       const routeId = order.shareId || order.id;
-      const actorHandle = order.actorHandle || order.ownerUsername || 'api';
-      return routeId ? `/@${actorHandle}/${routeId}` : null;
+      return routeId ? `/#/orders/${encodeURIComponent(routeId)}` : null;
     } catch {
       return null;
     }

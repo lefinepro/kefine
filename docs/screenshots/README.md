@@ -32,7 +32,7 @@ node experiments/capture-profile-owner.mjs
 | clock-widget.png | `/@api/time` |
 | translator-widget.png | `/@api/translate` |
 | music-widget.png | `/@api/music` |
-| created-task.png | `/order/order-1` |
+| created-task.png | `/@api/order-1` |
 | task-detail.png | `/task/order-1` |
 | solutions.png | `/@api/order-1?task=Document%20current%20workspace%20pages` |
 | solver-detail.png | `/order/order-1/solver/1` |

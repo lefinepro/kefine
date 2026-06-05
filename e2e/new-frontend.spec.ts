@@ -91,6 +91,17 @@ test.describe('New frontend task results', () => {
     await expect(page.getByRole('button', { name: /Merge/ })).toHaveCount(0);
   });
 
+  test('canonical profile order route opens the order page without a task query', async ({ page }) => {
+    await mockOrderApi(page);
+    await page.goto('/@api/order-1');
+
+    await expect(page).toHaveURL(/\/@api\/order-1$/);
+    await expect(page.getByTestId('solution-list-page')).toBeVisible();
+    await expect(page.getByTestId('solver-task-list')).toBeVisible();
+    await expect(page.getByTestId('repo-readme')).toBeVisible();
+    await expect(page.getByTestId('repo-checklist')).toBeVisible();
+  });
+
   test('checklist task solver selector shows avatars and lets you choose a variant', async ({ page }) => {
     await mockOrderApi(page);
     await page.goto('/@api/order-1?task=Build%20a%20Go%20mini%20proxy');

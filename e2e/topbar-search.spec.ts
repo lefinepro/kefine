@@ -19,7 +19,7 @@ test.describe('Topbar search', () => {
     await gotoAndWaitForReady(page);
 
     await createTask(page, 'Need Redis backup script');
-    await expect(page).toHaveURL(/\/order-1$/);
+    await expect(page).toHaveURL(/#\/orders\/order-1$/);
 
     await page.getByTestId('kefine-topbar-search-trigger').click();
     await expect(page.getByTestId('kefine-topbar-search-dialog')).toBeVisible();
@@ -39,7 +39,7 @@ test.describe('Topbar search', () => {
     await mockOrderApi(page);
     await gotoAndWaitForReady(page);
     await createTask(page, 'Open widget command palette');
-    await expect(page).toHaveURL(/\/order-1$/);
+    await expect(page).toHaveURL(/#\/orders\/order-1$/);
 
     await page.getByTestId('kefine-topbar-search-trigger').click();
     await expect(page.getByTestId('kefine-topbar-search-dialog')).toBeVisible();
