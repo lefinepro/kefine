@@ -13,12 +13,14 @@
     description,
     comments,
     isCorrectingTask,
+    showHeading = false,
     onSubmitCorrection
   }: {
     title: string;
     description: string;
     comments: Comment[];
     isCorrectingTask: boolean;
+    showHeading?: boolean;
     onSubmitCorrection: (text: string) => void;
   } = $props();
 
@@ -42,12 +44,16 @@
 
 <lef-task-panel>
   <lef-task-card>
-    <lef-task-head>
-      <strong>{labels.task}</strong>
-      {#if comments.length > 0}
-        <lefine-text>{comments.length} {comments.length === 1 ? labels.comment : labels.comments}</lefine-text>
-      {/if}
-    </lef-task-head>
+    {#if showHeading || comments.length > 0}
+      <lef-task-head>
+        {#if showHeading}
+          <strong>{labels.task}</strong>
+        {/if}
+        {#if comments.length > 0}
+          <lefine-text>{comments.length} {comments.length === 1 ? labels.comment : labels.comments}</lefine-text>
+        {/if}
+      </lef-task-head>
+    {/if}
     {#if description && description !== title}
       <p class="lef-task-description">{description}</p>
     {:else}

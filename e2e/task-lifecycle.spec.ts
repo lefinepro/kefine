@@ -11,7 +11,7 @@ const ORDER_ID = 'order-1';
 test.describe('Task Lifecycle', () => {
   const exchangeNodeId = `${ORDER_ID}-exchange-search`;
 
-  test('brand mark uses the shared magical lefine font token', async ({ page }) => {
+  test('brand mark uses the shared site font token', async ({ page }) => {
     await mockOrderApi(page);
     await gotoAndWaitForReady(page);
 
@@ -21,12 +21,13 @@ test.describe('Task Lifecycle', () => {
     const fontData = await brandMark.evaluate((node) => {
       const element = node as HTMLElement;
       return {
+        appFontToken: getComputedStyle(document.documentElement).getPropertyValue('--kef-font-family').trim(),
         brandFontToken: getComputedStyle(document.documentElement).getPropertyValue('--kef-font-family-brand').trim(),
         brandFontFamily: getComputedStyle(element).fontFamily
       };
     });
 
-    expect(normalizeFontFamily(fontData.brandFontToken)).toBe('Papyrus, Copperplate, Apple Chancery, fantasy');
+    expect(normalizeFontFamily(fontData.brandFontToken)).toBe(normalizeFontFamily(fontData.appFontToken));
     expect(normalizeFontFamily(fontData.brandFontFamily)).toBe(normalizeFontFamily(fontData.brandFontToken));
   });
 

@@ -1117,6 +1117,10 @@ export const KEFINE_TEXT_RU = {
     fileSearchClear: 'Очистить поиск файлов',
     fileSearchEmpty: 'Нет подходящих файлов',
     tabs: {
+      overview: {
+        label: 'Обзор',
+        hint: 'Тесты, контекст задачи и варианты решателей'
+      },
       testing: {
         label: 'Тестирование',
         hint: 'Отправить тестовый запрос солверу'

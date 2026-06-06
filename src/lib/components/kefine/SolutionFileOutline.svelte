@@ -294,7 +294,7 @@
   lef-file-outline-glyph[data-kind='doc'] { background: color-mix(in oklab, var(--lefine-text-soft) 55%, transparent); }
 
   lef-file-outline-name {
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: var(--kef-font-family-mono);
     font-size: 0.78rem;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -305,7 +305,7 @@
   lef-file-outline-stats {
     display: inline-flex;
     gap: 0.35rem;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: var(--kef-font-family-mono);
     font-size: 0.7rem;
     font-weight: 700;
   }

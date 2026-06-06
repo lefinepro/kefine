@@ -433,7 +433,11 @@
   function handleAuthClick() {
     cancelAuthClick?.();
     cancelAuthClick = scheduleAfter(220, () => {
-      onAuth();
+      if (isAuthenticated) {
+        onOpenProfile();
+      } else {
+        onAuth();
+      }
       cancelAuthClick = null;
     });
   }

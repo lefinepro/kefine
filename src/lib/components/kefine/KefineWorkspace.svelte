@@ -187,7 +187,7 @@
 
   function applyActorIdentityFallback(
     order: OrderView,
-    fallback?: Partial<Pick<OrderView, 'actorHandle' | 'actorDid'>>
+    fallback?: Partial<Pick<OrderView, 'actorHandle' | 'actorDid' | 'id' | 'shareId'>>
   ): OrderView {
     const actorHandle =
       order.actorHandle?.trim() ||
@@ -199,11 +199,20 @@
       order.actorDid?.trim() ||
       fallback?.actorDid?.trim() ||
       (actorHandle ? `did:key:${normalizeActorHandle(actorHandle)}` : undefined);
+    const nextShareId = order.shareId?.trim();
+    const fallbackShareId = fallback?.shareId?.trim();
+    const orderId = order.id?.trim();
+    const fallbackId = fallback?.id?.trim();
+    const shareId =
+      nextShareId && nextShareId !== orderId && nextShareId !== fallbackId
+        ? nextShareId
+        : fallbackShareId || nextShareId || undefined;
 
     return {
       ...order,
       ...(actorHandle ? { actorHandle: normalizeActorHandle(actorHandle) } : {}),
-      ...(actorDid ? { actorDid } : {})
+      ...(actorDid ? { actorDid } : {}),
+      ...(shareId ? { shareId } : {})
     };
   }
 
@@ -1276,6 +1285,14 @@
       paymentStage = 'result-ready';
       step = 'payment';
     }
+  });
+
+  $effect(() => {
+    if (!browser || isHydratingRoute || step !== 'create' || !isHashOrderRouteActive()) {
+      return;
+    }
+
+    void hydrateTaskRouteFromLocation(createdOrders.length > 0 ? createdOrders : loadCreatedOrders());
   });
 
   $effect(() => {

@@ -1608,7 +1608,7 @@
   kefine-thread-block pre {
     margin: 0;
     overflow-x: auto;
-    font: 0.82rem/1.55 'JetBrains Mono', monospace;
+    font: 0.82rem/1.55 var(--kef-font-family-mono);
     white-space: pre-wrap;
   }
 

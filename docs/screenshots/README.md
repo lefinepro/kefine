@@ -33,6 +33,7 @@ node experiments/capture-issue-145.mjs
 | --- | --- |
 | home.png | `/` |
 | profile.png | `/@api` |
+| profile-solver-profile.png | `/@api/solver` |
 | profile-search.png | `/@api?q=proxy%20server` |
 | weather-widget.png | `/@api/weather` |
 | clock-widget.png | `/@api/time` |

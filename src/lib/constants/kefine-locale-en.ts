@@ -1115,6 +1115,10 @@ export const KEFINE_TEXT_EN = {
     fileSearchClear: 'Clear file search',
     fileSearchEmpty: 'No matching files',
     tabs: {
+      overview: {
+        label: 'Overview',
+        hint: 'Review tests, task context, and solver options'
+      },
       testing: {
         label: 'Testing',
         hint: 'Send a sample request to the solver'

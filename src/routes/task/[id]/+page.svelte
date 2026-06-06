@@ -493,7 +493,32 @@
         <p>This task is not available.</p>
       </lef-task-empty-state>
     {:else}
-      <article aria-label="Task document">
+      <aside data-testid="kefine-task-document-sidebar" aria-label="Task document navigation">
+        <nav>
+          <a href="#overview">
+            <Icon icon="lucide:layout-dashboard" width="15" height="15" aria-hidden="true" />
+            <lefine-text>Overview</lefine-text>
+          </a>
+          <a href="#details">
+            <Icon icon="lucide:list-checks" width="15" height="15" aria-hidden="true" />
+            <lefine-text>Details</lefine-text>
+          </a>
+          {#if subtasks.length > 0}
+            <a href="#subtasks">
+              <Icon icon="lucide:check-square" width="15" height="15" aria-hidden="true" />
+              <lefine-text>Subtasks</lefine-text>
+            </a>
+          {/if}
+          {#if detailBlocks.length > 0}
+            <a href="#activity">
+              <Icon icon="lucide:history" width="15" height="15" aria-hidden="true" />
+              <lefine-text>Activity</lefine-text>
+            </a>
+          {/if}
+        </nav>
+      </aside>
+
+      <article id="overview" aria-label="Task document">
         <lef-task-title-block>
           <lef-task-title-row>
             <input type="checkbox" aria-label="Task completion" checked={taskCompleted} disabled />
@@ -509,7 +534,7 @@
           {/if}
         </lef-task-title-block>
 
-        <lef-task-property-grid data-testid="kefine-task-document-properties">
+        <lef-task-property-grid id="details" data-testid="kefine-task-document-properties">
           {#each propertyRows as row}
             <lef-task-property>
               <Icon icon={row.icon} width="16" height="16" aria-hidden="true" />
@@ -555,7 +580,7 @@
         </section>
 
         {#if subtasks.length > 0}
-          <section aria-label="Subtasks" data-testid="kefine-task-document-subtasks">
+          <section id="subtasks" aria-label="Subtasks" data-testid="kefine-task-document-subtasks">
             <ol>
               {#each subtasks as subtask}
                 <li>
@@ -578,7 +603,7 @@
         {/if}
 
         {#if detailBlocks.length > 0}
-          <section aria-label="More" data-testid="kefine-task-document-blocks">
+          <section id="activity" aria-label="More" data-testid="kefine-task-document-blocks">
             <lef-task-detail-block-list>
               {#each detailBlocks as block}
                 <lef-task-detail-block data-kind={block.type}>
@@ -615,10 +640,49 @@
 
   lef-task-document-shell {
     display: grid;
-    width: min(52rem, 100%);
+    grid-template-columns: 13rem minmax(0, 1fr);
+    align-items: start;
+    width: min(76rem, 100%);
     margin: 0 auto;
     gap: 1.1rem;
     padding: 2rem 1.5rem 4rem;
+  }
+
+  aside {
+    display: block;
+    position: sticky;
+    top: 5.25rem;
+    min-width: 0;
+  }
+
+  nav {
+    display: grid;
+    gap: 0.25rem;
+  }
+
+  nav a {
+    display: grid;
+    grid-template-columns: 1rem minmax(0, 1fr);
+    align-items: center;
+    gap: 0.55rem;
+    min-height: 2.35rem;
+    border-radius: 0.5rem;
+    padding: 0.45rem 0.6rem;
+    color: var(--lefine-text-soft);
+    font-size: 0.88rem;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  nav a:hover,
+  nav a:focus-visible {
+    background: color-mix(in oklab, var(--kef-color-primary, var(--kef-primary)) 8%, transparent);
+    color: var(--lefine-text);
+  }
+
+  nav a lefine-text {
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   article,
@@ -632,9 +696,11 @@
 
   article {
     gap: 1.25rem;
+    min-width: 0;
   }
 
   lef-task-empty-state {
+    grid-column: 1 / -1;
     min-height: 18rem;
     align-content: center;
     gap: 0.5rem;
@@ -844,7 +910,7 @@
   }
 
   code {
-    font-family: 'Fira Mono', Consolas, Monaco, monospace;
+    font-family: var(--kef-font-family-mono);
   }
 
   lef-task-detail-block-list {
@@ -869,8 +935,21 @@
 
   @media (max-width: 720px) {
     lef-task-document-shell {
+      grid-template-columns: 1fr;
       gap: 1rem;
       padding: 1rem 0.9rem 3rem;
+    }
+
+    aside {
+      position: static;
+    }
+
+    nav {
+      grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+    }
+
+    nav a {
+      justify-content: center;
     }
 
     h1 {

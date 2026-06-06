@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { gotoAndWaitForReady, mockPrivateKeyAuth, readActorPrivateKeyCompact } from './helpers/kefine';
+import { gotoAndWaitForReady, mockOrderApi, mockPrivateKeyAuth, readActorPrivateKeyCompact } from './helpers/kefine';
 
 test.describe('Auth Flows', () => {
   test('privatekey login works with compact pqsk key and sends only local public key string to auth', async ({ page }) => {
@@ -19,6 +19,33 @@ test.describe('Auth Flows', () => {
     await expect(page.getByTestId('kefine-profile-handle')).toHaveValue('api');
   });
 
+  test('authenticated task topbar profile button opens the profile route', async ({ page }) => {
+    await mockPrivateKeyAuth(page);
+    await mockOrderApi(page);
+
+    await gotoAndWaitForReady(page);
+
+    await page.locator("button[data-part='auth']").click();
+    await page.getByTestId('kefine-privatekey-auth-tile').click();
+    await page.getByTestId('kefine-privatekey-input').fill(readActorPrivateKeyCompact());
+    await page.getByTestId('kefine-privatekey-submit').click();
+
+    await expect(page).toHaveURL(/\/@api$/);
+
+    await page.goto('/@api/order-1?task=Build%20a%20Go%20mini%20proxy');
+    await expect(page.getByTestId('solution-list-page')).toBeVisible();
+
+    const authButton = page.locator("button[data-part='auth']");
+    await expect(authButton).toHaveText('API');
+    await page.waitForFunction(() => {
+      const button = document.querySelector("button[data-part='auth']");
+      return button && Object.getOwnPropertySymbols(button).length > 0;
+    });
+    await authButton.click();
+    await expect(page).toHaveURL(/\/@api$/);
+    await expect(page.getByTestId('kefine-profile-first-name')).toBeVisible();
+  });
+
   test('workspace owner can create and copy a solver profile token', async ({ page, context }) => {
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
     await mockPrivateKeyAuth(page);
@@ -33,6 +60,12 @@ test.describe('Auth Flows', () => {
     await expect(page).toHaveURL(/\/@api$/);
     await page.getByRole('button', { name: 'Continue to social links' }).click();
     await page.getByRole('button', { name: 'Finish setup' }).click();
+
+    await expect(page.getByTestId('kefine-solver-profile-panel')).toHaveCount(0);
+    await expect(page.getByTestId('profile-solver-link-card')).toBeVisible();
+
+    await page.getByTestId('profile-solver-link-card').getByRole('link', { name: 'Solver profile' }).click();
+    await expect(page).toHaveURL(/\/@api\/solver$/);
 
     const solverPanel = page.getByTestId('kefine-solver-profile-panel');
     await expect(solverPanel).toBeVisible();

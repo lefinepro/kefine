@@ -145,7 +145,7 @@
   .lef-chart-axis text {
     font-size: 9px;
     fill: var(--lefine-text-soft);
-    font-family: 'Synt', monospace;
+    font-family: var(--kef-font-family-mono);
   }
 
   .lef-chart-bar {
@@ -239,7 +239,7 @@
   }
 
   lef-chart-legend-value {
-    font-family: 'Synt', monospace;
+    font-family: var(--kef-font-family-mono);
     font-size: 0.72rem;
   }
 </style>
