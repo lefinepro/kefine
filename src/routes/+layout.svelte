@@ -13,6 +13,7 @@
   import { shortenAuthLabel } from '$lib/components/kefine/kefine-workspace-helpers';
   import { resolvePublicRuntimeConfig, setBrowserPublicRuntimeConfig } from '$lib/config/public-config';
   import { kefineLocale, kefineLocaleText, setKefineLocale, type KefineLocale } from '$lib/constants/kefine-locale';
+  import { buildProfilePath } from '$lib/profile/profile-handles';
   import { buildLocaleHomePath, localizeAppPath, readLocaleFromPathname } from '$lib/routing/kefine-locale-routing';
   import {
     topbarSearchActions,
@@ -99,6 +100,29 @@
   ]);
   const isAuthenticated = $derived(Boolean(passkeySession?.userId || authState.isConnected));
   const authenticatedLabel = $derived(shortenAuthLabel(authState.displayName || authState.email || authState.address || null));
+  const authenticatedProfileHandle = $derived.by(() => {
+    const authHandle = authState.handle?.trim();
+    if (authHandle) {
+      return authHandle;
+    }
+
+    const passkeyUsername = passkeySession?.username?.trim();
+    if (passkeyUsername) {
+      return passkeyUsername;
+    }
+
+    const emailUsername = authState.email?.split('@')[0]?.trim();
+    if (emailUsername) {
+      return emailUsername;
+    }
+
+    const displayName = authState.displayName?.trim();
+    if (displayName) {
+      return displayName;
+    }
+
+    return runtimePublicConfig.defaultActor.handle || 'staff';
+  });
 
   let topbarExpanded = $state(false);
   let themeMode = $state<'light' | 'dark' | 'auto'>('auto');
@@ -155,6 +179,10 @@
 
   function handleSharedBrandClick() {
     void goto(buildLocaleHomePath(activeLocale));
+  }
+
+  function handleSharedOpenProfile() {
+    void goto(localizeAppPath(buildProfilePath(authenticatedProfileHandle), activeLocale));
   }
 
   function consumeExternalAuthCallback() {
@@ -309,11 +337,11 @@
       themeMode = theme;
     }}
     onAuth={handleSharedBrandClick}
-    onOpenProfile={handleSharedBrandClick}
+    onOpenProfile={handleSharedOpenProfile}
     onSignOut={() => {
       void handleSharedSignOut();
     }}
-    onAuthDoubleClick={handleSharedBrandClick}
+    onAuthDoubleClick={handleSharedOpenProfile}
     onLocale={handleSharedLocaleChange}
   />
 

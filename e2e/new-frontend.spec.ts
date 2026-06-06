@@ -119,6 +119,13 @@ test.describe('New frontend task results', () => {
     await page.getByTestId('todo-solver-select').first().click();
     const variants = page.getByTestId('task-solver-variants');
     await expect(variants).toBeVisible();
+    const compareButton = page.getByTestId('open-solvers-compare');
+    await expect(compareButton).toBeVisible();
+
+    const compareBox = await compareButton.boundingBox();
+    expect(compareBox, 'compare solvers button should render as a horizontal pill').not.toBeNull();
+    expect(compareBox!.width).toBeGreaterThan(compareBox!.height * 2);
+    expect(compareBox!.height).toBeLessThan(48);
 
     // Each solver renders a small avatar with deterministic initials.
     await expect(variants.locator('[data-variant="5"] lef-solver-avatar')).toHaveText('GB');

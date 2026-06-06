@@ -1195,6 +1195,8 @@
   lef-compare-row {
     display: flex;
     justify-content: flex-end;
+    grid-column: 2 / -1;
+    min-width: 0;
     margin-top: 0.5rem;
   }
 
@@ -1211,6 +1213,7 @@
     background: var(--kef-bg-card);
     border: 1px solid var(--kef-line-soft);
     border-radius: 999px;
+    white-space: nowrap;
     transition: border-color 160ms ease, color 160ms ease, background 160ms ease;
   }
 
