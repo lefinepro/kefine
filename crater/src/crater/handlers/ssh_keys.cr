@@ -10,13 +10,13 @@ module Lepos
         get "/actor/:username/keys/ssh" do |env|
           env.response.content_type = "application/json"
           username = env.params.url["username"]
-          record = SshKeyStore.find_by_actor(username, config)
+          records = SshKeyStore.list_by_actor(username, config)
 
-          if record
-            SshKeyStore.to_json_payload(record).to_json
+          if records.any?
+            SshKeyStore.to_json_payload(username, records).to_json
           else
             env.response.status_code = 404
-            {error: "SSH key is not configured."}.to_json
+            {error: "SSH keys are not configured."}.to_json
           end
         end
 
@@ -24,14 +24,14 @@ module Lepos
           env.response.content_type = "application/json"
           username = env.params.url["username"]
           payload = parse_body(env)
-          public_key = payload["publicKey"]?.try(&.as_s?) || payload["key"]?.try(&.as_s?) || ""
+          public_keys = public_keys_from_payload(payload)
 
           begin
-            record = SshKeyStore.upsert_for_actor(username, public_key, config)
-            SshKeyStore.to_json_payload(record).to_json
+            records = SshKeyStore.replace_for_actor(username, public_keys, config)
+            SshKeyStore.to_json_payload(username, records).to_json
           rescue ex
             env.response.status_code = 400
-            {error: ex.message || "SSH public key is invalid."}.to_json
+            {error: ex.message || "SSH public keys are invalid."}.to_json
           end
         end
 
@@ -50,6 +50,31 @@ module Lepos
         JSON.parse(raw_body)
       rescue
         JSON.parse(%({}))
+      end
+
+      private def self.public_keys_from_payload(payload : JSON::Any) : Array(String)
+        keys = [] of String
+
+        if public_keys = payload["publicKeys"]?
+          if array = public_keys.as_a?
+            array.each do |item|
+              value = item.as_s?
+              keys << value if value
+            end
+          elsif value = public_keys.as_s?
+            keys << value
+          end
+        end
+
+        if public_key = payload["publicKey"]?.try(&.as_s?)
+          keys << public_key
+        end
+
+        if public_key = payload["key"]?.try(&.as_s?)
+          keys << public_key
+        end
+
+        keys
       end
     end
   end

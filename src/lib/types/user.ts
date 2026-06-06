@@ -108,11 +108,12 @@ export interface ProfileMetadata extends Record<string, unknown> {
   profileSetupStep?: 'identity' | 'card' | 'socials' | 'done';
   profileSetupCompleted?: boolean;
   cardBonusEligible?: boolean;
+  /**
+   * Public SSH keys authorized for this actor. `sshPublicKey` is retained as a
+   * legacy single-key mirror for older stored profiles.
+   */
+  sshPublicKeys?: string[];
   sshPublicKey?: string;
-  solverProfileId?: string;
-  solverProfileHandle?: string;
-  solverProfileToken?: string;
-  solverProfileCreatedAt?: string;
   /**
    * Org-format widget document for the public workspace. Holds `#+begin_<widget>`
    * blocks (weather, clock, …) that the profile screen renders inline and that

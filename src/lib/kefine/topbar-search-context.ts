@@ -2,12 +2,21 @@ import { writable } from 'svelte/store';
 import type { KefineTopbarIconName } from '$lib/components/kefine/KefineTopbarIcon.svelte';
 import type { KefineSearchWidgetId } from '$lib/kefine/search-widgets';
 
+export type TopbarSearchActionMenuItem = {
+  id: string;
+  label: string;
+  icon?: KefineTopbarIconName;
+  testId?: string;
+  onClick: () => void | Promise<void>;
+};
+
 export type TopbarSearchAction = {
   id: string;
   label: string;
   icon: KefineTopbarIconName;
   testId?: string;
-  onClick: () => void | Promise<void>;
+  onClick?: () => void | Promise<void>;
+  menuItems?: TopbarSearchActionMenuItem[];
 };
 
 export type TopbarSearchItem = {

@@ -6,14 +6,13 @@
   import KefineProfileSocialLinksCard from '$lib/components/kefine/KefineProfileSocialLinksCard.svelte';
   import KefineProfileSetupDots from '$lib/components/kefine/KefineProfileSetupDots.svelte';
   import KefineProfileRepository from '$lib/components/kefine/KefineProfileRepository.svelte';
-  import KefineProfileBonusCardPanel from '$lib/components/kefine/KefineProfileBonusCardPanel.svelte';
+  import KefineProfileWidgets from '$lib/components/kefine/KefineProfileWidgets.svelte';
   import KefineTopbar from '$lib/components/kefine/KefineTopbar.svelte';
-  import KefineSolverProfileCard from '$lib/components/kefine/KefineSolverProfileCard.svelte';
+  import KefineTopbarIcon from '$lib/components/kefine/KefineTopbarIcon.svelte';
   import { onMount } from 'svelte';
   import type { Component } from 'svelte';
   import { disconnectAppKit } from '$lib/auth/appkit';
   import { authState, clearAuthState, hydrateAuthStateFromSession } from '$lib/auth/auth-store.svelte.js';
-  import { loadGeneratedPrivateKeyCookie } from '$lib/auth/publickey-cookie';
   import { clearPasskeySession, loadPasskeySession, passkeySessionStore } from '$lib/auth/passkey-session';
   import { parseStoredOrders } from '$lib/components/kefine/kefine-workflow';
   import { shortenAuthLabel } from '$lib/components/kefine/kefine-workspace-helpers';
@@ -21,16 +20,12 @@
   import { kefineLocale, kefineLocaleText, setKefineLocale, type KefineLocale } from '$lib/constants/kefine-locale';
   import {
     DEFAULT_PROFILE_TASKS_ORG,
-    DEFAULT_PROFILE_WIDGETS_ORG,
-    buildProfileSocialOrg,
-    parseProfileWidgetBlocks
+    buildProfileSocialOrg
   } from '$lib/profile/profile-social-org';
   import {
-    KEFINE_SEARCH_WIDGET_IDS,
-    type KefineSearchWidgetId
+    KEFINE_SEARCH_WIDGET_IDS
   } from '$lib/kefine/search-widgets';
   import {
-    addProfileBonus,
     buildProfilePath,
     deriveWalletProfileHandle,
     ensureProfileForSession,
@@ -61,20 +56,6 @@
   // "Create task" result registered by KefineProfileRepository.
   const searchRequest = $derived($topbarSearchRequest);
   const searchItems = $derived($topbarSearchItems);
-  // The profile is rendered as a repository: its declared widgets are not shown
-  // statically, they are only surfaced through the command palette when the
-  // visitor types a matching query. Pass the org-declared widget set to the
-  // topbar so it offers exactly those (falling back to every widget when the
-  // profile declares none).
-  const profileWidgetIds = $derived.by<readonly KefineSearchWidgetId[]>(() => {
-    const declared = parseProfileWidgetBlocks(widgetsOrg);
-    const seen = new Set<KefineSearchWidgetId>();
-    for (const block of declared) {
-      seen.add(block.type);
-    }
-    const ordered = KEFINE_SEARCH_WIDGET_IDS.filter((id) => seen.has(id));
-    return ordered.length > 0 ? ordered : KEFINE_SEARCH_WIDGET_IDS;
-  });
   const passkeySession = $derived($passkeySessionStore);
   const BRAND_HOME_NAVIGATION_STORAGE_KEY = 'kefine-brand-home-navigation';
   const THEME_STORAGE_KEY = 'kefine-theme';
@@ -83,7 +64,6 @@
   let viewerProfile = $state<Profile | null>(null);
   let unavailable = $state(false);
   let following = $state(false);
-  let copyState = $state<'idle' | 'profile' | 'solver-token'>('idle');
   let Workspace: Component<{
     initialActorHandle?: string;
     initialSearchQuery?: string;
@@ -96,18 +76,16 @@
   let isPublic = $state(false);
   let referralPercent = $state(10);
   let socialLinks = $state<ProfileSocialLink[]>([]);
-  let sshPublicKey = $state('');
+  let sshPublicKeys = $state('');
   let widgetsOrg = $state('');
   let tasksOrg = $state('');
   let socialOrgState = $state<'idle' | 'copied'>('idle');
-  let privateKey = $state('');
   let firstName = $state('');
   let surname = $state('');
   let leftNavExpanded = $state(false);
   let themeMode = $state<'light' | 'dark' | 'auto'>('auto');
   let systemPrefersDark = $state(false);
-  let cardNumber = $state('');
-  let editorElement = $state<HTMLElement | null>(null);
+  let profileSettingsOpen = $state(false);
 
   const requestedHandle = $derived(page.params.handle ?? '');
   const activeLocale = $derived(readLocaleFromPathname(page.url.pathname) ?? 'en');
@@ -117,26 +95,6 @@
   const profileSearchQuery = $derived(page.url.searchParams.get('q') ?? '');
   const shouldRenderSearchWorkspace = $derived(Boolean(profileSearchQuery.trim()));
   const setupMetadata = $derived((profile?.metadata ?? {}) as ProfileMetadata);
-  const SOLVER_RELAY_ORIGIN = 'http://127.0.0.1:4501';
-  const solverProfileToken = $derived(
-    typeof setupMetadata.solverProfileToken === 'string' ? setupMetadata.solverProfileToken.trim() : ''
-  );
-  // The local solver is created automatically with a random handle, so the
-  // handle only exists once the profile has been created.
-  const solverProfileHandle = $derived(
-    typeof setupMetadata.solverProfileHandle === 'string' ? setupMetadata.solverProfileHandle.trim() : ''
-  );
-  const solverProfileCreated = $derived(Boolean(solverProfileToken));
-  // The inbox is the auto-created solver's actor inbox, derived from its random handle.
-  const solverProfileEndpoint = $derived(
-    solverProfileHandle ? `${SOLVER_RELAY_ORIGIN}/solvers/${solverProfileHandle}/inbox` : `${SOLVER_RELAY_ORIGIN}/solvers/.../inbox`
-  );
-  const solverAuthorizationHeader = $derived(
-    solverProfileToken ? `Authorization: Bearer ${solverProfileToken}` : 'Authorization: Bearer lepos_solver_...'
-  );
-  // Where the solver returns its results: it processes the message relayed to
-  // its inbox and POSTs the response (OpenAI Responses shape) back here.
-  const solverResponsesEndpoint = `${SOLVER_RELAY_ORIGIN}/api/responses`;
 
   // The profile is a repository, so the topbar search reads as the repo handle
   // (`@demo`) instead of the generic prompt — the same contextual pill the
@@ -145,29 +103,48 @@
   const profileSearchSlug = $derived(
     profile ? `@${(username || profile.primaryHandle).replace(/^@+/, '').trim()}` : ''
   );
-  const cardHolderPreview = $derived(
-    `${firstName.trim()} ${surname.trim()}`.trim() || profile?.displayName || 'LEFINE'
-  );
   // Route-scoped icon actions rendered beside the topbar search, mirroring the
-  // solvers screen: anyone can download the profile as `social.org`, and the
-  // owner gets a settings shortcut that jumps to the editor below.
+  // solvers screen: social.org exports live in one compact menu, and the owner
+  // gets a settings shortcut that opens the profile settings modal.
   const profileSearchActions = $derived.by<TopbarSearchAction[]>(() => {
     const actions: TopbarSearchAction[] = [
       {
-        id: 'profile-download',
-        label: localeText.profile.downloadSocialOrg,
+        id: 'profile-social-org',
+        label: localeText.profile.socialOrgActions,
         icon: 'download',
-        testId: 'profile-social-download',
-        onClick: downloadSocialOrg
+        testId: 'profile-social-menu-trigger',
+        menuItems: [
+          {
+            id: 'profile-social-open',
+            label: localeText.profile.openPublicProfile,
+            icon: 'open',
+            testId: 'profile-social-open',
+            onClick: openPublicProfile
+          },
+          {
+            id: 'profile-social-copy',
+            label: socialOrgState === 'copied' ? localeText.profile.socialOrgCopied : localeText.profile.copySocialOrg,
+            icon: 'copy',
+            testId: 'profile-social-copy',
+            onClick: copySocialOrg
+          },
+          {
+            id: 'profile-social-download',
+            label: localeText.profile.downloadSocialOrg,
+            icon: 'download',
+            testId: 'profile-social-download',
+            onClick: downloadSocialOrg
+          }
+        ]
       }
     ];
     if (isOwner) {
       actions.push({
         id: 'profile-settings',
-        label: localeText.profile.title,
+        label: localeText.profile.profileSettingsTitle,
         icon: 'settings',
         testId: 'profile-settings-trigger',
-        onClick: scrollToProfileEditor
+        onClick: openProfileSettings
       });
     }
     return actions;
@@ -175,13 +152,6 @@
 
   const hasIdentityStepCompleted = $derived(
     Boolean(firstName.trim() || surname.trim() || profile?.displayName.trim() || username.trim())
-  );
-  const hasCardStepCompleted = $derived(Boolean(profile?.cardVerification?.verifiedAt));
-  const hasSocialStepCompleted = $derived(
-    socialLinks.some((link) => Boolean(link.value.trim()))
-  );
-  const socialsStepHint = $derived(
-    setupMetadata.cardBonusEligible && !hasSocialStepCompleted ? localeText.profile.socialBonusHint : ''
   );
   const profileSetupCompleted = $derived(
     setupMetadata.profileSetupCompleted === true || setupMetadata.profileSetupStep === 'done'
@@ -289,6 +259,28 @@
     return { id, type: 'website', label: 'Website', value: '' };
   }
 
+  function normalizeSshPublicKeyText(value: string): string[] {
+    const seen = new Set<string>();
+    return value
+      .split(/\r?\n/)
+      .map((key) => key.trim().replace(/\s+/g, ' '))
+      .filter((key) => {
+        if (!key || seen.has(key)) {
+          return false;
+        }
+        seen.add(key);
+        return true;
+      });
+  }
+
+  function readProfileSshPublicKeys(metadata: ProfileMetadata | undefined): string[] {
+    const keys = Array.isArray(metadata?.sshPublicKeys)
+      ? metadata.sshPublicKeys.filter((key): key is string => typeof key === 'string')
+      : [];
+    const legacyKey = typeof metadata?.sshPublicKey === 'string' ? metadata.sshPublicKey : '';
+    return normalizeSshPublicKeyText([...keys, legacyKey].join('\n'));
+  }
+
   function syncDraftStateFromProfile(nextProfile: Profile | null) {
     displayName = nextProfile?.displayName ?? '';
     username = nextProfile?.primaryHandle ?? '';
@@ -299,17 +291,13 @@
     if (viewerProfile && nextProfile && viewerProfile.id === nextProfile.id && socialLinks.length === 0) {
       socialLinks = [createEmptySocialLink()];
     }
-    sshPublicKey = typeof nextProfile?.metadata?.sshPublicKey === 'string' ? nextProfile.metadata.sshPublicKey : '';
+    sshPublicKeys = readProfileSshPublicKeys(nextProfile?.metadata as ProfileMetadata | undefined).join('\n');
     widgetsOrg = typeof nextProfile?.metadata?.widgetsOrg === 'string' ? nextProfile.metadata.widgetsOrg : '';
     tasksOrg =
       typeof nextProfile?.metadata?.tasksOrg === 'string' ? nextProfile.metadata.tasksOrg : DEFAULT_PROFILE_TASKS_ORG;
     const nameParts = readProfileNameParts(nextProfile);
     firstName = nameParts.firstName;
     surname = nameParts.surname;
-  }
-
-  function syncPrivateKeyState() {
-    privateKey = browser ? loadGeneratedPrivateKeyCookie() ?? '' : '';
   }
 
   function buildDefaultActorProfile(): Profile | null {
@@ -385,7 +373,6 @@
     mediaQuery.addEventListener('change', handleThemePreferenceChange);
     hydrateAuthStateFromSession();
     loadPasskeySession();
-    syncPrivateKeyState();
 
     return () => {
       mediaQuery.removeEventListener('change', handleThemePreferenceChange);
@@ -406,8 +393,6 @@
     if (!browser) {
       return;
     }
-
-    syncPrivateKeyState();
 
     const currentPasskeySession = passkeySession;
     const userId = currentPasskeySession?.userId || authState.userId?.trim() || authState.email?.trim().toLowerCase() || authState.address?.trim();
@@ -467,24 +452,24 @@
     socialLinks = socialLinks.filter((link) => link.id !== id);
   }
 
-  async function syncSshPublicKey(handle: string, publicKey: string) {
+  async function syncSshPublicKeys(handle: string, publicKeys: string[]) {
     if (!browser) {
       return;
     }
 
     const url = `/actor/${encodeURIComponent(handle)}/keys/ssh`;
-    if (publicKey.trim()) {
+    if (publicKeys.length > 0) {
       const response = await fetch(url, {
         method: 'PUT',
         headers: {
           'content-type': 'application/json'
         },
         body: JSON.stringify({
-          publicKey: publicKey.trim()
+          publicKeys
         })
       });
       if (!response.ok) {
-        throw new Error('Failed to save SSH public key on the server.');
+        throw new Error('Failed to save SSH public keys on the server.');
       }
       return;
     }
@@ -493,87 +478,8 @@
       method: 'DELETE'
     });
     if (!response.ok) {
-      throw new Error('Failed to delete SSH public key on the server.');
+      throw new Error('Failed to delete SSH public keys on the server.');
     }
-  }
-
-  async function copyLink(value: string, kind: 'profile' | 'solver-token') {
-    if (!browser || !navigator.clipboard) {
-      return;
-    }
-
-    await navigator.clipboard.writeText(value);
-    copyState = kind;
-    window.setTimeout(() => {
-      if (copyState === kind) {
-        copyState = 'idle';
-      }
-    }, 1400);
-  }
-
-  async function copyPrivateKey() {
-    if (!privateKey.trim()) {
-      return;
-    }
-
-    await copyLink(privateKey, 'profile');
-  }
-
-  function createRandomSolverSlug(length: number): string {
-    const alphabet = 'abcdefghijklmnopqrstuvwxyz0123456789';
-    if (typeof crypto !== 'undefined' && 'getRandomValues' in crypto) {
-      const values = crypto.getRandomValues(new Uint32Array(length));
-      return Array.from(values, (value) => alphabet[value % alphabet.length]).join('');
-    }
-
-    let slug = '';
-    while (slug.length < length) {
-      slug += Math.random().toString(36).slice(2);
-    }
-    return slug.slice(0, length);
-  }
-
-  function createSolverProfile() {
-    if (!browser || !profile || !isOwner) {
-      return;
-    }
-
-    const updated = updateStoredProfile(localStorage, profile.id, (current) => {
-      const metadata = (current.metadata ?? {}) as ProfileMetadata;
-      const storedToken = typeof metadata.solverProfileToken === 'string' ? metadata.solverProfileToken.trim() : '';
-      const storedHandle = typeof metadata.solverProfileHandle === 'string' ? metadata.solverProfileHandle.trim() : '';
-      // The solver (its inbox identity) is created automatically with a random handle.
-      const randomHandle = `solver-${createRandomSolverSlug(8)}`;
-
-      return {
-        ...current,
-        metadata: nextMetadata(current, {
-          solverProfileId:
-            typeof metadata.solverProfileId === 'string' && metadata.solverProfileId.trim()
-              ? metadata.solverProfileId.trim()
-              : `solver-profile:${current.id}`,
-          solverProfileHandle: storedHandle || randomHandle,
-          solverProfileToken: storedToken || `lepos_solver_${createRandomSolverSlug(32)}`,
-          solverProfileCreatedAt:
-            typeof metadata.solverProfileCreatedAt === 'string' && metadata.solverProfileCreatedAt.trim()
-              ? metadata.solverProfileCreatedAt.trim()
-              : new Date().toISOString()
-        })
-      };
-    });
-
-    if (updated) {
-      profile = updated;
-      syncDraftStateFromProfile(updated);
-    }
-  }
-
-  async function copySolverToken() {
-    if (!solverProfileToken) {
-      return;
-    }
-
-    await copyLink(solverProfileToken, 'solver-token');
   }
 
   // Build a `social.org` (org-social) document from the current draft so owners
@@ -640,12 +546,40 @@
     URL.revokeObjectURL(url);
   }
 
-  function insertExampleWidgets() {
-    widgetsOrg = DEFAULT_PROFILE_WIDGETS_ORG;
+  function openPublicProfile() {
+    if (!browser || !canonicalProfilePath) {
+      return;
+    }
+
+    window.open(new URL(canonicalProfilePath, window.location.origin).toString(), '_blank', 'noopener,noreferrer');
   }
 
-  function insertExampleTasks() {
-    tasksOrg = DEFAULT_PROFILE_TASKS_ORG;
+  function selectProfileTheme(theme: 'light' | 'dark' | 'auto') {
+    themeMode = theme;
+  }
+
+  function selectProfileLocale(locale: KefineLocale) {
+    setKefineLocale(locale);
+  }
+
+  function openProfileSettings() {
+    profileSettingsOpen = true;
+  }
+
+  function closeProfileSettings() {
+    profileSettingsOpen = false;
+  }
+
+  function handleProfileSettingsBackdrop(event: MouseEvent) {
+    if (event.currentTarget === event.target) {
+      closeProfileSettings();
+    }
+  }
+
+  function handleProfileSettingsKeydown(event: KeyboardEvent) {
+    if (event.key === 'Escape') {
+      closeProfileSettings();
+    }
   }
 
   function resolveNextUsername(current: Profile): string {
@@ -678,6 +612,7 @@
 
     const nextHandle = resolveNextUsername(profile);
     const fullName = `${firstName.trim()} ${surname.trim()}`.trim();
+    const normalizedSshPublicKeys = normalizeSshPublicKeyText(sshPublicKeys);
     const updated = updateStoredProfile(localStorage, profile.id, (current) => ({
       ...current,
       username: nextHandle,
@@ -696,14 +631,15 @@
       metadata: nextMetadata(current, {
         firstName: firstName.trim(),
         surname: surname.trim(),
-        sshPublicKey: sshPublicKey.trim(),
+        sshPublicKey: normalizedSshPublicKeys[0] ?? undefined,
+        sshPublicKeys: normalizedSshPublicKeys,
         widgetsOrg: widgetsOrg.trim(),
         tasksOrg: tasksOrg.trim()
       })
     }));
 
     if (updated) {
-      await syncSshPublicKey(updated.primaryHandle, sshPublicKey.trim());
+      await syncSshPublicKeys(updated.primaryHandle, normalizedSshPublicKeys);
       syncOwnedOrderHandles(updated.id, updated.primaryHandle);
       profile = updated;
       await navigateToProfileHandle(updated.primaryHandle);
@@ -785,40 +721,14 @@
       }))
       .filter((link) => link.value);
 
-    let updated = updateStoredProfile(localStorage, profile.id, (current) => ({
+    const updated = updateStoredProfile(localStorage, profile.id, (current) => ({
       ...current,
       socialLinks: nextSocialLinks,
-      cardVerification:
-        nextSocialLinks.length > 0 &&
-        current.metadata &&
-        current.metadata.cardBonusEligible === true &&
-        current.cardVerification &&
-        !current.cardVerification.bonusGrantedAt
-          ? {
-              ...current.cardVerification,
-              bonusGrantedAt: new Date().toISOString()
-            }
-          : current.cardVerification,
       metadata: nextMetadata(current, {
         profileSetupStep: 'done',
         profileSetupCompleted: true
       })
     }));
-
-    if (
-      updated &&
-      nextSocialLinks.length > 0 &&
-      setupMetadata.cardBonusEligible === true &&
-      !profile.cardVerification?.bonusGrantedAt
-    ) {
-      updated = addProfileBonus({
-        storage: localStorage,
-        profileId: updated.id,
-        amountUsd: 100,
-        source: 'card-verification',
-        note: 'Armenian bank card verification bonus'
-      });
-    }
 
     if (updated) {
       profile = updated;
@@ -840,82 +750,6 @@
     if (updated) {
       profile = updated;
       isPublic = updated.isPublic;
-    }
-  }
-
-  function scrollToProfileEditor() {
-    editorElement?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-
-  // Verify a bank card's BIN against the Armenian-bank allowlist through the
-  // SvelteKit API route, which proxies binlist.net. A verified card unlocks the
-  // $100 workspace bonus that is granted once a social link is saved.
-  async function verifyProfileCard() {
-    if (!browser || !profile || !isOwner) {
-      return;
-    }
-
-    const digits = cardNumber.replace(/\D+/g, '');
-    if (digits.length < 6) {
-      return;
-    }
-
-    const response = await fetch('/api/profile/bin-lookup', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ cardNumber: digits })
-    }).catch(() => null);
-
-    if (!response) {
-      return;
-    }
-
-    const payload = (await response.json().catch(() => null)) as
-      | {
-          bin?: string;
-          scheme?: string | null;
-          cardType?: string | null;
-          bankName?: string | null;
-          countryAlpha2?: string | null;
-          countryName?: string | null;
-          isArmenianBank?: boolean;
-          bonusEligible?: boolean;
-          error?: string;
-        }
-      | null;
-
-    if (!payload || payload.error) {
-      return;
-    }
-
-    const verifiedAt = new Date().toISOString();
-    const updated = updateStoredProfile(localStorage, profile.id, (current) => ({
-      ...current,
-      cardVerification: {
-        status: payload.bonusEligible ? 'verified' : 'rejected',
-        bin: payload.bin ?? digits.slice(0, 8),
-        last4: digits.slice(-4),
-        scheme: payload.scheme ?? undefined,
-        cardType: payload.cardType ?? undefined,
-        bankName: payload.bankName ?? undefined,
-        countryAlpha2: payload.countryAlpha2 ?? undefined,
-        countryName: payload.countryName ?? undefined,
-        isArmenianBank: payload.isArmenianBank === true,
-        verifiedAt,
-        bonusGrantedAt: current.cardVerification?.bonusGrantedAt,
-        rejectionReason: payload.bonusEligible
-          ? undefined
-          : 'Card is not tied to an Armenian bank allowlist issuer.'
-      },
-      metadata: nextMetadata(current, {
-        cardBonusEligible: payload.bonusEligible === true
-      })
-    }));
-
-    if (updated) {
-      profile = updated;
     }
   }
 
@@ -1005,7 +839,7 @@
       searchTranslatorLabel={localeText.topbar.searchTranslatorLabel}
       searchMusicLabel={localeText.topbar.searchMusicLabel}
       searchProxyLabel={localeText.topbar.searchProxyLabel}
-      searchWidgetIds={profileWidgetIds}
+      searchWidgetIds={KEFINE_SEARCH_WIDGET_IDS}
       searchWidgetBackLabel={localeText.topbar.searchWidgetBackLabel}
       searchHomeHref={buildLocaleHomePath(activeLocale)}
       initialSearchQuery={page.url.searchParams.get('q') ?? ''}
@@ -1053,6 +887,134 @@
         void goto(buildLocaleHomePath(locale));
       }}
     />
+
+    {#if isOwner && profileSettingsOpen}
+      <lefine-box
+        class="profile-settings-modal"
+        data-testid="profile-settings-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="profile-settings-title"
+        tabindex="-1"
+        onclick={handleProfileSettingsBackdrop}
+        onkeydown={handleProfileSettingsKeydown}
+      >
+        <lef-profile-zone data-zone="settings" data-testid="profile-settings-panel">
+          <lefine-box class="profile-settings-modal__head">
+            <lefine-box class="profile-zone__head">
+              <strong id="profile-settings-title">{localeText.profile.profileSettingsTitle}</strong>
+              <p>{localeText.profile.profileSettingsHint}</p>
+            </lefine-box>
+            <button
+              type="button"
+              class="profile-settings-modal__close"
+              data-testid="profile-settings-close"
+              aria-label={localeText.profile.profileSettingsTitle}
+              onclick={closeProfileSettings}
+            ></button>
+          </lefine-box>
+
+          <lefine-box class="profile-settings-grid">
+            <lefine-box class="profile-links-column">
+              <label class="profile-field">
+                <lefine-text>{localeText.profile.sshPublicKeys}</lefine-text>
+                <textarea
+                  data-testid="profile-ssh-public-keys"
+                  bind:value={sshPublicKeys}
+                  rows="5"
+                  placeholder={localeText.profile.sshPublicKeysHint}
+                ></textarea>
+              </label>
+            </lefine-box>
+
+            <lefine-box class="profile-settings-group" data-testid="profile-theme-settings">
+              <lefine-text>{localeText.profile.themeSettings}</lefine-text>
+              <lefine-box
+                class="profile-settings-options"
+                role="group"
+                aria-label={localeText.profile.themeSettings}
+              >
+                <button
+                  type="button"
+                  class="profile-settings-option"
+                  data-active={themeMode === 'auto'}
+                  data-testid="profile-theme-option-auto"
+                  onclick={() => selectProfileTheme('auto')}
+                >
+                  <KefineTopbarIcon name="theme-auto" size={16} />
+                  <lefine-text>{localeText.topbar.theme.auto}</lefine-text>
+                </button>
+                <button
+                  type="button"
+                  class="profile-settings-option"
+                  data-active={themeMode === 'light'}
+                  data-testid="profile-theme-option-light"
+                  onclick={() => selectProfileTheme('light')}
+                >
+                  <KefineTopbarIcon name="theme-light" size={16} />
+                  <lefine-text>{localeText.topbar.theme.light}</lefine-text>
+                </button>
+                <button
+                  type="button"
+                  class="profile-settings-option"
+                  data-active={themeMode === 'dark'}
+                  data-testid="profile-theme-option-dark"
+                  onclick={() => selectProfileTheme('dark')}
+                >
+                  <KefineTopbarIcon name="theme-dark" size={16} />
+                  <lefine-text>{localeText.topbar.theme.dark}</lefine-text>
+                </button>
+              </lefine-box>
+            </lefine-box>
+
+            <lefine-box class="profile-settings-group" data-testid="profile-language-settings">
+              <lefine-text>{localeText.profile.languageSettings}</lefine-text>
+              <lefine-box
+                class="profile-settings-options"
+                role="group"
+                aria-label={localeText.profile.languageSettings}
+              >
+                <button
+                  type="button"
+                  class="profile-settings-option"
+                  data-active={$kefineLocale === 'en'}
+                  data-testid="profile-locale-option-en"
+                  onclick={() => selectProfileLocale('en')}
+                >
+                  <KefineTopbarIcon name="flag-en" size={16} />
+                  <lefine-text>{localeText.topbar.languageEnglish}</lefine-text>
+                </button>
+                <button
+                  type="button"
+                  class="profile-settings-option"
+                  data-active={$kefineLocale === 'ru'}
+                  data-testid="profile-locale-option-ru"
+                  onclick={() => selectProfileLocale('ru')}
+                >
+                  <KefineTopbarIcon name="flag-ru" size={16} />
+                  <lefine-text>{localeText.topbar.languageRussian}</lefine-text>
+                </button>
+                <button
+                  type="button"
+                  class="profile-settings-option"
+                  data-active={$kefineLocale === 'hy'}
+                  data-testid="profile-locale-option-hy"
+                  onclick={() => selectProfileLocale('hy')}
+                >
+                  <KefineTopbarIcon name="flag-hy" size={16} />
+                  <lefine-text>{localeText.topbar.languageArmenian}</lefine-text>
+                </button>
+              </lefine-box>
+            </lefine-box>
+          </lefine-box>
+
+          <footer class="profile-settings-modal__footer">
+            <button type="button" onclick={closeProfileSettings}>{localeText.profile.profileSettingsTitle}</button>
+            <button type="button" data-variant="primary" onclick={saveProfile}>{localeText.profile.save}</button>
+          </footer>
+        </lef-profile-zone>
+      </lefine-box>
+    {/if}
 
     <lefine-box class:profile-layout={true} class:profile-layout--single={true}>
       <lefine-box class="profile-main" class:profile-main--setup={isOwner && onboardingStep === 'identity'}>
@@ -1128,9 +1090,6 @@
                 emptyText={localeText.profile.onboardingSubtitle}
                 isOwner={true}
               />
-              {#if socialsStepHint}
-                <small role="alert">{socialsStepHint}</small>
-              {/if}
               <lefine-box class="profile-setup__footer">
                 <button type="button" data-variant="primary" onclick={saveSocialLinksStep}>
                   {localeText.profile.finishSetup}
@@ -1141,9 +1100,8 @@
         {:else}
           <article class="profile-details">
             <!-- A profile is a repository: no enclosing frame at all. The README
-                 block carries its own subtle surface and the tasks float as a
-                 flat checklist directly on the page — exactly like the solution
-                 screen (reviewer: "make it flatter"). -->
+                 block carries its own subtle surface. Tasks are private and only
+                 render for the owner; the public view stays at the README. -->
             <KefineProfileRepository
               handle={username || profile.primaryHandle}
               {displayName}
@@ -1152,10 +1110,15 @@
               {isOwner}
             />
 
+            <!-- Widgets live directly inside the profile (not behind the command
+                 palette): the owner's declared widget blocks render inline for
+                 every visitor. -->
+            <KefineProfileWidgets {widgetsOrg} />
+
             {#if isOwner}
               <!-- Owner editor: lives below the public repository view. The lock
                    chip is the single, polished public/private control. -->
-              <lef-profile-editor bind:this={editorElement} data-testid="profile-editor">
+              <lef-profile-editor data-testid="profile-editor">
                 <lefine-box class="profile-editor__head" data-public={isPublic}>
                   <lefine-box class="profile-editor__status">
                     <strong>{isPublic ? localeText.profile.publicStatus : localeText.profile.privateStatus}</strong>
@@ -1181,115 +1144,29 @@
                   </button>
                 </lefine-box>
 
-                <label class="profile-field">
-                  <lefine-text>{localeText.profile.bio}</lefine-text>
-                  <textarea bind:value={bio} rows="4"></textarea>
-                </label>
-
-                <KefineSolverProfileCard
-                  text={localeText.profile}
-                  workspaceHandle={profile.primaryHandle}
-                  solverHandle={solverProfileHandle}
-                  token={solverProfileToken}
-                  endpoint={solverProfileEndpoint}
-                  responsesEndpoint={solverResponsesEndpoint}
-                  authHeader={solverAuthorizationHeader}
-                  created={solverProfileCreated}
-                  copied={copyState === 'solver-token'}
-                  onCreate={createSolverProfile}
-                  onCopy={copySolverToken}
-                />
-
-                <lefine-box class="profile-links-column">
-                  <lefine-box class="profile-links-head">
-                    <button type="button" class="profile-plus" aria-label={localeText.profile.addLink} onclick={addSocialLink}>
-                      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
-                    </button>
-                    <strong>{localeText.profile.socialLinks}</strong>
+                <!-- Public zone: structured fields that shape the public
+                     workspace. Owner-only controls live in the settings zone. -->
+                <lef-profile-zone data-zone="public">
+                  <lefine-box class="profile-zone__head">
+                    <strong>{localeText.profile.publicZoneTitle}</strong>
+                    <p>{localeText.profile.publicZoneHint}</p>
                   </lefine-box>
-                  <KefineProfileSocialLinksCard
-                    bind:links={socialLinks}
-                    valuePlaceholder={localeText.profile.socialUrl}
-                    emptyText=""
-                    {isOwner}
-                  />
-                </lefine-box>
 
-                <!-- Secret data: owner-only, never leaves the workspace. -->
-                <lefine-box class="profile-links-column">
-                  <lefine-box class="profile-links-head">
-                    <strong>{localeText.profile.secretData}</strong>
-                  </lefine-box>
-                  <label class="profile-field">
-                    <lefine-text>{localeText.profile.sshPublicKey}</lefine-text>
-                    <textarea bind:value={sshPublicKey} rows="6" placeholder={localeText.profile.sshPublicKeyHint}></textarea>
-                  </label>
-                  <label class="profile-field">
-                    <lefine-box class="profile-secret-field-head">
-                      <lefine-text>{localeText.profile.privateKey}</lefine-text>
-                      <button type="button" data-variant="ghost" onclick={copyPrivateKey} disabled={!privateKey.trim()}>
-                        {copyState === 'profile' ? localeText.profile.privateKeyCopied : localeText.profile.copyPrivateKey}
+                  <lefine-box class="profile-links-column">
+                    <lefine-box class="profile-links-head">
+                      <button type="button" class="profile-plus" aria-label={localeText.profile.addLink} onclick={addSocialLink}>
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
                       </button>
+                      <strong>{localeText.profile.socialLinks}</strong>
                     </lefine-box>
-                    <textarea value={privateKey} rows="8" readonly placeholder={localeText.profile.privateKeyHint}></textarea>
-                  </label>
-                </lefine-box>
-
-                <lefine-box class="profile-widgets-editor">
-                  <lefine-box class="profile-links-head">
-                    <strong>{localeText.profile.tasksTitle}</strong>
-                    <button type="button" class="profile-widgets-example" onclick={insertExampleTasks}>
-                      {localeText.profile.tasksInsertExample}
-                    </button>
+                    <KefineProfileSocialLinksCard
+                      bind:links={socialLinks}
+                      valuePlaceholder={localeText.profile.socialUrl}
+                      emptyText=""
+                      {isOwner}
+                    />
                   </lefine-box>
-                  <p class="profile-widgets-hint">{localeText.profile.tasksHint}</p>
-                  <textarea
-                    class="profile-widgets-input"
-                    bind:value={tasksOrg}
-                    rows="6"
-                    spellcheck="false"
-                    placeholder={DEFAULT_PROFILE_TASKS_ORG}
-                  ></textarea>
-                </lefine-box>
-
-                <lefine-box class="profile-widgets-editor">
-                  <lefine-box class="profile-links-head">
-                    <strong>{localeText.profile.widgetsTitle}</strong>
-                    <button type="button" class="profile-widgets-example" onclick={insertExampleWidgets}>
-                      {localeText.profile.widgetsInsertExample}
-                    </button>
-                  </lefine-box>
-                  <p class="profile-widgets-hint">{localeText.profile.widgetsHint}</p>
-                  <textarea
-                    class="profile-widgets-input"
-                    bind:value={widgetsOrg}
-                    rows="6"
-                    spellcheck="false"
-                    placeholder={DEFAULT_PROFILE_WIDGETS_ORG}
-                  ></textarea>
-                  <lefine-box class="profile-widgets-actions">
-                    <button type="button" data-variant="ghost" onclick={copySocialOrg}>
-                      {socialOrgState === 'copied' ? localeText.profile.socialOrgCopied : localeText.profile.copySocialOrg}
-                    </button>
-                    <button type="button" data-variant="ghost" onclick={downloadSocialOrg}>
-                      {localeText.profile.downloadSocialOrg}
-                    </button>
-                  </lefine-box>
-                </lefine-box>
-
-                <!-- The animated bonus card: the brand art updates live as the
-                     owner types, and the BIN is verified against the Armenian
-                     bank allowlist through /api/profile/bin-lookup. -->
-                <KefineProfileBonusCardPanel
-                  bind:cardNumber
-                  cardStepTitle={localeText.profile.cardStepTitle}
-                  bonusTitle={localeText.profile.bonusTitle}
-                  bonusText={localeText.profile.bonusText}
-                  holderName={cardHolderPreview}
-                  verifyLabel={localeText.profile.verifyCard}
-                  status={profile.cardVerification}
-                  onVerify={verifyProfileCard}
-                />
+                </lef-profile-zone>
 
                 <footer class="profile-details__footer">
                   <button type="button" data-variant="primary" onclick={saveProfile}>{localeText.profile.save}</button>
@@ -1472,6 +1349,71 @@
     color: var(--kef-color-muted);
   }
 
+  .profile-settings-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    display: grid;
+    place-items: start center;
+    padding: clamp(4.75rem, 9vh, 6rem) 1rem 1.5rem;
+    background: color-mix(in oklab, black 42%, transparent);
+    overflow: auto;
+  }
+
+  .profile-settings-modal > lef-profile-zone {
+    width: min(58rem, 100%);
+    max-height: calc(100vh - 7rem);
+    overflow: auto;
+    box-shadow: 0 24px 70px color-mix(in oklab, black 28%, transparent);
+  }
+
+  .profile-settings-modal__head,
+  .profile-settings-modal__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .profile-settings-modal__close {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 2.35rem;
+    height: 2.35rem;
+    padding: 0;
+    border: 1px solid color-mix(in oklab, var(--kef-color-text) 10%, transparent);
+    border-radius: 0.6rem;
+    background: color-mix(in oklab, var(--kef-color-bg) 42%, transparent);
+    color: var(--kef-color-text);
+    cursor: pointer;
+  }
+
+  .profile-settings-modal__close::before,
+  .profile-settings-modal__close::after {
+    content: '';
+    position: absolute;
+    width: 0.9rem;
+    height: 1.5px;
+    border-radius: 999px;
+    background: currentColor;
+  }
+
+  .profile-settings-modal__close::before {
+    transform: rotate(45deg);
+  }
+
+  .profile-settings-modal__close::after {
+    transform: rotate(-45deg);
+  }
+
+  .profile-settings-modal__footer {
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+
   /* Owner editor sits below the public repository view, separated by a hairline
      rather than another framed panel. */
   lef-profile-editor {
@@ -1496,6 +1438,98 @@
   .profile-editor__head[data-public='true'] {
     background: color-mix(in oklab, var(--kef-color-primary) 9%, var(--kef-color-bg-card));
     border-color: color-mix(in oklab, var(--kef-color-primary) 22%, transparent);
+  }
+
+  /* Public profile settings share the same quiet surface as the visibility
+     control, without adding another nested card. */
+  lef-profile-zone {
+    display: grid;
+    gap: 0.85rem;
+    padding: 1rem 1.05rem 1.15rem;
+    border-radius: 0.85rem;
+    border: 1px solid color-mix(in oklab, var(--kef-color-text) 8%, transparent);
+    background: color-mix(in oklab, var(--kef-color-bg) 45%, var(--kef-color-bg-card));
+  }
+
+  .profile-zone__head {
+    display: grid;
+    gap: 0.2rem;
+    min-width: 0;
+  }
+
+  .profile-zone__head strong {
+    font-size: 0.95rem;
+  }
+
+  .profile-zone__head p {
+    margin: 0;
+    color: var(--kef-color-muted);
+    font-size: 0.82rem;
+    line-height: 1.4;
+  }
+
+  .profile-settings-grid,
+  .profile-settings-group {
+    display: grid;
+    gap: 0.7rem;
+    min-width: 0;
+  }
+
+  .profile-settings-grid {
+    grid-template-columns: minmax(16rem, 1fr) minmax(13rem, 0.82fr) minmax(13rem, 0.82fr);
+    align-items: start;
+  }
+
+  .profile-settings-group > lefine-text {
+    color: color-mix(in oklab, var(--kef-color-text) 78%, transparent);
+    font-size: 0.94rem;
+    font-weight: 650;
+    line-height: 1.1;
+  }
+
+  .profile-settings-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.38rem;
+    min-width: 0;
+  }
+
+  .profile-settings-option {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.38rem;
+    min-height: 2.25rem;
+    max-width: 100%;
+    padding: 0.42rem 0.56rem;
+    border: 1px solid color-mix(in oklab, var(--kef-color-text) 10%, transparent);
+    border-radius: 0.5rem;
+    background: color-mix(in oklab, var(--kef-color-bg) 42%, transparent);
+    color: color-mix(in oklab, var(--kef-color-text) 82%, transparent);
+    font: inherit;
+    font-size: 0.84rem;
+    font-weight: 650;
+    line-height: 1;
+    letter-spacing: 0;
+    cursor: pointer;
+    transition:
+      border-color var(--kef-motion-fast) var(--kef-ease-soft),
+      background-color var(--kef-motion-fast) var(--kef-ease-soft),
+      color var(--kef-motion-fast) var(--kef-ease-soft);
+  }
+
+  .profile-settings-option lefine-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .profile-settings-option:hover,
+  .profile-settings-option[data-active='true'] {
+    border-color: color-mix(in oklab, var(--kef-color-primary) 34%, transparent);
+    background: color-mix(in oklab, var(--kef-color-primary) 11%, var(--kef-color-bg-card));
+    color: color-mix(in oklab, var(--kef-color-text) 58%, var(--kef-color-primary));
   }
 
   .profile-editor__status {
@@ -1560,13 +1594,6 @@
   .profile-links-head {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-  }
-
-  .profile-secret-field-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
     gap: 0.75rem;
   }
 
@@ -1703,55 +1730,21 @@
 
   .profile-field textarea {
     width: 100%;
-  }
-
-  .profile-widgets-editor {
-    display: grid;
-    gap: 0.55rem;
-  }
-
-  .profile-widgets-hint {
-    margin: 0;
-    color: var(--kef-color-muted);
-    font-size: 0.82rem;
-    line-height: 1.45;
-  }
-
-  .profile-widgets-input {
-    width: 100%;
-    font-family: var(--kef-font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
-    font-size: 0.82rem;
-    line-height: 1.5;
+    overflow-x: auto;
     white-space: pre;
-    overflow-wrap: normal;
-  }
-
-  .profile-widgets-example {
-    margin-left: auto;
-    padding: 0.3rem 0.6rem;
-    border: 1px solid color-mix(in oklab, var(--kef-color-text) 12%, transparent);
-    border-radius: 999px;
-    background: transparent;
-    color: var(--kef-color-text);
-    font-size: 0.78rem;
-    cursor: pointer;
-    transition: border-color var(--kef-motion-fast) var(--kef-ease-soft);
-  }
-
-  .profile-widgets-example:hover {
-    border-color: color-mix(in oklab, var(--kef-color-primary) 40%, transparent);
-  }
-
-  .profile-widgets-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
   }
 
   .profile-setup__footer,
   .profile-details__footer {
     display: flex;
     justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .profile-details__footer {
+    justify-content: flex-end;
   }
 
   .profile-setup__footer--spread {
@@ -1794,6 +1787,10 @@
     .profile-editor__head {
       align-items: flex-start;
       flex-direction: column;
+    }
+
+    .profile-settings-grid {
+      grid-template-columns: 1fr;
     }
   }
 </style>
