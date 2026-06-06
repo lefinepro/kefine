@@ -418,7 +418,7 @@
 
   lef-file-name {
     overflow: hidden;
-    font-family: 'Fira Mono', 'Fira Code', ui-monospace, monospace;
+    font-family: var(--kef-font-family-mono);
     font-size: 0.76rem;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -427,7 +427,7 @@
   lef-file-changes {
     display: inline-flex;
     gap: 0.45rem;
-    font-family: 'Fira Mono', 'Fira Code', ui-monospace, monospace;
+    font-family: var(--kef-font-family-mono);
     font-size: 0.74rem;
     font-weight: 700;
   }

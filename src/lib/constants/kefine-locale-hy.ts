@@ -1081,6 +1081,10 @@ export const KEFINE_TEXT_HY = {
     files: 'Ֆայլեր',
     modifiedFilesOutline: 'Փոփոխված ֆայլերի ցանկ',
     tabs: {
+      overview: {
+        label: 'Ակնարկ',
+        hint: 'Դիտել թեստերը, առաջադրանքի կոնտեքստը և solver տարբերակները'
+      },
       testing: {
         label: 'Թեստավորում',
         hint: 'Ուղարկել օրինակ հարցում solver-ին'

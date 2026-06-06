@@ -1,7 +1,8 @@
 <script lang="ts">
+  import Icon from '@iconify/svelte';
   import { kefineLocaleText } from '$lib/constants/kefine-locale';
 
-  type SolutionView = 'source' | 'testing' | 'checkpoints';
+  type SolutionView = 'overview' | 'source' | 'checkpoints';
 
   let {
     active,
@@ -15,17 +16,20 @@
 
   const items = $derived.by(() => [
     {
-      id: 'testing' as const,
-      label: localeText.solutionView.tabs.testing.label,
-      hint: localeText.solutionView.tabs.testing.hint
+      id: 'overview' as const,
+      icon: 'lucide:layout-dashboard',
+      label: localeText.solutionView.tabs.overview.label,
+      hint: localeText.solutionView.tabs.overview.hint
     },
     {
       id: 'checkpoints' as const,
+      icon: 'lucide:git-branch',
       label: localeText.solutionView.tabs.checkpoints.label,
       hint: localeText.solutionView.tabs.checkpoints.hint
     },
     {
       id: 'source' as const,
+      icon: 'lucide:code-2',
       label: localeText.solutionView.tabs.source.label,
       hint: localeText.solutionView.tabs.source.hint
     }
@@ -43,24 +47,7 @@
       title={item.hint}
       onclick={() => onSelect(item.id)}
     >
-      {#if item.id === 'checkpoints'}
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <circle cx="12" cy="12" r="4"></circle>
-          <polyline points="12 8 12 12 14 14"></polyline>
-          <path d="M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20z"></path>
-        </svg>
-      {:else if item.id === 'source'}
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <polyline points="16 18 22 12 16 6"></polyline>
-          <polyline points="8 6 2 12 8 18"></polyline>
-        </svg>
-      {:else}
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M9 3h6"/>
-          <path d="M10 3v6.5L4 19.5a1.5 1.5 0 0 0 1.3 2.2h13.4a1.5 1.5 0 0 0 1.3-2.2L14 9.5V3"/>
-          <path d="M7 16h10"/>
-        </svg>
-      {/if}
+      <Icon icon={item.icon} width="14" height="14" aria-hidden="true" />
       <lefine-text>{item.label}</lefine-text>
     </button>
   {/each}

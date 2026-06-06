@@ -508,7 +508,7 @@
     border-radius: 1rem;
     background: color-mix(in oklab, var(--kef-color-bg-card) 88%, transparent);
     color: var(--kef-color-text);
-    font: 0.9rem/1.5 'JetBrains Mono', 'SFMono-Regular', monospace;
+    font: 0.9rem/1.5 var(--kef-font-family-mono);
     white-space: pre-wrap;
     word-break: break-word;
   }

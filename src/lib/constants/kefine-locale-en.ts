@@ -1107,6 +1107,10 @@ export const KEFINE_TEXT_EN = {
     files: 'Files',
     modifiedFilesOutline: 'Modified files outline',
     tabs: {
+      overview: {
+        label: 'Overview',
+        hint: 'Review tests, task context, and solver options'
+      },
       testing: {
         label: 'Testing',
         hint: 'Send a sample request to the solver'

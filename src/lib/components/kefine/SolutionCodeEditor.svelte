@@ -237,7 +237,7 @@
   }
 
   lef-code-path {
-    font-family: 'Synt', monospace;
+    font-family: var(--kef-font-family-mono);
     font-size: 0.78rem;
     color: var(--lefine-text-soft);
   }
@@ -245,7 +245,7 @@
   lef-code-stats {
     display: inline-flex;
     gap: 0.5rem;
-    font-family: 'Synt', monospace;
+    font-family: var(--kef-font-family-mono);
     font-size: 0.74rem;
     font-weight: 600;
   }
@@ -264,7 +264,7 @@
   lef-code-header-cell {
     display: block;
     padding: 0.4rem 0.85rem;
-    font-family: 'Synt', monospace;
+    font-family: var(--kef-font-family-mono);
     font-size: 0.72rem;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -364,7 +364,7 @@
     flex: 1;
     padding-left: 0.65rem;
     white-space: pre;
-    font-family: 'Synt', monospace;
+    font-family: var(--kef-font-family-mono);
   }
 
   lef-text-placeholder {

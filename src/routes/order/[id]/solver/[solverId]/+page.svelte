@@ -3,17 +3,20 @@
   import { onMount, onDestroy } from 'svelte';
   import '$lib/kefine/jetbrains-hljs.css';
   import { solutionsStore } from '$lib/kefine/solutions-store';
-  import { defaultSolutions } from '$lib/kefine/solutions-data';
+  import { defaultMetrics, defaultSolutions } from '$lib/kefine/solutions-data';
+  import { solverAvatarColor, solverInitials } from '$lib/kefine/solver-avatars';
   import { kefineLocaleText } from '$lib/constants/kefine-locale';
   import SolutionCodeEditor from '$lib/components/kefine/SolutionCodeEditor.svelte';
+  import SolutionMetricsMini from '$lib/components/kefine/SolutionMetricsMini.svelte';
   import SolutionTopbar from '$lib/components/kefine/SolutionTopbar.svelte';
   import SolutionTaskPanel from '$lib/components/kefine/SolutionTaskPanel.svelte';
   import SolutionViewTabs from '$lib/components/kefine/SolutionViewTabs.svelte';
-  type SolutionView = 'source' | 'testing' | 'checkpoints';
   import SolutionTestingPanel from '$lib/components/kefine/SolutionTestingPanel.svelte';
   import SolutionFileOutline from '$lib/components/kefine/SolutionFileOutline.svelte';
   import SolutionCheckpoints from '$lib/components/kefine/SolutionCheckpoints.svelte';
   import type { CommitInfo } from './+page.server';
+
+  type SolutionView = 'overview' | 'source' | 'checkpoints';
 
   let {
     data
@@ -64,6 +67,38 @@
       ?? stored.find(s => s.id === data.solverId)
       ?? null
   );
+  const allSolutions = $derived.by(() => {
+    const merged = [...defaultSolutions, ...stored];
+    const seen = new Set<string>();
+
+    return merged.filter((entry) => {
+      if (seen.has(entry.id)) {
+        return false;
+      }
+
+      seen.add(entry.id);
+      return true;
+    });
+  });
+  const sidebarSolutions = $derived.by(() => {
+    if (!solution) {
+      return [];
+    }
+
+    const project = solution.project?.trim();
+    const sameProject = project
+      ? allSolutions.filter((entry) => entry.project === project)
+      : [];
+
+    return sameProject.length > 0
+      ? sameProject
+      : allSolutions.filter((entry) => entry.id === solution.id);
+  });
+  const overviewMetrics = $derived(
+    defaultMetrics.filter((metric) =>
+      sidebarSolutions.some((entry) => entry.id === metric.solverId)
+    )
+  );
 
   const taskTitle = $derived(solution?.title ?? labels.fallbackTitle);
   const taskDescription = $derived(solution?.description ?? '');
@@ -86,7 +121,7 @@
     showCorrected && solution?.correctedDiffs ? solution.correctedDiffs : (solution?.diffs ?? [])
   );
   let activeFile = $state('');
-  let activeView = $state<SolutionView>('testing');
+  let activeView = $state<SolutionView>('overview');
 
   $effect(() => {
     if (files.length > 0 && !files.some((f: { file: string }) => f.file === activeFile)) {
@@ -110,6 +145,14 @@
 
   function selectFile(file: string) {
     activeFile = file;
+  }
+
+  function chooseSolver(id: string) {
+    if (id === data.solverId) {
+      return;
+    }
+
+    goto(`/order/${data.orderId}/solver/${id}`);
   }
 
   function goBack(event: MouseEvent) {
@@ -234,21 +277,54 @@
           />
         </lef-solver-checkpoints>
       {:else}
-        <lef-solver-testing>
-          <SolutionTestingPanel
-            endpoint={'/'}
-            sampleBody={'{\n  "ping": "hello"\n}'}
-            sampleResponse={'{\n  "ok": true,\n  "message": "proxy ready"\n}'}
-          />
+        <lef-solver-overview data-testid="solution-overview">
+          <aside data-testid="solution-solver-sidebar" aria-label="Solvers">
+            {#each sidebarSolutions as candidate (candidate.id)}
+              <button
+                type="button"
+                data-active={candidate.id === data.solverId ? 'true' : 'false'}
+                aria-current={candidate.id === data.solverId ? 'page' : undefined}
+                onclick={() => chooseSolver(candidate.id)}
+              >
+                <lef-solver-avatar
+                  style="--avatar-color: {solverAvatarColor(candidate.solver)}"
+                  aria-hidden="true"
+                >{solverInitials(candidate.solver)}</lef-solver-avatar>
+                <lef-solver-option-copy>
+                  <strong>{candidate.solver}</strong>
+                  <small>{candidate.title}</small>
+                </lef-solver-option-copy>
+              </button>
+            {/each}
+          </aside>
 
-          <SolutionTaskPanel
-            title={taskTitle}
-            description={taskDescription}
-            {comments}
-            {isCorrectingTask}
-            onSubmitCorrection={handleSubmitCorrection}
-          />
-        </lef-solver-testing>
+          <lef-solver-testing>
+            <SolutionTestingPanel
+              endpoint={'/'}
+              sampleBody={'{\n  "ping": "hello"\n}'}
+              sampleResponse={'{\n  "ok": true,\n  "message": "proxy ready"\n}'}
+            />
+
+            <SolutionTaskPanel
+              title={taskTitle}
+              description={taskDescription}
+              {comments}
+              {isCorrectingTask}
+              onSubmitCorrection={handleSubmitCorrection}
+            />
+          </lef-solver-testing>
+
+          {#if overviewMetrics.length > 0}
+            <lef-solver-metrics-col>
+              <SolutionMetricsMini
+                metrics={overviewMetrics}
+                activeSolverId={data.solverId}
+                project={solution.project}
+                slug={solution.slug}
+              />
+            </lef-solver-metrics-col>
+          {/if}
+        </lef-solver-overview>
       {/if}
     </lef-solver-grid>
   {:else}
@@ -311,6 +387,86 @@
     gap: 0.6rem;
     min-width: 0;
     min-height: 420px;
+  }
+
+  lef-solver-overview {
+    display: grid;
+    grid-template-columns: 210px minmax(0, 1fr) 260px;
+    align-items: start;
+    gap: 0.85rem;
+    min-width: 0;
+  }
+
+  aside[data-testid='solution-solver-sidebar'] {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    min-width: 0;
+  }
+
+  aside[data-testid='solution-solver-sidebar'] button {
+    display: grid;
+    grid-template-columns: 1.75rem minmax(0, 1fr);
+    align-items: center;
+    gap: 0.55rem;
+    width: 100%;
+    min-height: 3.05rem;
+    padding: 0.55rem 0.65rem;
+    border: 1px solid var(--kef-line-soft);
+    border-radius: 0.5rem;
+    background: var(--kef-bg-card);
+    color: var(--lefine-text);
+    text-align: left;
+  }
+
+  aside[data-testid='solution-solver-sidebar'] button:hover,
+  aside[data-testid='solution-solver-sidebar'] button[data-active='true'] {
+    border-color: color-mix(in oklab, var(--kef-color-primary, #3a7afe) 42%, var(--kef-line));
+    background: color-mix(in oklab, var(--kef-color-primary, #3a7afe) 8%, var(--kef-bg-card));
+  }
+
+  lef-solver-avatar {
+    display: inline-grid;
+    place-items: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 8px;
+    background: var(--avatar-color, var(--kef-color-primary, #3a7afe));
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  lef-solver-option-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    min-width: 0;
+  }
+
+  lef-solver-option-copy strong,
+  lef-solver-option-copy small {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  lef-solver-option-copy strong {
+    font-size: 0.82rem;
+    line-height: 1.25;
+  }
+
+  lef-solver-option-copy small {
+    color: var(--lefine-text-soft);
+    font-size: 0.74rem;
+    line-height: 1.25;
+  }
+
+  lef-solver-metrics-col {
+    display: block;
+    min-width: 0;
   }
 
   lef-solver-checkpoints {
@@ -398,7 +554,8 @@
     lef-solver-grid {
       padding: 1rem;
     }
-    lef-solver-source {
+    lef-solver-source,
+    lef-solver-overview {
       grid-template-columns: 1fr;
     }
   }
