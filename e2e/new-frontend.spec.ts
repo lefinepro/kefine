@@ -117,6 +117,9 @@ test.describe('New frontend task results', () => {
     await page.getByTestId('solution-file-search-trigger').click();
     await expect(page.getByTestId('solution-file-search-input')).toBeVisible();
     await expect(page.getByTestId('solution-file-search-input')).toBeFocused();
+    const searchBox = await page.locator('lef-file-search').boundingBox();
+    expect(searchBox).not.toBeNull();
+    expect(searchBox!.height).toBeLessThanOrEqual(30);
 
     await page.getByTestId('solution-file-search-input').fill('config');
     await expect(page.getByTestId('solution-file-outline-item')).toHaveCount(1);

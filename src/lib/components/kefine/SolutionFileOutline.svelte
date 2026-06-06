@@ -208,11 +208,12 @@
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
-    gap: 0.35rem;
-    min-height: 2.05rem;
-    padding: 0.25rem 0.35rem;
+    gap: 0.3rem;
+    height: 1.75rem;
+    min-height: 0;
+    padding: 0.1rem 0.3rem;
     border: 1px solid var(--kef-line-soft);
-    border-radius: 0.45rem;
+    border-radius: 0.4rem;
     background: var(--kef-bg-soft);
     color: var(--lefine-text-soft);
   }
@@ -222,10 +223,14 @@
     min-width: 0;
     border: 0;
     outline: 0;
+    height: 100%;
+    min-height: 0;
+    padding: 0;
     background: transparent;
     color: var(--lefine-text);
     font: inherit;
     font-size: 0.8rem;
+    line-height: 1;
   }
 
   lef-file-search input::placeholder {
