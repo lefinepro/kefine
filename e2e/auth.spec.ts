@@ -61,6 +61,12 @@ test.describe('Auth Flows', () => {
     await page.getByRole('button', { name: 'Continue to social links' }).click();
     await page.getByRole('button', { name: 'Finish setup' }).click();
 
+    await expect(page.getByTestId('kefine-solver-profile-panel')).toHaveCount(0);
+    await expect(page.getByTestId('profile-solver-link-card')).toBeVisible();
+
+    await page.getByTestId('profile-solver-link-card').getByRole('link', { name: 'Solver profile' }).click();
+    await expect(page).toHaveURL(/\/@api\/solver$/);
+
     const solverPanel = page.getByTestId('kefine-solver-profile-panel');
     await expect(solverPanel).toBeVisible();
     await expect(solverPanel).toContainText('Connect a local OpenAI Responses endpoint');

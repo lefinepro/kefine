@@ -35,7 +35,7 @@ const demoOrder = {
   solver: 'Release Solver',
   solverName: 'Release Solver',
   solverHandle: 'release-solver',
-  solverProfileUrl: '/@api',
+  solverProfileUrl: '/@api/solver',
   status: 'active',
   title: 'Document import workflow',
   description: [
@@ -106,11 +106,15 @@ function seedStorage({ profile, order }) {
   window.localStorage.setItem('kefine-theme', 'light');
   window.localStorage.setItem('kefine-profiles-v1', JSON.stringify([profile]));
   window.localStorage.setItem('kefine-created-orders-v1', JSON.stringify([order]));
-  window.localStorage.setItem('lefine-session', JSON.stringify({
+  window.localStorage.setItem('auth-session', JSON.stringify({
+    address: null,
+    chainId: null,
     userId: profile.userId,
     email: profile.email,
     handle: profile.username,
-    displayName: profile.displayName
+    displayName: profile.displayName,
+    authType: 'publickey',
+    connectedAt: Date.now()
   }));
 }
 
