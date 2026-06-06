@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
 
+import { mockOrderApi } from './helpers/kefine';
+
 // A profile is a repository: the public profile renders the handle as a README
 // header and the profile tasks as an Org TODO checklist, mirroring the solvers
 // screen. We seed a public profile into local storage and visit it as an
@@ -67,7 +69,23 @@ test.describe('Profile repository view', () => {
     await expect(items.last()).toHaveAttribute('data-state', 'done');
   });
 
+  test('sidebar menu shows brief profile context instead of repository cards', async ({ page }) => {
+    await seedPublicProfile(page);
+    await page.goto(`/@${SEED_HANDLE}`);
+
+    await page.getByTestId('kefine-brand-mark').click();
+
+    const profileSummary = page.getByTestId('kefine-sidebar-profile');
+    await expect(profileSummary).toBeVisible();
+    await expect(profileSummary).toContainText('Demo Builder');
+    await expect(profileSummary).toContainText(`@${SEED_HANDLE}`);
+    await expect(profileSummary).toContainText('Building reliable solver flows.');
+    await expect(page.locator('kefine-sidebar-popover')).not.toContainText('Latest repos');
+    await expect(page.locator('kefine-sidebar-popover')).not.toContainText('Repos');
+  });
+
   test('new-task row deeplinks into the topbar search to create a task', async ({ page }) => {
+    await mockOrderApi(page);
     await seedPublicProfile(page);
     await page.goto(`/@${SEED_HANDLE}`);
 
@@ -80,6 +98,9 @@ test.describe('Profile repository view', () => {
     const createTaskResult = page.getByTestId('kefine-topbar-search-result-create-task');
     await expect(createTaskResult).toBeVisible();
     await expect(createTaskResult).toContainText('Ship the landing page');
+
+    await createTaskResult.click();
+    await expect(page).toHaveURL(/\/order-1$/);
   });
 
   test('declared widgets are not shown statically but are surfaced by a matching query', async ({

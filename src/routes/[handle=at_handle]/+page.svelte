@@ -172,6 +172,16 @@
     }
     return actions;
   });
+  const sidebarProfile = $derived(
+    profile
+      ? {
+          handle: username || profile.primaryHandle,
+          displayName: displayName || profile.displayName,
+          bio,
+          href: canonicalProfilePath
+        }
+      : null
+  );
 
   const hasIdentityStepCompleted = $derived(
     Boolean(firstName.trim() || surname.trim() || profile?.displayName.trim() || username.trim())
@@ -1011,6 +1021,7 @@
       initialSearchQuery={page.url.searchParams.get('q') ?? ''}
       searchRequest={searchRequest}
       searchItems={searchItems}
+      {sidebarProfile}
       socialLinks={sidebarSocialLinks}
       showSocialLinks={false}
       legalLinks={sidebarLegalLinks}
