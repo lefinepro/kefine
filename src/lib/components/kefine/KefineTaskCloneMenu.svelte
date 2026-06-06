@@ -160,6 +160,7 @@
             <kefine-clone-target>
               <kefine-clone-target-copy>
                 <strong>{repositoryCloneTarget.label}</strong>
+                <em>{labels.cloneCommandHint}</em>
                 <code>{repositoryCloneTarget.command}</code>
                 <small>{repositoryCloneTarget.url}</small>
               </kefine-clone-target-copy>
@@ -306,6 +307,13 @@
     word-break: break-word;
     font-size: 0.8rem;
     line-height: 1.48;
+  }
+
+  kefine-clone-target-copy em {
+    color: color-mix(in oklab, var(--lefine-text, #453323) 72%, transparent);
+    font-size: 0.76rem;
+    font-style: normal;
+    line-height: 1.35;
   }
 
   kefine-clone-target-copy small {

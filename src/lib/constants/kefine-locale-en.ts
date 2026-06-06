@@ -966,6 +966,10 @@ export const KEFINE_TEXT_EN = {
     closeRepositorySettings: 'Close repository settings',
     repositorySettingsHeading: 'Repository settings',
     clone: 'Clone',
+    openRepositoryClone: 'Open repository clone instructions',
+    cloneCommandHint: 'Run this command in your terminal to clone the repository.',
+    repositoryLink: 'Repository link',
+    backToRepository: 'Back to repository',
     pinSolution: 'Pin solution',
     view: 'View',
     apply: 'Apply',
@@ -1106,6 +1110,10 @@ export const KEFINE_TEXT_EN = {
     unchangedLine: 'unchanged line',
     files: 'Files',
     modifiedFilesOutline: 'Modified files outline',
+    fileSearch: 'Search files',
+    fileSearchPlaceholder: 'Search files',
+    fileSearchClear: 'Clear file search',
+    fileSearchEmpty: 'No matching files',
     tabs: {
       overview: {
         label: 'Overview',

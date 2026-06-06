@@ -1,9 +1,10 @@
 <script lang="ts">
   import { browser } from '$app/environment';
+  import { goto } from '$app/navigation';
+  import { page } from '$app/state';
   import Icon from '@iconify/svelte';
   import { defaultMetrics, type Solution, type SolutionMetric } from '$lib/kefine/solutions-data';
   import { kefineLocaleText } from '$lib/constants/kefine-locale';
-  import KefineModal from '$lib/components/kefine/KefineModal.svelte';
   import KefineSolverBadge from '$lib/components/kefine/KefineSolverBadge.svelte';
   import KefineSolversModal from '$lib/components/kefine/KefineSolversModal.svelte';
   import {
@@ -27,6 +28,8 @@
   import type { OrgReadme, OrgTodo, OrgTodoState } from '$lib/kefine/repo-docs';
 
   export type SolversHistoryTask = SolverHistoryTask;
+
+  type RepoContentView = 'readme' | 'settings' | 'clone';
 
   let {
     solutions = [],
@@ -54,8 +57,8 @@
     (readme?.sections ?? []).find((section) => section.id === 'settings') ?? null
   );
 
-  // README sections visible in the main flow. Settings move to the right-rail
-  // modal, while Folder layout and Demonstration are intentionally omitted per
+  // README sections visible in the main flow. Settings move to a URL-backed
+  // page, while Folder layout and Demonstration are intentionally omitted per
   // review feedback.
   const readmeVisibleSections = $derived(
     (readme?.sections ?? []).filter(
@@ -76,18 +79,40 @@
   const displayRepoName = $derived(displayProjectPath(readme?.title || repoName || 'kefine/go-proxy'));
 
   let copyFlash = $state(false);
-  let settingsModalOpen = $state(false);
 
-  const resolvedCloneUrl = $derived.by(() => {
-    if (cloneUrl) return cloneUrl;
-    const slug = repoName ? normalizeProjectPath(repoName) : 'kefine/go-proxy';
-    return `git clone https://kefine.pro/${slug}.git`;
+  const repoContentView = $derived.by((): RepoContentView => {
+    const view = page.url.searchParams.get('view');
+    if (view === 'settings' && readmeSettingsSection) return 'settings';
+    if (view === 'clone') return 'clone';
+    return 'readme';
   });
+
+  const resolvedCloneTarget = $derived.by(() => {
+    if (cloneUrl) return cloneUrl.trim().replace(/^git\s+clone\s+/i, '');
+    const slug = repoName ? normalizeProjectPath(repoName) : 'kefine/go-proxy';
+    return `https://kefine.pro/${slug}.git`;
+  });
+
+  const resolvedCloneCommand = $derived(`git clone ${resolvedCloneTarget}`);
+
+  function repoViewHref(view: RepoContentView): string {
+    const url = new URL(page.url);
+    if (view === 'readme') {
+      url.searchParams.delete('view');
+    } else {
+      url.searchParams.set('view', view);
+    }
+    return `${url.pathname}${url.search}${url.hash}`;
+  }
+
+  function openRepoView(view: RepoContentView) {
+    void goto(repoViewHref(view), { keepFocus: true });
+  }
 
   async function copyClone() {
     if (!browser) return;
     try {
-      await navigator.clipboard.writeText(resolvedCloneUrl);
+      await navigator.clipboard.writeText(resolvedCloneCommand);
       copyFlash = true;
       setTimeout(() => (copyFlash = false), 1400);
     } catch {
@@ -103,10 +128,10 @@
         id: 'repo-clone',
         label: copyFlash
           ? localeText.solversView.copied
-          : localeText.solversView.copyGitCloneCommand,
+          : localeText.solversView.openRepositoryClone,
         icon: 'download' as const,
         testId: 'repo-clone-trigger',
-        onClick: copyClone
+        onClick: () => openRepoView('clone')
       }
     ];
 
@@ -116,9 +141,7 @@
         label: localeText.solversView.openRepositorySettings,
         icon: 'settings' as const,
         testId: 'repo-settings-trigger',
-        onClick: () => {
-          settingsModalOpen = true;
-        }
+        onClick: () => openRepoView('settings')
       });
     }
 
@@ -291,14 +314,64 @@
     openNewTaskSearch();
   }
 
-  function closeSettingsModal() {
-    settingsModalOpen = false;
-  }
 </script>
 
 <lefine-box class="solutions-page-container" data-testid="solution-list-page">
   <lef-tasks-grid>
       <lef-main-tasks aria-label={localeText.solversView.tasksAside} data-testid="solver-task-list">
+        {#if repoContentView === 'settings' && readmeSettingsSection}
+          <lef-repo-page data-testid="repo-settings-page">
+            <lef-repo-page-head>
+              <lef-repo-page-title>
+                <h2>{localeText.solversView.repositorySettingsHeading}</h2>
+                <p>{displayRepoName}</p>
+              </lef-repo-page-title>
+              <a class="repo-page-back" href={repoViewHref('readme')}>
+                <Icon icon="lucide:arrow-left" width="14" height="14" aria-hidden="true" />
+                <lefine-text>{localeText.solversView.backToRepository}</lefine-text>
+              </a>
+            </lef-repo-page-head>
+            <dl class="repo-settings-list">
+              {#each readmeSettingsSection.settings as setting (setting.key)}
+                <lef-repo-settings-kv>
+                  <dt>{setting.key}</dt>
+                  <dd>{setting.value}</dd>
+                </lef-repo-settings-kv>
+              {/each}
+            </dl>
+          </lef-repo-page>
+        {:else if repoContentView === 'clone'}
+          <lef-repo-page data-testid="repo-clone-page">
+            <lef-repo-page-head>
+              <lef-repo-page-title>
+                <h2>{localeText.solversView.cloneHeading}</h2>
+                <p>{displayRepoName}</p>
+              </lef-repo-page-title>
+              <a class="repo-page-back" href={repoViewHref('readme')}>
+                <Icon icon="lucide:arrow-left" width="14" height="14" aria-hidden="true" />
+                <lefine-text>{localeText.solversView.backToRepository}</lefine-text>
+              </a>
+            </lef-repo-page-head>
+            <lef-repo-clone-hint>{localeText.solversView.cloneCommandHint}</lef-repo-clone-hint>
+            <lef-repo-clone-command>
+              <code>{resolvedCloneCommand}</code>
+              <button
+                type="button"
+                class="repo-page-copy"
+                data-testid="repo-clone-copy"
+                aria-label={localeText.solversView.copyGitCloneCommand}
+                onclick={copyClone}
+              >
+                <Icon icon={copyFlash ? 'lucide:check' : 'lucide:copy'} width="14" height="14" aria-hidden="true" />
+                <lefine-text>{copyFlash ? localeText.solversView.copied : localeText.solversView.copy}</lefine-text>
+              </button>
+            </lef-repo-clone-command>
+            <lef-repo-clone-link>
+              <lefine-text>{localeText.solversView.repositoryLink}</lefine-text>
+              <code>{resolvedCloneTarget}</code>
+            </lef-repo-clone-link>
+          </lef-repo-page>
+        {:else}
         {#if readme}
           <lef-repo-readme aria-label={localeText.solversView.readmeAria} data-testid="repo-readme">
             <lef-repo-readme-head>
@@ -600,35 +673,11 @@
           {/each}
         </lef-main-task-list>
         {/if}
+        {/if}
       </lef-main-tasks>
 
   </lef-tasks-grid>
 </lefine-box>
-
-{#if readmeSettingsSection}
-  <KefineModal
-    open={settingsModalOpen}
-    onClose={closeSettingsModal}
-    closeLabel={localeText.solversView.closeRepositorySettings}
-    width="medium"
-    placement="right"
-  >
-    <lef-repo-settings-dialog data-testid="repo-settings-dialog">
-      <lef-repo-settings-head>
-        <h2>{localeText.solversView.repositorySettingsHeading}</h2>
-        <p>{displayRepoName}</p>
-      </lef-repo-settings-head>
-      <dl>
-        {#each readmeSettingsSection.settings as setting (setting.key)}
-          <lef-repo-settings-kv>
-            <dt>{setting.key}</dt>
-            <dd>{setting.value}</dd>
-          </lef-repo-settings-kv>
-        {/each}
-      </dl>
-    </lef-repo-settings-dialog>
-  </KefineModal>
-{/if}
 
 <KefineSolversModal
   open={solversModalOpen}
@@ -665,7 +714,7 @@
     padding: 0.9rem 1rem 1rem;
     margin-bottom: 0.6rem;
     border: 1px solid var(--kef-line);
-    border-radius: 0.75rem;
+    border-radius: 8px;
     background: var(--kef-bg-card);
   }
 
@@ -1196,38 +1245,76 @@
     background: color-mix(in oklab, var(--kef-color-primary, #3a7afe) 8%, var(--kef-bg-card));
   }
 
-  lef-repo-settings-dialog {
+  lef-repo-page {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 0.85rem;
+    padding: 0.9rem 1rem 1rem;
+    border: 1px solid var(--kef-line);
+    border-radius: 0.75rem;
+    background: var(--kef-bg-card);
     color: var(--lefine-text);
   }
 
-  lef-repo-settings-head {
+  lef-repo-page-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 0.75rem;
+  }
+
+  lef-repo-page-title {
     display: flex;
     flex-direction: column;
     gap: 0.2rem;
-    padding-right: 2.4rem;
+    min-width: 0;
   }
 
-  lef-repo-settings-head h2,
-  lef-repo-settings-head p {
+  lef-repo-page-title h2,
+  lef-repo-page-title p {
     margin: 0;
   }
 
-  lef-repo-settings-head h2 {
+  lef-repo-page-title h2 {
     font-size: 1.05rem;
     line-height: 1.25;
     font-weight: 700;
   }
 
-  lef-repo-settings-head p {
+  lef-repo-page-title p {
     font-size: 0.86rem;
     color: var(--lefine-text-soft);
     overflow-wrap: anywhere;
   }
 
-  lef-repo-settings-dialog dl {
+  .repo-page-back,
+  .repo-page-copy {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-height: 2rem;
+    padding: 0.35rem 0.6rem;
+    border: 1px solid var(--kef-line);
+    border-radius: 8px;
+    background: color-mix(in oklab, var(--kef-bg-card) 78%, var(--kef-bg-soft) 22%);
+    color: var(--lefine-text-soft);
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: border-color 160ms ease, color 160ms ease, background 160ms ease;
+  }
+
+  .repo-page-back:hover,
+  .repo-page-copy:hover {
+    color: var(--lefine-text);
+    border-color: color-mix(in oklab, var(--kef-color-primary, #3a7afe) 38%, var(--kef-line));
+    background: color-mix(in oklab, var(--kef-color-primary, #3a7afe) 8%, var(--kef-bg-card));
+  }
+
+  .repo-settings-list {
     display: grid;
     grid-template-columns: minmax(8rem, max-content) minmax(0, 1fr);
     gap: 0.5rem 0.9rem;
@@ -1238,19 +1325,60 @@
     display: contents;
   }
 
-  lef-repo-settings-dialog dt {
+  .repo-settings-list dt {
     font-size: 0.8rem;
     font-weight: 700;
     color: var(--lefine-text);
   }
 
-  lef-repo-settings-dialog dd {
+  .repo-settings-list dd {
     margin: 0;
     min-width: 0;
     font-family: ui-monospace, monospace;
     font-size: 0.8rem;
     color: var(--lefine-text-soft);
     overflow-wrap: anywhere;
+  }
+
+  lef-repo-clone-hint {
+    display: block;
+    font-size: 0.88rem;
+    line-height: 1.45;
+    color: var(--lefine-text-soft);
+  }
+
+  lef-repo-clone-command {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.55rem;
+    border: 1px solid var(--kef-line-soft);
+    border-radius: 8px;
+    background: color-mix(in oklab, var(--kef-bg-soft) 74%, transparent);
+  }
+
+  lef-repo-clone-command code,
+  lef-repo-clone-link code {
+    min-width: 0;
+    font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+    font-size: 0.8rem;
+    color: var(--lefine-text);
+    overflow-wrap: anywhere;
+  }
+
+  lef-repo-clone-link {
+    display: grid;
+    grid-template-columns: minmax(7rem, max-content) minmax(0, 1fr);
+    gap: 0.45rem 0.85rem;
+    align-items: baseline;
+    color: var(--lefine-text-soft);
+    font-size: 0.8rem;
+  }
+
+  lef-repo-clone-link lefine-text {
+    font-weight: 700;
+    color: var(--lefine-text);
   }
 
   @media (max-width: 980px) {
@@ -1304,6 +1432,18 @@
 
     lef-task-variants.todo-solver-variants {
       grid-column: 2 / -1;
+    }
+
+    lef-repo-page-head,
+    lef-repo-clone-command,
+    lef-repo-clone-link,
+    .repo-settings-list {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .repo-page-back,
+    .repo-page-copy {
+      justify-content: center;
     }
   }
 </style>

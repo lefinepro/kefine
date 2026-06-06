@@ -23,6 +23,12 @@ node experiments/capture-profile-repository.mjs
 node experiments/capture-profile-owner.mjs
 ```
 
+The issue #145 frontend fix captures are regenerated separately with:
+
+```bash
+node experiments/capture-issue-145.mjs
+```
+
 | File | Route |
 | --- | --- |
 | home.png | `/` |
@@ -49,3 +55,12 @@ Profile-as-repository captures (issue #130):
 | profile-repository-checklist.png | Close-up of the profile task checklist. |
 | profile-widget-search.png | A declared widget (translator) surfaced from the command palette only when the visitor types a matching query. |
 | profile-owner-editor.png | Owner view: the flat repository panel followed by the editor — public/private lock chip, social/secret columns, and the restored bonus card wired to `/api/profile/bin-lookup`. |
+
+Issue #145 captures:
+
+| File | Description |
+| --- | --- |
+| issue-145-upload-attachment.png | Composer state after attaching `notes.txt`, showing the clickable upload chip and attached file pill. |
+| issue-145-repo-clone-page.png | Repository clone instructions page with copyable `git clone` command. |
+| issue-145-repo-settings-page.png | Repository settings rendered as a URL-backed page instead of a modal. |
+| issue-145-source-file-search.png | Solver source view with file search open and filtered to `config.yaml`. |
