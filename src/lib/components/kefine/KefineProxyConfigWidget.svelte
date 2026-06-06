@@ -491,7 +491,7 @@
     border-radius: var(--kef-radius-sm);
     background: var(--kef-bg-card);
     color: var(--lefine-text-soft);
-    font-family: 'Fira Mono', ui-monospace, monospace;
+    font-family: var(--kef-font-family-mono);
     font-size: 0.68rem;
     line-height: 1.4;
     text-align: left;

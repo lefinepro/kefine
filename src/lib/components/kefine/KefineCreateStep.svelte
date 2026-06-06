@@ -3543,7 +3543,7 @@ initialized = true;
     display: flex;
     flex-direction: column;
     gap: 0.2rem;
-    font-family: 'Synt', monospace;
+    font-family: var(--kef-font-family-mono);
     font-size: 0.78rem;
   }
 
@@ -3883,7 +3883,7 @@ initialized = true;
   }
 
   kefine-task-branch-name {
-    font-family: 'Synt', monospace;
+    font-family: var(--kef-font-family-mono);
     font-size: 0.74rem;
     font-weight: 600;
     color: var(--lefine-text);

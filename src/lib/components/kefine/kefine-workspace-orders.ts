@@ -25,13 +25,22 @@ function mergeActorIdentity(previous: OrderView, next: OrderView): OrderView {
     next.actorDid?.trim() ||
     previous.actorDid?.trim() ||
     (actorHandle ? `did:key:${actorHandle.replace(/^@+/, '')}` : undefined);
+  const nextShareId = next.shareId?.trim();
+  const previousShareId = previous.shareId?.trim();
+  const nextId = next.id?.trim();
+  const previousId = previous.id?.trim();
+  const shareId =
+    nextShareId && nextShareId !== nextId && nextShareId !== previousId
+      ? nextShareId
+      : previousShareId || nextShareId || undefined;
 
   return {
     ...previous,
     ...next,
     ...(next.taskIcon?.trim() ? { taskIcon: next.taskIcon.trim() } : previous.taskIcon ? { taskIcon: previous.taskIcon } : {}),
     ...(actorHandle ? { actorHandle: actorHandle.replace(/^@+/, '') } : {}),
-    ...(actorDid ? { actorDid } : {})
+    ...(actorDid ? { actorDid } : {}),
+    ...(shareId ? { shareId } : {})
   };
 }
 

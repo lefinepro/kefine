@@ -459,19 +459,6 @@
                 oninput={updateNewTask}
                 onkeydown={handleNewTaskKeydown}
               />
-              <lef-todo-solver-cell>
-                <button
-                  type="button"
-                  class="todo-solver-select create-task-search"
-                  data-testid="repo-new-task-search"
-                  aria-label={localeText.solversView.openCreateTaskSearch}
-                  title={localeText.solversView.openCreateTaskSearch}
-                  disabled={newTaskText.trim().length === 0}
-                  onclick={openNewTaskSearch}
-                >
-                  <Icon icon="lucide:search" width="14" height="14" aria-hidden="true" />
-                </button>
-              </lef-todo-solver-cell>
             </lef-repo-checklist-item>
           </lef-repo-checklist>
         {/if}
@@ -829,6 +816,7 @@
   }
 
   lef-repo-checklist-item[data-state='create'] {
+    grid-template-columns: 18px minmax(0, 1fr);
     border-style: dashed;
     background: color-mix(in oklab, var(--kef-bg-card) 66%, transparent);
   }
@@ -901,21 +889,6 @@
 
   .todo-solver-select:active {
     transform: scale(0.98);
-  }
-
-  .create-task-search {
-    color: var(--lefine-text-soft);
-  }
-
-  .create-task-search:disabled {
-    cursor: default;
-    opacity: 0.46;
-    transform: none;
-  }
-
-  .create-task-search:disabled:hover {
-    border-color: color-mix(in oklab, var(--kef-line) 75%, transparent);
-    background: color-mix(in oklab, var(--lefine-text) 7%, var(--kef-bg-card));
   }
 
   .todo-solver-select lef-solver-avatar {

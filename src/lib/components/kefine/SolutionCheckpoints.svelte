@@ -123,14 +123,14 @@
   }
 
   lef-cp-branch-name {
-    font-family: 'Synt', monospace;
+    font-family: var(--kef-font-family-mono);
     font-size: 0.82rem;
     font-weight: 600;
     color: var(--lefine-text);
   }
 
   lef-cp-project-name {
-    font-family: 'Synt', monospace;
+    font-family: var(--kef-font-family-mono);
     font-size: 0.72rem;
     color: var(--lefine-text-soft);
     margin-left: auto;
@@ -252,7 +252,7 @@
 
   lef-cp-hash {
     color: color-mix(in oklab, var(--lefine-text-soft) 60%, transparent);
-    font-family: 'Synt', monospace;
+    font-family: var(--kef-font-family-mono);
     font-size: 0.68rem;
   }
 

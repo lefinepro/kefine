@@ -318,13 +318,13 @@
     font-size: 0.88rem;
     font-weight: 700;
     color: var(--lefine-text);
-    font-family: 'Synt', monospace;
+    font-family: var(--kef-font-family-mono);
   }
 
   kefine-route-stats small {
     font-size: 0.72rem;
     color: var(--lefine-text-soft);
-    font-family: 'Synt', monospace;
+    font-family: var(--kef-font-family-mono);
   }
 
   kefine-route-empty {

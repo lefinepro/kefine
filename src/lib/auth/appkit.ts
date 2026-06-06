@@ -15,13 +15,13 @@ const metadata = {
 };
 
 const KEFINE_THEME_LIGHT = {
-	'--w3m-font-family': 'Manrope, system-ui, sans-serif',
+	'--w3m-font-family': 'system-ui, sans-serif',
 	'--w3m-accent': '#7a4b2a',
 	'--w3m-color-mix': '#2e2317',
 	'--w3m-color-mix-strength': 12,
 	'--w3m-border-radius-master': '8px',
 	'--w3m-font-size-master': '9px',
-	'--apkt-font-family': 'Manrope, system-ui, sans-serif',
+	'--apkt-font-family': 'system-ui, sans-serif',
 	'--apkt-accent': '#7a4b2a',
 	'--apkt-color-mix': '#2e2317',
 	'--apkt-color-mix-strength': 12,
@@ -30,13 +30,13 @@ const KEFINE_THEME_LIGHT = {
 } as const;
 
 const KEFINE_THEME_DARK = {
-	'--w3m-font-family': 'Manrope, system-ui, sans-serif',
+	'--w3m-font-family': 'system-ui, sans-serif',
 	'--w3m-accent': '#c89a5a',
 	'--w3m-color-mix': '#e7d6b7',
 	'--w3m-color-mix-strength': 16,
 	'--w3m-border-radius-master': '8px',
 	'--w3m-font-size-master': '9px',
-	'--apkt-font-family': 'Manrope, system-ui, sans-serif',
+	'--apkt-font-family': 'system-ui, sans-serif',
 	'--apkt-accent': '#c89a5a',
 	'--apkt-color-mix': '#e7d6b7',
 	'--apkt-color-mix-strength': 16,

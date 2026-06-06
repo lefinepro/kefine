@@ -39,9 +39,6 @@ importers:
         specifier: ^2.47.6
         version: 2.49.3(typescript@5.9.3)(zod@3.25.76)
     devDependencies:
-      '@fontsource/fira-mono':
-        specifier: ^5.2.7
-        version: 5.2.7
       '@neoconfetti/svelte':
         specifier: ^2.2.2
         version: 2.2.2(svelte@5.55.7)
@@ -338,9 +335,6 @@ packages:
 
   '@floating-ui/utils@0.2.11':
     resolution: {integrity: sha512-RiB/yIh78pcIxl6lLMG0CgBXAZ2Y0eVHqMPYugu+9U0AeT6YBeiJpf7lbdJNIugFP5SIjwNRgo4DhR1Qxi26Gg==}
-
-  '@fontsource/fira-mono@5.2.7':
-    resolution: {integrity: sha512-wYrAn6i3nH6luqQBZxtWUpl4UTUvs9AEbEeZxksPMwIqyjRRaxHTNW3c2VfM50gabS2IS7pT8lVWS2USB4ukYA==}
 
   '@iconify/svelte@5.2.1':
     resolution: {integrity: sha512-zHmsIPmnIhGd5gc95bNN5FL+GifwMZv7M2rlZEpa7IXYGFJm/XGHdWf6PWQa6OBoC+R69WyiPO9NAj5wjfjbow==}
@@ -3496,8 +3490,6 @@ snapshots:
       '@floating-ui/utils': 0.2.11
 
   '@floating-ui/utils@0.2.11': {}
-
-  '@fontsource/fira-mono@5.2.7': {}
 
   '@iconify/svelte@5.2.1(svelte@5.55.7)':
     dependencies:

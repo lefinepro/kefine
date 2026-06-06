@@ -55,7 +55,7 @@ const documentOrder = {
 };
 
 test.describe('Task document page', () => {
-  test('renders the legacy task route as a compact document', async ({ page }) => {
+  test('renders the legacy task route in the production document shell with sidebar navigation', async ({ page }) => {
     await page.route('**/api/status/order-1', async (route) => {
       await route.fulfill({
         status: 200,
@@ -76,6 +76,10 @@ test.describe('Task document page', () => {
 
     const documentPage = page.getByTestId('kefine-task-document-page');
     await expect(documentPage).toBeVisible();
+    await expect(page.getByTestId('kefine-task-document-sidebar')).toBeVisible();
+    await expect(page.getByTestId('kefine-task-document-sidebar').getByRole('link', { name: 'Overview' })).toBeVisible();
+    await expect(page.getByTestId('kefine-task-document-sidebar').getByRole('link', { name: 'Details' })).toBeVisible();
+    await expect(page.getByTestId('kefine-task-document-sidebar').getByRole('link', { name: 'Subtasks' })).toBeVisible();
     await expect(documentPage.getByRole('heading', { name: 'Document import workflow' })).toBeVisible();
     await expect(documentPage.getByRole('checkbox', { name: 'Task completion' })).not.toBeChecked();
 

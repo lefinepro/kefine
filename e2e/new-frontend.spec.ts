@@ -70,6 +70,7 @@ test.describe('New frontend task results', () => {
     await expect(page.getByRole('button', { name: /Merge/ })).toHaveCount(0);
 
     await expect(page.getByTestId('repo-new-task-row')).toBeVisible();
+    await expect(page.getByTestId('repo-new-task-search')).toHaveCount(0);
     await page.getByTestId('repo-new-task-input').fill('Add gzip middleware');
     await page.getByTestId('repo-new-task-input').press('Enter');
 
@@ -89,6 +90,17 @@ test.describe('New frontend task results', () => {
 
     await expect(page.getByRole('button', { name: 'Apply solution' })).toBeVisible();
     await expect(page.getByRole('button', { name: /Merge/ })).toHaveCount(0);
+    await expect(page.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('tab', { name: 'Testing' })).toHaveCount(0);
+    await expect(page.getByRole('tab', { name: 'Checkpoints' })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Source' })).toBeVisible();
+    await expect(page.getByTestId('solution-overview')).toBeVisible();
+    const sidebar = page.getByTestId('solution-solver-sidebar');
+    await expect(sidebar).toBeVisible();
+    await expect(sidebar.getByRole('button')).toHaveCount(3);
+    await expect(sidebar).toContainText('Go Proxy Basic');
+    await expect(sidebar).toContainText('Go Proxy Pro');
+    await expect(page.locator('lef-task-head strong', { hasText: 'Task' })).toHaveCount(0);
   });
 
   test('canonical profile order route opens the order page without a task query', async ({ page }) => {
