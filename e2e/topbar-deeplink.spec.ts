@@ -37,6 +37,7 @@ test.describe('Search deep links', () => {
       'weather'
     );
     await expect(page.getByTestId('kefine-weather-widget')).toBeVisible();
+    await expect(page).toHaveURL(/\/@api\/weather$/);
   });
 
   test('opens the translator widget from a profile short link alias', async ({ page }) => {

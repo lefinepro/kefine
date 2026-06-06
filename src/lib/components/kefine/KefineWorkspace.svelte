@@ -380,14 +380,21 @@
     if (!browser) return;
 
     const task = page.url.searchParams.get('task')?.trim() ?? '';
-    if (!task || appliedDeepLinkTask === task) {
+    const shouldCreate = page.url.searchParams.get('create') === '1';
+    const taskSignature = `${shouldCreate ? 'create' : 'draft'}:${task}`;
+    if (!task || appliedDeepLinkTask === taskSignature) {
       return;
     }
 
-    appliedDeepLinkTask = task;
+    appliedDeepLinkTask = taskSignature;
 
     if (step !== 'create' || currentOrder) {
       newOrder();
+    }
+
+    if (shouldCreate) {
+      submitDraftInForeground(normalizeDraftOrder({ ...createEmptyDraft(), description: task }, localeText));
+      return;
     }
 
     draft.description = task;
@@ -631,6 +638,18 @@
       runtimeConfig.defaultActor.handle?.trim() ??
       'staff'
   );
+  const sidebarProfile = $derived.by(() => {
+    const profile = currentProfile ?? temporaryProfile;
+    if (!profile) {
+      return null;
+    }
+
+    return {
+      handle: profile.primaryHandle,
+      bio: profile.bio,
+      href: localizeAppPath(buildProfilePath(profile.primaryHandle), activeLocale)
+    };
+  });
   const searchResultsOnly = $derived(searchPageMode === 'saved');
   const inlineHomeSearchActive = $derived(
     step === 'create' && !getNormalizedInitialActorHandle() && !getNormalizedInitialOrderId() && !initialWidget
@@ -1356,6 +1375,10 @@
       if (window.location.href !== nextUrl.toString()) {
         safeReplaceState(nextUrl, page.state);
       }
+      return;
+    }
+
+    if (initialWidget && getNormalizedInitialActorHandle() && step === 'create' && !orderRouteId) {
       return;
     }
 
@@ -2490,6 +2513,14 @@
       return;
     }
 
+    submitDraftInForeground(normalized);
+  }
+
+  function submitDraftInForeground(normalized: DraftOrder) {
+    if (!normalized.description.trim() && !normalized.title.trim()) {
+      return;
+    }
+
     const submittedSearchText = normalized.description.trim() || normalized.title.trim() || localeText.defaults.taskTitle;
     solverSearchText = submittedSearchText;
     solverSearchActive = true;
@@ -3129,6 +3160,7 @@
   initialSearchQuery={latchedSearchPageQuery ? '' : latchedDeepLinkSearchQuery}
   searchDefaultQuery={searchPageMode ? searchPageQuery : ''}
   initialWidget={initialWidget}
+  {sidebarProfile}
   socialLinks={sidebarSocialLinks}
   showSocialLinks={false}
   showDockControls={step !== 'create'}

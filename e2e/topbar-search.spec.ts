@@ -10,6 +10,7 @@ test.describe('Topbar search', () => {
     await page.getByTestId('kefine-brand-mark').click();
 
     await expect(page.locator('kefine-sidebar-popover kefine-sidebar-nav')).toBeVisible();
+    await expect(page.locator('kefine-sidebar-nav a[data-part="link"] svg')).toHaveCount(2);
     await expect(page.getByTestId('kefine-topbar-theme-toggle')).toHaveCount(0);
     await expect(page.getByTestId('kefine-topbar-locale-toggle')).toHaveCount(0);
   });

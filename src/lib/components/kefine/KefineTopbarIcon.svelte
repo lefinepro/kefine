@@ -21,6 +21,8 @@
     | 'settings'
     | 'check'
     | 'open'
+    | 'privacy'
+    | 'terms'
     | 'profile'
     | 'sign-out'
     | 'github'
@@ -148,6 +150,15 @@
     <path d="M14 5h5v5" />
     <path d="M19 5 10.2 13.8" />
     <rect x="5" y="9" width="10" height="10" rx="2.2" />
+  {:else if name === 'privacy'}
+    <path d="M12 3.4 5.4 6v5.1c0 3.8 2.7 6.6 6.6 7.8 3.9-1.2 6.6-4 6.6-7.8V6Z" />
+    <path d="M9.4 11.6a2.6 2.6 0 1 1 5.2 0v2.8" />
+    <path d="M8.7 14.4h6.6" />
+  {:else if name === 'terms'}
+    <path d="M7.2 4.5h7.1L18 8.2v9.1a2.2 2.2 0 0 1-2.2 2.2H7.2A2.2 2.2 0 0 1 5 17.3V6.7a2.2 2.2 0 0 1 2.2-2.2Z" />
+    <path d="M14 4.7V8h3.3" />
+    <path d="M8.4 11.5h7.2" />
+    <path d="M8.4 15h5" />
   {:else if name === 'profile'}
     <circle cx="12" cy="8.2" r="3.2" />
     <path d="M5.2 18.4c1.3-3.1 4.1-4.7 6.8-4.7s5.5 1.6 6.8 4.7" />

@@ -34,6 +34,12 @@
     href: string;
   };
 
+  type SidebarProfile = {
+    handle: string;
+    bio?: string | null;
+    href?: string | null;
+  };
+
   export type KefineTopbarSearchItem = TopbarSearchItem;
 
   type SearchContextSegment = {
@@ -93,6 +99,7 @@
     searchMusicLabel = 'Music',
     searchProxyLabel = 'Proxy',
     searchWidgetBackLabel = 'Back to results',
+    sidebarProfile = null,
     socialLinks,
     showSocialLinks = false,
     showDockControls = true,
@@ -170,6 +177,7 @@
     searchMusicLabel?: string;
     searchProxyLabel?: string;
     searchWidgetBackLabel?: string;
+    sidebarProfile?: SidebarProfile | null;
     socialLinks: SocialLink[];
     showSocialLinks?: boolean;
     showDockControls?: boolean;
@@ -490,6 +498,15 @@
 
   function getSearchItemHref(item: KefineTopbarSearchItem) {
     return item.hrefFromQuery?.(searchQuery.trim()) || item.href || '';
+  }
+
+  function getLegalLinkIcon(id: LegalLink['id']): KefineTopbarIconName {
+    return id === 'privacy' ? 'privacy' : 'terms';
+  }
+
+  function getSidebarProfileHandle(profile: SidebarProfile) {
+    const handle = profile.handle.trim().replace(/^@+/, '');
+    return handle ? `@${handle}` : '';
   }
 
   function parseContextualSearchPlaceholder(value: string): SearchContextSegment[] {
@@ -831,53 +848,74 @@
             </kefine-sidebar-toolbar>
           {/if}
 
-          <kefine-sidebar-nav aria-label={legalLabel}>
-            {#each legalLinks as link (link.id)}
-              <a data-part="link" href={link.href}>
-                <lefine-text data-part="link-label">{link.label}</lefine-text>
-              </a>
-            {/each}
-          </kefine-sidebar-nav>
+          {#if sidebarProfile}
+            {@const profileHref = sidebarProfile.href?.trim() || ''}
+            <kefine-sidebar-profile data-testid="kefine-sidebar-profile">
+              <svelte:element
+                this={profileHref ? 'a' : 'kefine-sidebar-profile-card'}
+                href={profileHref || undefined}
+                data-part="profile-card"
+              >
+                <kefine-sidebar-profile-copy>
+                  <lefine-text data-part="profile-handle">{getSidebarProfileHandle(sidebarProfile)}</lefine-text>
+                  {#if sidebarProfile.bio?.trim()}
+                    <lefine-text data-part="profile-bio">{sidebarProfile.bio.trim()}</lefine-text>
+                  {/if}
+                </kefine-sidebar-profile-copy>
+              </svelte:element>
+            </kefine-sidebar-profile>
+          {/if}
 
-          {#if showDockControls}
-            <kefine-sidebar-toolbar aria-label={dockLabel}>
-              <button
-                type="button"
-                data-part="icon"
-                data-role="theme"
-                data-testid="kefine-topbar-theme-toggle"
-                aria-label={themeLabel}
-                title={themeLabel}
-                onclick={handleThemeButtonClick}
-                ondblclick={handleThemeButtonDoubleClick}
-              >
-                <KefineTopbarIcon name={isDarkTheme ? 'theme-light' : 'theme-dark'} size={20} />
-              </button>
-              <button
-                type="button"
-                data-part="icon"
-                data-role="locale"
-                data-testid="kefine-topbar-locale-toggle"
-                aria-label={localeLabel}
-                title={localeLabel}
-                onclick={handleLocaleButtonClick}
-                ondblclick={handleLocaleButtonDoubleClick}
-              >
-                <KefineTopbarIcon name={currentLocaleFlagIcon} size={20} />
-              </button>
-              {#if showEmailButton}
+          <kefine-sidebar-utility>
+            <kefine-sidebar-nav aria-label={legalLabel}>
+              {#each legalLinks as link (link.id)}
+                <a data-part="link" href={link.href}>
+                  <KefineTopbarIcon name={getLegalLinkIcon(link.id)} size={18} />
+                  <lefine-text data-part="link-label">{link.label}</lefine-text>
+                </a>
+              {/each}
+            </kefine-sidebar-nav>
+
+            {#if showDockControls}
+              <kefine-sidebar-toolbar aria-label={dockLabel}>
                 <button
                   type="button"
                   data-part="icon"
-                  aria-label={mailLabel}
-                  title={mailLabel}
-                  onclick={handleEmailClick}
+                  data-role="theme"
+                  data-testid="kefine-topbar-theme-toggle"
+                  aria-label={themeLabel}
+                  title={themeLabel}
+                  onclick={handleThemeButtonClick}
+                  ondblclick={handleThemeButtonDoubleClick}
                 >
-                  <KefineTopbarIcon name="email" size={20} />
+                  <KefineTopbarIcon name={isDarkTheme ? 'theme-light' : 'theme-dark'} size={20} />
                 </button>
-              {/if}
-            </kefine-sidebar-toolbar>
-          {/if}
+                <button
+                  type="button"
+                  data-part="icon"
+                  data-role="locale"
+                  data-testid="kefine-topbar-locale-toggle"
+                  aria-label={localeLabel}
+                  title={localeLabel}
+                  onclick={handleLocaleButtonClick}
+                  ondblclick={handleLocaleButtonDoubleClick}
+                >
+                  <KefineTopbarIcon name={currentLocaleFlagIcon} size={20} />
+                </button>
+                {#if showEmailButton}
+                  <button
+                    type="button"
+                    data-part="icon"
+                    aria-label={mailLabel}
+                    title={mailLabel}
+                    onclick={handleEmailClick}
+                  >
+                    <KefineTopbarIcon name="email" size={20} />
+                  </button>
+                {/if}
+              </kefine-sidebar-toolbar>
+            {/if}
+          </kefine-sidebar-utility>
         </kefine-sidebar-stack>
       </kefine-sidebar-popover>
       <kefine-picker-popover
@@ -1669,28 +1707,82 @@
   }
 
   kefine-sidebar-stack {
-    display: flex;
-    flex-direction: row;
+    display: grid;
     gap: 0.45rem;
-    width: 100%;
+    width: min(20rem, calc(100vw - 2rem));
     border-radius: calc(var(--kef-radius-ui) - 0.06rem);
     background: transparent;
+  }
+
+  kefine-sidebar-profile {
+    display: block;
+    min-width: 0;
+  }
+
+  kefine-sidebar-profile [data-part='profile-card'] {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: center;
+    min-height: 4.15rem;
+    padding: 0.72rem 0.8rem;
+    border: var(--kef-border-width-soft) solid color-mix(in oklab, var(--kef-line) 82%, transparent);
+    border-radius: calc(var(--kef-radius-ui) - 0.06rem);
+    background: color-mix(in oklab, var(--kef-primary) 7%, transparent);
+    color: var(--lefine-text);
+    text-decoration: none;
+  }
+
+  kefine-sidebar-profile-copy {
+    display: grid;
+    gap: 0.18rem;
+    min-width: 0;
+  }
+
+  kefine-sidebar-profile-copy lefine-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    letter-spacing: 0;
+  }
+
+  kefine-sidebar-profile-copy [data-part='profile-handle'] {
+    color: color-mix(in oklab, var(--kef-primary) 74%, var(--lefine-text-soft));
+    font-size: 0.94rem;
+    font-weight: 700;
+    line-height: 1.1;
+  }
+
+  kefine-sidebar-profile-copy [data-part='profile-bio'] {
+    color: var(--lefine-text-soft);
+    font-size: 0.78rem;
+    font-weight: 520;
+    line-height: 1.2;
+  }
+
+  kefine-sidebar-utility {
+    display: flex;
+    align-items: stretch;
+    gap: 0.45rem;
+    min-width: 0;
   }
 
   kefine-sidebar-nav {
     display: grid;
     gap: 0.42rem;
+    min-width: 0;
   }
 
   kefine-sidebar-nav a[data-part='link'] {
     min-height: 2.85rem;
     border-radius: calc(var(--kef-radius-ui) - 0.06rem);
     background: transparent;
-    display: inline-flex;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
     align-items: center;
-    justify-content: center;
-    gap: 0.82rem;
-    padding: 0.72rem 0.88rem;
+    justify-content: stretch;
+    gap: 0.62rem;
+    padding: 0.72rem 0.78rem;
     transition:
       border-color var(--kef-motion-fast) var(--kef-ease-soft),
       color var(--kef-motion-fast) var(--kef-ease-soft),
@@ -1711,6 +1803,8 @@
     font-weight: 620;
     line-height: 1;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     color: color-mix(in oklab, var(--lefine-text) 96%, transparent);
   }
 
@@ -1976,6 +2070,12 @@
       overflow-y: hidden;
       background: transparent;
       flex-wrap: nowrap;
+    }
+
+    kefine-sidebar-utility {
+      display: grid;
+      gap: 0.45rem;
+      width: 100%;
     }
 
     kefine-sidebar-nav,

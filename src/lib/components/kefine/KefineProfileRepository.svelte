@@ -55,13 +55,14 @@
     }
     const params = new URLSearchParams();
     params.set('task', task);
+    params.set('create', '1');
     return `/?${params.toString()}`;
   }
 
   // Mirror the solvers screen: typing a task in the README "new task" row opens
   // the command palette with a "Create task" result that hands the query off to
-  // the home composer — a profile is a repository, so its tasks start the same
-  // way.
+  // the order creator — a profile is a repository, so its tasks start the same
+  // way a README checklist item would.
   $effect(() => {
     const items: TopbarSearchItem[] = [
       {
