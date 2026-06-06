@@ -176,7 +176,6 @@
     profile
       ? {
           handle: username || profile.primaryHandle,
-          displayName: displayName || profile.displayName,
           bio,
           href: canonicalProfilePath
         }

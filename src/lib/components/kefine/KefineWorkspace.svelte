@@ -637,7 +637,6 @@
 
     return {
       handle: profile.primaryHandle,
-      displayName: profile.displayName || profile.primaryHandle,
       bio: profile.bio,
       href: localizeAppPath(buildProfilePath(profile.primaryHandle), activeLocale)
     };

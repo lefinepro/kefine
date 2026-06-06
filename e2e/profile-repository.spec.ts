@@ -69,7 +69,7 @@ test.describe('Profile repository view', () => {
     await expect(items.last()).toHaveAttribute('data-state', 'done');
   });
 
-  test('sidebar menu shows brief profile context instead of repository cards', async ({ page }) => {
+  test('sidebar menu shows handle context instead of repository cards or display names', async ({ page }) => {
     await seedPublicProfile(page);
     await page.goto(`/@${SEED_HANDLE}`);
 
@@ -77,9 +77,9 @@ test.describe('Profile repository view', () => {
 
     const profileSummary = page.getByTestId('kefine-sidebar-profile');
     await expect(profileSummary).toBeVisible();
-    await expect(profileSummary).toContainText('Demo Builder');
     await expect(profileSummary).toContainText(`@${SEED_HANDLE}`);
     await expect(profileSummary).toContainText('Building reliable solver flows.');
+    await expect(page.locator('kefine-sidebar-popover')).not.toContainText('Demo Builder');
     await expect(page.locator('kefine-sidebar-popover')).not.toContainText('Latest repos');
     await expect(page.locator('kefine-sidebar-popover')).not.toContainText('Repos');
   });

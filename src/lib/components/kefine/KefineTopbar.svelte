@@ -36,7 +36,6 @@
 
   type SidebarProfile = {
     handle: string;
-    displayName: string;
     bio?: string | null;
     href?: string | null;
   };
@@ -507,7 +506,7 @@
   }
 
   function getSidebarProfileInitials(profile: SidebarProfile) {
-    const source = profile.displayName.trim() || getSidebarProfileHandle(profile);
+    const source = getSidebarProfileHandle(profile);
     const letters = source
       .replace(/^@+/, '')
       .split(/\s+/)
@@ -870,7 +869,6 @@
                   {getSidebarProfileInitials(sidebarProfile)}
                 </kefine-sidebar-profile-avatar>
                 <kefine-sidebar-profile-copy>
-                  <lefine-text data-part="profile-name">{sidebarProfile.displayName.trim() || getSidebarProfileHandle(sidebarProfile)}</lefine-text>
                   <lefine-text data-part="profile-handle">{getSidebarProfileHandle(sidebarProfile)}</lefine-text>
                   {#if sidebarProfile.bio?.trim()}
                     <lefine-text data-part="profile-bio">{sidebarProfile.bio.trim()}</lefine-text>
@@ -1775,16 +1773,10 @@
     letter-spacing: 0;
   }
 
-  kefine-sidebar-profile-copy [data-part='profile-name'] {
-    font-size: 0.94rem;
-    font-weight: 700;
-    line-height: 1.1;
-  }
-
   kefine-sidebar-profile-copy [data-part='profile-handle'] {
     color: color-mix(in oklab, var(--kef-primary) 74%, var(--lefine-text-soft));
-    font-size: 0.82rem;
-    font-weight: 640;
+    font-size: 0.94rem;
+    font-weight: 700;
     line-height: 1.1;
   }
 
