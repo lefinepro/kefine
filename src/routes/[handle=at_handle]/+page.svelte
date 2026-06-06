@@ -8,7 +8,6 @@
   import KefineProfileRepository from '$lib/components/kefine/KefineProfileRepository.svelte';
   import KefineProfileBonusCardPanel from '$lib/components/kefine/KefineProfileBonusCardPanel.svelte';
   import KefineTopbar from '$lib/components/kefine/KefineTopbar.svelte';
-  import KefineSolverProfileCard from '$lib/components/kefine/KefineSolverProfileCard.svelte';
   import { onMount } from 'svelte';
   import type { Component } from 'svelte';
   import { disconnectAppKit } from '$lib/auth/appkit';
@@ -42,6 +41,7 @@
     readProfiles,
     updateStoredProfile
   } from '$lib/profile/profile-storage';
+  import { buildSolverProfilePath } from '$lib/profile/solver-profile';
   import type {
     Profile,
     ProfileMetadata,
@@ -83,7 +83,7 @@
   let viewerProfile = $state<Profile | null>(null);
   let unavailable = $state(false);
   let following = $state(false);
-  let copyState = $state<'idle' | 'profile' | 'solver-token'>('idle');
+  let copyState = $state<'idle' | 'profile'>('idle');
   let Workspace: Component<{
     initialActorHandle?: string;
     initialSearchQuery?: string;
@@ -117,26 +117,9 @@
   const profileSearchQuery = $derived(page.url.searchParams.get('q') ?? '');
   const shouldRenderSearchWorkspace = $derived(Boolean(profileSearchQuery.trim()));
   const setupMetadata = $derived((profile?.metadata ?? {}) as ProfileMetadata);
-  const SOLVER_RELAY_ORIGIN = 'http://127.0.0.1:4501';
-  const solverProfileToken = $derived(
-    typeof setupMetadata.solverProfileToken === 'string' ? setupMetadata.solverProfileToken.trim() : ''
+  const solverProfilePath = $derived(
+    profile ? localizeAppPath(buildSolverProfilePath(profile.primaryHandle), activeLocale) : ''
   );
-  // The local solver is created automatically with a random handle, so the
-  // handle only exists once the profile has been created.
-  const solverProfileHandle = $derived(
-    typeof setupMetadata.solverProfileHandle === 'string' ? setupMetadata.solverProfileHandle.trim() : ''
-  );
-  const solverProfileCreated = $derived(Boolean(solverProfileToken));
-  // The inbox is the auto-created solver's actor inbox, derived from its random handle.
-  const solverProfileEndpoint = $derived(
-    solverProfileHandle ? `${SOLVER_RELAY_ORIGIN}/solvers/${solverProfileHandle}/inbox` : `${SOLVER_RELAY_ORIGIN}/solvers/.../inbox`
-  );
-  const solverAuthorizationHeader = $derived(
-    solverProfileToken ? `Authorization: Bearer ${solverProfileToken}` : 'Authorization: Bearer lepos_solver_...'
-  );
-  // Where the solver returns its results: it processes the message relayed to
-  // its inbox and POSTs the response (OpenAI Responses shape) back here.
-  const solverResponsesEndpoint = `${SOLVER_RELAY_ORIGIN}/api/responses`;
 
   // The profile is a repository, so the topbar search reads as the repo handle
   // (`@demo`) instead of the generic prompt — the same contextual pill the
@@ -497,7 +480,7 @@
     }
   }
 
-  async function copyLink(value: string, kind: 'profile' | 'solver-token') {
+  async function copyLink(value: string, kind: 'profile') {
     if (!browser || !navigator.clipboard) {
       return;
     }
@@ -517,63 +500,6 @@
     }
 
     await copyLink(privateKey, 'profile');
-  }
-
-  function createRandomSolverSlug(length: number): string {
-    const alphabet = 'abcdefghijklmnopqrstuvwxyz0123456789';
-    if (typeof crypto !== 'undefined' && 'getRandomValues' in crypto) {
-      const values = crypto.getRandomValues(new Uint32Array(length));
-      return Array.from(values, (value) => alphabet[value % alphabet.length]).join('');
-    }
-
-    let slug = '';
-    while (slug.length < length) {
-      slug += Math.random().toString(36).slice(2);
-    }
-    return slug.slice(0, length);
-  }
-
-  function createSolverProfile() {
-    if (!browser || !profile || !isOwner) {
-      return;
-    }
-
-    const updated = updateStoredProfile(localStorage, profile.id, (current) => {
-      const metadata = (current.metadata ?? {}) as ProfileMetadata;
-      const storedToken = typeof metadata.solverProfileToken === 'string' ? metadata.solverProfileToken.trim() : '';
-      const storedHandle = typeof metadata.solverProfileHandle === 'string' ? metadata.solverProfileHandle.trim() : '';
-      // The solver (its inbox identity) is created automatically with a random handle.
-      const randomHandle = `solver-${createRandomSolverSlug(8)}`;
-
-      return {
-        ...current,
-        metadata: nextMetadata(current, {
-          solverProfileId:
-            typeof metadata.solverProfileId === 'string' && metadata.solverProfileId.trim()
-              ? metadata.solverProfileId.trim()
-              : `solver-profile:${current.id}`,
-          solverProfileHandle: storedHandle || randomHandle,
-          solverProfileToken: storedToken || `lepos_solver_${createRandomSolverSlug(32)}`,
-          solverProfileCreatedAt:
-            typeof metadata.solverProfileCreatedAt === 'string' && metadata.solverProfileCreatedAt.trim()
-              ? metadata.solverProfileCreatedAt.trim()
-              : new Date().toISOString()
-        })
-      };
-    });
-
-    if (updated) {
-      profile = updated;
-      syncDraftStateFromProfile(updated);
-    }
-  }
-
-  async function copySolverToken() {
-    if (!solverProfileToken) {
-      return;
-    }
-
-    await copyLink(solverProfileToken, 'solver-token');
   }
 
   // Build a `social.org` (org-social) document from the current draft so owners
@@ -1186,19 +1112,18 @@
                   <textarea bind:value={bio} rows="4"></textarea>
                 </label>
 
-                <KefineSolverProfileCard
-                  text={localeText.profile}
-                  workspaceHandle={profile.primaryHandle}
-                  solverHandle={solverProfileHandle}
-                  token={solverProfileToken}
-                  endpoint={solverProfileEndpoint}
-                  responsesEndpoint={solverResponsesEndpoint}
-                  authHeader={solverAuthorizationHeader}
-                  created={solverProfileCreated}
-                  copied={copyState === 'solver-token'}
-                  onCreate={createSolverProfile}
-                  onCopy={copySolverToken}
-                />
+                <lefine-box class="profile-solver-link-card" data-testid="profile-solver-link-card">
+                  <lefine-box class="profile-solver-link-card__copy">
+                    <strong>{localeText.profile.solverProfileTitle}</strong>
+                    <p>{localeText.profile.solverProfileSubtitle}</p>
+                  </lefine-box>
+                  <a class="profile-solver-link-card__action" href={solverProfilePath}>
+                    <lefine-text>{localeText.profile.solverProfileTitle}</lefine-text>
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M7 12h10m-4-4 4 4-4 4" />
+                    </svg>
+                  </a>
+                </lefine-box>
 
                 <lefine-box class="profile-links-column">
                   <lefine-box class="profile-links-head">
@@ -1515,6 +1440,67 @@
     line-height: 1.4;
   }
 
+  .profile-solver-link-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.85rem 1rem;
+    border-radius: 0.85rem;
+    border: 1px solid color-mix(in oklab, var(--kef-color-primary) 18%, transparent);
+    background: color-mix(in oklab, var(--kef-color-bg) 45%, var(--kef-color-bg-card));
+  }
+
+  .profile-solver-link-card__copy {
+    display: grid;
+    gap: 0.2rem;
+    min-width: 0;
+  }
+
+  .profile-solver-link-card__copy strong {
+    font-size: 0.95rem;
+  }
+
+  .profile-solver-link-card__copy p {
+    margin: 0;
+    color: var(--kef-color-muted);
+    font-size: 0.82rem;
+    line-height: 1.4;
+  }
+
+  .profile-solver-link-card__action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    min-height: 2.4rem;
+    padding: 0.5rem 0.7rem;
+    border-radius: 0.5rem;
+    border: 1px solid color-mix(in oklab, var(--kef-color-primary) 28%, transparent);
+    background: color-mix(in oklab, var(--kef-color-primary) 12%, var(--kef-color-bg-card));
+    color: var(--kef-color-text);
+    font-weight: 650;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .profile-solver-link-card__action:hover {
+    border-color: color-mix(in oklab, var(--kef-color-primary) 42%, transparent);
+    background: color-mix(in oklab, var(--kef-color-primary) 18%, var(--kef-color-bg-card));
+    text-decoration: none;
+  }
+
+  .profile-solver-link-card__action svg {
+    width: 1rem;
+    height: 1rem;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    flex: none;
+  }
+
   .profile-visibility-toggle {
     display: inline-flex;
     align-items: center;
@@ -1794,6 +1780,14 @@
     .profile-editor__head {
       align-items: flex-start;
       flex-direction: column;
+    }
+
+    .profile-solver-link-card {
+      grid-template-columns: 1fr;
+    }
+
+    .profile-solver-link-card__action {
+      width: fit-content;
     }
   }
 </style>

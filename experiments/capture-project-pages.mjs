@@ -38,6 +38,10 @@ const demoProfile = {
     surname: 'Maintainer',
     profileSetupCompleted: true,
     profileSetupStep: 'done',
+    solverProfileId: 'solver-profile:profile-api',
+    solverProfileHandle: 'solver-release',
+    solverProfileToken: 'lepos_solver_d910y1clzkef7ilaf5rugyt49hwnac91',
+    solverProfileCreatedAt: createdAt,
     // Org-social widget blocks the profile declares. They are not rendered
     // statically — they only surface from the command palette on a matching
     // query (see experiments/capture-profile-repository.mjs).
@@ -50,7 +54,7 @@ const demoOrder = {
   solver: 'Release Solver',
   solverName: 'Release Solver',
   solverHandle: 'release-solver',
-  solverProfileUrl: '/@api',
+  solverProfileUrl: '/@api/solver',
   status: 'completed',
   title: 'Document current workspace pages',
   description: 'Refresh project screenshots and verify the main task, profile, widget, solution, and legal pages.',
@@ -99,6 +103,7 @@ const demoOrder = {
 const pages = [
   { file: 'home.png', route: '/', waitFor: '[data-testid="kefine-task-input"]' },
   { file: 'profile.png', route: '/@api', waitFor: '.profile-page' },
+  { file: 'profile-solver-profile.png', route: '/@api/solver', waitFor: '[data-testid="kefine-solver-profile-panel"]' },
   { file: 'profile-search.png', route: '/@api?q=proxy%20server', waitFor: '[data-testid="kefine-search-page-results"]' },
   { file: 'weather-widget.png', route: '/@api/weather', waitFor: '[data-testid="kefine-weather-widget"]' },
   { file: 'clock-widget.png', route: '/@api/time', waitFor: '[data-testid="kefine-clock-widget"]' },
@@ -167,11 +172,15 @@ function seedStorage({ profile, order }) {
     'checkout flow',
     'repository cleanup'
   ]));
-  window.localStorage.setItem('lefine-session', JSON.stringify({
+  window.localStorage.setItem('auth-session', JSON.stringify({
+    address: null,
+    chainId: null,
     userId: profile.userId,
     email: profile.email,
     handle: profile.username,
-    displayName: profile.displayName
+    displayName: profile.displayName,
+    authType: 'publickey',
+    connectedAt: Date.now()
   }));
 }
 
