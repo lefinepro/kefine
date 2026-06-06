@@ -70,6 +70,7 @@ test.describe('Profile repository view', () => {
   });
 
   test('sidebar menu shows handle context instead of repository cards or display names', async ({ page }) => {
+    await page.setViewportSize({ width: 576, height: 433 });
     await seedPublicProfile(page);
     await page.goto(`/@${SEED_HANDLE}`);
 
@@ -79,9 +80,24 @@ test.describe('Profile repository view', () => {
     await expect(profileSummary).toBeVisible();
     await expect(profileSummary).toContainText(`@${SEED_HANDLE}`);
     await expect(profileSummary).toContainText('Building reliable solver flows.');
+    await expect(profileSummary.locator('kefine-sidebar-profile-avatar')).toHaveCount(0);
     await expect(page.locator('kefine-sidebar-popover')).not.toContainText('Demo Builder');
     await expect(page.locator('kefine-sidebar-popover')).not.toContainText('Latest repos');
     await expect(page.locator('kefine-sidebar-popover')).not.toContainText('Repos');
+
+    const sidebarPopoverBox = await page.locator('kefine-sidebar-popover').boundingBox();
+    const dockControlsBox = await page.locator('kefine-sidebar-toolbar').last().boundingBox();
+    if (!sidebarPopoverBox || !dockControlsBox) {
+      throw new Error('Expected sidebar popover and dock controls to be measurable');
+    }
+
+    await expect(page.getByTestId('kefine-topbar-theme-toggle')).toBeVisible();
+    await expect(page.getByTestId('kefine-topbar-locale-toggle')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Write to us' })).toBeVisible();
+    expect(dockControlsBox.x).toBeGreaterThanOrEqual(sidebarPopoverBox.x - 1);
+    expect(dockControlsBox.x + dockControlsBox.width).toBeLessThanOrEqual(
+      sidebarPopoverBox.x + sidebarPopoverBox.width + 1
+    );
   });
 
   test('new-task row deeplinks into the topbar search to create a task', async ({ page }) => {

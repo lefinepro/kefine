@@ -505,19 +505,6 @@
     return handle ? `@${handle}` : '';
   }
 
-  function getSidebarProfileInitials(profile: SidebarProfile) {
-    const source = getSidebarProfileHandle(profile);
-    const letters = source
-      .replace(/^@+/, '')
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase())
-      .join('');
-
-    return letters || '@';
-  }
-
   function parseContextualSearchPlaceholder(value: string): SearchContextSegment[] {
     const trimmed = value.trim();
     if (!trimmed) {
@@ -865,9 +852,6 @@
                 href={profileHref || undefined}
                 data-part="profile-card"
               >
-                <kefine-sidebar-profile-avatar aria-hidden="true">
-                  {getSidebarProfileInitials(sidebarProfile)}
-                </kefine-sidebar-profile-avatar>
                 <kefine-sidebar-profile-copy>
                   <lefine-text data-part="profile-handle">{getSidebarProfileHandle(sidebarProfile)}</lefine-text>
                   {#if sidebarProfile.bio?.trim()}
@@ -1733,30 +1717,15 @@
 
   kefine-sidebar-profile [data-part='profile-card'] {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
     align-items: center;
-    gap: 0.75rem;
-    min-height: 4.6rem;
+    min-height: 4.15rem;
     padding: 0.72rem 0.8rem;
     border: var(--kef-border-width-soft) solid color-mix(in oklab, var(--kef-line) 82%, transparent);
     border-radius: calc(var(--kef-radius-ui) - 0.06rem);
     background: color-mix(in oklab, var(--kef-primary) 7%, transparent);
     color: var(--lefine-text);
     text-decoration: none;
-  }
-
-  kefine-sidebar-profile-avatar {
-    display: inline-grid;
-    place-items: center;
-    width: 2.45rem;
-    height: 2.45rem;
-    border-radius: 50%;
-    border: var(--kef-border-width-soft) solid color-mix(in oklab, var(--kef-primary) 32%, var(--kef-line));
-    background: color-mix(in oklab, var(--kef-primary) 14%, var(--kef-bg-card));
-    color: color-mix(in oklab, var(--kef-primary) 86%, var(--lefine-text));
-    font-size: 0.82rem;
-    font-weight: 760;
-    line-height: 1;
   }
 
   kefine-sidebar-profile-copy {
@@ -2097,6 +2066,12 @@
       overflow-y: hidden;
       background: transparent;
       flex-wrap: nowrap;
+    }
+
+    kefine-sidebar-utility {
+      display: grid;
+      gap: 0.45rem;
+      width: 100%;
     }
 
     kefine-sidebar-nav,
