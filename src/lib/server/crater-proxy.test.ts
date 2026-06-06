@@ -30,12 +30,17 @@ describe('proxyCraterRequest', () => {
 
     expect(response.status).toBe(200);
     expect(fetchFn).toHaveBeenCalledOnce();
-    expect(forwardedInit?.body).toBeInstanceOf(Uint8Array);
-    expect((forwardedInit?.headers as Record<string, string>)['Content-Type']).toMatch(
+    expect(forwardedInit).toBeDefined();
+    if (!forwardedInit) {
+      throw new Error('Expected proxyCraterRequest to forward the request');
+    }
+
+    expect(forwardedInit.body).toBeInstanceOf(Uint8Array);
+    expect((forwardedInit.headers as Record<string, string>)['Content-Type']).toMatch(
       /^multipart\/form-data; boundary=/
     );
 
-    const bodyText = new TextDecoder().decode(forwardedInit?.body as Uint8Array);
+    const bodyText = new TextDecoder().decode(forwardedInit.body as Uint8Array);
     expect(bodyText).toContain('name="title"');
     expect(bodyText).toContain('Upload repro');
     expect(bodyText).toContain('filename="notes.txt"');
