@@ -14,7 +14,6 @@ export async function proxyCraterRequest(
 ): Promise<Response> {
   try {
     const contentType = request.headers.get('content-type');
-    const isMultipart = contentType?.includes('multipart/form-data');
     const forwardedProto = request.headers.get('x-forwarded-proto');
     const forwardedHost = request.headers.get('x-forwarded-host');
     const forwardedPort = request.headers.get('x-forwarded-port');
@@ -59,18 +58,11 @@ export async function proxyCraterRequest(
     }
 
     if (request.method !== 'GET' && request.method !== 'HEAD') {
-      if (isMultipart) {
-        // For multipart/form-data, forward the body directly to preserve boundary
-        body = request.body ?? undefined;
-        if (contentType) {
-          headers['Content-Type'] = contentType;
-        }
-      } else {
-        // For JSON and other types, read as ArrayBuffer
-        body = new Uint8Array(await request.arrayBuffer());
-        if (contentType) {
-          headers['Content-Type'] = contentType;
-        }
+      // Multipart boundaries are preserved by the Content-Type header and raw
+      // payload bytes; buffering avoids Node fetch stream duplex failures.
+      body = new Uint8Array(await request.arrayBuffer());
+      if (contentType) {
+        headers['Content-Type'] = contentType;
       }
     }
 

@@ -40,6 +40,7 @@
       aria-selected={active === item.id}
       class="lef-view-tab"
       class:lef-view-tab--active={active === item.id}
+      data-testid={`solution-view-tab-${item.id}`}
       title={item.hint}
       onclick={() => onSelect(item.id)}
     >

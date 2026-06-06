@@ -111,6 +111,39 @@ function buildRepository(order: MockOrder) {
   };
 }
 
+function readMultipartTextField(body: string, name: string): string | undefined {
+  const fieldMarker = `name="${name}"`;
+  const fieldStart = body.indexOf(fieldMarker);
+  if (fieldStart === -1) return undefined;
+
+  const separator = body.includes('\r\n\r\n', fieldStart) ? '\r\n\r\n' : '\n\n';
+  const valueStart = body.indexOf(separator, fieldStart);
+  if (valueStart === -1) return undefined;
+
+  const contentStart = valueStart + separator.length;
+  const crlfBoundaryStart = body.indexOf('\r\n--', contentStart);
+  const lfBoundaryStart = body.indexOf('\n--', contentStart);
+  const boundaryStart =
+    crlfBoundaryStart === -1
+      ? lfBoundaryStart
+      : lfBoundaryStart === -1
+        ? crlfBoundaryStart
+        : Math.min(crlfBoundaryStart, lfBoundaryStart);
+  const contentEnd = boundaryStart === -1 ? body.length : boundaryStart;
+  return body.slice(contentStart, contentEnd).trim();
+}
+
+function readCreateTitle(route: Route, fallback: string): string {
+  const contentType = route.request().headers()['content-type'] ?? '';
+  if (contentType.includes('multipart/form-data')) {
+    const body = route.request().postDataBuffer()?.toString('utf8') ?? '';
+    return readMultipartTextField(body, 'title') ?? readMultipartTextField(body, 'name') ?? fallback;
+  }
+
+  const postData = route.request().postDataJSON() as { title?: string; name?: string };
+  return postData.title ?? postData.name ?? fallback;
+}
+
 export async function mockOrderApi(page: Page) {
   let createCounter = 0;
   const orders = new Map<string, MockOrder>();
@@ -122,8 +155,7 @@ export async function mockOrderApi(page: Page) {
 
   await page.route('**/create', async (route) => {
     createCounter += 1;
-    const postData = route.request().postDataJSON() as { title?: string; name?: string };
-    const title = postData.title ?? postData.name ?? `Task ${createCounter}`;
+    const title = readCreateTitle(route, `Task ${createCounter}`);
     const order = buildOrder(`order-${createCounter}`, title, 'queued');
     orders.set(order.id, order);
 
@@ -256,10 +288,14 @@ export async function gotoAndWaitForReady(page: Page) {
   });
   await page.reload();
   await expect(page.getByTestId('kefine-task-input')).toBeVisible();
-  await page.waitForFunction(() => {
-    const el = document.querySelector('[data-testid="kefine-task-input"]');
+  await waitForHydratedElement(page, '[data-testid="kefine-task-input"]');
+}
+
+export async function waitForHydratedElement(page: Page, selector: string) {
+  await page.waitForFunction((selector) => {
+    const el = document.querySelector(selector);
     return el && Object.getOwnPropertySymbols(el).length > 0;
-  });
+  }, selector);
 }
 
 export async function submitTask(page: Page) {

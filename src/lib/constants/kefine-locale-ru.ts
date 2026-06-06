@@ -969,6 +969,10 @@ export const KEFINE_TEXT_RU = {
     closeRepositorySettings: 'Закрыть настройки репозитория',
     repositorySettingsHeading: 'Настройки репозитория',
     clone: 'Клонировать',
+    openRepositoryClone: 'Открыть инструкции клонирования репозитория',
+    cloneCommandHint: 'Выполните эту команду в терминале, чтобы клонировать репозиторий.',
+    repositoryLink: 'Ссылка репозитория',
+    backToRepository: 'Назад к репозиторию',
     pinSolution: 'Закрепить решение',
     view: 'Просмотр',
     apply: 'Применить',
@@ -1108,6 +1112,10 @@ export const KEFINE_TEXT_RU = {
     unchangedLine: 'строка без изменений',
     files: 'Файлы',
     modifiedFilesOutline: 'Список изменённых файлов',
+    fileSearch: 'Поиск файлов',
+    fileSearchPlaceholder: 'Искать файлы',
+    fileSearchClear: 'Очистить поиск файлов',
+    fileSearchEmpty: 'Нет подходящих файлов',
     tabs: {
       testing: {
         label: 'Тестирование',

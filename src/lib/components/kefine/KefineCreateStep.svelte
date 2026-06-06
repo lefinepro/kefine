@@ -1322,12 +1322,14 @@ initialized = true;
       placeholderFocused = false;
     }
 
+    const previewStartIndex = draft.files.length;
+
     // Generate previews for image files
     filesToProcess.forEach((file, i) => {
       if (isImageFile(file)) {
         createPreview(file)
           .then((dataUrl) => {
-            filePreviews.set(i, dataUrl);
+            filePreviews.set(previewStartIndex + i, dataUrl);
             filePreviews = new Map(filePreviews);
           })
           .catch((err) => {
@@ -1336,9 +1338,21 @@ initialized = true;
       }
     });
 
-    // Notify parent about the files
     onAttachFiles(filesToProcess);
     target.value = '';
+  }
+
+  function removeFile(index: number) {
+    onRemoveFile(index);
+    const nextPreviews = new Map<number, string>();
+    for (const [previewIndex, preview] of filePreviews.entries()) {
+      if (previewIndex < index) {
+        nextPreviews.set(previewIndex, preview);
+      } else if (previewIndex > index) {
+        nextPreviews.set(previewIndex - 1, preview);
+      }
+    }
+    filePreviews = nextPreviews;
   }
 
   function handleDeleteClick(order: OrderView, event: MouseEvent) {
@@ -1759,7 +1773,15 @@ initialized = true;
     {#if inputMetaOpen}
       <kefine-input-meta data-part="input-meta">
         <kefine-composer-strip aria-label={composerHints}>
-          <button type="button" data-part="composer-chip" title={backgroundExecuteAria} onmousedown={keepComposerFocus} onclick={() => fileInput?.click()}>
+          <button
+            type="button"
+            data-part="composer-chip"
+            data-testid="composer-upload-trigger"
+            aria-label={addFileLabel}
+            title={addFileLabel}
+            onmousedown={keepComposerFocus}
+            onclick={() => fileInput?.click()}
+          >
             <lefine-text>{addFileLabel}</lefine-text>
             {#if draft.files.length > 0}
               <strong>{fileCountLabel(draft.files.length)}</strong>
@@ -1828,7 +1850,7 @@ initialized = true;
         {#if draft.files.length > 0}
           <kefine-file-list>
             {#each draft.files as file, index (`${file.name}-${file.size}-${index}`)}
-              <button type="button" data-part="file-pill" onmousedown={keepComposerFocus} onclick={() => onRemoveFile(index)}>
+              <button type="button" data-part="file-pill" onmousedown={keepComposerFocus} onclick={() => removeFile(index)}>
                 {#if isImageFile(file) && filePreviews.has(index)}
                   <lefine-box data-part="file-preview-wrapper">
                     <img
@@ -1847,7 +1869,14 @@ initialized = true;
       </kefine-input-meta>
     {/if}
 
-    <input bind:this={fileInput} data-part="file-input" type="file" multiple onchange={handleFileChange} />
+    <input
+      bind:this={fileInput}
+      data-part="file-input"
+      type="file"
+      multiple
+      aria-label={addFileLabel}
+      onchange={handleFileChange}
+    />
     <p id="kefine-composer-hints" data-part="composer-hints" hidden>{composerHints}</p>
   {/if}
 

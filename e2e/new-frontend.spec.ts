@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { gotoAndWaitForReady, mockOrderApi } from './helpers/kefine';
+import { gotoAndWaitForReady, mockOrderApi, waitForHydratedElement } from './helpers/kefine';
 
 test.describe('New frontend task results', () => {
   test('submitted Go proxy task opens solvers as a task list with variants', async ({ page }) => {
@@ -53,11 +53,25 @@ test.describe('New frontend task results', () => {
     await expect(page.getByTestId('solver-clone-rail')).toHaveCount(0);
     await expect(page.getByTestId('repo-clone-trigger')).toBeVisible();
     await expect(page.getByTestId('repo-clone-trigger')).toHaveAttribute('data-icon', 'download');
+    await page.getByTestId('repo-clone-trigger').click();
+    await expect(page).toHaveURL(/[?&]view=clone/);
+    await expect(page.getByTestId('repo-clone-page')).toBeVisible();
+    await expect(page.getByTestId('repo-clone-page')).toContainText(
+      'git clone https://kefine.pro/kefine/go-proxy.git'
+    );
+    await expect(page.getByTestId('repo-clone-copy')).toBeVisible();
+    await page.getByRole('link', { name: 'Back to repository' }).click();
+    await expect(page).not.toHaveURL(/[?&]view=clone/);
+    await expect(page.getByTestId('repo-readme')).toBeVisible();
+
     await expect(page.getByTestId('repo-settings-trigger')).toBeVisible();
     await page.getByTestId('repo-settings-trigger').click();
-    await expect(page.getByTestId('repo-settings-dialog')).toBeVisible();
-    await expect(page.getByTestId('repo-settings-dialog')).toContainText('Default branch');
-    await page.getByRole('button', { name: 'Close repository settings' }).click();
+    await expect(page).toHaveURL(/[?&]view=settings/);
+    await expect(page.getByTestId('repo-settings-page')).toBeVisible();
+    await expect(page.getByTestId('repo-settings-page')).toContainText('Default branch');
+    await expect(page.getByTestId('repo-settings-dialog')).toHaveCount(0);
+    await page.getByRole('link', { name: 'Back to repository' }).click();
+    await expect(page).not.toHaveURL(/[?&]view=settings/);
     await expect(page.getByTestId('todo-solvers-block')).toHaveCount(0);
     await expect(page.getByTestId('todo-solver-select')).toHaveCount(4);
     await expect(page.getByTestId('todo-solver-select').first()).not.toContainText('Go Proxy Basic');
@@ -89,6 +103,29 @@ test.describe('New frontend task results', () => {
 
     await expect(page.getByRole('button', { name: 'Apply solution' })).toBeVisible();
     await expect(page.getByRole('button', { name: /Merge/ })).toHaveCount(0);
+  });
+
+  test('solution source file search opens and filters modified files', async ({ page }) => {
+    await mockOrderApi(page);
+    await page.goto('/order/order-1/solver/5');
+
+    await waitForHydratedElement(page, '[data-testid="solution-view-tab-source"]');
+    await page.getByTestId('solution-view-tab-source').click();
+    await expect(page.getByTestId('solution-view-tab-source')).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByTestId('solution-file-outline-item')).toHaveCount(3);
+
+    await page.getByTestId('solution-file-search-trigger').click();
+    await expect(page.getByTestId('solution-file-search-input')).toBeVisible();
+    await expect(page.getByTestId('solution-file-search-input')).toBeFocused();
+
+    await page.getByTestId('solution-file-search-input').fill('config');
+    await expect(page.getByTestId('solution-file-outline-item')).toHaveCount(1);
+    await expect(page.getByTestId('solution-file-outline-item').first()).toContainText(
+      'config.yaml'
+    );
+
+    await page.getByTestId('solution-file-outline-item').first().click();
+    await expect(page.locator('lef-code-path')).toHaveText('config.yaml');
   });
 
   test('canonical profile order route opens the order page without a task query', async ({ page }) => {
