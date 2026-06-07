@@ -1084,7 +1084,7 @@
               handle={username || profile.primaryHandle}
               {displayName}
               {bio}
-              {tasksOrg}
+              bind:tasksOrg={tasksOrg}
               {isOwner}
             />
 
