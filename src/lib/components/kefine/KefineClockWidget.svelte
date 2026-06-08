@@ -145,8 +145,8 @@
     border: 1px solid var(--kef-line);
     border-radius: var(--kef-radius-sm);
     background:
-      radial-gradient(circle at 14% 8%, color-mix(in oklab, #8f7bff 18%, transparent), transparent 30%),
-      linear-gradient(135deg, color-mix(in oklab, #62b8ff 12%, transparent), transparent 60%),
+      radial-gradient(circle at 14% 8%, color-mix(in oklab, #ffcc00 22%, transparent), transparent 30%),
+      linear-gradient(135deg, color-mix(in oklab, #ffd700 15%, transparent), transparent 60%),
       var(--kef-bg-soft);
   }
 
@@ -165,8 +165,8 @@
     width: clamp(2.5rem, 7vw, 3rem);
     height: clamp(2.5rem, 7vw, 3rem);
     border-radius: 50%;
-    background: color-mix(in oklab, #8f7bff 20%, var(--kef-bg-card));
-    color: #a99bff;
+    background: color-mix(in oklab, #ffcc00 25%, var(--kef-bg-card));
+    color: #e6b800;
     font-size: clamp(1.3rem, 4.2vw, 1.7rem);
     box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--kef-line) 75%, transparent);
   }

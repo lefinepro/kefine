@@ -13,7 +13,7 @@
     handle,
     displayName = '',
     bio = '',
-    tasksOrg = '',
+    tasksOrg = $bindable(''),
     isOwner = false
   }: {
     handle: string;
@@ -31,6 +31,8 @@
   const repoHandle = $derived(`@${handle.replace(/^@+/, '').trim()}`);
   const avatarSeed = $derived(displayName.trim() || handle.trim() || 'profile');
   const todos = $derived(parseOrgTodos(tasksOrg ?? ''));
+
+  import { goto } from '$app/navigation';
 
   let newTaskText = $state('');
 
@@ -103,6 +105,33 @@
     event.preventDefault();
     openNewTaskSearch();
   }
+
+  function toggleTodoState(todo: OrgTodo) {
+    const next: Record<OrgTodoState, OrgTodoState> = {
+      TODO: 'IN PROGRESS',
+      'IN PROGRESS': 'DONE',
+      DONE: 'TODO'
+    };
+    const newState = next[todo.state];
+    const lines = (tasksOrg ?? '').split(/\r?\n/);
+    const index = lines.findIndex((l) => {
+      const m = l.match(/^\*+\s+(TODO|IN PROGRESS|DONE)\s+(.*)$/);
+      return m && m[2].trim() === todo.title;
+    });
+    if (index === -1) return;
+    lines[index] = lines[index].replace(
+      /^( *\*+ +)(TODO|IN PROGRESS|DONE)( +.*)$/,
+      `$1${newState}$3`
+    );
+    tasksOrg = lines.join('\n');
+  }
+
+  function navigateToTask(task: string) {
+    const href = createTaskHref(task);
+    if (href !== '/') {
+      goto(href);
+    }
+  }
 </script>
 
 <lef-profile-repo data-testid="profile-repo">
@@ -123,9 +152,12 @@
       <lef-repo-checklist-item data-state={statusKind} data-testid="profile-checklist-item">
         <lef-repo-todo-check
           data-state={statusKind}
-          role="img"
+          role="button"
+          tabindex="0"
           aria-label={todoStatusLabel(todo.state)}
           title={todoStatusLabel(todo.state)}
+          onclick={() => toggleTodoState(todo)}
+          onkeydown={(e) => { if (e.key === 'Enter') toggleTodoState(todo); }}
         >
           {#if todo.state === 'DONE'}
             <Icon icon="lucide:check" width="12" height="12" aria-hidden="true" />
@@ -133,7 +165,12 @@
             <Icon icon="lucide:minus" width="12" height="12" aria-hidden="true" />
           {/if}
         </lef-repo-todo-check>
-        <lefine-text>{todo.title}</lefine-text>
+        <lefine-text
+          role="button"
+          tabindex="0"
+          onclick={() => navigateToTask(todo.title)}
+          onkeydown={(e) => { if (e.key === 'Enter') navigateToTask(todo.title); }}
+        >{todo.title}</lefine-text>
         <lef-todo-solver-cell>
           <lef-solver-avatar
             style="--avatar-color: {solverAvatarColor(avatarSeed)}"
@@ -237,6 +274,7 @@
     border: 1.5px solid color-mix(in oklab, var(--lefine-text-soft) 70%, var(--kef-line));
     background: color-mix(in oklab, var(--lefine-text-soft) 70%, var(--kef-bg-card));
     color: #fff;
+    cursor: pointer;
   }
 
   lef-repo-todo-check[data-state='in-progress'] {
@@ -285,6 +323,7 @@
     overflow-wrap: anywhere;
     font-size: 0.9rem;
     line-height: 1.3;
+    cursor: pointer;
   }
 
   lef-repo-checklist-item[data-state='done'] lefine-text {
