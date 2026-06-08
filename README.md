@@ -307,9 +307,9 @@ mise run dev
 This command:
 
 - ensures frontend dependencies are installed,
-- starts Postgres via `nerdctl compose`,
+- starts Postgres via Compose,
 - waits until the database is ready,
-- starts `crater` in a container on `http://localhost:3001`,
+- starts the Lepos backend in a container on `http://localhost:3001`,
 - starts the SvelteKit frontend on `http://localhost:5173`.
 
 You can also run just `mise run`, because the default task maps to `dev`.
@@ -370,7 +370,7 @@ If you do not want to use the one-command `mise` flow, you still have two practi
 Option A: run only the backend in a container
 
 ```bash
-nerdctl compose up --build crater
+./scripts/container-compose.sh up --build lepos
 ```
 
 Option B: run the backend directly with Crystal

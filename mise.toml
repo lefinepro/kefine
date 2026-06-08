@@ -10,7 +10,7 @@ depends = ["dev"]
 
 [tasks.install]
 description = "Install all project dependencies"
-depends = ["frontend:deps"]
+depends = ["frontend:deps", "backend:deps"]
 
 [tasks."frontend:deps"]
 description = "Install frontend dependencies with pnpm"
@@ -21,26 +21,28 @@ fi
 '''
 
 [tasks."backend:deps"]
-description = "Install crater dependencies with shards"
+description = "Install Lepos backend dependencies with shards"
 run = '''
-if [ ! -d crater/lib/kemal ]; then
-  cd crater && shards install
+cd crater
+if ! shards check >/dev/null 2>&1; then
+  shards install --frozen
 fi
+../scripts/patch-rcl-crystal-merge.sh
 '''
 
 [tasks."backend:build"]
-description = "Build the crater dev container image"
-run = "./scripts/nerdctl-compose.sh build crater"
+description = "Build the Lepos backend dev container image"
+run = "./scripts/container-compose.sh build lepos"
 
 [tasks."db:up"]
-description = "Start local Postgres in nerdctl compose"
-run = "./scripts/nerdctl-compose.sh up -d postgres"
+description = "Start local Postgres with Compose"
+run = "./scripts/container-compose.sh up -d postgres"
 
 [tasks."db:wait"]
 description = "Wait until local Postgres accepts connections"
 depends = ["db:up"]
 run = '''
-until ./scripts/nerdctl-compose.sh exec -T postgres pg_isready -U kefine -d kefine >/dev/null 2>&1; do
+until ./scripts/container-compose.sh exec -T postgres pg_isready -U kefine -d kefine >/dev/null 2>&1; do
   echo "Waiting for postgres on localhost:5432..."
   sleep 1
 done
@@ -52,7 +54,7 @@ run = "containerd-rootless-setuptool.sh install"
 
 [tasks."db:down"]
 description = "Stop local Postgres"
-run = "./scripts/nerdctl-compose.sh stop postgres"
+run = "./scripts/container-compose.sh stop postgres"
 
 [tasks.frontend]
 description = "Run the SvelteKit frontend"
@@ -70,21 +72,21 @@ depends = ["frontend:build"]
 run = "pnpm preview --host 0.0.0.0"
 
 [tasks.backend]
-description = "Run the crater backend in a dev container without rebuilding"
+description = "Run the Lepos backend in a dev container without rebuilding"
 depends = ["db:wait"]
-run = "./scripts/nerdctl-compose.sh up crater"
+run = "./scripts/container-compose.sh up lepos"
 
 [tasks."backend:local"]
-description = "Run the crater backend directly with Crystal"
+description = "Run the Lepos backend directly with Crystal"
 depends = ["backend:deps", "db:wait"]
 run = "cd crater && crystal run src/crater.cr"
 
 [tasks."backend:down"]
-description = "Stop the crater backend container"
-run = "./scripts/nerdctl-compose.sh stop crater"
+description = "Stop the Lepos backend container"
+run = "./scripts/container-compose.sh stop lepos"
 
 [tasks.dev]
-description = "Start Postgres, crater, and the frontend"
+description = "Start Postgres, Lepos, and the frontend"
 depends = ["install"]
 run = "mise run backend ::: frontend"
 
@@ -100,6 +102,6 @@ frpc -c scripts/frpc.dev-proxy.toml
 '''
 
 [tasks."dev:proxy"]
-description = "Start the local stack and expose it through FRP"
+description = "Start the local Lepos stack and expose it through FRP"
 depends = ["install"]
 run = "mise run backend ::: frontend ::: tunnel"
