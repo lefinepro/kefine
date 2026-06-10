@@ -63,6 +63,7 @@
     themeLightLabel,
     themeDarkLabel,
     signInLabel,
+    signOutLabel,
     signedInLabel,
     authenticatedLabel,
     authenticatedSecondaryLabel,
@@ -102,7 +103,6 @@
     sidebarProfile = null,
     socialLinks,
     showSocialLinks = false,
-    showDockControls = true,
     showEmailButton = true,
     showAuthButton = true,
     legalLinks,
@@ -128,6 +128,7 @@
     mailLabel: string;
     themeLabel: string;
     themeMode: 'light' | 'dark' | 'auto';
+    signOutLabel: string;
     themeAutoLabel: string;
     themeLightLabel: string;
     themeDarkLabel: string;
@@ -180,7 +181,6 @@
     sidebarProfile?: SidebarProfile | null;
     socialLinks: SocialLink[];
     showSocialLinks?: boolean;
-    showDockControls?: boolean;
     showEmailButton?: boolean;
     showAuthButton?: boolean;
     legalLinks: LegalLink[];
@@ -848,24 +848,6 @@
             </kefine-sidebar-toolbar>
           {/if}
 
-          {#if sidebarProfile}
-            {@const profileHref = sidebarProfile.href?.trim() || ''}
-            <kefine-sidebar-profile data-testid="kefine-sidebar-profile">
-              <svelte:element
-                this={profileHref ? 'a' : 'kefine-sidebar-profile-card'}
-                href={profileHref || undefined}
-                data-part="profile-card"
-              >
-                <kefine-sidebar-profile-copy>
-                  <lefine-text data-part="profile-handle">{getSidebarProfileHandle(sidebarProfile)}</lefine-text>
-                  {#if sidebarProfile.bio?.trim()}
-                    <lefine-text data-part="profile-bio">{sidebarProfile.bio.trim()}</lefine-text>
-                  {/if}
-                </kefine-sidebar-profile-copy>
-              </svelte:element>
-            </kefine-sidebar-profile>
-          {/if}
-
           <kefine-sidebar-utility>
             <kefine-sidebar-nav aria-label={legalLabel}>
               {#each legalLinks as link (link.id)}
@@ -876,43 +858,54 @@
               {/each}
             </kefine-sidebar-nav>
 
-            {#if showDockControls}
-              <kefine-sidebar-toolbar aria-label={dockLabel}>
+            <kefine-sidebar-toolbar aria-label={dockLabel}>
+              <button
+                type="button"
+                data-part="icon"
+                data-role="theme"
+                data-testid="kefine-topbar-theme-toggle"
+                aria-label={themeLabel}
+                title={themeLabel}
+                onclick={handleThemeButtonClick}
+                ondblclick={handleThemeButtonDoubleClick}
+              >
+                <KefineTopbarIcon name={isDarkTheme ? 'theme-light' : 'theme-dark'} size={20} />
+              </button>
+              <button
+                type="button"
+                data-part="icon"
+                data-role="locale"
+                data-testid="kefine-topbar-locale-toggle"
+                aria-label={localeLabel}
+                title={localeLabel}
+                onclick={handleLocaleButtonClick}
+                ondblclick={handleLocaleButtonDoubleClick}
+              >
+                <KefineTopbarIcon name={currentLocaleFlagIcon} size={20} />
+              </button>
+              {#if showEmailButton}
                 <button
                   type="button"
                   data-part="icon"
-                  data-role="theme"
-                  data-testid="kefine-topbar-theme-toggle"
-                  aria-label={themeLabel}
-                  title={themeLabel}
-                  onclick={handleThemeButtonClick}
-                  ondblclick={handleThemeButtonDoubleClick}
+                  aria-label={mailLabel}
+                  title={mailLabel}
+                  onclick={handleEmailClick}
                 >
-                  <KefineTopbarIcon name={isDarkTheme ? 'theme-light' : 'theme-dark'} size={20} />
+                  <KefineTopbarIcon name="email" size={20} />
                 </button>
+              {/if}
+            </kefine-sidebar-toolbar>
+            {#if onSignOut}
+              <kefine-sidebar-toolbar aria-label={signOutLabel}>
                 <button
                   type="button"
                   data-part="icon"
-                  data-role="locale"
-                  data-testid="kefine-topbar-locale-toggle"
-                  aria-label={localeLabel}
-                  title={localeLabel}
-                  onclick={handleLocaleButtonClick}
-                  ondblclick={handleLocaleButtonDoubleClick}
+                  aria-label={signOutLabel}
+                  title={signOutLabel}
+                  onclick={onSignOut}
                 >
-                  <KefineTopbarIcon name={currentLocaleFlagIcon} size={20} />
+                  <KefineTopbarIcon name="sign-out" size={20} />
                 </button>
-                {#if showEmailButton}
-                  <button
-                    type="button"
-                    data-part="icon"
-                    aria-label={mailLabel}
-                    title={mailLabel}
-                    onclick={handleEmailClick}
-                  >
-                    <KefineTopbarIcon name="email" size={20} />
-                  </button>
-                {/if}
               </kefine-sidebar-toolbar>
             {/if}
           </kefine-sidebar-utility>
@@ -1067,6 +1060,7 @@
             inputTestId="kefine-topbar-search-input"
             rowTestId="kefine-topbar-search-input-row"
             shortcutLabel={searchShortcutLabel}
+            showShortcut={false}
             showBack={Boolean(activeSearchWidget)}
             backLabel={searchWidgetBackLabel}
             focusRequest={searchFocusRequest}

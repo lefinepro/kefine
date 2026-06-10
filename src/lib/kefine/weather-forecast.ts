@@ -1,4 +1,4 @@
-export type WeatherUnit = 'celsius' | 'fahrenheit';
+export type WeatherUnit = 'celsius' | 'fahrenheit' | 'kelvin';
 
 export type WeatherCondition =
   | 'mostly-cloudy'
@@ -164,9 +164,14 @@ export function toFahrenheit(celsius: number): number {
   return Math.round((celsius * 9) / 5 + 32);
 }
 
+export function toKelvin(celsius: number): number {
+  return Math.round(celsius + 273.15);
+}
+
 export function formatTemperature(celsius: number, unit: WeatherUnit): string {
-  const value = unit === 'fahrenheit' ? toFahrenheit(celsius) : Math.round(celsius);
-  return `${value}°`;
+  if (unit === 'fahrenheit') return `${toFahrenheit(celsius)}°`;
+  if (unit === 'kelvin') return `${toKelvin(celsius)}°`;
+  return `${Math.round(celsius)}°`;
 }
 
 export function weatherCodeToCondition(code: number | undefined): WeatherCondition {

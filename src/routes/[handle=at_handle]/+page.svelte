@@ -73,7 +73,7 @@
       seen.add(block.type);
     }
     const ordered = KEFINE_SEARCH_WIDGET_IDS.filter((id) => seen.has(id));
-    return ordered.length > 0 ? ordered : KEFINE_SEARCH_WIDGET_IDS;
+    return ordered.length > 0 ? ordered : KEFINE_SEARCH_WIDGET_IDS.filter((id) => id !== 'weather');
   });
   const passkeySession = $derived($passkeySessionStore);
   const BRAND_HOME_NAVIGATION_STORAGE_KEY = 'kefine-brand-home-navigation';
@@ -428,14 +428,32 @@
       viewerProfile = null;
     }
 
-    const storedProfile = getProfileByUsername(localStorage, requestedHandle) ?? buildDefaultActorProfile();
-    profile = storedProfile;
-    syncDraftStateFromProfile(storedProfile);
+    let storedProfile = getProfileByUsername(localStorage, requestedHandle) ?? buildDefaultActorProfile();
 
     if (!storedProfile) {
-      unavailable = true;
-      return;
+      const now = new Date().toISOString();
+      const cleanHandle = requestedHandle.replace(/^@+/, '');
+      storedProfile = {
+        id: `handle:${cleanHandle}`,
+        userId: `handle:${cleanHandle}`,
+        username: cleanHandle,
+        primaryHandle: cleanHandle,
+        primaryHandleType: 'publickey',
+        displayName: cleanHandle.toUpperCase(),
+        bio: '',
+        isPublic: true,
+        socialLinks: [],
+        referralPercent: 0,
+        bonusBalanceUsd: 0,
+        followersCount: 0,
+        followingCount: 0,
+        createdAt: now,
+        updatedAt: now
+      };
     }
+
+    profile = storedProfile;
+    syncDraftStateFromProfile(storedProfile);
 
     const ownerViewing = Boolean(viewerProfile && viewerProfile.id === storedProfile.id);
     if (!storedProfile.isPublic && !ownerViewing) {
@@ -991,89 +1009,9 @@
     />
 
     <lefine-box class:profile-layout={true} class:profile-layout--single={true}>
-      <lefine-box class="profile-main" class:profile-main--setup={isOwner && onboardingStep === 'identity'}>
+      <lefine-box class="profile-main">
         {#if isOwner && onboardingStep}
-          {#if onboardingStep === 'identity'}
-            <section class="profile-surface profile-step-surface profile-step-surface--identity">
-              <KefineProfileHeaderEditor
-                bind:firstName
-                bind:surname
-                bind:username
-                isOwner={true}
-                isSetup={true}
-                isEmbedded={true}
-                displayName={profile.displayName}
-                canonicalProfilePath={canonicalProfilePath}
-                bio={bio}
-                firstNameLabel={localeText.profile.firstName}
-                surnameLabel={localeText.profile.surname}
-                usernameLabel={localeText.profile.username}
-                onFieldKeydown={blockStepSubmitOnEnter}
-              />
-              <KefineProfileSetupDots currentStep={1} steps={[1, 2]} onSelect={(step) => goToOnboardingStep(step as 1 | 2)} />
-              <textarea
-                class="profile-identity-input"
-                bind:value={bio}
-                rows="6"
-                placeholder={localeText.profile.bioPlaceholder}
-                onkeydown={blockStepSubmitOnEnter}
-              ></textarea>
-              <lefine-box class="profile-setup__footer profile-setup__footer--spread">
-                <small>{localeText.profile.setupHint}</small>
-                <button
-                  type="button"
-                  class="profile-setup__arrow"
-                  aria-label={localeText.profile.continueToSocials}
-                  disabled={!hasIdentityStepCompleted}
-                  onclick={saveIdentityStep}
-                >
-                  <lefine-text>{localeText.profile.continueToSocials}</lefine-text>
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M7 12h10m-4-4 4 4-4 4" />
-                  </svg>
-                </button>
-              </lefine-box>
-            </section>
-          {:else if onboardingStep === 'socials'}
-            <section class="profile-surface profile-step-surface">
-              <KefineProfileHeaderEditor
-                bind:firstName
-                bind:surname
-                bind:username
-                isOwner={true}
-                isSetup={true}
-                isEmbedded={true}
-                displayName={profile.displayName}
-                canonicalProfilePath={canonicalProfilePath}
-                bio={bio}
-                firstNameLabel={localeText.profile.firstName}
-                surnameLabel={localeText.profile.surname}
-                usernameLabel={localeText.profile.username}
-                onFieldKeydown={blockStepSubmitOnEnter}
-              />
-              <KefineProfileSetupDots currentStep={2} steps={[1, 2]} onSelect={(step) => goToOnboardingStep(step as 1 | 2)} />
-              <lefine-box class="profile-links-head">
-                <button type="button" class="profile-plus" aria-label={localeText.profile.addLink} onclick={addSocialLink}>
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
-                </button>
-                <strong>{localeText.profile.socialLinks}</strong>
-              </lefine-box>
-              <KefineProfileSocialLinksCard
-                bind:links={socialLinks}
-                valuePlaceholder={localeText.profile.socialUrl}
-                emptyText={localeText.profile.onboardingSubtitle}
-                isOwner={true}
-              />
-              {#if socialsStepHint}
-                <small role="alert">{socialsStepHint}</small>
-              {/if}
-              <lefine-box class="profile-setup__footer">
-                <button type="button" data-variant="primary" onclick={saveSocialLinksStep}>
-                  {localeText.profile.finishSetup}
-                </button>
-              </lefine-box>
-            </section>
-          {/if}
+          <!-- onboarding screen commented out -->
         {:else}
           <article class="profile-details">
             <!-- A profile is a repository: no enclosing frame at all. The README
@@ -1083,7 +1021,6 @@
             <KefineProfileRepository
               handle={username || profile.primaryHandle}
               {displayName}
-              {bio}
               bind:tasksOrg={tasksOrg}
               {isOwner}
             />
@@ -1135,7 +1072,7 @@
                   </a>
                 </lefine-box>
 
-                <lefine-box class="profile-links-column">
+                <!--lefine-box class="profile-links-column">
                   <lefine-box class="profile-links-head">
                     <button type="button" class="profile-plus" aria-label={localeText.profile.addLink} onclick={addSocialLink}>
                       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
@@ -1148,7 +1085,7 @@
                     emptyText=""
                     {isOwner}
                   />
-                </lefine-box>
+                </lefine-box-->
 
                 <!-- Secret data: owner-only, never leaves the workspace. -->
                 <lefine-box class="profile-links-column">

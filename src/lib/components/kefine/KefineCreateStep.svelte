@@ -24,7 +24,7 @@
   import { buildActorOrderPath } from '$lib/components/kefine/kefine-workspace-helpers';
   import { defaultMetrics } from '$lib/kefine/solutions-data';
   import { cubicOut } from 'svelte/easing';
-  import { onMount, tick } from 'svelte';
+  import { onMount, onDestroy, tick } from 'svelte';
   const PLACEHOLDER_TYPE_DELAY_MS = 58;
   const PLACEHOLDER_DELETE_DELAY_MS = 34;
   const PLACEHOLDER_PAUSE_MS = 1150;
@@ -453,6 +453,42 @@
   let taskCompleted = $state(false);
   let isFlying = $state(false);
   let initialized = $state(false);
+
+  let now = $state(Date.now());
+  let timerHandle: ReturnType<typeof setInterval> | undefined;
+  let timerStarted = $state(false);
+  $effect(() => {
+    if (filteredRecentOrders.length > 0 && !timerStarted) {
+      timerStarted = true;
+      timerHandle = setInterval(() => { now = Date.now(); }, 1000);
+    }
+    if (filteredRecentOrders.length === 0 && timerHandle) {
+      clearInterval(timerHandle);
+      timerHandle = undefined;
+      timerStarted = false;
+    }
+  });
+  onDestroy(() => { if (timerHandle) clearInterval(timerHandle); });
+
+  function formatElapsed(createdAt: string): string {
+    const elapsed = now - Date.parse(createdAt);
+    if (elapsed < 0) return '';
+    const totalSec = Math.floor(elapsed / 1000);
+    if (totalSec < 10) return `${totalSec}s`;
+    const totalMin = Math.floor(totalSec / 60);
+    if (totalMin < 1) return `${totalSec}s`;
+    if (totalMin < 60) return `${totalMin}m`;
+    const totalHours = Math.floor(totalMin / 60);
+    if (totalHours < 24) return `${totalHours}h`;
+    const totalDays = Math.floor(totalHours / 24);
+    if (totalDays < 7) return `${totalDays}d`;
+    const totalWeeks = Math.floor(totalDays / 7);
+    if (totalWeeks < 5) return `${totalWeeks}w`;
+    const totalMonths = Math.floor(totalDays / 30);
+    if (totalMonths < 12) return `${totalMonths}mo`;
+    const totalYears = Math.floor(totalDays / 365);
+    return `${totalYears}y`;
+  }
 
   $effect(() => {
     const request = searchFocusRequest;
@@ -1971,9 +2007,9 @@ initialized = true;
             <kefine-solver-search-row aria-live="polite" data-state={inProgress ? 'in-progress' : 'completed'}>
               <lefine-text>{order.title}</lefine-text>
 
-              {#if order.executionEstimate}
+              {#if !inProgress}
                 <lefine-text data-part="task-estimate" data-testid={`kefine-order-eta-${order.id}`}>
-                  {order.executionEstimate}
+                  {formatElapsed(order.createdAt)}
                 </lefine-text>
               {/if}
 
@@ -2008,37 +2044,39 @@ initialized = true;
               </kefine-solver-search-indicator>
             </kefine-solver-search-row>
           </a>
-          <kefine-task-history-actions>
-            {#if shouldShowSolverList(order.title, !inProgress)}
-              <a
-                role="button"
-                data-part="open-solvers"
-                href={orderSolutionsHref(order)}
-                onmousedown={keepComposerFocus}
-                onclick={(event) => openSolverList(event, orderSolutionsHref(order))}
-              >
-                Open solver list
-              </a>
-            {/if}
-            {#if onStopOrder && order.status !== 'stopped' && order.status !== 'completed' && order.status !== 'done'}
-              <button
-                type="button"
-                data-part="stop-task"
-                data-testid={`kefine-stop-order-${order.id}`}
-                aria-label={`${stopTaskLabel}: ${order.title}`}
-                title={stopTaskLabel}
-                onmousedown={keepComposerFocus}
-                onclick={(event) => onStopOrder?.(order, event)}
-                onpointerup={(event) => {
-                  if (event.pointerType === 'touch') {
-                    onStopOrder?.(order, event);
-                  }
-                }}
-              >
-                <lefine-text aria-hidden="true"></lefine-text>
-              </button>
-            {/if}
-          </kefine-task-history-actions>
+          {#if order.status !== 'completed' && order.status !== 'done'}
+            <kefine-task-history-actions>
+              {#if shouldShowSolverList(order.title, !inProgress)}
+                <a
+                  role="button"
+                  data-part="open-solvers"
+                  href={orderSolutionsHref(order)}
+                  onmousedown={keepComposerFocus}
+                  onclick={(event) => openSolverList(event, orderSolutionsHref(order))}
+                >
+                  Open solver list
+                </a>
+              {/if}
+              {#if onStopOrder && order.status !== 'stopped' && order.status !== 'completed' && order.status !== 'done'}
+                <button
+                  type="button"
+                  data-part="stop-task"
+                  data-testid={`kefine-stop-order-${order.id}`}
+                  aria-label={`${stopTaskLabel}: ${order.title}`}
+                  title={stopTaskLabel}
+                  onmousedown={keepComposerFocus}
+                  onclick={(event) => onStopOrder?.(order, event)}
+                  onpointerup={(event) => {
+                    if (event.pointerType === 'touch') {
+                      onStopOrder?.(order, event);
+                    }
+                  }}
+                >
+                  <lefine-text aria-hidden="true"></lefine-text>
+                </button>
+              {/if}
+            </kefine-task-history-actions>
+          {/if}
         </kefine-task-history-item>
       {/each}
       </section>
