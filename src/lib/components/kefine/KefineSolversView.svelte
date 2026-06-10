@@ -432,9 +432,12 @@
                 <lef-repo-todo-check
                   data-state={statusKind}
                   data-testid="repo-checklist-status"
-                  role="img"
+                  role="button"
+                  tabindex="0"
                   aria-label={todoStatusLabel(todo.state)}
                   title={todoStatusLabel(todo.state)}
+                  onclick={() => toggleTask(todo.id)}
+                  onkeydown={(e) => { if (e.key === 'Enter') toggleTask(todo.id); }}
                 >
                   {#if todo.state === 'DONE'}
                     <Icon icon="lucide:check" width="12" height="12" aria-hidden="true" />
@@ -442,7 +445,12 @@
                     <Icon icon="lucide:minus" width="12" height="12" aria-hidden="true" />
                   {/if}
                 </lef-repo-todo-check>
-                <lefine-text>{todo.title}</lefine-text>
+                <lefine-text
+                  role="button"
+                  tabindex="0"
+                  onclick={() => goto(createTaskHref(todo.title))}
+                  onkeydown={(e) => { if (e.key === 'Enter') goto(createTaskHref(todo.title)); }}
+                >{todo.title}</lefine-text>
                 {#if selectedSolution}
                   <lef-todo-solver-cell>
                     <button
@@ -482,25 +490,9 @@
                         <lef-task-variant-meta>
                           <lef-task-variant-name>
                             <strong>{solution.solver}</strong>
-                            <KefineSolverBadge
-                              badge={badgeForSolver(solverBadges, solution.id)}
-                              bestLabel={localeText.solversView.badges.best}
-                              bestTitle={localeText.solversView.badges.bestTitle}
-                              deltaTitle={localeText.solversView.badges.deltaTitle}
-                              size="compact"
-                            />
                           </lef-task-variant-name>
                           <small>{solution.title}</small>
                         </lef-task-variant-meta>
-                        {#if variantMetric}
-                          <lef-task-variant-stats>
-                            <strong>{formatPrice(variantMetric.priceUsd)}</strong>
-                            <small>
-                              {formatSeconds(variantMetric.executionTimeSec)}
-                              / {formatPercent(variantMetric.successRate)}
-                            </small>
-                          </lef-task-variant-stats>
-                        {/if}
                       </button>
                     {/each}
                   </lef-task-variants>

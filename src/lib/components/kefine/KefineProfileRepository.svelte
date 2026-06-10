@@ -2,7 +2,6 @@
   import Icon from '@iconify/svelte';
   import { kefineLocaleText } from '$lib/constants/kefine-locale';
   import { parseOrgTodos, type OrgTodoState } from '$lib/kefine/repo-docs';
-  import { solverAvatarColor, solverInitials } from '$lib/kefine/solver-avatars';
   import {
     requestTopbarSearch,
     topbarSearchItems,
@@ -12,24 +11,21 @@
   let {
     handle,
     displayName = '',
-    bio = '',
     tasksOrg = $bindable(''),
     isOwner = false
   }: {
     handle: string;
     displayName?: string;
-    bio?: string;
     tasksOrg?: string | null;
     isOwner?: boolean;
   } = $props();
 
   const localeText = $derived($kefineLocaleText);
 
-  // A profile is a repository: the README header is the handle and the brief is
-  // the bio, and the tasks are an Org TODO list rendered as a checklist — the
-  // same visual language as the solvers/solution screen.
+  // A profile is a repository: the README header is the handle and the tasks are
+  // an Org TODO list rendered as a checklist — the same visual language as the
+  // solvers/solution screen.
   const repoHandle = $derived(`@${handle.replace(/^@+/, '').trim()}`);
-  const avatarSeed = $derived(displayName.trim() || handle.trim() || 'profile');
   const todos = $derived(parseOrgTodos(tasksOrg ?? ''));
 
   import { goto } from '$app/navigation';
@@ -139,11 +135,6 @@
     <lef-repo-readme-head>
       <h2 data-testid="profile-readme-title">{repoHandle}</h2>
     </lef-repo-readme-head>
-    {#if bio.trim()}
-      <lef-repo-brief data-testid="profile-brief">
-        <p>{bio}</p>
-      </lef-repo-brief>
-    {/if}
   </lef-repo-readme>
 
   <lef-repo-checklist aria-label={localeText.profile.repoChecklistAria} data-testid="profile-checklist">
@@ -171,12 +162,6 @@
           onclick={() => navigateToTask(todo.title)}
           onkeydown={(e) => { if (e.key === 'Enter') navigateToTask(todo.title); }}
         >{todo.title}</lefine-text>
-        <lef-todo-solver-cell>
-          <lef-solver-avatar
-            style="--avatar-color: {solverAvatarColor(avatarSeed)}"
-            aria-hidden="true"
-          >{solverInitials(avatarSeed)}</lef-solver-avatar>
-        </lef-todo-solver-cell>
       </lef-repo-checklist-item>
     {/each}
     <lef-repo-checklist-item data-state="create" data-testid="profile-new-task-row">
@@ -221,8 +206,8 @@
   }
 
   /* The README is the one emphasized surface: a single, flat panel holding the
-     handle and brief — the same quiet card the solution screen uses for its
-     readme, with the checklist floating beneath it (reviewer: "flatter"). */
+     handle — the same quiet card the solution screen uses for its readme, with
+     the checklist floating beneath it (reviewer: "flatter"). */
   lef-repo-readme {
     display: flex;
     flex-direction: column;
@@ -244,18 +229,6 @@
     font-weight: 700;
     letter-spacing: -0.01em;
     color: var(--lefine-text);
-  }
-
-  lef-repo-brief {
-    display: block;
-  }
-
-  lef-repo-brief p {
-    margin: 0;
-    font-size: 0.92rem;
-    line-height: 1.45;
-    color: var(--lefine-text-soft);
-    white-space: pre-line;
   }
 
   lef-repo-checklist {

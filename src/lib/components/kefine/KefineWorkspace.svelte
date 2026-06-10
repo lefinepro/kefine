@@ -1035,31 +1035,7 @@
     isSpecialRuntime = isSpecialRuntimeOrigin(window.location.origin);
     runWhenIdle(() => ensureTemporaryOrderProfile({ createIfMissing: false }));
 
-    if (!authState.isConnected) {
-      void (async () => {
-        try {
-          const { restoreGeneratedPortableActor } = await loadAuthRoutes();
-          const restored = await restoreGeneratedPortableActor();
-          if (!restored) {
-            return;
-          }
-
-          updateAuthState({
-            isConnected: true,
-            address: null,
-            chainId: null,
-            email: restored.email,
-            userId: restored.userId,
-            handle: normalizeActorHandle(restored.handle || restored.publickey.key),
-            displayName: restored.displayName,
-            authType: 'publickey',
-            status: 'connected'
-          });
-        } catch (error) {
-          console.error('[publickey] restoreGeneratedPortableActor', error);
-        }
-      })();
-    }
+    // auto-auth restored via public key disabled
 
     if (!hydrateTaskRouteFromLocation(loadedOrders)) {
       restoreCloneDraftPrefill();
@@ -2454,6 +2430,14 @@
 
   async function submitDraft(form: DraftOrder, options?: { background?: boolean; focusInQueue?: boolean }) {
     const normalized = normalizeDraftOrder(form, localeText);
+
+    if (!isAuthenticated) {
+      draftQueued = normalized;
+      suppressPostAuthProfileRedirect = true;
+      await selectTopbarAuth();
+      return null;
+    }
+
     const created = await createOrder(normalized, options);
 
     if (created && options?.background) {
@@ -3098,9 +3082,7 @@
   }
 
   function saveAnonymousResult() {
-    suppressPostAuthProfileRedirect = true;
-    selectedAuthMethod = 'passkey';
-    void loginWithDefaultPasskey();
+    // auto-auth via passkey disabled — user must authorize manually
   }
 
   function cancelExecutingActions() {
@@ -3128,6 +3110,7 @@
   themeLightLabel={localeText.topbar.theme.light}
   themeDarkLabel={localeText.topbar.theme.dark}
   signInLabel={localeText.topbar.signIn}
+  signOutLabel={localeText.profile.signOut}
   signedInLabel={localeText.topbar.signedIn}
   authenticatedLabel={authenticatedLabel}
   authenticatedSecondaryLabel={null}
@@ -3163,7 +3146,6 @@
   {sidebarProfile}
   socialLinks={sidebarSocialLinks}
   showSocialLinks={false}
-  showDockControls={step !== 'create'}
   legalLinks={sidebarLegalLinks}
   onExpandedChange={(expanded) => { leftNavExpanded = expanded; }}
   onBrandClick={handleTopbarBrandClick}

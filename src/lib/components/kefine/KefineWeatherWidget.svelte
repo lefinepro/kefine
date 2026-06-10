@@ -320,6 +320,16 @@
             >
               °F
             </button>
+            <button
+              type="button"
+              data-active={unit === 'kelvin'}
+              aria-pressed={unit === 'kelvin'}
+              aria-label={copy.kelvin}
+              onpointerdown={(event) => handleUnitPointerDown(event, 'kelvin')}
+              onclick={() => selectUnit('kelvin')}
+            >
+              K
+            </button>
           </kefine-weather-units>
         </kefine-weather-head>
 
@@ -472,7 +482,7 @@
 
   kefine-weather-units {
     display: inline-grid;
-    grid-template-columns: repeat(2, 2.05rem);
+    grid-template-columns: repeat(3, 2.05rem);
     align-items: center;
     padding: 0.14rem;
     border: 1px solid var(--kef-line);

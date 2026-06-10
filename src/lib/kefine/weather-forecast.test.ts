@@ -3,7 +3,8 @@ import {
   buildWeatherForecastFromOpenMeteo,
   formatTemperature,
   resolveKnownWeatherLocation,
-  toFahrenheit
+  toFahrenheit,
+  toKelvin
 } from './weather-forecast';
 
 const forecastResponse = {
@@ -54,6 +55,13 @@ describe('weather forecast formatting', () => {
     expect(toFahrenheit(14)).toBe(57);
     expect(formatTemperature(14.4, 'celsius')).toBe('14°');
     expect(formatTemperature(14.4, 'fahrenheit')).toBe('58°');
+  });
+
+  it('converts celsius values to kelvin', () => {
+    expect(toKelvin(14)).toBe(287);
+    expect(toKelvin(0)).toBe(273);
+    expect(toKelvin(-273)).toBe(0);
+    expect(formatTemperature(14.4, 'kelvin')).toBe('288°');
   });
 });
 
