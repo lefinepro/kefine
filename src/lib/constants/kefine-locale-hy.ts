@@ -245,6 +245,7 @@ export const KEFINE_TEXT_HY = {
     unitLabel: 'Ջերմաստիճանի միավոր',
     celsius: 'Ցելսիուս',
     fahrenheit: 'Ֆարենհայթ',
+    kelvin: 'Կելվին',
     metricsLabel: 'Եղանակի տվյալներ',
     feelsLike: 'Զգացվում է որպես',
     humidity: 'Խոնավություն',

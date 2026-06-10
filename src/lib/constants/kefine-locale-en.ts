@@ -269,6 +269,7 @@ export const KEFINE_TEXT_EN = {
     unitLabel: 'Temperature unit',
     celsius: 'Celsius',
     fahrenheit: 'Fahrenheit',
+    kelvin: 'Kelvin',
     metricsLabel: 'Weather details',
     feelsLike: 'Feels like',
     humidity: 'Humidity',

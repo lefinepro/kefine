@@ -269,6 +269,7 @@ export const KEFINE_TEXT_RU = {
     unitLabel: 'Единицы температуры',
     celsius: 'Цельсий',
     fahrenheit: 'Фаренгейт',
+    kelvin: 'Кельвин',
     metricsLabel: 'Подробности погоды',
     feelsLike: 'Ощущается как',
     humidity: 'Влажность',

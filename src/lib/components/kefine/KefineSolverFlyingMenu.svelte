@@ -91,6 +91,13 @@
 {/if}
 
 <style>
+  flying-menu {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    z-index: 1000;
+  }
+
   flying-menu::part(menu) {
     background: var(--kef-bg-card);
     border: 1px solid var(--kef-line-soft);
