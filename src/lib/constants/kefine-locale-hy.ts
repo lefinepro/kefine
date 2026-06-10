@@ -1080,6 +1080,11 @@ export const KEFINE_TEXT_HY = {
     unchangedLine: 'անփոփոխ տող',
     files: 'Ֆայլեր',
     modifiedFilesOutline: 'Փոփոխված ֆայլերի ցանկ',
+    flyingMenu: {
+      trigger: 'Փոխել solver-ը',
+      title: 'Solver-ներ',
+      listAria: 'Փոխանջատվել solver-ների միջև'
+    },
     tabs: {
       overview: {
         label: 'Ակնարկ',

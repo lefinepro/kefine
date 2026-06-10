@@ -109,12 +109,40 @@ test.describe('New frontend task results', () => {
     await expect(page.getByRole('tab', { name: 'Checkpoints' })).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Source' })).toBeVisible();
     await expect(page.getByTestId('solution-overview')).toBeVisible();
-    const sidebar = page.getByTestId('solution-solver-sidebar');
-    await expect(sidebar).toBeVisible();
-    await expect(sidebar.getByRole('button')).toHaveCount(3);
-    await expect(sidebar).toContainText('Go Proxy Basic');
-    await expect(sidebar).toContainText('Go Proxy Pro');
+    // The overview no longer carries a left solver sidebar or the metrics column;
+    // solver switching now lives in the flying menu at the bottom of the page.
+    await expect(page.getByTestId('solution-solver-sidebar')).toHaveCount(0);
+    await expect(page.locator('lef-solver-metrics-col')).toHaveCount(0);
     await expect(page.locator('lef-task-head strong', { hasText: 'Task' })).toHaveCount(0);
+  });
+
+  test('solver detail page exposes a flying solver menu that switches solvers', async ({ page }) => {
+    await mockOrderApi(page);
+    await page.goto('/order/order-1/solver/5');
+
+    // The flying-menu custom element must upgrade in the browser before its
+    // trigger is usable.
+    await waitForHydratedElement(page, 'flying-menu');
+
+    const trigger = page.locator('flying-menu [slot="trigger"]');
+    await expect(trigger).toBeVisible();
+
+    // The collapsed trigger shows the specific solver icons it switches between.
+    await expect(trigger.locator('lef-fm-stack-avatar')).toHaveCount(3);
+    await expect(trigger.locator('lef-fm-stack-avatar').first()).toHaveText('GB');
+
+    // The menu list is hidden until the trigger is tapped.
+    const menu = page.getByTestId('solver-flying-menu');
+    await expect(menu).toBeHidden();
+
+    await trigger.click();
+    await expect(menu).toBeVisible();
+    await expect(menu).toContainText('Go Proxy Basic');
+    await expect(menu).toContainText('Go Proxy Pro');
+
+    // Choosing a different solver navigates to that solver's detail page.
+    await menu.locator('[data-solver-id="6"]').click();
+    await expect(page).toHaveURL(/\/order\/order-1\/solver\/6/);
   });
 
   test('solution source file search opens and filters modified files', async ({ page }) => {
