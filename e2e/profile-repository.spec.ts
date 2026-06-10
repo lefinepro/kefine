@@ -59,7 +59,9 @@ test.describe('Profile repository view', () => {
     await expect(page.getByTestId('profile-repo')).toBeVisible();
     await expect(page.getByTestId('profile-readme')).toBeVisible();
     await expect(page.getByTestId('profile-readme-title')).toContainText(`@${SEED_HANDLE}`);
-    await expect(page.getByTestId('profile-brief')).toContainText('Building reliable solver flows.');
+    // The bio brief was dropped from the repository README in #168 — the README
+    // now leads with the handle alone, so only the handle title is asserted.
+    await expect(page.getByTestId('profile-brief')).toHaveCount(0);
 
     // The seeded task list has four items spanning every TODO state.
     const items = page.getByTestId('profile-checklist-item');
@@ -69,18 +71,17 @@ test.describe('Profile repository view', () => {
     await expect(items.last()).toHaveAttribute('data-state', 'done');
   });
 
-  test('sidebar menu shows handle context instead of repository cards or display names', async ({ page }) => {
+  test('sidebar menu stays focused on legal links and dock controls, not repository cards or display names', async ({ page }) => {
     await page.setViewportSize({ width: 576, height: 433 });
     await seedPublicProfile(page);
     await page.goto(`/@${SEED_HANDLE}`);
 
     await page.getByTestId('kefine-brand-mark').click();
 
-    const profileSummary = page.getByTestId('kefine-sidebar-profile');
-    await expect(profileSummary).toBeVisible();
-    await expect(profileSummary).toContainText(`@${SEED_HANDLE}`);
-    await expect(profileSummary).toContainText('Building reliable solver flows.');
-    await expect(profileSummary.locator('kefine-sidebar-profile-avatar')).toHaveCount(0);
+    // The sidebar profile summary card was removed in #168; the popover keeps a
+    // lean legal-links focus and never leaks repository cards or display names.
+    await expect(page.getByTestId('kefine-sidebar-profile')).toHaveCount(0);
+    await expect(page.locator('kefine-sidebar-popover')).toBeVisible();
     await expect(page.locator('kefine-sidebar-popover')).not.toContainText('Demo Builder');
     await expect(page.locator('kefine-sidebar-popover')).not.toContainText('Latest repos');
     await expect(page.locator('kefine-sidebar-popover')).not.toContainText('Repos');
@@ -103,6 +104,21 @@ test.describe('Profile repository view', () => {
   test('new-task row deeplinks into the topbar search to create a task', async ({ page }) => {
     await mockOrderApi(page);
     await seedPublicProfile(page);
+    // Since #168 launching a task requires an authorized visitor, so seed a
+    // session before visiting the profile. The create-task result then completes
+    // the deeplinked launch instead of bouncing to the auth gate.
+    await page.addInitScript(() => {
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+      window.localStorage.setItem(
+        'kefine-passkey-session',
+        JSON.stringify({
+          token: 'passkey:api:test',
+          username: 'api',
+          userId: 'passkey:api',
+          expiresAt
+        })
+      );
+    });
     await page.goto(`/@${SEED_HANDLE}`);
 
     await expect(page.getByTestId('profile-new-task-row')).toBeVisible();

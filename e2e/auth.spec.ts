@@ -14,9 +14,11 @@ test.describe('Auth Flows', () => {
     await page.getByTestId('kefine-privatekey-submit').click();
 
     await expect(page).toHaveURL(/\/@api$/);
-    await expect(page.getByTestId('kefine-profile-first-name')).toBeVisible();
-    await expect(page.getByTestId('kefine-profile-surname')).toBeVisible();
-    await expect(page.getByTestId('kefine-profile-handle')).toHaveValue('api');
+    // The onboarding identity wizard was removed in #168, so login now lands the
+    // owner directly on their repository view. The owner editor surfacing proves
+    // the session authenticated as the `@api` profile owner.
+    await expect(page.getByTestId('profile-editor')).toBeVisible();
+    await expect(page.getByTestId('profile-readme-title')).toContainText('@api');
   });
 
   test('authenticated task topbar profile button opens the profile route', async ({ page }) => {
@@ -43,7 +45,9 @@ test.describe('Auth Flows', () => {
     });
     await authButton.click();
     await expect(page).toHaveURL(/\/@api$/);
-    await expect(page.getByTestId('kefine-profile-first-name')).toBeVisible();
+    // Post-#168 the profile route opens straight on the owner repository view
+    // (no onboarding step), so the owner editor is the stable landing marker.
+    await expect(page.getByTestId('profile-editor')).toBeVisible();
   });
 
   test('workspace owner can create and copy a solver profile token', async ({ page, context }) => {
@@ -58,9 +62,8 @@ test.describe('Auth Flows', () => {
     await page.getByTestId('kefine-privatekey-submit').click();
 
     await expect(page).toHaveURL(/\/@api$/);
-    await page.getByRole('button', { name: 'Continue to social links' }).click();
-    await page.getByRole('button', { name: 'Finish setup' }).click();
-
+    // The onboarding social-links step was removed in #168; the owner repository
+    // view (and its solver-link card) now renders immediately after login.
     await expect(page.getByTestId('kefine-solver-profile-panel')).toHaveCount(0);
     await expect(page.getByTestId('profile-solver-link-card')).toBeVisible();
 

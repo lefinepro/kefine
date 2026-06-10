@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { gotoAndWaitForReady, mockOrderApi, waitForHydratedElement } from './helpers/kefine';
+import { authenticate, gotoAndWaitForReady, mockOrderApi, waitForHydratedElement } from './helpers/kefine';
 
 test.describe('Task Controls', () => {
   test('expanded topbar menu does not overlap the create card on narrow chromium viewport', async ({ page, browserName }) => {
@@ -48,6 +48,7 @@ test.describe('Task Controls', () => {
   test('desktop stop keeps task stopped in the shared list', async ({ page }) => {
     const api = await mockOrderApi(page);
     await gotoAndWaitForReady(page);
+    await authenticate(page);
 
     await page.getByTestId('kefine-task-input').fill('Need access to Telegram');
     await page.getByTestId('kefine-task-input').press('Shift+Enter');
@@ -112,6 +113,7 @@ test.describe('Task Controls', () => {
 
     await mockOrderApi(page);
     await gotoAndWaitForReady(page);
+    await authenticate(page);
 
     const input = page.getByTestId('kefine-task-input');
     await input.fill('A very long background task title that should still wrap correctly on very narrow screens');

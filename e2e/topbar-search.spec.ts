@@ -11,8 +11,11 @@ test.describe('Topbar search', () => {
 
     await expect(page.locator('kefine-sidebar-popover kefine-sidebar-nav')).toBeVisible();
     await expect(page.locator('kefine-sidebar-nav a[data-part="link"] svg')).toHaveCount(2);
-    await expect(page.getByTestId('kefine-topbar-theme-toggle')).toHaveCount(0);
-    await expect(page.getByTestId('kefine-topbar-locale-toggle')).toHaveCount(0);
+    // Since #168 the theme/locale toggles live in the always-on sidebar utility
+    // dock (the `showDockControls` gate was removed), so they are present on the
+    // home screen too rather than only after a task launch.
+    await expect(page.getByTestId('kefine-topbar-theme-toggle')).toHaveCount(1);
+    await expect(page.getByTestId('kefine-topbar-locale-toggle')).toHaveCount(1);
   });
 
   test('opens from the header and finds a queued lepo', async ({ page }) => {

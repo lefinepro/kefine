@@ -1,11 +1,12 @@
 import { expect, test } from '@playwright/test';
 
-import { gotoAndWaitForReady, mockOrderApi, waitForHydratedElement } from './helpers/kefine';
+import { authenticate, gotoAndWaitForReady, mockOrderApi, waitForHydratedElement } from './helpers/kefine';
 
 test.describe('New frontend task results', () => {
   test('submitted Go proxy task opens solvers as a task list with variants', async ({ page }) => {
     await mockOrderApi(page);
     await gotoAndWaitForReady(page);
+    await authenticate(page);
 
     await page.getByTestId('kefine-task-input').fill('Нужен мини прокси на go');
     await page.getByTestId('kefine-task-input').press('Enter');

@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { createTask, gotoAndWaitForReady, mockOrderApi } from './helpers/kefine';
+import { authenticate, createTask, gotoAndWaitForReady, mockOrderApi } from './helpers/kefine';
 
 function normalizeFontFamily(value: string) {
   return value.replaceAll('"', '').replaceAll("'", '').replaceAll(/\s*,\s*/g, ', ').trim();
@@ -59,6 +59,7 @@ test.describe('Task Lifecycle', () => {
     const api = await mockOrderApi(page);
     api.setCreateDelay(1200);
     await gotoAndWaitForReady(page);
+    await authenticate(page);
 
     const input = page.getByTestId('kefine-task-input');
     await input.fill('Temporary optimistic order');
@@ -75,7 +76,9 @@ test.describe('Task Lifecycle', () => {
 
     const realRow = page.locator('[data-order-id="order-1"]');
     await expect(realRow).toBeVisible();
-    await expect(realRow.getByTestId('kefine-order-eta-order-1')).toContainText('about 2 hours');
+    // The optimistic temp row is replaced by the real order, which surfaces as
+    // the active solver-search row for the submitted task text.
+    await expect(realRow).toContainText('Temporary optimistic order');
 
     const storedAfter = await page.evaluate(() => window.localStorage.getItem('kefine-created-orders-v1'));
     expect(storedAfter).not.toContain('temp-');
