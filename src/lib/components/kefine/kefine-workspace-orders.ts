@@ -33,6 +33,15 @@ function mergeActorIdentity(previous: OrderView, next: OrderView): OrderView {
     nextShareId && nextShareId !== nextId && nextShareId !== previousId
       ? nextShareId
       : previousShareId || nextShareId || undefined;
+  // Owner identity is assigned locally when the task is created (it ties the
+  // order to the signed-in profile). Status payloads describe backend execution
+  // state and legitimately omit it, so a blind spread would clobber the local
+  // attribution with `undefined` and the order would vanish from the owner's
+  // recent history. Preserve the previous owner fields whenever the incoming
+  // update does not carry them.
+  const ownerProfileId = next.ownerProfileId?.trim() || previous.ownerProfileId?.trim() || undefined;
+  const ownerUsername = next.ownerUsername?.trim() || previous.ownerUsername?.trim() || undefined;
+  const ownerDisplayName = next.ownerDisplayName?.trim() || previous.ownerDisplayName?.trim() || undefined;
 
   return {
     ...previous,
@@ -40,7 +49,10 @@ function mergeActorIdentity(previous: OrderView, next: OrderView): OrderView {
     ...(next.taskIcon?.trim() ? { taskIcon: next.taskIcon.trim() } : previous.taskIcon ? { taskIcon: previous.taskIcon } : {}),
     ...(actorHandle ? { actorHandle: actorHandle.replace(/^@+/, '') } : {}),
     ...(actorDid ? { actorDid } : {}),
-    ...(shareId ? { shareId } : {})
+    ...(shareId ? { shareId } : {}),
+    ...(ownerProfileId ? { ownerProfileId } : {}),
+    ...(ownerUsername ? { ownerUsername } : {}),
+    ...(ownerDisplayName ? { ownerDisplayName } : {})
   };
 }
 

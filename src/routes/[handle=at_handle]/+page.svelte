@@ -1010,9 +1010,10 @@
 
     <lefine-box class:profile-layout={true} class:profile-layout--single={true}>
       <lefine-box class="profile-main">
-        {#if isOwner && onboardingStep}
-          <!-- onboarding screen commented out -->
-        {:else}
+        <!-- The onboarding identity/socials wizard was removed in #168. Render the
+             repository view (plus the owner editor) directly for everyone — the
+             empty `{#if onboardingStep}` branch left fresh owners with a blank
+             profile page, so the gate is dropped entirely. -->
           <article class="profile-details">
             <!-- A profile is a repository: no enclosing frame at all. The README
                  block carries its own subtle surface and the tasks float as a
@@ -1182,8 +1183,6 @@
               </lefine-box>
             {/if}
           </article>
-
-        {/if}
       </lefine-box>
 
     </lefine-box>

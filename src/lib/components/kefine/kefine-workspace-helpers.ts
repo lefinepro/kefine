@@ -154,6 +154,25 @@ export function mergeOrdersById(
       ...order,
       ...(order.shareId?.trim() ? { shareId: order.shareId.trim() } : current.shareId ? { shareId: current.shareId } : {}),
       ...(order.taskIcon?.trim() ? { taskIcon: order.taskIcon.trim() } : current.taskIcon ? { taskIcon: current.taskIcon } : {}),
+      // Owner identity is assigned locally at creation and ties the order to the
+      // signed-in profile. Backend status updates omit it, so preserve the
+      // existing attribution instead of letting an `undefined` update wipe it
+      // (otherwise the order disappears from the owner's recent history).
+      ...(order.ownerProfileId?.trim()
+        ? { ownerProfileId: order.ownerProfileId.trim() }
+        : current.ownerProfileId
+          ? { ownerProfileId: current.ownerProfileId }
+          : {}),
+      ...(order.ownerUsername?.trim()
+        ? { ownerUsername: order.ownerUsername.trim() }
+        : current.ownerUsername
+          ? { ownerUsername: current.ownerUsername }
+          : {}),
+      ...(order.ownerDisplayName?.trim()
+        ? { ownerDisplayName: order.ownerDisplayName.trim() }
+        : current.ownerDisplayName
+          ? { ownerDisplayName: current.ownerDisplayName }
+          : {}),
       id: current.id
     },
     ...orders.slice(index + 1)
