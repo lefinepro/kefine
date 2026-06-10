@@ -46,6 +46,27 @@ test.describe('Auth Flows', () => {
     await expect(page.getByTestId('kefine-profile-first-name')).toBeVisible();
   });
 
+  test('authenticated topbar exposes a sign-out button that ends the session', async ({ page }) => {
+    await mockPrivateKeyAuth(page);
+
+    await gotoAndWaitForReady(page);
+
+    await page.locator("button[data-part='auth']").click();
+    await page.getByTestId('kefine-privatekey-auth-tile').click();
+    await page.getByTestId('kefine-privatekey-input').fill(readActorPrivateKeyCompact());
+    await page.getByTestId('kefine-privatekey-submit').click();
+
+    await expect(page).toHaveURL(/\/@api$/);
+
+    const signOutButton = page.getByTestId('kefine-topbar-sign-out');
+    await expect(signOutButton).toBeVisible();
+    await signOutButton.click();
+
+    await expect(page).toHaveURL(/\/$/);
+    await expect(page.getByTestId('kefine-topbar-sign-out')).toHaveCount(0);
+    await expect(page.locator("button[data-part='auth']")).toHaveText('Sign in');
+  });
+
   test('workspace owner can create and copy a solver profile token', async ({ page, context }) => {
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
     await mockPrivateKeyAuth(page);

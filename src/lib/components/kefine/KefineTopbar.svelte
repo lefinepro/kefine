@@ -895,19 +895,6 @@
                 </button>
               {/if}
             </kefine-sidebar-toolbar>
-            {#if onSignOut}
-              <kefine-sidebar-toolbar aria-label={signOutLabel}>
-                <button
-                  type="button"
-                  data-part="icon"
-                  aria-label={signOutLabel}
-                  title={signOutLabel}
-                  onclick={onSignOut}
-                >
-                  <KefineTopbarIcon name="sign-out" size={20} />
-                </button>
-              </kefine-sidebar-toolbar>
-            {/if}
           </kefine-sidebar-utility>
         </kefine-sidebar-stack>
       </kefine-sidebar-popover>
@@ -1135,29 +1122,44 @@
     {/if}
 
     {#if showAuthButton}
-      <button
-        data-part="auth"
-        data-authenticated={isAuthenticated}
-        type="button"
-        data-scrolled={hasScrolled}
-        data-variant={isAuthenticated ? 'ghost' : 'primary'}
-        data-loading={isAuthLoading}
-        disabled={isAuthLoading}
-        onclick={handleAuthClick}
-        ondblclick={handleAuthDoubleClick}
-        onkeydown={handleAuthKeydown}
-      >
-        {#if isAuthLoading}
-          <lef-auth-loading aria-hidden="true"></lef-auth-loading>
-        {/if}
-        <kefine-auth-label data-part="auth-label">
-          {#if isAuthenticated}
-            {authenticatedSecondaryLabel ?? authenticatedLabel ?? signedInLabel}
-          {:else}
-            {signInLabel}
+      <kefine-topbar-account>
+        <button
+          data-part="auth"
+          data-authenticated={isAuthenticated}
+          type="button"
+          data-scrolled={hasScrolled}
+          data-variant={isAuthenticated ? 'ghost' : 'primary'}
+          data-loading={isAuthLoading}
+          disabled={isAuthLoading}
+          onclick={handleAuthClick}
+          ondblclick={handleAuthDoubleClick}
+          onkeydown={handleAuthKeydown}
+        >
+          {#if isAuthLoading}
+            <lef-auth-loading aria-hidden="true"></lef-auth-loading>
           {/if}
-        </kefine-auth-label>
-      </button>
+          <kefine-auth-label data-part="auth-label">
+            {#if isAuthenticated}
+              {authenticatedSecondaryLabel ?? authenticatedLabel ?? signedInLabel}
+            {:else}
+              {signInLabel}
+            {/if}
+          </kefine-auth-label>
+        </button>
+        {#if onSignOut && isAuthenticated}
+          <button
+            data-part="sign-out"
+            type="button"
+            data-scrolled={hasScrolled}
+            data-testid="kefine-topbar-sign-out"
+            aria-label={signOutLabel}
+            title={signOutLabel}
+            onclick={onSignOut}
+          >
+            <KefineTopbarIcon name="sign-out" size={20} />
+          </button>
+        {/if}
+      </kefine-topbar-account>
     {/if}
   </kefine-topbar-row>
 </kefine-topbar>
@@ -1837,6 +1839,51 @@
 
   kefine-sidebar-toolbar [data-part='icon']:hover {
     box-shadow: 0 10px 20px color-mix(in oklab, var(--lefine-text) 6%, transparent);
+  }
+
+  kefine-topbar-account {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex: 0 1 auto;
+    min-width: 0;
+    pointer-events: none;
+  }
+
+  button[data-part='sign-out'] {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 2.5rem;
+    height: 2.5rem;
+    min-height: 2.5rem;
+    padding: 0;
+    border: var(--kef-border-width-soft) solid color-mix(in oklab, var(--kef-border) 72%, transparent);
+    border-radius: calc(var(--kef-radius-ui) - 0.04rem);
+    background: color-mix(in oklab, var(--kef-bg-card) 94%, var(--kef-bg));
+    color: color-mix(in oklab, var(--lefine-text) 96%, transparent);
+    cursor: pointer;
+    pointer-events: auto;
+    transition:
+      background-color var(--kef-motion-fast) var(--kef-ease-soft),
+      box-shadow var(--kef-motion-fast) var(--kef-ease-soft),
+      border-color var(--kef-motion-fast) var(--kef-ease-soft),
+      color var(--kef-motion-fast) var(--kef-ease-soft);
+  }
+
+  button[data-part='sign-out'][data-scrolled='true'] {
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+
+  button[data-part='sign-out']:hover {
+    color: color-mix(in oklab, var(--kef-primary) 92%, #4f3d30);
+    border-color: color-mix(in oklab, var(--kef-primary) 38%, var(--kef-border));
+    background: color-mix(in oklab, var(--kef-primary) 10%, transparent);
   }
 
   button[data-part='auth'] {
