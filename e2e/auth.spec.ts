@@ -14,9 +14,10 @@ test.describe('Auth Flows', () => {
     await page.getByTestId('kefine-privatekey-submit').click();
 
     await expect(page).toHaveURL(/\/@api$/);
-    await expect(page.getByTestId('kefine-profile-first-name')).toBeVisible();
-    await expect(page.getByTestId('kefine-profile-surname')).toBeVisible();
-    await expect(page.getByTestId('kefine-profile-handle')).toHaveValue('api');
+    // Onboarding was removed (#168): a fresh login lands directly on the profile
+    // repository instead of the identity/socials setup wizard.
+    await expect(page.getByTestId('profile-repo')).toBeVisible();
+    await expect(page.getByTestId('profile-readme-title')).toHaveText('@api');
   });
 
   test('authenticated task topbar profile button opens the profile route', async ({ page }) => {
@@ -43,7 +44,7 @@ test.describe('Auth Flows', () => {
     });
     await authButton.click();
     await expect(page).toHaveURL(/\/@api$/);
-    await expect(page.getByTestId('kefine-profile-first-name')).toBeVisible();
+    await expect(page.getByTestId('profile-readme-title')).toHaveText('@api');
   });
 
   test('workspace owner can create and copy a solver profile token', async ({ page, context }) => {
@@ -58,9 +59,8 @@ test.describe('Auth Flows', () => {
     await page.getByTestId('kefine-privatekey-submit').click();
 
     await expect(page).toHaveURL(/\/@api$/);
-    await page.getByRole('button', { name: 'Continue to social links' }).click();
-    await page.getByRole('button', { name: 'Finish setup' }).click();
-
+    // Onboarding was removed (#168): the owner lands straight on the profile
+    // repository, so the solver-profile link card is reachable without a wizard.
     await expect(page.getByTestId('kefine-solver-profile-panel')).toHaveCount(0);
     await expect(page.getByTestId('profile-solver-link-card')).toBeVisible();
 
