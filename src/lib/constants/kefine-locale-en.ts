@@ -1114,6 +1114,11 @@ export const KEFINE_TEXT_EN = {
     fileSearchPlaceholder: 'Search files',
     fileSearchClear: 'Clear file search',
     fileSearchEmpty: 'No matching files',
+    flyingMenu: {
+      trigger: 'Switch solver',
+      title: 'Solvers',
+      listAria: 'Switch between solvers'
+    },
     tabs: {
       overview: {
         label: 'Overview',

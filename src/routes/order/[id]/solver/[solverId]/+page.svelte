@@ -14,6 +14,7 @@
   import SolutionTestingPanel from '$lib/components/kefine/SolutionTestingPanel.svelte';
   import SolutionFileOutline from '$lib/components/kefine/SolutionFileOutline.svelte';
   import SolutionCheckpoints from '$lib/components/kefine/SolutionCheckpoints.svelte';
+  import KefineSolverFlyingMenu from '$lib/components/kefine/KefineSolverFlyingMenu.svelte';
   import type { CommitInfo } from './+page.server';
 
   type SolutionView = 'overview' | 'source' | 'checkpoints';
@@ -327,6 +328,12 @@
         </lef-solver-overview>
       {/if}
     </lef-solver-grid>
+
+    <KefineSolverFlyingMenu
+      solvers={sidebarSolutions}
+      activeId={data.solverId}
+      onSelect={chooseSolver}
+    />
   {:else}
     <lef-empty-state>{labels.emptyState}</lef-empty-state>
   {/if}

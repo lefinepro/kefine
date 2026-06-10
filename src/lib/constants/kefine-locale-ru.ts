@@ -1116,6 +1116,11 @@ export const KEFINE_TEXT_RU = {
     fileSearchPlaceholder: 'Искать файлы',
     fileSearchClear: 'Очистить поиск файлов',
     fileSearchEmpty: 'Нет подходящих файлов',
+    flyingMenu: {
+      trigger: 'Переключить солвер',
+      title: 'Солверы',
+      listAria: 'Переключение между солверами'
+    },
     tabs: {
       overview: {
         label: 'Обзор',

@@ -117,6 +117,31 @@ test.describe('New frontend task results', () => {
     await expect(page.locator('lef-task-head strong', { hasText: 'Task' })).toHaveCount(0);
   });
 
+  test('solver detail page exposes a flying solver menu that switches solvers', async ({ page }) => {
+    await mockOrderApi(page);
+    await page.goto('/order/order-1/solver/5');
+
+    // The flying-menu custom element must upgrade in the browser before its
+    // trigger is usable.
+    await waitForHydratedElement(page, 'flying-menu');
+
+    const trigger = page.locator('flying-menu [slot="trigger"]');
+    await expect(trigger).toBeVisible();
+
+    // The menu list is hidden until the trigger is tapped.
+    const menu = page.getByTestId('solver-flying-menu');
+    await expect(menu).toBeHidden();
+
+    await trigger.click();
+    await expect(menu).toBeVisible();
+    await expect(menu).toContainText('Go Proxy Basic');
+    await expect(menu).toContainText('Go Proxy Pro');
+
+    // Choosing a different solver navigates to that solver's detail page.
+    await menu.locator('[data-solver-id="6"]').click();
+    await expect(page).toHaveURL(/\/order\/order-1\/solver\/6/);
+  });
+
   test('solution source file search opens and filters modified files', async ({ page }) => {
     await mockOrderApi(page);
     await page.goto('/order/order-1/solver/5');
