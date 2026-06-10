@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { gotoAndWaitForReady, mockOrderApi } from './helpers/kefine';
+import { gotoAndWaitForReady, mockOrderApi, waitForHydratedElement } from './helpers/kefine';
 
 test.describe('Task Controls', () => {
   test('expanded topbar menu does not overlap the create card on narrow chromium viewport', async ({ page, browserName }) => {
@@ -60,6 +60,51 @@ test.describe('Task Controls', () => {
     api.setOrderStatus('order-1', 'completed');
     await page.waitForTimeout(1800);
     await expect(row).toHaveAttribute('data-status', 'stopped');
+  });
+
+  test('completed solver-list task hides the stop button in the main window history', async ({ page }) => {
+    await mockOrderApi(page);
+
+    // Seed a recognized solver task ("мини прокси на go"). In the main-window
+    // history such a task is rendered in its completed state and exposes the
+    // "Open solver list" action — the stop button must not remain visible
+    // alongside it (issue #167).
+    await page.addInitScript(() => {
+      window.localStorage.clear();
+      window.localStorage.setItem(
+        'kefine-created-orders-v1',
+        JSON.stringify([
+          {
+            id: 'order-1',
+            solver: 'Test Solver',
+            status: 'queued',
+            title: 'Нужен мини прокси на go',
+            description: 'Нужен мини прокси на go',
+            createdAt: '2026-03-21T00:00:00.000Z',
+            currency: 'USDC',
+            ownerUsername: 'api',
+            actorHandle: 'api',
+            shareId: 'order-1'
+          }
+        ])
+      );
+    });
+
+    await page.goto('/');
+    await expect(page.getByTestId('kefine-task-input')).toBeVisible();
+    await waitForHydratedElement(page, '[data-testid="kefine-task-input"]');
+
+    // Reveal the persistent task history by focusing the composer input.
+    await page.getByTestId('kefine-task-input').click();
+
+    const row = page.locator('kefine-task-history-item[data-order-id="order-1"]');
+    await expect(row).toBeVisible();
+
+    // The "Open solver list" action confirms the row is in its completed state.
+    await expect(row.locator('[data-part="open-solvers"]')).toBeVisible();
+
+    // The stop button must be gone once the solver list is available.
+    await expect(row.getByTestId('kefine-stop-order-order-1')).toHaveCount(0);
   });
 
   test('mobile long press stops task without horizontal overflow', async ({ page, browserName }) => {

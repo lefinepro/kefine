@@ -2057,7 +2057,7 @@ initialized = true;
                   Open solver list
                 </a>
               {/if}
-              {#if onStopOrder && order.status !== 'stopped' && order.status !== 'completed' && order.status !== 'done'}
+              {#if onStopOrder && !shouldShowSolverList(order.title, !inProgress) && order.status !== 'stopped' && order.status !== 'completed' && order.status !== 'done'}
                 <button
                   type="button"
                   data-part="stop-task"
