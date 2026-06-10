@@ -1011,6 +1011,34 @@ initialized = true;
     void goto(href);
   }
 
+  function taskDocumentHref(order: OrderView): string {
+    return `/task/${encodeURIComponent(order.shareId ?? order.id)}`;
+  }
+
+  // Clicking the branch chip opens the task document view in a separate window,
+  // keeping it independent from the row link that leads to the solver list.
+  function openTaskBranchWindow(event: MouseEvent, href: string) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (browser) {
+      window.open(href, '_blank', 'noopener,noreferrer');
+    }
+  }
+
+  function handleTaskBranchKeydown(event: KeyboardEvent, href: string) {
+    if (event.key !== 'Enter' && event.key !== ' ') {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (browser) {
+      window.open(href, '_blank', 'noopener,noreferrer');
+    }
+  }
+
   function formatTemplateVariableLabel(key: string): string {
     const normalized = key.trim().replace(/[_-]+/g, ' ');
     if (!normalized) {
@@ -1908,7 +1936,16 @@ initialized = true;
             <kefine-solver-search-row aria-live="polite" data-state={taskCompleted ? 'completed' : 'in-progress'}>
               <lefine-text>{solverSearchText}</lefine-text>
               {#if taskCompleted}
-                <kefine-task-branch>
+                {@const branchHref = activeSearchDuplicate ? taskDocumentHref(activeSearchDuplicate) : searchResultHref}
+                <kefine-task-branch
+                  role="button"
+                  tabindex="0"
+                  data-testid="kefine-solver-search-task-branch"
+                  aria-label={`Open task document for ${solverSearchText} in a new window`}
+                  title={`Open task document for ${solverSearchText}`}
+                  onclick={(event: MouseEvent) => openTaskBranchWindow(event, branchHref)}
+                  onkeydown={(event: KeyboardEvent) => handleTaskBranchKeydown(event, branchHref)}
+                >
                   <kefine-task-branch-name>{completedBranchLabel(solverSearchText, taskCompleted)}</kefine-task-branch-name>
                   <lef-cp-branch-icon>
                     <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -1977,7 +2014,15 @@ initialized = true;
                 </lefine-text>
               {/if}
 
-              <kefine-task-branch>
+              <kefine-task-branch
+                  role="button"
+                  tabindex="0"
+                  data-testid={`kefine-task-branch-${order.id}`}
+                  aria-label={`Open task document for ${order.title} in a new window`}
+                  title={`Open task document for ${order.title}`}
+                  onclick={(event: MouseEvent) => openTaskBranchWindow(event, taskDocumentHref(order))}
+                  onkeydown={(event: KeyboardEvent) => handleTaskBranchKeydown(event, taskDocumentHref(order))}
+                >
                   <kefine-task-branch-name>{completedBranchLabel(order.title, !inProgress)}</kefine-task-branch-name>
                   <lef-cp-branch-icon>
                     <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -3895,13 +3940,26 @@ initialized = true;
     padding: 0.05rem 0.2rem;
     border-radius: 999px;
     background: transparent;
+    cursor: pointer;
     transition: background 120ms ease, padding 120ms ease;
   }
 
-  kefine-task-branch:hover {
+  kefine-task-branch:hover,
+  kefine-task-branch:focus-visible {
     background: color-mix(in oklab, var(--kef-bg-card) 78%, transparent);
     gap: 4px;
     padding: 0.05rem 0.45rem 0.05rem 0.32rem;
+  }
+
+  kefine-task-branch:focus-visible {
+    outline: 2px solid color-mix(in oklab, var(--kef-primary) 60%, transparent);
+    outline-offset: 1px;
+  }
+
+  kefine-task-branch:focus-visible kefine-task-branch-name {
+    opacity: 1;
+    max-width: 160px;
+    margin-right: 3px;
   }
 
   lef-cp-branch-icon {
