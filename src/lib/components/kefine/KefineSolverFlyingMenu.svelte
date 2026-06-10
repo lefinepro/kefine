@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { solverAvatarColor, solverInitials } from '$lib/kefine/solver-avatars';
+  import { buildSolverAvatars, solverAvatarColor, solverInitials } from '$lib/kefine/solver-avatars';
   import { kefineLocaleText } from '$lib/constants/kefine-locale';
 
   type SolverOption = {
@@ -27,6 +27,10 @@
 
   const labels = $derived($kefineLocaleText.solutionView.flyingMenu);
 
+  // Show the actual solver icons on the collapsed trigger so it reads as a stack
+  // of the specific solvers it switches between, not a generic glyph.
+  const triggerAvatars = $derived(buildSolverAvatars(solvers, 3));
+
   onMount(() => {
     let cancelled = false;
     void import('@igor-ganov/flying-menu').then(() => {
@@ -51,12 +55,14 @@
 {#if ready && solvers.length > 0}
   <flying-menu corner="bottom-right" storage-key="kefine-solver-flying-menu">
     <button slot="trigger" type="button" class="lef-fm-trigger" aria-label={labels.trigger} title={labels.trigger}>
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M12 2 2 7l10 5 10-5-10-5Z"></path>
-        <path d="m2 17 10 5 10-5"></path>
-        <path d="m2 12 10 5 10-5"></path>
-      </svg>
-      <lef-fm-count aria-hidden="true">{solvers.length}</lef-fm-count>
+      <lef-fm-stack aria-hidden="true">
+        {#each triggerAvatars.avatars as avatar (avatar.id)}
+          <lef-fm-stack-avatar style="--avatar-color: {avatar.color}">{avatar.initials}</lef-fm-stack-avatar>
+        {/each}
+        {#if triggerAvatars.overflow > 0}
+          <lef-fm-stack-avatar data-overflow="true">+{triggerAvatars.overflow}</lef-fm-stack-avatar>
+        {/if}
+      </lef-fm-stack>
     </button>
 
     <lef-fm-menu slot="menu" role="menu" aria-label={labels.listAria} data-testid="solver-flying-menu">
@@ -96,8 +102,7 @@
   .lef-fm-trigger {
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
-    padding: 0.55rem 0.7rem;
+    padding: 0.4rem 0.55rem;
     border-radius: 999px;
     border: 1px solid var(--kef-line-soft);
     background: var(--kef-bg-card);
@@ -114,18 +119,32 @@
     background: color-mix(in oklab, var(--kef-color-primary, #3a7afe) 8%, var(--kef-bg-card));
   }
 
-  lef-fm-count {
+  lef-fm-stack {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  lef-fm-stack-avatar {
     display: inline-grid;
     place-items: center;
-    min-width: 1.25rem;
-    height: 1.25rem;
-    padding: 0 0.3rem;
+    width: 1.7rem;
+    height: 1.7rem;
     border-radius: 999px;
-    background: var(--kef-color-primary, #3a7afe);
+    border: 2px solid var(--kef-bg-card);
+    background: var(--avatar-color, var(--kef-color-primary, #3a7afe));
     color: #fff;
-    font-size: 0.72rem;
+    font-size: 0.66rem;
     font-weight: 800;
     line-height: 1;
+  }
+
+  lef-fm-stack-avatar:not(:first-child) {
+    margin-left: -0.55rem;
+  }
+
+  lef-fm-stack-avatar[data-overflow='true'] {
+    background: var(--kef-line);
+    color: var(--lefine-text);
   }
 
   lef-fm-menu {

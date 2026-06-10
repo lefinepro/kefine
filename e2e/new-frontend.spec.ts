@@ -109,11 +109,10 @@ test.describe('New frontend task results', () => {
     await expect(page.getByRole('tab', { name: 'Checkpoints' })).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Source' })).toBeVisible();
     await expect(page.getByTestId('solution-overview')).toBeVisible();
-    const sidebar = page.getByTestId('solution-solver-sidebar');
-    await expect(sidebar).toBeVisible();
-    await expect(sidebar.getByRole('button')).toHaveCount(3);
-    await expect(sidebar).toContainText('Go Proxy Basic');
-    await expect(sidebar).toContainText('Go Proxy Pro');
+    // The overview no longer carries a left solver sidebar or the metrics column;
+    // solver switching now lives in the flying menu at the bottom of the page.
+    await expect(page.getByTestId('solution-solver-sidebar')).toHaveCount(0);
+    await expect(page.locator('lef-solver-metrics-col')).toHaveCount(0);
     await expect(page.locator('lef-task-head strong', { hasText: 'Task' })).toHaveCount(0);
   });
 
@@ -127,6 +126,10 @@ test.describe('New frontend task results', () => {
 
     const trigger = page.locator('flying-menu [slot="trigger"]');
     await expect(trigger).toBeVisible();
+
+    // The collapsed trigger shows the specific solver icons it switches between.
+    await expect(trigger.locator('lef-fm-stack-avatar')).toHaveCount(3);
+    await expect(trigger.locator('lef-fm-stack-avatar').first()).toHaveText('GB');
 
     // The menu list is hidden until the trigger is tapped.
     const menu = page.getByTestId('solver-flying-menu');
