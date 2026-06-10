@@ -2001,11 +2001,18 @@
       padding: 0.7rem 0.55rem;
       gap: 0.45rem;
       justify-content: flex-start;
+      /* Constrain the row to the viewport so its flex children (search shell,
+         account) actually shrink instead of overflowing off the right edge. */
+      min-width: 0;
+      max-width: 100%;
     }
 
     kefine-topbar-search-shell {
       margin-left: auto;
-      flex: 0 0 auto;
+      /* Allow the search shell to absorb shrinking so the top-right account
+         group (auth handle + sign-out) stays fully within the viewport. */
+      flex: 0 1 auto;
+      min-width: 0;
       width: auto;
       gap: 0.32rem;
     }
@@ -2142,8 +2149,22 @@
     }
 
     button[data-part='auth'][data-authenticated='true'] {
-      flex-basis: min(calc(12ch + 1.44rem), calc(100vw - 4.25rem));
-      width: min(calc(12ch + 1.44rem), calc(100vw - 4.25rem));
+      flex-basis: auto;
+      width: auto;
+      max-width: min(calc(12ch + 1.44rem), calc(100vw - 4.25rem));
+    }
+
+    /* Keep the top-right account group (auth handle + sign-out) fully within
+       the viewport on narrow screens so the sign-out button stays reachable. */
+    kefine-topbar-account {
+      flex: 0 0 auto;
+      min-width: 0;
+      max-width: calc(100vw - 1.1rem);
+    }
+
+    button[data-part='search-trigger'][data-context='project'] {
+      min-width: 0;
+      flex-shrink: 1;
     }
   }
 </style>
