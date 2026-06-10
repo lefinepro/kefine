@@ -1641,16 +1641,18 @@
     align-items: center;
     justify-content: center;
     justify-self: start;
-    width: 2rem;
+    gap: 0.45rem;
     min-width: 2rem;
-    min-height: 2rem;
-    margin-top: 0.15rem;
-    padding: 0;
+    min-height: 2.1rem;
+    padding: 0.4rem 0.8rem;
     border: 1px dashed color-mix(in oklab, var(--kef-border, #e0c999) 80%, transparent);
     border-radius: 999px;
     background: color-mix(in oklab, var(--kef-bg-card, #f7ecd4) 78%, white 22%);
     color: color-mix(in oklab, var(--lefine-text, #453323) 78%, transparent);
     font: inherit;
+    font-size: 0.86rem;
+    font-weight: 500;
+    line-height: 1;
     box-shadow: 0 0 0 0.18rem color-mix(in oklab, var(--kef-bg, #f7ecd4) 92%, transparent);
     transition:
       border-color var(--kef-motion-fast) var(--kef-ease-soft),

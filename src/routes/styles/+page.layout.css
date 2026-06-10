@@ -943,6 +943,7 @@
     justify-items: center;
     min-height: 10rem;
     padding: 0.8rem;
+    overflow-wrap: anywhere;
     border-radius: 1rem;
     border: var(--kef-border-width-soft) solid var(--kef-line);
     background: color-mix(in oklab, var(--kef-bg-card) 92%, var(--kef-bg-soft));

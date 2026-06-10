@@ -11,6 +11,9 @@ importers:
       '@iconify/svelte':
         specifier: ^5.2.1
         version: 5.2.1(svelte@5.55.7)
+      '@igor-ganov/flying-menu':
+        specifier: ^0.1.2
+        version: 0.1.2
       '@noble/post-quantum':
         specifier: ^0.6.1
         version: 0.6.1
@@ -343,6 +346,9 @@ packages:
 
   '@iconify/types@2.0.0':
     resolution: {integrity: sha512-+wluvCrRhXrhyOmRDJ3q8mux9JkKy5SJ/v8ol2tu4FVjyYvtEzkc/3pK15ET6RKg4b4w4BmTk1+gsCUhf21Ykg==}
+
+  '@igor-ganov/flying-menu@0.1.2':
+    resolution: {integrity: sha512-rcs0V0a3u+DYALk/OlRyrge/Uv7MYa4AHMCKL/HKJ7u2m8T+ChJ5pnCAsTVUfinhyespJjS1cM5qwD/CSmqaYA==}
 
   '@jridgewell/gen-mapping@0.3.13':
     resolution: {integrity: sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==}
@@ -3497,6 +3503,10 @@ snapshots:
       svelte: 5.55.7
 
   '@iconify/types@2.0.0': {}
+
+  '@igor-ganov/flying-menu@0.1.2':
+    dependencies:
+      lit: 3.3.0
 
   '@jridgewell/gen-mapping@0.3.13':
     dependencies:
