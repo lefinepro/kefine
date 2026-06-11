@@ -934,6 +934,7 @@
       themeDarkLabel={localeText.topbar.theme.dark}
       signInLabel={localeText.topbar.signIn}
       signedInLabel={localeText.topbar.signedIn}
+      signOutLabel={localeText.profile.signOut}
       authenticatedLabel={viewerProfile ? shortenAuthLabel(`@${viewerProfile.primaryHandle}`) : null}
       authenticatedSecondaryLabel={null}
       authenticatedAvatarUrl={null}

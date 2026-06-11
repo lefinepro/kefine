@@ -292,6 +292,7 @@
     themeDarkLabel={localeText.topbar.theme.dark}
     signInLabel={localeText.topbar.signIn}
     signedInLabel={localeText.topbar.signedIn}
+    signOutLabel={localeText.profile.signOut}
     authenticatedLabel={authenticatedLabel}
     authenticatedSecondaryLabel={null}
     authenticatedAvatarUrl={null}
