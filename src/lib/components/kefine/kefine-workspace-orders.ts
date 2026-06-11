@@ -34,13 +34,23 @@ function mergeActorIdentity(previous: OrderView, next: OrderView): OrderView {
       ? nextShareId
       : previousShareId || nextShareId || undefined;
 
+  // Owner attribution is established locally when the order is created and is not
+  // always echoed back by the status endpoint. Preserve the previously known owner
+  // identity so a status poll cannot strip an order out of its owner-scoped lists.
+  const ownerProfileId = next.ownerProfileId?.trim() || previous.ownerProfileId?.trim() || undefined;
+  const ownerUsername = next.ownerUsername?.trim() || previous.ownerUsername?.trim() || undefined;
+  const ownerDisplayName = next.ownerDisplayName?.trim() || previous.ownerDisplayName?.trim() || undefined;
+
   return {
     ...previous,
     ...next,
     ...(next.taskIcon?.trim() ? { taskIcon: next.taskIcon.trim() } : previous.taskIcon ? { taskIcon: previous.taskIcon } : {}),
     ...(actorHandle ? { actorHandle: actorHandle.replace(/^@+/, '') } : {}),
     ...(actorDid ? { actorDid } : {}),
-    ...(shareId ? { shareId } : {})
+    ...(shareId ? { shareId } : {}),
+    ...(ownerProfileId ? { ownerProfileId } : {}),
+    ...(ownerUsername ? { ownerUsername } : {}),
+    ...(ownerDisplayName ? { ownerDisplayName } : {})
   };
 }
 
