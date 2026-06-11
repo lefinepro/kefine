@@ -126,9 +126,9 @@ test.describe('Task document page', () => {
     expect(propertyGap).toBeGreaterThanOrEqual(8);
     await expect(page.getByRole('heading', { name: 'Description' })).toHaveCount(0);
     await expect(page.getByRole('heading', { name: 'Subtasks' })).toHaveCount(0);
-    await expect(page.getByTestId('kefine-task-document-description')).toContainText('Import plan');
-    await expect(page.getByTestId('kefine-task-document-description')).toContainText('Parse CSV input');
-    await expect(page.locator('lef-task-markdown-code code')).toContainText('pnpm test -- task-document');
+    // The task description block was removed in #175; only the subtasks section
+    // remains below the property grid.
+    await expect(page.getByTestId('kefine-task-document-description')).toHaveCount(0);
     await expect(page.getByTestId('kefine-task-document-subtasks')).toContainText('Map CSV columns');
     await expect(page.getByTestId('kefine-task-document-subtasks')).toContainText('Run importer smoke test');
     await expect(page.locator('kefine-thread-title')).toHaveCount(0);

@@ -2,9 +2,10 @@ import { expect, test } from '@playwright/test';
 
 import { mockOrderApi, waitForHydratedElement } from './helpers/kefine';
 
-// Issue #165: clicking the branch chip on a task history row must open that
-// task's document view (/task/<id>) in a new browser window, independently from
-// the row link that leads to the solver list.
+// Issue #165: clicking the branch chip on a task history row must open in a new
+// browser window, independently from the row link. Since #175 the roles are
+// swapped: the row link opens the task document (/task/<id>) while the branch
+// chip opens that order's page (/@<owner>/<id>) in a new window.
 const createdAt = '2026-06-03T12:00:00.000Z';
 
 const documentOrder = {
@@ -53,22 +54,22 @@ test.describe('Task branch chip opens task document in a new window', () => {
     return branch;
   }
 
-  test('clicking the branch chip opens the task document page in a new window', async ({ page }) => {
+  test('clicking the branch chip opens the order page in a new window', async ({ page }) => {
     const branch = await revealBranchChip(page);
 
     // The chip is an accessible button advertising the new-window behaviour.
     await expect(branch).toHaveAttribute('role', 'button');
-    await expect(branch).toHaveAttribute('aria-label', /Open task document.*new window/i);
+    await expect(branch).toHaveAttribute('aria-label', /Open .*order page.*new window/i);
 
     // window.open(..., '_blank', 'noopener') surfaces as a new page on the context.
     const popupPromise = page.context().waitForEvent('page');
     await branch.click();
     const popup = await popupPromise;
 
-    await popup.waitForURL(/\/task\/order-1/);
-    expect(popup.url()).toContain('/task/order-1');
+    await popup.waitForURL(/\/@api\/order-1/);
+    expect(popup.url()).toContain('/@api/order-1');
 
-    // The row link to the solver list must NOT have fired: we stay on home.
+    // The row link (now the task document) must NOT have fired: we stay on home.
     await expect(page).toHaveURL(/\/$/);
 
     await popup.close();
@@ -83,8 +84,8 @@ test.describe('Task branch chip opens task document in a new window', () => {
     await page.keyboard.press('Enter');
     const popup = await popupPromise;
 
-    await popup.waitForURL(/\/task\/order-1/);
-    expect(popup.url()).toContain('/task/order-1');
+    await popup.waitForURL(/\/@api\/order-1/);
+    expect(popup.url()).toContain('/@api/order-1');
     await expect(page).toHaveURL(/\/$/);
 
     await popup.close();

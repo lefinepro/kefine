@@ -85,7 +85,7 @@ test.describe('Solver Pricing', () => {
     await expect(variants.nth(3)).toContainText('$0.18');
   });
 
-  test('solver badges rank the best solver and the comparison modal mirrors them', async ({ page }) => {
+  test('solver badges rank the best solver inline (comparison modal temporarily disabled)', async ({ page }) => {
     await mockOrderApi(page);
     await seedRustOrder(page);
 
@@ -99,31 +99,9 @@ test.describe('Solver Pricing', () => {
     await expect(variants.nth(3)).toContainText('Best');
     await expect(variants.nth(0)).toContainText('-13%');
 
-    // Open the "Compare solvers" modal from the trigger below the variant list.
-    await page.getByTestId('open-solvers-compare').first().click();
-
-    const modal = page.getByTestId('solvers-compare-modal');
-    await expect(modal).toBeVisible();
-
-    const routes = page.getByTestId('solvers-route-list').locator('.route-card');
-    await expect(routes).toHaveCount(4);
-
-    // Best-first ordering: the success leader (Modern Rust Patterns) sits on top
-    // with the "Best" badge.
-    await expect(routes.first()).toContainText('Modern Rust Patterns');
-    await expect(routes.first()).toContainText('Best');
-    await expect(routes.first()).toHaveAttribute('data-best', 'true');
-
-    // The plots render inside the modal alongside the route cards.
-    await expect(modal.locator('lef-metrics-block')).toBeVisible();
-
-    // Switching the ranking metric re-ranks the routes: by price the cheapest
-    // solver (Basic Rust Dev, $0.04) becomes the best route.
-    await modal.locator('[data-metric="price"]').click();
-    await expect(routes.first()).toContainText('Basic Rust Dev');
-    await expect(routes.first()).toContainText('Best');
-
-    // The inline badges follow the same ranking metric: Basic Rust Dev now leads.
-    await expect(variants.nth(0)).toContainText('Best');
+    // The "Compare solvers" trigger (and the modal it opens) is temporarily
+    // disabled — #174 wraps the compare row in `{#if false}` inside
+    // KefineSolversView — so the trigger must not render.
+    await expect(page.getByTestId('open-solvers-compare')).toHaveCount(0);
   });
 });

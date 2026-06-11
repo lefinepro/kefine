@@ -521,6 +521,52 @@ module Lepos
       install_receive_hooks(record)
     end
 
+    # Clones a remote repository as a bare mirror, replacing the contents
+    # of the existing bare repository at record.repo_path.
+    #
+    # This method only touches the filesystem — it does not update the
+    # RepositoryRecord. Call ForgeFedStore.sync_repository afterwards to
+    # sync the discovered branch state into the database.
+    def self.git_clone_mirror!(record : RepositoryRecord, remote_url : String) : Nil
+      FileUtils.rm_rf(record.repo_path)
+      FileUtils.mkdir_p(File.dirname(record.repo_path))
+      run_git!(["clone", "--bare", "--mirror", remote_url, record.repo_path])
+      run_git!(["--git-dir", record.repo_path, "update-server-info"])
+      install_receive_hooks(record)
+    end
+
+    # Detects the mirror's HEAD branch and adopts it as the record's
+    # default_branch, persisting the change when it differs from the current
+    # value. Imported repositories frequently use a trunk other than "main"
+    # (e.g. "master"), and ForgeFed sync must treat the real trunk as the
+    # default so it does not open a spurious merge request for it.
+    #
+    # Returns the resolved default branch name. The record is left untouched
+    # (and no DB write happens) when HEAD cannot be resolved — for example an
+    # empty repository with no commits.
+    def self.adopt_mirror_default_branch!(record : RepositoryRecord, config : Utils::Config = Utils::Config.load) : String
+      detected = detect_mirror_default_branch(record.repo_path)
+
+      if detected && detected != record.default_branch
+        record.default_branch = detected
+        record.updated_at = current_time
+        persist(record, config)
+      end
+
+      record.default_branch
+    end
+
+    # Reads the bare repository's HEAD symbolic ref and returns the short branch
+    # name it points at (e.g. "master" or "main"), or nil when HEAD cannot be
+    # resolved — for example an empty repository with no commits or a detached
+    # HEAD. Pure filesystem/git operation with no DB access, which keeps it
+    # unit-testable in isolation.
+    def self.detect_mirror_default_branch(repo_path : String) : String?
+      presence(run_git_output(["--git-dir", repo_path, "symbolic-ref", "--short", "HEAD"]).strip)
+    rescue
+      nil
+    end
+
     private def self.meta_issue_readme_content(config : LeposConfig::RepositorySettings) : String
       [
         "* Issue Template",
@@ -1043,21 +1089,34 @@ module Lepos
 
     def self.find_by_owner_and_project_clone_name(owner_handle : String, clone_name : String, config : Utils::Config = Utils::Config.load) : RepositoryRecord?
       normalized_owner = normalize_handle(owner_handle)
-      normalized_clone_name = clone_name.sub(/\.git\z/, "")
+      stripped_clone_name = clone_name.sub(/\.git\z/, "")
+      # Repositories are persisted with a slugified project_id (see
+      # ensure_ad_hoc_for_owner_and_clone_name → normalize_clone_name), so a
+      # lookup with the original casing/spelling (e.g. "Hello-World") must be
+      # normalized the same way to match the stored "hello-world". We compare
+      # against both the raw and normalized forms to stay backward compatible
+      # with callers that already pass a normalized value.
+      normalized_clone_name = begin
+        normalize_clone_name(stripped_clone_name)
+      rescue
+        stripped_clone_name
+      end
+      candidates = [stripped_clone_name, normalized_clone_name].uniq
 
       list(config).find do |repository|
         owner_handle_for(repository, config) == normalized_owner &&
-          (
-            repository.project_id == normalized_clone_name ||
-              repository.order_id == normalized_clone_name ||
-              repository.slug == normalized_clone_name
-          )
+          candidates.any? do |candidate|
+            repository.project_id == candidate ||
+              repository.order_id == candidate ||
+              repository.slug == candidate
+          end
       end
     end
 
-    def self.ensure_ad_hoc_for_owner_and_clone_name(owner_handle : String, clone_name : String, config : Utils::Config = Utils::Config.load) : RepositoryRecord
+    def self.ensure_ad_hoc_for_owner_and_clone_name(owner_handle : String, clone_name : String, config : Utils::Config = Utils::Config.load, visibility : String = "private") : RepositoryRecord
       normalized_owner = normalize_handle(owner_handle)
       normalized_clone_name = normalize_clone_name(clone_name)
+      normalized_visibility = visibility == "public" ? "public" : "private"
       existing = find_by_owner_and_project_clone_name(normalized_owner, normalized_clone_name, config)
       if existing
         install_receive_hooks(existing)
@@ -1074,10 +1133,10 @@ module Lepos
         order_id: ad_hoc_order_id(normalized_owner, normalized_clone_name),
         slug: slug,
         name: tail,
-        visibility: "private",
+        visibility: normalized_visibility,
         default_branch: DEFAULT_BRANCH,
         server_uuid: UUID.random.to_s,
-        public_clone_url: nil,
+        public_clone_url: public_clone_url(slug, normalized_visibility, config),
         ssh_clone_url: ssh_clone_url_for_path("/@#{normalized_owner}/#{normalized_clone_name}.git", config),
         repo_path: bare_repo_path_for_owner(normalized_owner, normalized_clone_name),
         created_at: now,
