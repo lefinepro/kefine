@@ -137,6 +137,7 @@
 >
   {#if !isAuthenticated}
     <kefine-account-auth-grid>
+{#if false}
       <button
         type="button"
         class="kefine-account-auth-card"
@@ -150,6 +151,7 @@
         <strong>{browserWalletTitle}</strong>
         <small>{providerDetails.browserWallet}</small>
       </button>
+{/if}
 
       <button
         type="button"
