@@ -6,7 +6,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
 
-import { createTask, gotoAndWaitForReady, mockOrderApi } from './helpers/kefine';
+import { createTask, gotoAndWaitForReady, mockOrderApi, seedAuthSession } from './helpers/kefine';
 
 const execFileAsync = promisify(execFile);
 
@@ -57,6 +57,7 @@ function cloneUrlFromCommand(command: string) {
 test.describe('Task Clone', () => {
   test('create git repo flow persists and exposes clone targets after reload', async ({ page }) => {
     await mockOrderApi(page);
+    await seedAuthSession(page);
     await gotoAndWaitForReady(page);
 
     await createTask(page, 'Repository creation flow');
@@ -108,6 +109,7 @@ test.describe('Task Clone', () => {
 
   test('clone menu shows owner-scoped repository clone and archive URLs', async ({ page }) => {
     const api = await mockOrderApi(page);
+    await seedAuthSession(page);
     await gotoAndWaitForReady(page);
 
     await createTask(page, 'Cloneable repository task');
@@ -164,6 +166,7 @@ test.describe('Task Clone Git Round Trip', () => {
       const barePath = await createSeededBareRepository(tempRoot);
       const cloneUrl = pathToFileURL(barePath).href;
       const api = await mockOrderApi(page);
+      await seedAuthSession(page);
       await gotoAndWaitForReady(page);
 
       await createTask(page, 'Repository git roundtrip');

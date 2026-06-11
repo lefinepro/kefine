@@ -2303,6 +2303,16 @@
         currency: payload.currency || 'USDC',
         createdAt: new Date().toISOString(),
         labels: payload.tags,
+        // Attribute the optimistic order to the current owner so it shows up
+        // immediately in the owner-scoped recent list (recentProfileOrders);
+        // otherwise authenticated users never see the optimistic row.
+        ...(currentProfile
+          ? {
+              ownerProfileId: currentProfile.id,
+              ownerUsername: currentProfile.primaryHandle,
+              ownerDisplayName: currentProfile.displayName
+            }
+          : {}),
         templatePromptTemplate: payload.templatePromptTemplate,
         templateVariables: payload.templateVariables,
         templateVariableValues: payload.templateVariableValues

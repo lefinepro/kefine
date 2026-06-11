@@ -1010,9 +1010,8 @@
 
     <lefine-box class:profile-layout={true} class:profile-layout--single={true}>
       <lefine-box class="profile-main">
-        {#if isOwner && onboardingStep}
-          <!-- onboarding screen commented out -->
-        {:else}
+          <!-- Onboarding screens were removed (#168); owners land directly on
+               their profile repository instead of a setup wizard. -->
           <article class="profile-details">
             <!-- A profile is a repository: no enclosing frame at all. The README
                  block carries its own subtle surface and the tasks float as a
@@ -1182,8 +1181,6 @@
               </lefine-box>
             {/if}
           </article>
-
-        {/if}
       </lefine-box>
 
     </lefine-box>

@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { mockOrderApi } from './helpers/kefine';
+import { mockOrderApi, seedAuthSession } from './helpers/kefine';
 
 const SEARCH_FIXTURE_ORDERS = [
   {
@@ -81,6 +81,7 @@ test.describe('Search page URLs', () => {
 
   test('creates and starts executing a task by pressing Enter on the search page', async ({ page }) => {
     await mockOrderApi(page);
+    await seedAuthSession(page);
     await gotoSearchPage(page, '/?q=postgres%20restore');
 
     await expect(page.getByTestId('kefine-search-create-hint')).toBeVisible();

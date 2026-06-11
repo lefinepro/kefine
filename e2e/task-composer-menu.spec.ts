@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { Buffer } from 'node:buffer';
 
-import { gotoAndWaitForReady, mockOrderApi } from './helpers/kefine';
+import { gotoAndWaitForReady, mockOrderApi, seedAuthSession } from './helpers/kefine';
 
 test.describe('Task composer menu', () => {
   test('composer chips are clickable and reveal their editors', async ({ page }) => {
@@ -49,6 +49,7 @@ test.describe('Task composer menu', () => {
 
   test('file chip opens upload chooser and submits attachments as multipart', async ({ page }) => {
     await mockOrderApi(page);
+    await seedAuthSession(page);
     await gotoAndWaitForReady(page);
 
     await page.getByTestId('kefine-task-input').fill('Review attached notes');
