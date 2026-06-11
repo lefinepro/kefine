@@ -18,6 +18,7 @@ require "./crater/handlers/email_code_auth"
 require "./crater/handlers/projects"
 require "./crater/handlers/git_http"
 require "./crater/handlers/forgefed_resources"
+require "./crater/handlers/github_import"
 require "./crater/handlers/ssh_keys"
 require "./crater/middleware/cors"
 require "./crater/middleware/logger"
@@ -77,6 +78,7 @@ module Lepos
     Handlers::Projects.register(config)
     Handlers::GitHttp.register(config)
     Handlers::ForgeFedResources.register(config)
+    Handlers::GithubImport.register(config)
     Handlers::SshKeys.register(config)
 
     get "/health" do |env|
