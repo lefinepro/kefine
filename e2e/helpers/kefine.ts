@@ -281,6 +281,41 @@ export async function mockOrderApi(page: Page) {
   };
 }
 
+// Since #168 the composer requires an authenticated session before a task can
+// be launched (auto-auth was removed). Tests that exercise the task lifecycle
+// seed a persisted public-key session so the workspace hydrates as connected on
+// load. addInitScript re-runs on every navigation/reload, so the seeded session
+// survives the localStorage.clear() inside gotoAndWaitForReady.
+export async function seedAuthSession(
+  page: Page,
+  overrides: Partial<{
+    handle: string;
+    userId: string;
+    displayName: string;
+    email: string;
+  }> = {}
+) {
+  const handle = overrides.handle ?? 'api';
+  const session = {
+    address: null,
+    chainId: null,
+    email: overrides.email ?? `${handle}@actor.local`,
+    userId: overrides.userId ?? `publickey:${handle}`,
+    handle,
+    displayName: overrides.displayName ?? handle.toUpperCase(),
+    authType: 'publickey' as const,
+    connectedAt: 1_700_000_000_000
+  };
+
+  await page.addInitScript((data) => {
+    try {
+      window.localStorage.setItem('auth-session', JSON.stringify(data));
+    } catch {
+      // localStorage may be unavailable
+    }
+  }, session);
+}
+
 export async function gotoAndWaitForReady(page: Page) {
   await page.goto('/');
   await page.evaluate(() => {

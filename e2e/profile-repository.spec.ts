@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { mockOrderApi } from './helpers/kefine';
+import { mockOrderApi, seedAuthSession } from './helpers/kefine';
 
 // A profile is a repository: the public profile renders the handle as a README
 // header and the profile tasks as an Org TODO checklist, mirroring the solvers
@@ -59,7 +59,8 @@ test.describe('Profile repository view', () => {
     await expect(page.getByTestId('profile-repo')).toBeVisible();
     await expect(page.getByTestId('profile-readme')).toBeVisible();
     await expect(page.getByTestId('profile-readme-title')).toContainText(`@${SEED_HANDLE}`);
-    await expect(page.getByTestId('profile-brief')).toContainText('Building reliable solver flows.');
+    // The bio brief was removed from the repository README (#168): the README
+    // now leads with the handle and the task checklist only.
 
     // The seeded task list has four items spanning every TODO state.
     const items = page.getByTestId('profile-checklist-item');
@@ -76,11 +77,15 @@ test.describe('Profile repository view', () => {
 
     await page.getByTestId('kefine-brand-mark').click();
 
-    const profileSummary = page.getByTestId('kefine-sidebar-profile');
-    await expect(profileSummary).toBeVisible();
-    await expect(profileSummary).toContainText(`@${SEED_HANDLE}`);
-    await expect(profileSummary).toContainText('Building reliable solver flows.');
-    await expect(profileSummary.locator('kefine-sidebar-profile-avatar')).toHaveCount(0);
+    // Wait for the menu to open: the dock controls are always rendered (#168),
+    // so their visibility marks a fully expanded popover before we measure it.
+    await expect(page.getByTestId('kefine-topbar-theme-toggle')).toBeVisible();
+    await expect(page.getByTestId('kefine-topbar-locale-toggle')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Write to us' })).toBeVisible();
+
+    // The sidebar profile summary card was removed (#168): the menu no longer
+    // surfaces the handle, bio, avatar, or display name.
+    await expect(page.getByTestId('kefine-sidebar-profile')).toHaveCount(0);
     await expect(page.locator('kefine-sidebar-popover')).not.toContainText('Demo Builder');
     await expect(page.locator('kefine-sidebar-popover')).not.toContainText('Latest repos');
     await expect(page.locator('kefine-sidebar-popover')).not.toContainText('Repos');
@@ -91,9 +96,6 @@ test.describe('Profile repository view', () => {
       throw new Error('Expected sidebar popover and dock controls to be measurable');
     }
 
-    await expect(page.getByTestId('kefine-topbar-theme-toggle')).toBeVisible();
-    await expect(page.getByTestId('kefine-topbar-locale-toggle')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Write to us' })).toBeVisible();
     expect(dockControlsBox.x).toBeGreaterThanOrEqual(sidebarPopoverBox.x - 1);
     expect(dockControlsBox.x + dockControlsBox.width).toBeLessThanOrEqual(
       sidebarPopoverBox.x + sidebarPopoverBox.width + 1
@@ -102,6 +104,9 @@ test.describe('Profile repository view', () => {
 
   test('new-task row deeplinks into the topbar search to create a task', async ({ page }) => {
     await mockOrderApi(page);
+    // Launching a task now requires an authenticated viewer (#168), so seed a
+    // session before deeplinking from the profile's new-task row into create.
+    await seedAuthSession(page);
     await seedPublicProfile(page);
     await page.goto(`/@${SEED_HANDLE}`);
 
