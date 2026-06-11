@@ -7,7 +7,6 @@
   import { kefineLocaleText } from '$lib/constants/kefine-locale';
   import SolutionCodeEditor from '$lib/components/kefine/SolutionCodeEditor.svelte';
   import SolutionTopbar from '$lib/components/kefine/SolutionTopbar.svelte';
-  import SolutionTaskPanel from '$lib/components/kefine/SolutionTaskPanel.svelte';
   import SolutionViewTabs from '$lib/components/kefine/SolutionViewTabs.svelte';
   import SolutionTestingPanel from '$lib/components/kefine/SolutionTestingPanel.svelte';
   import SolutionFileOutline from '$lib/components/kefine/SolutionFileOutline.svelte';
@@ -249,13 +248,6 @@
               onSelect={selectFile}
             />
 
-            <SolutionTaskPanel
-              title={taskTitle}
-              description={taskDescription}
-              {comments}
-              {isCorrectingTask}
-              onSubmitCorrection={handleSubmitCorrection}
-            />
           </lef-solver-main>
         </lef-solver-source>
       {:else if activeView === 'checkpoints'}
@@ -279,13 +271,6 @@
               sampleResponse={'{\n  "ok": true,\n  "message": "proxy ready"\n}'}
             />
 
-            <SolutionTaskPanel
-              title={taskTitle}
-              description={taskDescription}
-              {comments}
-              {isCorrectingTask}
-              onSubmitCorrection={handleSubmitCorrection}
-            />
           </lef-solver-testing>
         </lef-solver-overview>
       {/if}
