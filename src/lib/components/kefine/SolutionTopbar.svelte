@@ -45,7 +45,7 @@
     {/if}
     {#if slug}
       <lef-solver-crumb class="lef-solver-crumb--slug">
-        <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <circle cx="5" cy="3.5" r="1.5"></circle>
           <circle cx="5" cy="12.5" r="1.5"></circle>
           <circle cx="11.5" cy="8" r="1.5"></circle>
@@ -144,7 +144,14 @@
   }
 
   lef-solver-crumb svg {
+    display: block;
     flex: 0 0 auto;
+  }
+
+  lef-solver-crumb--project svg,
+  lef-solver-crumb--slug svg {
+    width: 14px;
+    height: 14px;
   }
 
   lef-solver-crumb lefine-text {
