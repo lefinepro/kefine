@@ -65,13 +65,13 @@ test.describe('Task Controls', () => {
 
   test('completed solver-list task hides the stop button in the main window history', async ({ page }) => {
     await mockOrderApi(page);
-    await seedAuthSession(page);
 
-    // Seed a recognized solver task ("мини прокси на go") owned by the
-    // authenticated viewer. In the main-window history such a task renders in
-    // its completed state and exposes the "Open solver list" action — the stop
-    // button must not remain visible alongside it (issue #167).
+    // Seed a recognized solver task ("мини прокси на go"). In the main-window
+    // history such a task renders in its completed state and exposes the
+    // "Open solver list" action — the stop button must not remain visible
+    // alongside it (issue #167).
     await page.addInitScript(() => {
+      window.localStorage.clear();
       window.localStorage.setItem(
         'kefine-created-orders-v1',
         JSON.stringify([
