@@ -53,7 +53,7 @@
 </script>
 
 {#if ready && solvers.length > 0}
-  <flying-menu corner="bottom-right" storage-key="kefine-solver-flying-menu">
+  <flying-menu corner="bottom-right" margin="24" storage-key="kefine-solver-flying-menu">
     <button slot="trigger" type="button" class="lef-fm-trigger" aria-label={labels.trigger} title={labels.trigger}>
       <lef-fm-stack aria-hidden="true">
         {#each triggerAvatars.avatars as avatar (avatar.id)}
@@ -91,13 +91,6 @@
 {/if}
 
 <style>
-  flying-menu {
-    position: fixed;
-    bottom: 1.5rem;
-    right: 1.5rem;
-    z-index: 1000;
-  }
-
   flying-menu::part(menu) {
     background: var(--kef-bg-card);
     border: 1px solid var(--kef-line-soft);
