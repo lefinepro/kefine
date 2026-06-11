@@ -1016,20 +1016,8 @@ initialized = true;
     return completed ? solverRepositoryName(text) : 'feat/basic-forward';
   }
 
-  function shouldShowSolverList(text: string, completed: boolean): boolean {
-    return completed && (isGoProxySearch(text) || isRustHelloWorldSearch(text));
-  }
-
   function withTaskQuery(path: string, text: string): string {
     return `${path}?task=${encodeURIComponent(text)}`;
-  }
-
-  function orderSolutionsHref(order: OrderView): string {
-    const routeId = order.shareId ?? order.id;
-    const path = order.actorHandle || order.ownerUsername
-      ? buildActorOrderPath(order.actorHandle ?? order.ownerUsername!, routeId)
-      : `/order/${encodeURIComponent(routeId)}`;
-    return withTaskQuery(path, order.title || solverSearchText);
   }
 
   function orderTaskHref(order: OrderView): string {
@@ -2008,25 +1996,13 @@ initialized = true;
               </kefine-solver-search-indicator>
             </kefine-solver-search-row>
           </a>
-          {#if shouldShowSolverList(solverSearchText, taskCompleted)}
-            <kefine-task-history-actions>
-              <a
-                role="button"
-                data-part="open-solvers"
-                href={searchResultHref}
-                onmousedown={keepComposerFocus}
-                onclick={(event) => openSolverList(event, searchResultHref)}
-              >
-                Open solver list
-              </a>
-            </kefine-task-history-actions>
-          {/if}
         </kefine-task-history-item>
       {/if}
       {#each filteredRecentOrders as order, i (order.id)}
         {@const isDuplicate = activeSearchDuplicate?.id === order.id}
         {@const inProgress = isDuplicate && solverSearchActive && !taskCompleted}
         {@const orderHref = orderTaskHref(order)}
+        {@const taskHref = `${taskDocumentHref(order)}#details`}
         <kefine-task-history-item
           data-testid={isDuplicate && !order.id.startsWith('temp-') ? 'kefine-solver-search-row' : null}
           style="animation-delay: {i * 78}ms;"
@@ -2035,11 +2011,11 @@ initialized = true;
           data-active-task={isDuplicate ? 'true' : null}
         >
           <a
-            href={orderHref}
+            href={taskHref}
             data-testid={`kefine-open-order-${order.id}`}
             style="text-decoration:none; color:inherit; display:block;"
             onmousedown={keepComposerFocus}
-            onclick={(event) => openSolverList(event, orderHref)}
+            onclick={(event) => openSolverList(event, taskHref)}
           >
             <kefine-solver-search-row aria-live="polite" data-state={inProgress ? 'in-progress' : 'completed'}>
               <lefine-text>{order.title}</lefine-text>
@@ -2054,10 +2030,10 @@ initialized = true;
                   role="button"
                   tabindex="0"
                   data-testid={`kefine-task-branch-${order.id}`}
-                  aria-label={`Open task document for ${order.title} in a new window`}
-                  title={`Open task document for ${order.title}`}
-                  onclick={(event: MouseEvent) => openTaskBranchWindow(event, taskDocumentHref(order))}
-                  onkeydown={(event: KeyboardEvent) => handleTaskBranchKeydown(event, taskDocumentHref(order))}
+                  aria-label={`Open ${order.title} order page in a new window`}
+                  title={`Open ${order.title} order page`}
+                  onclick={(event: MouseEvent) => openTaskBranchWindow(event, orderHref)}
+                  onkeydown={(event: KeyboardEvent) => handleTaskBranchKeydown(event, orderHref)}
                 >
                   <kefine-task-branch-name>{completedBranchLabel(order.title, !inProgress)}</kefine-task-branch-name>
                   <lef-cp-branch-icon>
@@ -2091,18 +2067,7 @@ initialized = true;
           </a>
           {#if order.status !== 'completed' && order.status !== 'done'}
             <kefine-task-history-actions>
-              {#if shouldShowSolverList(order.title, !inProgress)}
-                <a
-                  role="button"
-                  data-part="open-solvers"
-                  href={orderSolutionsHref(order)}
-                  onmousedown={keepComposerFocus}
-                  onclick={(event) => openSolverList(event, orderSolutionsHref(order))}
-                >
-                  Open solver list
-                </a>
-              {/if}
-              {#if onStopOrder && !shouldShowSolverList(order.title, !inProgress) && order.status !== 'stopped' && order.status !== 'completed' && order.status !== 'done'}
+              {#if onStopOrder && inProgress && order.status !== 'stopped' && order.status !== 'completed' && order.status !== 'done'}
                 <button
                   type="button"
                   data-part="stop-task"
@@ -3378,10 +3343,6 @@ initialized = true;
       transform 120ms ease;
   }
 
-  kefine-task-history-actions a[data-part='open-solvers'] {
-    padding: 0 0.78rem;
-  }
-
   kefine-task-history-actions button[data-part='stop-task'] {
     width: 2rem;
     padding: 0;
@@ -3394,13 +3355,11 @@ initialized = true;
     background: currentColor;
   }
 
-  kefine-task-history-actions a[data-part='open-solvers']:hover,
   kefine-task-history-actions button[data-part='stop-task']:hover {
     background: color-mix(in oklab, var(--kef-bg-card) 82%, var(--kef-color-primary) 18%);
     border-color: color-mix(in oklab, var(--kef-color-primary) 38%, var(--kef-line));
   }
 
-  kefine-task-history-actions a[data-part='open-solvers']:active,
   kefine-task-history-actions button[data-part='stop-task']:active {
     transform: scale(0.96);
   }

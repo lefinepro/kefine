@@ -107,8 +107,6 @@ export async function ensureAppKit(): Promise<AppKitLike | undefined> {
 			defaultNetwork,
 			projectId,
 			metadata,
-			basic: true,
-			manualWCControl: true,
 			features: {
 				analytics: true,
 				email: false,

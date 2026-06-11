@@ -496,6 +496,7 @@
                       </button>
                     {/each}
                   </lef-task-variants>
+                  {#if false}
                   <lef-compare-row>
                     <button
                       type="button"
@@ -507,6 +508,7 @@
                       <lefine-text>{localeText.solversView.solversModal.open}</lefine-text>
                     </button>
                   </lef-compare-row>
+                  {/if}
                 {/if}
               </lef-repo-checklist-item>
             {/each}
@@ -624,6 +626,7 @@
                       </button>
                     {/each}
                   </lef-task-variants>
+                  {#if false}
                   <lef-compare-row>
                     <button
                       type="button"
@@ -635,6 +638,7 @@
                       <lefine-text>{localeText.solversView.solversModal.open}</lefine-text>
                     </button>
                   </lef-compare-row>
+                  {/if}
                 {/if}
               {:else if onSelectHistoryTask && !task.isActive}
                 <button
