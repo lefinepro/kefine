@@ -2293,11 +2293,6 @@
     let tempOrderId: string | undefined;
     if (isBackground && !focusInQueue) {
       tempOrderId = `temp-${crypto.randomUUID()}`;
-      // Stamp the optimistic row with the current owner identity so it is not
-      // filtered out of the owner-scoped recent list (recentProfileOrders keeps
-      // only orders whose ownerProfileId matches the active profile). Without
-      // this the queued temp row never renders for an authenticated user.
-      const optimisticOwnerProfile = currentProfile ?? temporaryProfile;
       const tempOrder: OrderView = {
         id: tempOrderId,
         ...(payload.taskIcon?.trim() ? { taskIcon: payload.taskIcon.trim() } : {}),
@@ -2308,11 +2303,14 @@
         currency: payload.currency || 'USDC',
         createdAt: new Date().toISOString(),
         labels: payload.tags,
-        ...(optimisticOwnerProfile
+        // Attribute the optimistic order to the current owner so it shows up
+        // immediately in the owner-scoped recent list (recentProfileOrders);
+        // otherwise authenticated users never see the optimistic row.
+        ...(currentProfile
           ? {
-              ownerProfileId: optimisticOwnerProfile.id,
-              ownerUsername: optimisticOwnerProfile.primaryHandle,
-              ownerDisplayName: optimisticOwnerProfile.displayName
+              ownerProfileId: currentProfile.id,
+              ownerUsername: currentProfile.primaryHandle,
+              ownerDisplayName: currentProfile.displayName
             }
           : {}),
         templatePromptTemplate: payload.templatePromptTemplate,

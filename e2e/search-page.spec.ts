@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { authenticate, mockOrderApi } from './helpers/kefine';
+import { mockOrderApi, seedAuthSession } from './helpers/kefine';
 
 const SEARCH_FIXTURE_ORDERS = [
   {
@@ -81,16 +81,8 @@ test.describe('Search page URLs', () => {
 
   test('creates and starts executing a task by pressing Enter on the search page', async ({ page }) => {
     await mockOrderApi(page);
-    // Since #168 a task launch requires an authorized visitor. Establish a
-    // session on the workspace home (where the task input exists) before
-    // seeding fixtures and visiting the search page.
-    await page.goto('/');
-    await authenticate(page);
-    await page.evaluate((orders) => {
-      window.localStorage.setItem('kefine-created-orders-v1', JSON.stringify(orders));
-    }, SEARCH_FIXTURE_ORDERS);
-    await page.goto('/?q=postgres%20restore');
-    await expect(page.getByTestId('kefine-search-page-results')).toBeVisible();
+    await seedAuthSession(page);
+    await gotoSearchPage(page, '/?q=postgres%20restore');
 
     await expect(page.getByTestId('kefine-search-create-hint')).toBeVisible();
     await page.getByTestId('kefine-search-page-input').press('Enter');

@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { authenticate, gotoAndWaitForReady, mockOrderApi, waitForHydratedElement } from './helpers/kefine';
+import { gotoAndWaitForReady, mockOrderApi, seedAuthSession, waitForHydratedElement } from './helpers/kefine';
 
 test.describe('Task Controls', () => {
   test('expanded topbar menu does not overlap the create card on narrow chromium viewport', async ({ page, browserName }) => {
@@ -47,8 +47,8 @@ test.describe('Task Controls', () => {
 
   test('desktop stop keeps task stopped in the shared list', async ({ page }) => {
     const api = await mockOrderApi(page);
+    await seedAuthSession(page);
     await gotoAndWaitForReady(page);
-    await authenticate(page);
 
     await page.getByTestId('kefine-task-input').fill('Need access to Telegram');
     await page.getByTestId('kefine-task-input').press('Shift+Enter');
@@ -65,13 +65,13 @@ test.describe('Task Controls', () => {
 
   test('completed solver-list task hides the stop button in the main window history', async ({ page }) => {
     await mockOrderApi(page);
+    await seedAuthSession(page);
 
-    // Seed a recognized solver task ("мини прокси на go"). In the main-window
-    // history such a task is rendered in its completed state and exposes the
-    // "Open solver list" action — the stop button must not remain visible
-    // alongside it (issue #167).
+    // Seed a recognized solver task ("мини прокси на go") owned by the
+    // authenticated viewer. In the main-window history such a task renders in
+    // its completed state and exposes the "Open solver list" action — the stop
+    // button must not remain visible alongside it (issue #167).
     await page.addInitScript(() => {
-      window.localStorage.clear();
       window.localStorage.setItem(
         'kefine-created-orders-v1',
         JSON.stringify([
@@ -98,7 +98,7 @@ test.describe('Task Controls', () => {
     // Reveal the persistent task history by focusing the composer input.
     await page.getByTestId('kefine-task-input').click();
 
-    const row = page.locator('kefine-task-history-item[data-order-id="order-1"]');
+    const row = page.locator('[data-order-id="order-1"]');
     await expect(row).toBeVisible();
 
     // The "Open solver list" action confirms the row is in its completed state.
@@ -112,8 +112,8 @@ test.describe('Task Controls', () => {
     test.skip(browserName !== 'chromium', 'pointer duration checks are only asserted on chromium project setup');
 
     await mockOrderApi(page);
+    await seedAuthSession(page);
     await gotoAndWaitForReady(page);
-    await authenticate(page);
 
     const input = page.getByTestId('kefine-task-input');
     await input.fill('A very long background task title that should still wrap correctly on very narrow screens');

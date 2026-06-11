@@ -33,12 +33,10 @@ function mergeActorIdentity(previous: OrderView, next: OrderView): OrderView {
     nextShareId && nextShareId !== nextId && nextShareId !== previousId
       ? nextShareId
       : previousShareId || nextShareId || undefined;
-  // Owner identity is assigned locally when the task is created (it ties the
-  // order to the signed-in profile). Status payloads describe backend execution
-  // state and legitimately omit it, so a blind spread would clobber the local
-  // attribution with `undefined` and the order would vanish from the owner's
-  // recent history. Preserve the previous owner fields whenever the incoming
-  // update does not carry them.
+
+  // Owner attribution is established locally when the order is created and is not
+  // always echoed back by the status endpoint. Preserve the previously known owner
+  // identity so a status poll cannot strip an order out of its owner-scoped lists.
   const ownerProfileId = next.ownerProfileId?.trim() || previous.ownerProfileId?.trim() || undefined;
   const ownerUsername = next.ownerUsername?.trim() || previous.ownerUsername?.trim() || undefined;
   const ownerDisplayName = next.ownerDisplayName?.trim() || previous.ownerDisplayName?.trim() || undefined;

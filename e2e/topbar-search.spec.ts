@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { createTask, gotoAndWaitForReady, mockOrderApi } from './helpers/kefine';
+import { createTask, gotoAndWaitForReady, mockOrderApi, seedAuthSession } from './helpers/kefine';
 
 test.describe('Topbar search', () => {
   test('home screen keeps the sidebar focused on brand and legal links', async ({ page }) => {
@@ -11,15 +11,15 @@ test.describe('Topbar search', () => {
 
     await expect(page.locator('kefine-sidebar-popover kefine-sidebar-nav')).toBeVisible();
     await expect(page.locator('kefine-sidebar-nav a[data-part="link"] svg')).toHaveCount(2);
-    // Since #168 the theme/locale toggles live in the always-on sidebar utility
-    // dock (the `showDockControls` gate was removed), so they are present on the
-    // home screen too rather than only after a task launch.
-    await expect(page.getByTestId('kefine-topbar-theme-toggle')).toHaveCount(1);
-    await expect(page.getByTestId('kefine-topbar-locale-toggle')).toHaveCount(1);
+    // Dock controls are no longer hidden behind a flag (#168): the theme and
+    // locale toggles always render inside the expanded sidebar.
+    await expect(page.getByTestId('kefine-topbar-theme-toggle')).toBeVisible();
+    await expect(page.getByTestId('kefine-topbar-locale-toggle')).toBeVisible();
   });
 
   test('opens from the header and finds a queued lepo', async ({ page }) => {
     await mockOrderApi(page);
+    await seedAuthSession(page);
     await gotoAndWaitForReady(page);
 
     await createTask(page, 'Need Redis backup script');
@@ -41,6 +41,7 @@ test.describe('Topbar search', () => {
 
   test('surfaces developed widgets inline from the command palette', async ({ page }) => {
     await mockOrderApi(page);
+    await seedAuthSession(page);
     await gotoAndWaitForReady(page);
     await createTask(page, 'Open widget command palette');
     await expect(page).toHaveURL(/#\/orders\/order-1$/);

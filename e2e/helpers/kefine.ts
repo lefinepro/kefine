@@ -281,6 +281,41 @@ export async function mockOrderApi(page: Page) {
   };
 }
 
+// Since #168 the composer requires an authenticated session before a task can
+// be launched (auto-auth was removed). Tests that exercise the task lifecycle
+// seed a persisted public-key session so the workspace hydrates as connected on
+// load. addInitScript re-runs on every navigation/reload, so the seeded session
+// survives the localStorage.clear() inside gotoAndWaitForReady.
+export async function seedAuthSession(
+  page: Page,
+  overrides: Partial<{
+    handle: string;
+    userId: string;
+    displayName: string;
+    email: string;
+  }> = {}
+) {
+  const handle = overrides.handle ?? 'api';
+  const session = {
+    address: null,
+    chainId: null,
+    email: overrides.email ?? `${handle}@actor.local`,
+    userId: overrides.userId ?? `publickey:${handle}`,
+    handle,
+    displayName: overrides.displayName ?? handle.toUpperCase(),
+    authType: 'publickey' as const,
+    connectedAt: 1_700_000_000_000
+  };
+
+  await page.addInitScript((data) => {
+    try {
+      window.localStorage.setItem('auth-session', JSON.stringify(data));
+    } catch {
+      // localStorage may be unavailable
+    }
+  }, session);
+}
+
 export async function gotoAndWaitForReady(page: Page) {
   await page.goto('/');
   await page.evaluate(() => {
@@ -289,53 +324,6 @@ export async function gotoAndWaitForReady(page: Page) {
   await page.reload();
   await expect(page.getByTestId('kefine-task-input')).toBeVisible();
   await waitForHydratedElement(page, '[data-testid="kefine-task-input"]');
-}
-
-const PASSKEY_SESSION_KEY = 'kefine-passkey-session';
-
-/**
- * Seed a valid passkey session so the workspace treats the visitor as
- * authenticated. Since #168 the create/launch flow refuses to submit a task
- * until the visitor authorizes, so tests that exercise task creation must
- * establish a session first. Seeding the persisted session (instead of driving
- * the auth drawer) mirrors a returning, already-authorized visitor and keeps
- * these tests focused on the behaviour under test rather than the login UI.
- */
-export async function authenticate(page: Page, options?: { username?: string }) {
-  const username = options?.username ?? 'api';
-  await page.evaluate(
-    ({ key, username }) => {
-      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-      window.localStorage.setItem(
-        key,
-        JSON.stringify({
-          token: `passkey:${username}:test`,
-          username,
-          userId: `passkey:${username}`,
-          expiresAt
-        })
-      );
-    },
-    { key: PASSKEY_SESSION_KEY, username }
-  );
-  await page.reload();
-  await expect(page.getByTestId('kefine-task-input')).toBeVisible();
-  await waitForHydratedElement(page, '[data-testid="kefine-task-input"]');
-}
-
-/**
- * Authenticate only when no session is present yet. Task-creation helpers call
- * this so a test that already authenticated explicitly is not reloaded twice.
- */
-export async function ensureAuthenticated(page: Page, options?: { username?: string }) {
-  const alreadyAuthenticated = await page.evaluate(
-    (key) => Boolean(window.localStorage.getItem(key)),
-    PASSKEY_SESSION_KEY
-  );
-  if (alreadyAuthenticated) {
-    return;
-  }
-  await authenticate(page, options);
 }
 
 export async function waitForHydratedElement(page: Page, selector: string) {
@@ -350,10 +338,6 @@ export async function submitTask(page: Page) {
 }
 
 export async function createTask(page: Page, title: string) {
-  // Since #168 a task can only be launched by an authorized visitor, so make
-  // sure a session exists before submitting (no-op when the test already
-  // authenticated explicitly).
-  await ensureAuthenticated(page);
   await page.getByTestId('kefine-task-input').fill(title);
   await submitTask(page);
   const routeId = await page.waitForFunction<string | null, string>((taskTitle) => {

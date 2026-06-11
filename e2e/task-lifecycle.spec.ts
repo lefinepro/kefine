@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { authenticate, createTask, gotoAndWaitForReady, mockOrderApi } from './helpers/kefine';
+import { createTask, gotoAndWaitForReady, mockOrderApi, seedAuthSession } from './helpers/kefine';
 
 function normalizeFontFamily(value: string) {
   return value.replaceAll('"', '').replaceAll("'", '').replaceAll(/\s*,\s*/g, ', ').trim();
@@ -13,6 +13,7 @@ test.describe('Task Lifecycle', () => {
 
   test('brand mark uses the shared site font token', async ({ page }) => {
     await mockOrderApi(page);
+    await seedAuthSession(page);
     await gotoAndWaitForReady(page);
 
     const brandMark = page.getByTestId('kefine-brand-mark');
@@ -33,6 +34,7 @@ test.describe('Task Lifecycle', () => {
 
   test('create task -> reach result -> reopen stages', async ({ page }) => {
     const api = await mockOrderApi(page);
+    await seedAuthSession(page);
     await gotoAndWaitForReady(page);
 
     await createTask(page, 'Optimize database queries');
@@ -58,8 +60,13 @@ test.describe('Task Lifecycle', () => {
   test('shift+enter keeps create screen while optimistic item is replaced by real order', async ({ page }) => {
     const api = await mockOrderApi(page);
     api.setCreateDelay(1200);
+    await seedAuthSession(page);
     await gotoAndWaitForReady(page);
-    await authenticate(page);
+
+    await expect(page.locator("button[data-part='auth']")).toHaveAttribute(
+      'data-authenticated',
+      'true'
+    );
 
     const input = page.getByTestId('kefine-task-input');
     await input.fill('Temporary optimistic order');
@@ -76,8 +83,6 @@ test.describe('Task Lifecycle', () => {
 
     const realRow = page.locator('[data-order-id="order-1"]');
     await expect(realRow).toBeVisible();
-    // The optimistic temp row is replaced by the real order, which surfaces as
-    // the active solver-search row for the submitted task text.
     await expect(realRow).toContainText('Temporary optimistic order');
 
     const storedAfter = await page.evaluate(() => window.localStorage.getItem('kefine-created-orders-v1'));
@@ -91,6 +96,7 @@ test.describe('Task Lifecycle', () => {
   test('reloading a persisted order route keeps the executing flow mounted', async ({ page }) => {
     const api = await mockOrderApi(page);
     api.setCreateDelay(250);
+    await seedAuthSession(page);
     await gotoAndWaitForReady(page);
 
     await createTask(page, 'Persisted route order');
@@ -105,6 +111,7 @@ test.describe('Task Lifecycle', () => {
 
   test('custom slug survives reload and keeps executing flow mounted', async ({ page }) => {
     await mockOrderApi(page);
+    await seedAuthSession(page);
     await gotoAndWaitForReady(page);
 
     await createTask(page, 'Custom slug order');
@@ -208,6 +215,7 @@ test.describe('Task Lifecycle', () => {
 
   test('executing flow shows fallback solver info and hides standalone promo block', async ({ page }) => {
     await mockOrderApi(page);
+    await seedAuthSession(page);
     await gotoAndWaitForReady(page);
 
     await createTask(page, 'Build a landing page');
@@ -220,6 +228,7 @@ test.describe('Task Lifecycle', () => {
 
   test('next step from plus opens full editor and saves detailed step', async ({ page }) => {
     await mockOrderApi(page);
+    await seedAuthSession(page);
     await gotoAndWaitForReady(page);
 
     await createTask(page, 'Build a landing page');
@@ -237,6 +246,7 @@ test.describe('Task Lifecycle', () => {
 
   test('plus near a node starts a new branch and survives reload', async ({ page }) => {
     await mockOrderApi(page);
+    await seedAuthSession(page);
     await gotoAndWaitForReady(page);
 
     await createTask(page, 'Launch docs portal');
@@ -265,6 +275,7 @@ test.describe('Task Lifecycle', () => {
 
   test('expand and collapse branch children in ProseKit tree', async ({ page }) => {
     await mockOrderApi(page);
+    await seedAuthSession(page);
     await gotoAndWaitForReady(page);
 
     await createTask(page, 'ProseKit branch toggle');
@@ -294,6 +305,7 @@ test.describe('Task Lifecycle', () => {
 
   test('create inline comment from ProseKit node context', async ({ page }) => {
     await mockOrderApi(page);
+    await seedAuthSession(page);
     await gotoAndWaitForReady(page);
 
     await createTask(page, 'Task with inline comment');
@@ -311,6 +323,7 @@ test.describe('Task Lifecycle', () => {
 
   test('edit branch source through ProseKit inline editor', async ({ page }) => {
     await mockOrderApi(page);
+    await seedAuthSession(page);
     await gotoAndWaitForReady(page);
 
     await createTask(page, 'Task with editable branch');
@@ -336,6 +349,7 @@ test.describe('Task Lifecycle', () => {
 
   test('create left and hidden parallel branches and toggle hidden visibility', async ({ page }) => {
     await mockOrderApi(page);
+    await seedAuthSession(page);
     await gotoAndWaitForReady(page);
 
     await createTask(page, 'Parallel branch placement');
@@ -365,6 +379,7 @@ test.describe('Task Lifecycle', () => {
 
   test('branch tree state is persisted across reloads', async ({ page }) => {
     await mockOrderApi(page);
+    await seedAuthSession(page);
     await gotoAndWaitForReady(page);
 
     await createTask(page, 'Persistent branch layout');
@@ -407,6 +422,7 @@ test.describe('Task Lifecycle', () => {
 
   test('theme and locale switches do not close ProseKit inline editor', async ({ page }) => {
     await mockOrderApi(page);
+    await seedAuthSession(page);
     await gotoAndWaitForReady(page);
 
     await createTask(page, 'Editor survives theme locale switches');
@@ -436,6 +452,7 @@ test.describe('Task Lifecycle', () => {
 
   test('accessibility smoke: keyboard activation and ARIA labels', async ({ page }) => {
     await mockOrderApi(page);
+    await seedAuthSession(page);
     await gotoAndWaitForReady(page);
 
     await createTask(page, 'Keyboard accessible task tree');
