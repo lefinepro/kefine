@@ -550,34 +550,7 @@
           {/each}
         </lef-task-property-grid>
 
-        <section aria-label="Description" data-testid="kefine-task-document-description">
-          {#if markdownBlocks.length > 0}
-            <lef-task-markdown>
-              {#each markdownBlocks as block}
-                {#if block.type === 'heading'}
-                  <lef-task-markdown-heading data-level={block.level}>{block.content}</lef-task-markdown-heading>
-                {:else if block.type === 'paragraph'}
-                  <p>{block.content}</p>
-                {:else if block.type === 'list'}
-                  <ul>
-                    {#each block.items as item}
-                      <li>{item}</li>
-                    {/each}
-                  </ul>
-                {:else if block.type === 'code'}
-                  <lef-task-markdown-code>
-                    {#if block.language}
-                      <lefine-text>{block.language}</lefine-text>
-                    {/if}
-                    <pre><code>{block.content}</code></pre>
-                  </lef-task-markdown-code>
-                {/if}
-              {/each}
-            </lef-task-markdown>
-          {:else}
-            <p>No description.</p>
-          {/if}
-        </section>
+
 
         {#if subtasks.length > 0}
           <section id="subtasks" aria-label="Subtasks" data-testid="kefine-task-document-subtasks">

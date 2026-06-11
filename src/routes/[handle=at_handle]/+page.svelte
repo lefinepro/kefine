@@ -983,6 +983,9 @@
         if (isOwner) {
           void signOut();
         } else {
+          if (browser) {
+            sessionStorage.setItem('kefine-auth-dialog-open', '1');
+          }
           void goto(buildLocaleHomePath(activeLocale));
         }
       }}

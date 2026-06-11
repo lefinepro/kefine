@@ -96,6 +96,7 @@
 
   const THEME_STORAGE_KEY = 'kefine-theme';
   const BRAND_HOME_NAVIGATION_STORAGE_KEY = 'kefine-brand-home-navigation';
+  const AUTH_DIALOG_OPEN_STORAGE_KEY = 'kefine-auth-dialog-open';
   const CLONE_DRAFT_STORAGE_KEY = 'kefine-clone-draft-v1';
   type KefineSearchPageMode = 'anonymous' | 'saved';
 
@@ -1039,6 +1040,13 @@
 
     if (!hydrateTaskRouteFromLocation(loadedOrders)) {
       restoreCloneDraftPrefill();
+    }
+
+    if (sessionStorage.getItem(AUTH_DIALOG_OPEN_STORAGE_KEY) === '1') {
+      sessionStorage.removeItem(AUTH_DIALOG_OPEN_STORAGE_KEY);
+      runWhenIdle(() => {
+        selectTopbarAuth();
+      });
     }
 
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
