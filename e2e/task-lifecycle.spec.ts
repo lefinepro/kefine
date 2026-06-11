@@ -89,8 +89,10 @@ test.describe('Task Lifecycle', () => {
     expect(storedAfter).not.toContain('temp-');
     expect(storedAfter).toContain('order-1');
 
+    // Since #175 the history row link opens the task document (with the
+    // #details hash) rather than the order/solver-list page.
     await realRow.getByTestId('kefine-open-order-order-1').click();
-    await expect(page).toHaveURL(/\/@api\/order-1$/);
+    await expect(page).toHaveURL(/\/task\/order-1#details$/);
   });
 
   test('reloading a persisted order route keeps the executing flow mounted', async ({ page }) => {

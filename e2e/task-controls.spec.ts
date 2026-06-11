@@ -67,9 +67,8 @@ test.describe('Task Controls', () => {
     await mockOrderApi(page);
 
     // Seed a recognized solver task ("мини прокси на go"). In the main-window
-    // history such a task renders in its completed state and exposes the
-    // "Open solver list" action — the stop button must not remain visible
-    // alongside it (issue #167).
+    // history such a task renders in its completed state — the stop button must
+    // not remain visible alongside it (issue #167).
     await page.addInitScript(() => {
       window.localStorage.clear();
       window.localStorage.setItem(
@@ -101,10 +100,11 @@ test.describe('Task Controls', () => {
     const row = page.locator('[data-order-id="order-1"]');
     await expect(row).toBeVisible();
 
-    // The "Open solver list" action confirms the row is in its completed state.
-    await expect(row.locator('[data-part="open-solvers"]')).toBeVisible();
+    // The "Open solver list" action was removed in #175; the completed state is
+    // now confirmed directly via the solver search row's data-state.
+    await expect(row.locator('kefine-solver-search-row')).toHaveAttribute('data-state', 'completed');
 
-    // The stop button must be gone once the solver list is available.
+    // The stop button must be gone once the task is in its completed state.
     await expect(row.getByTestId('kefine-stop-order-order-1')).toHaveCount(0);
   });
 

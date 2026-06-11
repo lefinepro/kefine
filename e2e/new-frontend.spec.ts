@@ -17,10 +17,12 @@ test.describe('New frontend task results', () => {
     await expect(taskRow).not.toContainText('@kefine/go-proxy');
     await expect(page.getByTestId('kefine-inline-solver-list')).toHaveCount(0);
 
-    const openSolvers = page.getByRole('button', { name: 'Open solver list' });
-    await expect(openSolvers).toBeEnabled({ timeout: 6000 });
-    await expect(taskRow).toContainText('@kefine/go-proxy');
-    await openSolvers.click();
+    // The dedicated "Open solver list" button was removed in #175 (the row link
+    // now opens the task document instead). The solver repository name still
+    // resolves inline on the history row, after which the solver list page is
+    // reachable directly via the order route.
+    await expect(taskRow).toContainText('@kefine/go-proxy', { timeout: 6000 });
+    await page.goto(`/@api/order-1?task=${encodeURIComponent('Нужен мини прокси на go')}`);
 
     await expect(page).toHaveURL(/\/@api\/order-1\?task=/);
     await expect(page.getByTestId('solution-list-page')).toBeVisible();
@@ -200,13 +202,9 @@ test.describe('New frontend task results', () => {
     await page.getByTestId('todo-solver-select').first().click();
     const variants = page.getByTestId('task-solver-variants');
     await expect(variants).toBeVisible();
-    const compareButton = page.getByTestId('open-solvers-compare');
-    await expect(compareButton).toBeVisible();
-
-    const compareBox = await compareButton.boundingBox();
-    expect(compareBox, 'compare solvers button should render as a horizontal pill').not.toBeNull();
-    expect(compareBox!.width).toBeGreaterThan(compareBox!.height * 2);
-    expect(compareBox!.height).toBeLessThan(48);
+    // The "Compare solvers" trigger is temporarily disabled (#174 wraps it in
+    // `{#if false}` inside KefineSolversView), so it must not render.
+    await expect(page.getByTestId('open-solvers-compare')).toHaveCount(0);
 
     // Each solver renders a small avatar with deterministic initials.
     await expect(variants.locator('[data-variant="5"] lef-solver-avatar')).toHaveText('GB');

@@ -405,9 +405,15 @@ module Lepos
     private def self.branch_key_suffix(name : String, default_branch : String) : String?
       return nil if name == default_branch
 
-      prefix, remainder = name.split("/", 2)
-      return nil if remainder.nil?
+      parts = name.split("/", 2)
+      # Only namespaced branches (e.g. "feature/foo") get a derived key
+      # suffix. Plain branches without a "/" (e.g. "master", "develop") have
+      # no namespace prefix and therefore no suffix. Guarding on size also
+      # avoids an "Index out of bounds" crash from destructuring a 1-element
+      # array.
+      return nil if parts.size < 2
 
+      prefix = parts[0]
       normalized = prefix.downcase.gsub(/[^a-z0-9]+/, "-").gsub(/^-+|-+$/, "")
       normalized.empty? ? nil : normalized
     end
@@ -848,7 +854,10 @@ module Lepos
     private def self.next_patch_version(merge_request_id : String, config : Utils::Config) : Int32
       setup(config)
       database(config).query_one?(
-        "SELECT COALESCE(MAX(version_number), 0) FROM patch_sets WHERE merge_request_id = $1",
+        # Cast to bigint so the result type matches the Int64 read below.
+        # MAX(version_number) returns the column's integer (Int32) type, which
+        # otherwise raises a DB::ColumnTypeMismatchError against `as: Int64`.
+        "SELECT COALESCE(MAX(version_number), 0)::bigint FROM patch_sets WHERE merge_request_id = $1",
         merge_request_id,
         as: Int64
       ).try(&.to_i) || 0
