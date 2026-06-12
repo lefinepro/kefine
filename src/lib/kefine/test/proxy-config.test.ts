@@ -5,7 +5,7 @@ import {
   buildProxyProfile,
   type ProxyProtocol,
   type ProxyRegion
-} from './proxy-config';
+} from '../proxy-config';
 
 const region: ProxyRegion = PROXY_REGIONS[0];
 const byId = (id: string): ProxyProtocol => PROXY_PROTOCOLS.find((p) => p.id === id)!;

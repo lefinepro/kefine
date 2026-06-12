@@ -6,9 +6,9 @@ import {
   faviconUrl,
   type InstantAnswer,
   type InstantAnswersData
-} from './instant-answers';
+} from '../instant-answers';
 
-const datasetUrl = new URL('../../../static/instant-answers.json', import.meta.url);
+const datasetUrl = new URL('../../../../static/instant-answers.json', import.meta.url);
 const data = JSON.parse(readFileSync(fileURLToPath(datasetUrl), 'utf-8')) as InstantAnswersData;
 const sites: InstantAnswer[] = data.sites;
 

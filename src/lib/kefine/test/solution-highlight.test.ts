@@ -5,7 +5,7 @@ import {
   highlightLine,
   highlightLines,
   splitHtmlByLine
-} from './solution-highlight';
+} from '../solution-highlight';
 
 describe('detectLanguage', () => {
   test('returns "go" for .go files', () => {

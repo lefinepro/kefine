@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { detectMusicExtractIntent } from './music-intent';
+import { detectMusicExtractIntent } from '../music-intent';
 
 describe('detectMusicExtractIntent', () => {
   it('matches the Russian reference phrasing from the issue', () => {

@@ -4,7 +4,7 @@ import {
   solverAvatarColor,
   solverAvatarHue,
   solverInitials
-} from './solver-avatars';
+} from '../solver-avatars';
 
 describe('solverInitials', () => {
   test('uses first and last word initials', () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { detectProxyServerIntent } from './proxy-intent';
+import { detectProxyServerIntent } from '../proxy-intent';
 
 describe('detectProxyServerIntent', () => {
   it('matches the Russian reference phrasing from the issue', () => {

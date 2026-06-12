@@ -5,7 +5,7 @@ import {
   parseOrgTodos,
   repoReadme,
   repoTodos
-} from './repo-docs';
+} from '../repo-docs';
 
 describe('parseOrgLinks', () => {
   test('parses Org-style links', () => {

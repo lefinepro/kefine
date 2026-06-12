@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createQrMatrix, qrMatrixToSvgPath } from './qr-code';
+import { createQrMatrix, qrMatrixToSvgPath } from '../qr-code';
 
 describe('createQrMatrix', () => {
   it('produces a square matrix with an odd module count', () => {

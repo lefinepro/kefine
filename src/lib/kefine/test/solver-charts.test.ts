@@ -7,8 +7,8 @@ import {
   timeSeries,
   priceSeries,
   successRateSeries
-} from './solver-charts';
-import type { SolutionMetric } from './solutions-data';
+} from '../solver-charts';
+import type { SolutionMetric } from '../solutions-data';
 
 const sample: SolutionMetric[] = [
   { solverId: '1', solver: 'A', executionTimeSec: 12, priceUsd: 0.5, successRate: 80 },
