@@ -20,7 +20,7 @@
     topbarSearchItems,
     topbarSearchPlaceholderOverride,
     topbarSearchRequest
-  } from '$lib/kefine/topbar-search-context';
+  } from '$lib/kefine/topbar/topbar-search-context';
   import { getSeoMeta } from '$lib/seo';
   import type { LayoutData } from './$types';
 

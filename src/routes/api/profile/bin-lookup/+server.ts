@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { matchesArmenianBank } from '$lib/server/armenian-bank-allowlist';
+import { matchesArmenianBank } from '$lib/server/bank/armenian-bank-allowlist';
 
 type BinLookupPayload = {
   bin?: string;

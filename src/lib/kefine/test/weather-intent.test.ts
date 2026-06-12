@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { detectWeatherIntent, getWeatherTarget } from '../weather-intent';
+import { detectWeatherIntent, getWeatherTarget } from '../widgets/weather-intent';
 
 describe('detectWeatherIntent', () => {
   it('matches bare weather prompts that should use geolocation', () => {

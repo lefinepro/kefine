@@ -1,5 +1,5 @@
 import { json } from '@sveltejs/kit';
-import { buildCraterApiUrl } from '$lib/server/crater-api';
+import { buildCraterApiUrl } from '$lib/server/crater/crater-api';
 
 type ProxyOptions = {
   errorMessage: string;

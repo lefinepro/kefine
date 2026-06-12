@@ -4,7 +4,7 @@
   import { page } from '$app/state';
   import { isFeatureEnabled, resolvePublicRuntimeConfig } from '$lib/config/public-config';
   import { isSpecialRuntimeOrigin } from '$lib/config/special-runtime';
-  import type { KefineSearchWidgetId } from '$lib/kefine/search-widgets';
+  import type { KefineSearchWidgetId } from '$lib/kefine/widgets/search-widgets';
   import { resolveOrderProxyBasePath } from '$lib/order-proxy-path';
   import { onMount } from 'svelte';
   import { tick } from 'svelte';

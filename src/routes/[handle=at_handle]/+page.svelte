@@ -27,7 +27,7 @@
   import {
     KEFINE_SEARCH_WIDGET_IDS,
     type KefineSearchWidgetId
-  } from '$lib/kefine/search-widgets';
+  } from '$lib/kefine/widgets/search-widgets';
   import {
     addProfileBonus,
     buildProfilePath,
@@ -52,7 +52,7 @@
     topbarSearchItems,
     topbarSearchRequest,
     type TopbarSearchAction
-  } from '$lib/kefine/topbar-search-context';
+  } from '$lib/kefine/topbar/topbar-search-context';
 
   const localeText = $derived($kefineLocaleText);
   // The profile renders its own topbar (it is in ROUTES_WITH_OWN_TOPBAR), so it

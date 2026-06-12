@@ -1,4 +1,4 @@
-import { proxyCraterRequest } from '$lib/server/crater-proxy';
+import { proxyCraterRequest } from '$lib/server/crater/crater-proxy';
 
 export async function proxyCreateOrder(request: Request, fetchFn: typeof fetch): Promise<Response> {
   return proxyCraterRequest(request, fetchFn, '/create', {

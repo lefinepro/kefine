@@ -4,9 +4,9 @@
   import KefineSolversView, {
     type SolversHistoryTask
   } from '$lib/components/kefine/KefineSolversView.svelte';
-  import { repoReadme, repoTodos } from '$lib/kefine/repo-docs';
-  import { defaultSolutions, type Solution } from '$lib/kefine/solutions-data';
-  import { topbarSearchPlaceholderOverride } from '$lib/kefine/topbar-search-context';
+  import { repoReadme, repoTodos } from '$lib/kefine/repo-docs/repo-docs';
+  import { defaultSolutions, type Solution } from '$lib/kefine/solutions/solutions-data';
+  import { topbarSearchPlaceholderOverride } from '$lib/kefine/topbar/topbar-search-context';
 
   let {
     orderId,

@@ -8,7 +8,7 @@ import {
   parseProfileWidgetBlocks,
   type ProfileSocialOrgSource
 } from './profile-social-org';
-import { parseOrgTodos } from '$lib/kefine/repo-docs';
+import { parseOrgTodos } from '$lib/kefine/repo-docs/repo-docs';
 
 describe('profile widget definitions', () => {
   it('models every widget as a typed ActivityStreams Page object', () => {

@@ -5,7 +5,7 @@ import {
   resolveKnownWeatherLocation,
   toFahrenheit,
   toKelvin
-} from '../weather-forecast';
+} from '../widgets/weather-forecast';
 
 const forecastResponse = {
   current: {

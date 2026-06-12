@@ -11,8 +11,8 @@
  * These replace the earlier `.meta/issues/brief.org` idea: the brief now lives
  * inside the README, and the tasks live in the TODO file, both on the repo.
  */
-import readmeOrg from './repo-docs/readme.org?raw';
-import todoOrg from './repo-docs/todo.org?raw';
+import readmeOrg from './readme.org?raw';
+import todoOrg from './todo.org?raw';
 
 /** A parsed Org link, either `[[url][label]]` or a bare URL. */
 export interface OrgLink {

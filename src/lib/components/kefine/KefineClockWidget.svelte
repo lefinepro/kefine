@@ -10,7 +10,7 @@
     resolveClockTimeZone,
     type ClockReadout,
     type ClockTarget
-  } from '$lib/kefine/clock-widget';
+  } from '$lib/kefine/widgets/clock-widget';
 
   let { active = false, query = '' }: { active?: boolean; query?: string } = $props();
 

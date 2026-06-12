@@ -3,7 +3,7 @@ import {
   KEFINE_SEARCH_WIDGET_IDS,
   isSearchWidgetSlug,
   normalizeSearchWidgetId
-} from '../search-widgets';
+} from '../widgets/search-widgets';
 
 describe('normalizeSearchWidgetId', () => {
   it('maps canonical slugs to their widget id', () => {

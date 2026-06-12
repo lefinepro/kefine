@@ -1,5 +1,5 @@
 import { json } from '@sveltejs/kit';
-import { proxyOrderStatus } from '$lib/server/order-proxy';
+import { proxyOrderStatus } from '$lib/server/order/order-proxy';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ request, fetch, url }) => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildCover, buildWaveform, formatTime, hashSeed } from '../music-track';
+import { buildCover, buildWaveform, formatTime, hashSeed } from '../widgets/music-track';
 
 describe('buildWaveform', () => {
   it('returns the requested number of bars within [0.12, 1]', () => {

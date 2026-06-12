@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'vitest';
 
-import { defaultMetrics, defaultSolutions, type Solution } from '../solutions-data';
+import { defaultMetrics, defaultSolutions, type Solution } from '../solutions/solutions-data';
 
 type CodeLine = Solution['codeLines'][number];
 

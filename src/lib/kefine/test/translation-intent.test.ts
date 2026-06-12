@@ -3,7 +3,7 @@ import {
   DEFAULT_TRANSLATION_LANGUAGES,
   detectTranslationIntent,
   extractTranslationLanguages
-} from '../translation-intent';
+} from '../widgets/translation-intent';
 
 describe('detectTranslationIntent', () => {
   it('matches the generic translation prompts from the issue', () => {

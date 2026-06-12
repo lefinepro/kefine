@@ -1,5 +1,5 @@
 import type { LayoutServerLoad } from './$types';
-import { getPublicRuntimeConfig } from '$lib/server/kefine-config';
+import { getPublicRuntimeConfig } from '$lib/server/config/kefine-config';
 import { readLocaleFromPathname } from '$lib/routing/kefine-locale-routing';
 
 function resolveRequestOrigin(url: URL, request: Request): string {

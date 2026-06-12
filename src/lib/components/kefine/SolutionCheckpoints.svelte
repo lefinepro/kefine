@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { defaultSolutions } from '$lib/kefine/solutions-data';
+  import { defaultSolutions } from '$lib/kefine/solutions/solutions-data';
 
   export type CommitInfo = {
     hash: string;

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { buildSolverAvatars, solverAvatarColor, solverInitials } from '$lib/kefine/solver-avatars';
+  import { buildSolverAvatars, solverAvatarColor, solverInitials } from '$lib/kefine/solutions/solver-avatars';
   import { kefineLocaleText } from '$lib/constants/kefine-locale';
 
   type SolverOption = {

@@ -5,18 +5,18 @@
    * badge while the rest show how far behind they sit (e.g. `-6.7%`). The same
    * metric drives the plots below via the shared `SolutionMetricsBlock`.
    */
-  import type { Solution, SolutionMetric } from '$lib/kefine/solutions-data';
+  import type { Solution, SolutionMetric } from '$lib/kefine/solutions/solutions-data';
   import {
     rankSolvers,
     badgeForSolver,
     solverRankingMetrics,
     type SolverRankingMetric
-  } from '$lib/kefine/solver-badges';
+  } from '$lib/kefine/solutions/solver-badges';
   import { kefineLocaleText } from '$lib/constants/kefine-locale';
   import KefineModal from '$lib/components/kefine/KefineModal.svelte';
   import KefineSolverBadge from '$lib/components/kefine/KefineSolverBadge.svelte';
   import SolutionMetricsBlock from '$lib/components/kefine/SolutionMetricsBlock.svelte';
-  import { solverAvatarColor, solverInitials } from '$lib/kefine/solver-avatars';
+  import { solverAvatarColor, solverInitials } from '$lib/kefine/solutions/solver-avatars';
 
   let {
     open,

@@ -1,6 +1,6 @@
 import { writable } from 'svelte/store';
 import type { KefineTopbarIconName } from '$lib/components/kefine/KefineTopbarIcon.svelte';
-import type { KefineSearchWidgetId } from '$lib/kefine/search-widgets';
+import type { KefineSearchWidgetId } from '$lib/kefine/widgets/search-widgets';
 
 export type TopbarSearchAction = {
   id: string;

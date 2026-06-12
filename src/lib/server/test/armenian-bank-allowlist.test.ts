@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { matchesArmenianBank } from './armenian-bank-allowlist';
+import { matchesArmenianBank } from '../bank/armenian-bank-allowlist';
 
 describe('matchesArmenianBank', () => {
   it('matches allowlisted Armenian issuers regardless of casing or suffixes', () => {

@@ -36,7 +36,7 @@
   import { cubicOut } from 'svelte/easing';
   import type { OrderView } from '$lib/components/kefine/kefine-workflow';
   import type { TaskCloneFormat } from '$lib/components/kefine/kefine-task-clone';
-  import type { Solution } from '$lib/kefine/solutions-data';
+  import type { Solution } from '$lib/kefine/solutions/solutions-data';
   import KefineSolversView from '$lib/components/kefine/KefineSolversView.svelte';
   import {
     buildSolverHistoryTasks,

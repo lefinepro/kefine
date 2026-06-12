@@ -3,7 +3,7 @@
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
   import Icon from '@iconify/svelte';
-  import { defaultMetrics, type Solution, type SolutionMetric } from '$lib/kefine/solutions-data';
+  import { defaultMetrics, type Solution, type SolutionMetric } from '$lib/kefine/solutions/solutions-data';
   import { kefineLocaleText } from '$lib/constants/kefine-locale';
   import KefineSolverBadge from '$lib/components/kefine/KefineSolverBadge.svelte';
   import KefineSolversModal from '$lib/components/kefine/KefineSolversModal.svelte';
@@ -11,21 +11,21 @@
     rankSolvers,
     badgeForSolver,
     type SolverRankingMetric
-  } from '$lib/kefine/solver-badges';
+  } from '$lib/kefine/solutions/solver-badges';
   import {
     buildSolverAvatars,
     solverAvatarColor,
     solverInitials
-  } from '$lib/kefine/solver-avatars';
+  } from '$lib/kefine/solutions/solver-avatars';
   import {
     requestTopbarSearch,
     topbarSearchActions,
     topbarSearchItems,
     type TopbarSearchAction,
     type TopbarSearchItem
-  } from '$lib/kefine/topbar-search-context';
+  } from '$lib/kefine/topbar/topbar-search-context';
   import type { SolverHistoryTask } from '$lib/components/kefine/kefine-solver-history';
-  import type { OrgReadme, OrgTodo, OrgTodoState } from '$lib/kefine/repo-docs';
+  import type { OrgReadme, OrgTodo, OrgTodoState } from '$lib/kefine/repo-docs/repo-docs';
 
   export type SolversHistoryTask = SolverHistoryTask;
 

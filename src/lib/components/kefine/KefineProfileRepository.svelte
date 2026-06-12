@@ -1,12 +1,12 @@
 <script lang="ts">
   import Icon from '@iconify/svelte';
   import { kefineLocaleText } from '$lib/constants/kefine-locale';
-  import { parseOrgTodos, type OrgTodoState } from '$lib/kefine/repo-docs';
+  import { parseOrgTodos, type OrgTodoState } from '$lib/kefine/repo-docs/repo-docs';
   import {
     requestTopbarSearch,
     topbarSearchItems,
     type TopbarSearchItem
-  } from '$lib/kefine/topbar-search-context';
+  } from '$lib/kefine/topbar/topbar-search-context';
 
   let {
     handle,

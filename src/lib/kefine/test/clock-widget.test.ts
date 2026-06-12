@@ -6,7 +6,7 @@ import {
   getClockTarget,
   isValidTimeZone,
   resolveClockTimeZone
-} from '../clock-widget';
+} from '../widgets/clock-widget';
 
 describe('detectClockIntent', () => {
   it('matches bare time/clock prompts', () => {

@@ -13,7 +13,7 @@
   import KefineWalletProviderGrid from '$lib/components/kefine/KefineWalletProviderGrid.svelte';
   import KefineTaskTreeFeed from '$lib/components/kefine/KefineTaskTreeFeed.svelte';
   import { KEFINE_AUTH_ICONS } from '$lib/components/kefine/kefine-auth-constants';
-  import { defaultSolutions, type Solution } from '$lib/kefine/solutions-data';
+  import { defaultSolutions, type Solution } from '$lib/kefine/solutions/solutions-data';
 
   function getOrderSolutionsKey(orderId: string) {
     return `kefine-order-${orderId}-solutions`;

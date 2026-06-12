@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from 'vitest';
 
-import { proxyCraterRequest } from './crater-proxy';
+import { proxyCraterRequest } from '../crater/crater-proxy';
 
 describe('proxyCraterRequest', () => {
   test('forwards multipart uploads as buffered bytes with the original content type', async () => {

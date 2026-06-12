@@ -6,8 +6,8 @@
    * metric (e.g. `-6.7%`). Ranking math lives in `solver-badges.ts`; this
    * component is purely presentational.
    */
-  import type { SolverBadge } from '$lib/kefine/solver-badges';
-  import { formatSolverDelta } from '$lib/kefine/solver-badges';
+  import type { SolverBadge } from '$lib/kefine/solutions/solver-badges';
+  import { formatSolverDelta } from '$lib/kefine/solutions/solver-badges';
 
   let {
     badge,

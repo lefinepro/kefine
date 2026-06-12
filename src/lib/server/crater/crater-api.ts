@@ -1,4 +1,4 @@
-import { getKefineConfig } from '$lib/server/kefine-config';
+import { getKefineConfig } from '$lib/server/config/kefine-config';
 
 function normalizeBaseUrl(value: string): string {
   return value.replace(/\/+$/, '');
