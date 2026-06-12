@@ -2,8 +2,8 @@
   import { goto } from '$app/navigation';
   import { onMount, onDestroy } from 'svelte';
   import '$lib/kefine/jetbrains-hljs.css';
-  import { solutionsStore } from '$lib/kefine/solutions-store';
-  import { defaultSolutions } from '$lib/kefine/solutions-data';
+  import { solutionsStore } from '$lib/kefine/solutions/solutions-store';
+  import { defaultSolutions } from '$lib/kefine/solutions/solutions-data';
   import { kefineLocaleText } from '$lib/constants/kefine-locale';
   import SolutionCodeEditor from '$lib/components/kefine/SolutionCodeEditor.svelte';
   import SolutionTopbar from '$lib/components/kefine/SolutionTopbar.svelte';

@@ -1,6 +1,6 @@
 <script lang="ts">
-  import type { SolutionMetric } from '$lib/kefine/solutions-data';
-  import { compactChartSize, timeSeries, priceSeries } from '$lib/kefine/solver-charts';
+  import type { SolutionMetric } from '$lib/kefine/solutions/solutions-data';
+  import { compactChartSize, timeSeries, priceSeries } from '$lib/kefine/solutions/solver-charts';
   import SolutionChartCard from './SolutionChartCard.svelte';
   import { kefineLocaleText } from '$lib/constants/kefine-locale';
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { SolutionMetric } from '$lib/kefine/solutions-data';
+  import type { SolutionMetric } from '$lib/kefine/solutions/solutions-data';
   import {
     defaultChartSize,
     timeSeries,
@@ -7,7 +7,7 @@
     successRateSeries,
     efficiencySeries,
     efficiencyValue
-  } from '$lib/kefine/solver-charts';
+  } from '$lib/kefine/solutions/solver-charts';
   import SolutionChartCard from './SolutionChartCard.svelte';
   import { kefineLocaleText } from '$lib/constants/kefine-locale';
 

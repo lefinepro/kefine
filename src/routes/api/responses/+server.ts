@@ -1,4 +1,4 @@
-import { proxyCraterRequest } from '$lib/server/crater-proxy';
+import { proxyCraterRequest } from '$lib/server/crater/crater-proxy';
 import type { RequestHandler } from './$types';
 
 // The solver return path. A local solver service processes the message relayed

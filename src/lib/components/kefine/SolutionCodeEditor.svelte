@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { highlightLines } from '$lib/kefine/solution-highlight';
+  import { highlightLines } from '$lib/kefine/solutions/solution-highlight';
   import { kefineLocaleText } from '$lib/constants/kefine-locale';
   import SolutionCodeTabs from './SolutionCodeTabs.svelte';
   import { fade } from 'svelte/transition';

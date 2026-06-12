@@ -1,4 +1,4 @@
-import { proxyOrderSettingsUpdate } from '$lib/server/order-proxy';
+import { proxyOrderSettingsUpdate } from '$lib/server/order/order-proxy';
 import type { RequestHandler } from './$types';
 
 export const PATCH: RequestHandler = async ({ request, fetch, params }) => {

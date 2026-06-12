@@ -7,16 +7,16 @@
   import KefineProxyConfigWidget from '$lib/components/kefine/KefineProxyConfigWidget.svelte';
   import KefineSearchInput from '$lib/components/kefine/KefineSearchInput.svelte';
   import { onMount, tick } from 'svelte';
-  import { detectWeatherIntent } from '$lib/kefine/weather-intent';
+  import { detectWeatherIntent } from '$lib/kefine/widgets/weather-intent';
   import { scheduleAfter } from '$lib/utils/helpers';
   import type { KefineLocale } from '$lib/constants/kefine-locale';
   import type { KefineTopbarIconName } from '$lib/components/kefine/KefineTopbarIcon.svelte';
-  import { KEFINE_SEARCH_WIDGET_IDS, type KefineSearchWidgetId } from '$lib/kefine/search-widgets';
+  import { KEFINE_SEARCH_WIDGET_IDS, type KefineSearchWidgetId } from '$lib/kefine/widgets/search-widgets';
   import type {
     TopbarSearchAction,
     TopbarSearchItem,
     TopbarSearchRequest
-  } from '$lib/kefine/topbar-search-context';
+  } from '$lib/kefine/topbar/topbar-search-context';
 
   /** Built-in widgets the command palette can surface inline on any page. */
   export type { KefineSearchWidgetId };

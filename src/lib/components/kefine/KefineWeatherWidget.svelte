@@ -4,7 +4,7 @@
   import { cubicOut } from 'svelte/easing';
   import Icon from '@iconify/svelte';
   import { kefineLocaleText } from '$lib/constants/kefine-locale';
-  import { getWeatherTarget, type WeatherTarget } from '$lib/kefine/weather-intent';
+  import { getWeatherTarget, type WeatherTarget } from '$lib/kefine/widgets/weather-intent';
   import {
     buildOpenMeteoForecastUrl,
     buildOpenMeteoGeocodeUrl,
@@ -16,7 +16,7 @@
     type WeatherForecast,
     type WeatherResolvedLocation,
     type WeatherUnit
-  } from '$lib/kefine/weather-forecast';
+  } from '$lib/kefine/widgets/weather-forecast';
 
   let { active = false, query = '' }: { active?: boolean; query?: string } = $props();
 

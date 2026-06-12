@@ -2,14 +2,14 @@
   import { browser } from '$app/environment';
   import { cubicOut } from 'svelte/easing';
   import { kefineLocaleText } from '$lib/constants/kefine-locale';
-  import { createQrMatrix, qrMatrixToSvgPath } from '$lib/kefine/qr-code';
+  import { createQrMatrix, qrMatrixToSvgPath } from '$lib/kefine/widgets/qr-code';
   import {
     PROXY_PROTOCOLS,
     PROXY_REGIONS,
     buildProxyProfile,
     type ProxyProtocol,
     type ProxyRegion
-  } from '$lib/kefine/proxy-config';
+  } from '$lib/kefine/proxy/proxy-config';
 
   let { active = false }: { active?: boolean } = $props();
 

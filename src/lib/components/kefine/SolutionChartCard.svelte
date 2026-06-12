@@ -1,12 +1,12 @@
 <script lang="ts">
-  import type { SolutionMetric } from '$lib/kefine/solutions-data';
+  import type { SolutionMetric } from '$lib/kefine/solutions/solutions-data';
   import {
     buildChart,
     buildYTicks,
     makeLinePath,
     type ChartSize,
     type SolverChartSeries
-  } from '$lib/kefine/solver-charts';
+  } from '$lib/kefine/solutions/solver-charts';
 
   let {
     title,

@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import SolutionMetricsMini from '$lib/components/kefine/SolutionMetricsMini.svelte';
-  import { defaultMetrics, defaultSolutions, type Solution } from '$lib/kefine/solutions-data';
-  import { solutionsStore } from '$lib/kefine/solutions-store';
+  import { defaultMetrics, defaultSolutions, type Solution } from '$lib/kefine/solutions/solutions-data';
+  import { solutionsStore } from '$lib/kefine/solutions/solutions-store';
 
   let {
     orderId,

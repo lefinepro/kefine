@@ -1,4 +1,4 @@
-import { proxyOrderStepComment } from '$lib/server/order-proxy';
+import { proxyOrderStepComment } from '$lib/server/order/order-proxy';
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ request, fetch, params }) => {

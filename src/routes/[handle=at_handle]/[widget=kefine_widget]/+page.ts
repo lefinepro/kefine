@@ -1,4 +1,4 @@
-import { normalizeSearchWidgetId } from '$lib/kefine/search-widgets';
+import { normalizeSearchWidgetId } from '$lib/kefine/widgets/search-widgets';
 import type { PageLoad } from './$types';
 
 export const prerender = false;

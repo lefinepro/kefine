@@ -8,7 +8,7 @@
     buildWaveform,
     formatTime,
     randomCoverSeed
-  } from '$lib/kefine/music-track';
+  } from '$lib/kefine/widgets/music-track';
 
   let { active = false }: { active?: boolean } = $props();
 

@@ -1,5 +1,5 @@
 import { error, redirect } from '@sveltejs/kit';
-import { buildCraterApiUrl } from '$lib/server/crater-api';
+import { buildCraterApiUrl } from '$lib/server/crater/crater-api';
 import type { RequestHandler } from './$types';
 
 const SUPPORTED_PROVIDERS = new Set(['google', 'github']);

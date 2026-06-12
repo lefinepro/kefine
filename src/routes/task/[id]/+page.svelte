@@ -17,7 +17,7 @@
   import { KEFINE_TEXT_HY } from '$lib/constants/kefine-locale-hy';
   import { KEFINE_TEXT_RU } from '$lib/constants/kefine-locale-ru';
   import type { KefineLocaleText } from '$lib/constants/kefine-locale';
-  import { topbarSearchPlaceholderOverride } from '$lib/kefine/topbar-search-context';
+  import { topbarSearchPlaceholderOverride } from '$lib/kefine/topbar/topbar-search-context';
   import { readLocaleFromPathname } from '$lib/routing/kefine-locale-routing';
 
   type MarkdownBlock =

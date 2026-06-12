@@ -6,7 +6,7 @@
     DEFAULT_TRANSLATION_LANGUAGES,
     extractTranslationLanguages,
     type TranslationLanguageId
-  } from '$lib/kefine/translation-intent';
+  } from '$lib/kefine/widgets/translation-intent';
 
   let { active = false, query = '' }: { active?: boolean; query?: string } = $props();
 

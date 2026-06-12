@@ -10,19 +10,19 @@
   import KefineTranslatorWidget from '$lib/components/kefine/KefineTranslatorWidget.svelte';
   import KefineSearchInput from '$lib/components/kefine/KefineSearchInput.svelte';
   import SolutionMetricsMini from '$lib/components/kefine/SolutionMetricsMini.svelte';
-  import { detectProxyServerIntent } from '$lib/kefine/proxy-intent';
+  import { detectProxyServerIntent } from '$lib/kefine/widgets/proxy-intent';
   import {
     findInstantAnswers,
     faviconUrl,
     type InstantAnswer,
     type InstantAnswersData
-  } from '$lib/kefine/instant-answers';
-  import { createQrMatrix, qrMatrixToSvgPath } from '$lib/kefine/qr-code';
-  import { detectMusicExtractIntent } from '$lib/kefine/music-intent';
-  import { detectWeatherIntent } from '$lib/kefine/weather-intent';
-  import { detectTranslationIntent } from '$lib/kefine/translation-intent';
+  } from '$lib/kefine/widgets/instant-answers';
+  import { createQrMatrix, qrMatrixToSvgPath } from '$lib/kefine/widgets/qr-code';
+  import { detectMusicExtractIntent } from '$lib/kefine/widgets/music-intent';
+  import { detectWeatherIntent } from '$lib/kefine/widgets/weather-intent';
+  import { detectTranslationIntent } from '$lib/kefine/widgets/translation-intent';
   import { buildActorOrderPath } from '$lib/components/kefine/kefine-workspace-helpers';
-  import { defaultMetrics } from '$lib/kefine/solutions-data';
+  import { defaultMetrics } from '$lib/kefine/solutions/solutions-data';
   import { cubicOut } from 'svelte/easing';
   import { onMount, onDestroy, tick } from 'svelte';
   const PLACEHOLDER_TYPE_DELAY_MS = 58;
@@ -548,7 +548,7 @@
       : matchedOrders
   );
 
-  import { solutionsStore } from '$lib/kefine/solutions-store';
+  import { solutionsStore } from '$lib/kefine/solutions/solutions-store';
   import { get } from 'svelte/store';
 
   const COMPLETED_SEARCHES_KEY = 'kefine-completed-solver-searches';
